@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>选择风格 · Data Lab 实验 · 交互式工作台</title>
+<title>选择风格 · 浮点数 · 交互式课件</title>
 <style>
   :root{--bg:#0f1115; --card:#171a21; --ink:#e8ecf3; --muted:#98a2b3; --line:#262b35; --accent:#5b8cff;}
   *{box-sizing:border-box}
@@ -45,26 +45,26 @@
 <body>
 <div class="wrap">
   <h1>挑一个你喜欢的风格</h1>
-  <p class="lede">Data Lab 实验 · 交互式工作台 —— 4 套风格，<b>内容与交互完全一致</b>（同一份正文与同一份脚本），只是换了一层皮。
+  <p class="lede">浮点数 · 交互式课件 —— 4 套风格，<b>内容与交互完全一致</b>（同一份正文与同一份脚本），只是换了一层皮。
      点「打开这一版」全屏浏览，或在下面直接看缩略预览。</p>
-  <p class="cross">其他课件：<a href="variants/index.html">↗ 第 3 讲 · 浮点数</a><a href="variants-bits/index.html">↗ 第 2 讲 · 位、字节与整数</a><a href="variants-ics04/index.html">↗ 第 4 讲 · 机器级编程基础</a></p>
+  <p class="cross">其他课件：<a href="variants-bits/index.html">↗ 第 2 讲 · 位、字节与整数</a><a href="variants-lab/index.html">↗ Data Lab 实验</a><a href="variants-ics04/index.html">↗ 第 4 讲 · 机器级编程基础</a></p>
   <div class="grid">
     <div class="item">
       <div class="shot">
-        <iframe src="../datalab-zh.html" loading="lazy" title="清爽蓝（原版） 预览"></iframe>
+        <iframe src="../floating-point-zh.html" loading="lazy" title="清爽蓝（原版） 预览"></iframe>
         <div class="fade"></div>
       </div>
       <div class="meta">
         <h2>清爽蓝（原版）<span class="tag">默认</span></h2>
-        <p class="cap">16 道位运算 / 补码 / 浮点谜题 · 可在页内直接写表达式并测试</p>
+        <p class="cap">float / IEEE 754 · 48 页课件的中文交互版</p>
         <ul>
           <li>左侧固定目录 + 顶部进度条</li>
-          <li>蓝色主色、白色卡片，与两讲课件同款</li>
-          <li>16 个评测器一屏可读，适合长时间调试</li>
+          <li>蓝色主色、白色卡片、圆角柔和阴影</li>
+          <li>信息密度最高，适合长时间阅读</li>
         </ul>
         <div class="actions">
-          <a class="btn primary" href="../datalab-zh.html">打开这一版</a>
-          <a class="btn" href="../datalab-zh.html" target="_blank" rel="noopener">独立标签页</a>
+          <a class="btn primary" href="../floating-point-zh.html">打开这一版</a>
+          <a class="btn" href="../floating-point-zh.html" target="_blank" rel="noopener">独立标签页</a>
         </div>
       </div>
     </div>
@@ -75,10 +75,12 @@
       </div>
       <div class="meta">
         <h2>学术讲义<span class="tag">纸感</span></h2>
-        <p class="cap">16 道位运算 / 补码 / 浮点谜题 · 可在页内直接写表达式并测试</p>
+        <p class="cap">float / IEEE 754 · 48 页课件的中文交互版</p>
         <ul>
-          <li>暖白纸底 + 衬线标题，接近实验手册的纸面观感</li>
-          <li>目录移到右侧做「纲要」，适合打印出来对着写代码</li>
+          <li>暖白纸底 + 衬线标题，双线章节分隔</li>
+          <li>目录移到右侧做「纲要」，正文居中</li>
+          <li>三线表（booktabs）与批注式提示框</li>
+          <li>打印友好，最接近讲义/论文观感</li>
         </ul>
         <div class="actions">
           <a class="btn primary" href="01-academic.html">打开这一版</a>
@@ -93,11 +95,11 @@
       </div>
       <div class="meta">
         <h2>深色终端<span class="tag">夜读</span></h2>
-        <p class="cap">16 道位运算 / 补码 / 浮点谜题 · 可在页内直接写表达式并测试</p>
+        <p class="cap">float / IEEE 754 · 48 页课件的中文交互版</p>
         <ul>
-          <li>深灰底 + 青色霓虹，写位运算表达式时最像 IDE</li>
-          <li>等宽字体贯穿全页，评测输出像终端回显</li>
-          <li>暗光环境护眼</li>
+          <li>深灰底 + 青色霓虹强调，等宽字体标题</li>
+          <li>顶栏做成终端窗口标题条，分步演示带 $ 提示符</li>
+          <li>位解析器是「寄存器」风格，暗光环境护眼</li>
         </ul>
         <div class="actions">
           <a class="btn primary" href="02-terminal.html">打开这一版</a>
@@ -112,11 +114,12 @@
       </div>
       <div class="meta">
         <h2>新粗野<span class="tag">醒目</span></h2>
-        <p class="cap">16 道位运算 / 补码 / 浮点谜题 · 可在页内直接写表达式并测试</p>
+        <p class="cap">float / IEEE 754 · 48 页课件的中文交互版</p>
         <ul>
-          <li>厚黑描边 + 硬投影，评测结果的对/错一眼可辨</li>
-          <li>顶部大字报横幅，目录是横排药丸按钮</li>
-          <li>适合投屏演示</li>
+          <li>厚黑描边 + 硬投影，色块高饱和</li>
+          <li>顶部大字报横幅，目录变成横排药丸按钮</li>
+          <li>按钮可按下去，交互反馈最强</li>
+          <li>适合投屏演示、吸引注意力</li>
         </ul>
         <div class="actions">
           <a class="btn primary" href="03-brutalist.html">打开这一版</a>
@@ -131,10 +134,11 @@
       </div>
       <div class="meta">
         <h2>柔和玻璃<span class="tag">轻盈</span></h2>
-        <p class="cap">16 道位运算 / 补码 / 浮点谜题 · 可在页内直接写表达式并测试</p>
+        <p class="cap">float / IEEE 754 · 48 页课件的中文交互版</p>
         <ul>
-          <li>渐变背景 + 毛玻璃卡片，视觉最柔和</li>
+          <li>渐变背景 + 毛玻璃卡片，20px 大圆角</li>
           <li>顶部悬浮药丸导航，紫色渐层强调</li>
+          <li>无竖线表格，视觉最柔和现代</li>
         </ul>
         <div class="actions">
           <a class="btn primary" href="04-glass.html">打开这一版</a>
@@ -145,7 +149,7 @@
   </div>
   <div class="note">
     <b>说明</b>：每一页都是<b>单文件、零依赖</b>，可以直接双击打开或发给别人；缩略图是真实页面按 28% 缩放渲染的 iframe，不是截图。
-    原版（清爽蓝）保留在 <code>../datalab-zh.html</code>。<br>
+    原版（清爽蓝）保留在 <code>../floating-point-zh.html</code>。<br>
     如果缩略图在本机没有显示（个别浏览器会限制 <code>file://</code> 页面内嵌同目录文件），直接点「打开这一版」即可正常浏览。
   </div>
 </div>

@@ -1,0 +1,1769 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-deck="ics04">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>机器级编程 I：基础 · 交互式课件（中文）</title>
+<style>
+/* ==========================================================================
+   base.css —— 结构基础样式（所有风格共用）
+   只使用 CSS 变量，不含任何具体配色；由各主题覆盖变量与少量结构规则。
+   ========================================================================== */
+
+:root{
+  /* 颜色（每个主题必须覆盖） */
+  --bg:#f6f7f9; --card:#fff; --ink:#15181d; --muted:#697586; --line:#e4e7ec;
+  --accent:#2563eb; --accent-ink:#fff; --accent-soft:#eaf1ff;
+  --sign:#e5484d; --exp:#0b7fd4; --frac:#18915a; --warn:#b45309;
+  --sign-bg:#fdecec; --sign-fg:#a3262b; --sign-bd:#f6cdcf;
+  --exp-bg:#e8f2fd;  --exp-fg:#0a5f9e;  --exp-bd:#c7ddf5;
+  --frac-bg:#e9f7ef; --frac-fg:#116b43; --frac-bd:#c8e8d5;
+  --ok-bg:#f2fbf6; --ok-bd:#9ed3b4; --bad-bg:#fff5f5; --bad-bd:#f1b5b8;
+  --warn-bg:#fffbeb; --gray-bg:#eef1f5; --gray-fg:#5b6472;
+  --paper-soft:#fcfdfe; --code-bg:#f1f3f7; --code-bd:#e6e9ef;
+  --tbl-head:#f7f9fc; --tbl-hover:#fafbfd;
+  --sel-bg:#eef1f5;
+
+  /* 字体 */
+  --font-sans:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",system-ui,sans-serif;
+  --font-mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+  --font-display:var(--font-sans);
+  --tracking-title:normal;
+
+  /* 形状 */
+  --radius:12px; --radius-sm:8px; --radius-pill:99px;
+  --border-w:1px; --shadow:0 1px 2px rgba(16,24,40,.06),0 1px 3px rgba(16,24,40,.1);
+  --shadow-card:none;
+  --card-border:var(--border-w) solid var(--line);
+
+  /* 布局 */
+  --page-max:1180px; --nav-w:236px; --gap:26px; --sec-pad:26px 28px;
+  --nav-sticky-top:64px; --anchor-offset:70px;
+  --font-size:16px; --line-height:1.75;
+}
+
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font-sans);
+  font-size:var(--font-size);line-height:var(--line-height);-webkit-font-smoothing:antialiased}
+img{max-width:100%}
+
+/* ---------- 顶栏 ---------- */
+.topbar{position:sticky;top:0;z-index:50;background:var(--card);border-bottom:1px solid var(--line)}
+.topbar-in{max-width:var(--page-max);margin:0 auto;padding:10px 22px;display:flex;align-items:center;gap:14px}
+.brand{font-weight:700;letter-spacing:var(--tracking-title);font-family:var(--font-display)}
+.brand small{font-weight:500;color:var(--muted);margin-left:8px;font-size:12.5px}
+.progress{margin-left:auto;display:flex;align-items:center;gap:10px;font-size:12.5px;color:var(--muted)}
+.progress .bar{width:150px;height:6px;border-radius:var(--radius-pill);background:var(--line);overflow:hidden}
+.progress .bar>i{display:block;height:100%;width:0;background:var(--accent);transition:width .25s}
+
+/* ---------- 主体布局 ---------- */
+.layout{max-width:var(--page-max);margin:0 auto;padding:22px;display:grid;
+  grid-template-columns:var(--nav-w) minmax(0,1fr);gap:var(--gap)}
+main{min-width:0}
+
+/* ---------- 目录 ---------- */
+nav.toc{position:sticky;top:var(--nav-sticky-top);align-self:start;max-height:calc(100vh - 84px);overflow:auto;padding-right:4px}
+nav.toc h4{margin:0 0 8px;font-size:12px;letter-spacing:.12em;color:var(--muted);text-transform:uppercase;font-weight:600}
+nav.toc a{display:block;padding:7px 11px;border-radius:var(--radius-sm);color:var(--ink);opacity:.78;
+  text-decoration:none;font-size:14.5px;border-left:2.5px solid transparent}
+nav.toc a:hover{background:var(--sel-bg);opacity:1}
+nav.toc a.active{background:var(--accent-soft);color:var(--accent);border-left-color:var(--accent);font-weight:600;opacity:1}
+nav.toc a .n{display:inline-block;min-width:20px;color:var(--muted);font-size:12.5px;font-variant-numeric:tabular-nums}
+nav.toc a.active .n{color:var(--accent)}
+nav.toc .sub{padding-left:26px;font-size:13.5px;opacity:.7}
+
+/* ---------- 章节 ---------- */
+section{background:var(--card);border:var(--card-border);border-radius:var(--radius);
+  padding:var(--sec-pad);margin-bottom:22px;box-shadow:var(--shadow);scroll-margin-top:var(--anchor-offset)}
+section>h2{margin:0 0 6px;font-size:25px;letter-spacing:-.01em;font-family:var(--font-display)}
+section>.lede{color:var(--muted);margin:0 0 20px;font-size:14.5px}
+h3{font-size:18.5px;margin:26px 0 10px;padding-left:11px;border-left:3.5px solid var(--accent);font-family:var(--font-display)}
+h4{font-size:16px;margin:18px 0 8px;font-family:var(--font-display)}
+h5{font-size:15px;font-family:var(--font-display)}
+p{margin:10px 0}
+ul,ol{margin:10px 0;padding-left:22px}
+li{margin:5px 0}
+code{font-family:var(--font-mono);font-size:.89em;background:var(--code-bg);border:1px solid var(--code-bd);border-radius:5px;padding:1px 5px}
+.mono{font-family:var(--font-mono)}
+a{color:var(--accent)}
+hr{border:0;border-top:1px dashed var(--line);margin:24px 0}
+.srcref{font-size:11.5px;color:var(--muted);font-weight:500;font-family:var(--font-sans);margin-left:8px;vertical-align:middle;white-space:nowrap;opacity:.75}
+.en{color:var(--muted);font-size:.92em}
+
+/* ---------- 栅格与卡片 ---------- */
+.grid{display:grid;gap:14px}
+.g2{grid-template-columns:repeat(2,minmax(0,1fr))}
+.g3{grid-template-columns:repeat(3,minmax(0,1fr))}
+@media(max-width:820px){.g2,.g3{grid-template-columns:1fr}}
+.card{border:var(--card-border);border-radius:var(--radius-sm);padding:15px 17px;background:var(--paper-soft);box-shadow:var(--shadow-card)}
+.card h5{margin:0 0 7px}
+.card.pad0{padding:0;overflow:hidden}
+
+/* ---------- 提示框 ---------- */
+.box{border:1px solid var(--line);border-left:4px solid var(--accent);background:var(--accent-soft);
+  border-radius:var(--radius-sm);padding:12px 16px;margin:14px 0}
+.box.warn{border-left-color:var(--warn);background:var(--warn-bg)}
+.box.bad{border-left-color:var(--sign);background:var(--bad-bg)}
+.box.ok{border-left-color:var(--frac);background:var(--ok-bg)}
+.box .t{font-weight:650;font-size:14.5px;margin-bottom:2px}
+
+/* ---------- 公式 ---------- */
+.formula{font-family:var(--font-mono);background:var(--paper-soft);border:1px solid var(--line);
+  border-radius:var(--radius-sm);padding:14px 17px;margin:14px 0;font-size:16.5px;text-align:center;overflow-x:auto}
+.formula.big{font-size:20px}
+
+/* ---------- 表格 ---------- */
+table.tbl{width:100%;border-collapse:collapse;font-size:14.5px;margin:14px 0}
+table.tbl th,table.tbl td{border:1px solid var(--line);padding:8px 11px;text-align:left;vertical-align:top}
+table.tbl th{background:var(--tbl-head);font-weight:650;font-size:13.5px;white-space:nowrap}
+table.tbl td.mono,table.tbl th.mono{font-family:var(--font-mono);font-size:13.5px}
+table.tbl tr:hover td{background:var(--tbl-hover)}
+.tbl-wrap{overflow-x:auto}
+
+/* ---------- 位串控件 ---------- */
+.fw{display:flex;flex-wrap:wrap;gap:8px 18px;align-items:flex-start;margin:4px 0 2px}
+.fgrp{min-width:0}
+.fcap{font-size:12px;color:var(--muted);margin-bottom:4px;font-weight:600}
+.fcap b{font-family:var(--font-mono);font-size:12.5px}
+.bits{display:flex;flex-wrap:wrap;gap:2px;font-family:var(--font-mono);margin:4px 0}
+.bits .b{width:25px;height:33px;display:flex;align-items:center;justify-content:center;
+  border-radius:6px;font-size:15px;cursor:pointer;user-select:none;border:1px solid transparent;
+  transition:transform .06s,background .12s;font-weight:600}
+.bits .b:hover{transform:translateY(-2px)}
+.bits .b.s{background:var(--sign-bg);color:var(--sign-fg);border-color:var(--sign-bd)}
+.bits .b.e{background:var(--exp-bg);color:var(--exp-fg);border-color:var(--exp-bd)}
+.bits .b.f{background:var(--frac-bg);color:var(--frac-fg);border-color:var(--frac-bd)}
+.bits .b.sel{outline:2px solid var(--ink);outline-offset:1px}
+.bits.sm .b{width:19px;height:26px;font-size:12px;border-radius:4px}
+.fgrp .bits{flex-wrap:wrap;max-width:100%;gap:2px}
+.fgrp.ge .bits{max-width:300px}
+
+/* ---------- 读数表 ---------- */
+.readout{display:grid;grid-template-columns:auto 1fr;gap:4px 16px;font-size:14.5px;margin:12px 0}
+.readout dt{color:var(--muted);font-weight:600;font-family:var(--font-mono);font-size:13.5px;padding-top:2px}
+.readout dd{margin:0;font-family:var(--font-mono)}
+
+/* ---------- 小标签 ---------- */
+.chip{display:inline-block;font-size:12.5px;padding:2px 9px;border-radius:var(--radius-pill);
+  background:var(--accent-soft);color:var(--accent);font-weight:600}
+.chip.ok{background:var(--frac-bg);color:var(--frac-fg)}
+.chip.bad{background:var(--sign-bg);color:var(--sign-fg)}
+.chip.warn{background:var(--warn-bg);color:var(--warn)}
+.chip.gray{background:var(--gray-bg);color:var(--gray-fg)}
+.kbd{font-family:var(--font-mono);font-size:13px;background:var(--code-bg);border:1px solid var(--code-bd);
+  border-bottom-width:2px;border-radius:6px;padding:1px 7px}
+
+/* ---------- 控件 ---------- */
+.ctrls{display:flex;flex-wrap:wrap;gap:9px;align-items:center;margin:12px 0}
+label.fld{display:inline-flex;align-items:center;gap:7px;font-size:14px;color:var(--ink);max-width:100%;flex-wrap:wrap;min-width:0}
+label.fld select,label.fld input{min-width:0;max-width:100%}
+input[type=text],input[type=number],select{font-family:var(--font-mono);font-size:14px;padding:6px 10px;
+  border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--card);color:var(--ink)}
+input[type=text]:focus,input[type=number]:focus,select:focus{outline:2px solid var(--accent-soft);border-color:var(--accent)}
+button{font-family:var(--font-sans);font-size:14px;font-weight:600;padding:7px 15px;border-radius:var(--radius-sm);
+  border:1px solid var(--line);background:var(--card);color:var(--ink);cursor:pointer}
+button:hover{background:var(--sel-bg)}
+button.p{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+button.sm{padding:4px 10px;font-size:13px}
+button.pill{border-radius:var(--radius-pill)}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:var(--radius-sm);overflow:hidden}
+.seg button{border:0;border-radius:0;border-right:1px solid var(--line);padding:6px 13px}
+.seg button:last-child{border-right:0}
+.seg button.on{background:var(--accent);color:var(--accent-ink)}
+
+/* ---------- 分步演示 ---------- */
+.step{border:1px solid var(--line);border-radius:var(--radius-sm);padding:11px 15px;margin:9px 0;
+  background:var(--paper-soft);opacity:.42;transition:opacity .2s}
+.step.on{opacity:1;background:var(--card)}
+.step .h{font-size:13px;font-weight:700;color:var(--accent);letter-spacing:.02em;margin-bottom:3px}
+.step .m{font-family:var(--font-mono);font-size:14.5px;overflow-x:auto}
+.step .e{font-size:13.5px;color:var(--muted);margin-top:3px}
+
+/* ---------- 折叠与答案 ---------- */
+.reveal{border:1px solid var(--line);border-radius:var(--radius-sm);padding:11px 15px;margin:8px 0;background:var(--paper-soft)}
+.reveal summary{cursor:pointer;font-weight:600;font-size:14.5px}
+.reveal[open]{background:var(--card)}
+.ans{margin-top:8px;padding-top:8px;border-top:1px dashed var(--line);font-size:14.5px}
+
+/* ---------- 判断题 ---------- */
+.puzzle{border:1px solid var(--line);border-radius:var(--radius-sm);padding:12px 15px;margin:9px 0;
+  display:flex;gap:13px;align-items:flex-start;background:var(--paper-soft)}
+.puzzle .q{font-family:var(--font-mono);font-size:15px;flex:1;min-width:0;overflow-x:auto;white-space:nowrap}
+.puzzle .q small{font-family:var(--font-sans);color:var(--muted);display:block;white-space:normal}
+.puzzle .btns{display:flex;gap:6px;flex-shrink:0}
+.puzzle.correct{border-color:var(--ok-bd);background:var(--ok-bg)}
+.puzzle.wrong{border-color:var(--bad-bd);background:var(--bad-bg)}
+.puzzle .exp{margin-top:9px;padding-top:9px;border-top:1px dashed var(--line);font-size:14.5px;
+  display:none;white-space:normal;font-family:var(--font-sans)}
+.puzzle.done .exp{display:block}
+.puzzle .exp .verdict{font-weight:700}
+
+/* ---------- 分布图 ---------- */
+.tick{stroke:#94a3b8;stroke-width:1.4}
+.tick.dn{stroke:var(--exp)}
+.tick.nm{stroke:var(--frac)}
+.ticklabel{font-size:9.5px;fill:var(--muted);font-family:var(--font-mono)}
+.axisline{stroke:var(--line);stroke-width:1.2}
+.axislabel{font-size:11px;fill:var(--muted)}
+
+/* ---------- 页脚 / 回到顶部 ---------- */
+.footer{max-width:var(--page-max);margin:0 auto;padding:8px 22px 40px;color:var(--muted);font-size:13px}
+.totop{position:fixed;right:22px;bottom:22px;z-index:40;box-shadow:var(--shadow);display:none}
+
+/* ---------- 响应式 ---------- */
+@media(max-width:960px){
+  .layout{grid-template-columns:1fr;padding:16px}
+  nav.toc{position:static;max-height:none;display:flex;flex-wrap:wrap;gap:6px;
+    background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:10px}
+  nav.toc h4{width:100%;margin-bottom:2px}
+  nav.toc a{border-left:0;padding:5px 10px;font-size:13px}
+  nav.toc .sub{display:none}
+  section{padding:20px 17px}
+}
+@media print{
+  nav.toc,.topbar,.totop{display:none}
+  .layout{display:block}
+  section{break-inside:avoid;box-shadow:none}
+}
+
+/* ---------- 风格切换条（各主题通用） ---------- */
+.stylebar{max-width:var(--page-max);margin:0 auto;padding:14px 22px 0;display:flex;gap:8px;
+  flex-wrap:wrap;align-items:center;font-size:12.5px;color:var(--muted)}
+.stylebar>span{font-weight:600}
+.stylebar a{text-decoration:none;padding:4px 11px;border:1px solid var(--line);border-radius:var(--radius-pill);
+  color:var(--muted);background:var(--card);font-weight:600}
+.stylebar a:hover{border-color:var(--accent);color:var(--accent)}
+.stylebar a.cur{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+@media(max-width:960px){.stylebar{padding:12px 16px 0}}
+
+</style>
+</head>
+<body>
+
+<div class="topbar"><div class="topbar-in">
+  <div class="brand">机器级编程 I：基础 Machine-Level Programming I<small>《课程名》第 N 讲 · 中文交互版</small></div>
+  <div class="progress"><span id="pgText">学习进度 0%</span><span class="bar"><i id="pgBar"></i></span></div>
+</div></div>
+<div class="stylebar">
+  <span>课件：</span>
+  <a href="ics04-zh.html" class="cur" onclick="return false">第 4 讲 · 机器级编程基础（当前）</a>
+  <a href="datalab-zh.html">Data Lab 实验</a>
+  <a href="bits-bytes-ints-zh.html">第 2 讲 · 位、字节与整数</a>
+  <a href="floating-point-zh.html">第 3 讲 · 浮点数</a>
+  <a href="variants-ics04/index.html">◧ 本讲风格预览</a>
+</div>
+<div class="layout">
+  <nav class="toc">
+    <h4>目录</h4>
+    <a href="#s0"><span class="n">0</span>课程导览</a>
+    <a href="#s1"><span class="n">1</span>Intel x86 的演进</a>
+    <a href="#s2"><span class="n">2</span>程序员可见状态与流水线</a>
+    <a href="#s3"><span class="n">3</span>机器码与反汇编</a>
+    <a href="#s4"><span class="n">4</span>寄存器与操作数</a>
+    <a href="#s5"><span class="n">5</span>内存寻址模式</a>
+    <a href="#s6"><span class="n">6</span>算术与逻辑运算</a>
+    <a href="#s7"><span class="n">7</span>算术表达式追踪</a>
+    <a href="#s8"><span class="n">8</span>总结与测验</a>
+  </nav>
+
+  <main>
+<!-- ================= 0 ================= -->
+  <section id="s0">
+    <h2>课程导览<span class="srcref">原第 1–2、10、12 页</span></h2>
+    <p class="lede">北京大学《计算机系统导论》第 4 讲：机器级编程 I —— 基础。从这一讲开始往下走一层，看看 C 代码在机器里到底变成了什么。</p>
+
+    <div class="grid g3">
+      <div class="card"><h5>本讲提纲</h5>
+        <ol style="margin:0;padding-left:20px;font-size:14.5px">
+          <li>Intel 处理器与体系结构的历史</li>
+          <li>C、汇编、机器码</li>
+          <li>汇编基础：寄存器、操作数、mov</li>
+          <li>算术与逻辑运算</li>
+        </ol>
+      </div>
+      <div class="card"><h5>一句话核心</h5>
+        <p style="margin:0;font-size:14.5px">编译器把 C 的语句、表达式、过程<b>翻译成一串很底层的指令</b>。理解这层翻译，你才能解释性能、写出正确的底层代码、看得懂反汇编。</p>
+      </div>
+      <div class="card"><h5>本讲只讲 x86-64</h5>
+        <p style="margin:0;font-size:14.5px">IA32 是传统 x86，本课程不再覆盖。默认编译就是 64 位：<code>gcc hello.c</code> 等价于 <code>gcc -m64 hello.c</code>。</p>
+      </div>
+    </div>
+
+    <h3>0.1 先分清四个词</h3>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>术语</th><th>含义</th><th>例子</th></tr>
+      <tr><td><b>体系结构</b> Architecture / ISA</td><td>写正确的机器码或汇编代码时<b>必须理解</b>的那部分处理器设计</td><td>指令集规范、寄存器</td></tr>
+      <tr><td><b>微体系结构</b> Microarchitecture</td><td>体系结构的<b>具体实现</b></td><td>缓存大小、核心频率</td></tr>
+      <tr><td><b>机器码</b> Machine Code</td><td>处理器真正执行的<b>字节级</b>程序</td><td class="mono">48 89 03</td></tr>
+      <tr><td><b>汇编代码</b> Assembly Code</td><td>机器码的<b>文本表示</b></td><td class="mono">movq %rax, (%rbx)</td></tr>
+    </table></div>
+    <p style="font-size:14.5px;color:var(--muted)">常见的 ISA：Intel 的 x86 / IA32 / Itanium / x86-64；ARM（几乎所有手机都用它）；RISC-V（新的开源 ISA）。</p>
+
+    <div class="box"><div class="t">本页使用说明</div>
+      标有 <span class="chip gray">可交互</span> 的地方都能点击或输入，所有计算都在浏览器里实时完成。其中<a href="#s5">第 5 节的 swap 分步模拟器</a>把课件里连续 5 页的动画做成了可单步执行的工具。
+    </div>
+  </section>
+
+  <!-- ================= 1 ================= -->
+  <section id="s1">
+    <h2>1. Intel x86 的演进<span class="srcref">原第 3–9 页</span></h2>
+    <p class="lede">x86 统治了笔记本、台式机与服务器市场。它的设计是<b>演化</b>出来的，不是重新设计出来的 —— 这解释了很多「古怪」之处。</p>
+
+    <h3>1.1 演化式设计带来的特点</h3>
+    <ul>
+      <li><b>向后兼容</b>到 1978 年的 8086：新处理器必须能跑旧代码。</li>
+      <li>功能不断累加，如今手册已有 <b>3 卷、约 5000 页</b>。</li>
+      <li>属于 <b>CISC</b>（复杂指令集计算机）：指令多、格式杂。</li>
+      <li>但 Linux 程序实际只会遇到其中<b>很小的一个子集</b>。</li>
+      <li>按 RISC 路线做本来很难达到同等性能 —— 但 Intel 做到了（速度上；低功耗方面则未必）。</li>
+    </ul>
+
+    <h3>1.2 里程碑</h3>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>型号</th><th>年份</th><th>晶体管</th><th>频率 (MHz)</th><th>意义</th></tr>
+      <tr><td class="mono">8086</td><td class="mono">1978</td><td class="mono">29K</td><td class="mono">5–10</td><td>首个 16 位 Intel 处理器；IBM PC 与 DOS 的基础；1 MB 地址空间</td></tr>
+      <tr><td class="mono">386</td><td class="mono">1985</td><td class="mono">275K</td><td class="mono">16–33</td><td>首个 32 位 Intel 处理器（IA32）；引入平坦寻址，能跑 Unix</td></tr>
+      <tr><td class="mono">Pentium 4E</td><td class="mono">2004</td><td class="mono">125M</td><td class="mono">2800–3800</td><td>首个 64 位 x86 处理器（x86-64）</td></tr>
+      <tr><td class="mono">Core 2</td><td class="mono">2006</td><td class="mono">291M</td><td class="mono">1060–3333</td><td>首个多核 Intel 处理器</td></tr>
+      <tr><td class="mono">Core i7</td><td class="mono">2008</td><td class="mono">731M</td><td class="mono">1600–4400</td><td>四核</td></tr>
+    </table></div>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：晶体管的增长与制程的缩小</span>
+        <div class="seg" id="evoMode">
+          <button class="on" data-m="tr">晶体管数量</button>
+          <button data-m="nm">制程 (nm)</button>
+        </div>
+      </div>
+      <div id="evoOut"></div>
+      <p style="font-size:13.5px;color:var(--muted);margin:8px 0 0">
+        制程尺寸 = 最细导线的宽度；10 nm 大约相当于 <b>100 个原子宽</b>。
+      </p>
+    </div>
+
+    <h3>1.3 64 位的往事：为什么标准是 AMD 定的</h3>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>时间</th><th>事件</th></tr>
+      <tr><td class="mono">2001</td><td>Intel 尝试激进转向 <b>IA64</b>（Itanium）：全新架构，只能以遗留方式跑 IA32 代码，性能令人失望</td></tr>
+      <tr><td class="mono">2003</td><td><b>AMD 给出演化式方案</b>：x86-64（后来被称为 AMD64）</td></tr>
+      <tr><td class="mono">—</td><td>Intel 碍于面子继续押注 IA64（承认错误、或承认 AMD 更好，都很难）</td></tr>
+      <tr><td class="mono">2004</td><td>Intel 宣布 <b>EM64T</b>（Extended Memory 64-bit Technology）扩展 —— 与 x86-64 <b>几乎一模一样</b></td></tr>
+    </table></div>
+    <div class="box warn"><div class="t">关于 AMD 的补充</div>
+      历史上 AMD 一直跟在 Intel 后面：稍慢一点、便宜很多。后来它从 DEC 等公司挖来顶尖电路设计师，做出 Opteron 与 x86-64，一度反超；再后来 Intel 缓过神来，1995–2011 年一直是全球第一半导体厂，2018 年掉到第二（第一是三星），2019 年又夺回第一。AMD 一度落后、依赖外部代工（GlobalFoundries），到 2019 年前后的 Ryzen 才重新有竞争力。
+    </div>
+  </section>
+
+  <!-- ================= 2 ================= -->
+  <section id="s2">
+    <h2>2. 程序员可见状态与编译流水线<span class="srcref">原第 13–17 页</span></h2>
+    <p class="lede">写机器级代码时，你脑子里要有一台「简化版的机器」：它只有 PC、寄存器、条件码和内存。</p>
+
+    <h3>2.1 程序员可见状态</h3>
+    <div class="grid g2">
+      <div class="card"><h5>CPU 侧</h5>
+        <ul style="margin:0">
+          <li><b>PC（程序计数器）</b>：下一条指令的地址。x86-64 里叫 <code>%rip</code>。</li>
+          <li><b>寄存器堆</b>：被频繁使用的程序数据。</li>
+          <li><b>条件码</b>：保存最近一次算术或逻辑运算的状态信息，用于条件分支。</li>
+        </ul>
+      </div>
+      <div class="card"><h5>内存侧</h5>
+        <ul style="margin:0">
+          <li><b>按字节寻址</b>的数组。</li>
+          <li>存放<b>代码与用户数据</b>。</li>
+          <li>还有一块<b>栈</b>，用来支持过程调用。</li>
+        </ul>
+      </div>
+    </div>
+
+    <h3>2.2 从 C 到可执行文件</h3>
+    <div class="mono" style="font-size:14px;line-height:1.9;background:var(--code-bg);border:1px solid var(--code-bd);border-radius:8px;padding:12px 15px">
+      C 程序 &nbsp;p1.c p2.c<br>
+      &nbsp;&nbsp;↓ <b>编译器</b> gcc -Og -S<br>
+      汇编程序 &nbsp;p1.s p2.s<br>
+      &nbsp;&nbsp;↓ <b>汇编器</b> gcc / as<br>
+      目标程序 &nbsp;p1.o p2.o &nbsp;（+ 静态库 .a）<br>
+      &nbsp;&nbsp;↓ <b>链接器</b> gcc / ld<br>
+      可执行程序 &nbsp;p
+    </div>
+    <p><b>编译命令：</b><code>gcc -Og p1.c p2.c -o p</code> —— <code>-Og</code> 表示使用「基本优化」（较新版本 GCC 新增的选项），<code>-o p</code> 指定输出文件名。</p>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：编译流水线（点每一步，看它做什么、产出什么）</span>
+      </div>
+      <div id="pipeOut"></div>
+    </div>
+
+    <h3>2.3 一个完整的例子：sum.c</h3>
+    <div class="grid g2">
+      <div class="card"><h5>C 代码</h5>
+        <div class="mono" style="font-size:13.5px;line-height:1.8">
+          long plus(long x, long y);<br><br>
+          void sumstore(long x, long y,<br>
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;long *dest)<br>
+          {<br>
+          &nbsp;&nbsp;&nbsp;&nbsp;long t = plus(x, y);<br>
+          &nbsp;&nbsp;&nbsp;&nbsp;*dest = t;<br>
+          }
+        </div>
+      </div>
+      <div class="card"><h5>编译器生成的 x86-64 汇编</h5>
+        <div class="mono" style="font-size:13.5px;line-height:1.8">
+          sumstore:<br>
+          &nbsp;&nbsp;&nbsp;&nbsp;pushq &nbsp;%rbx<br>
+          &nbsp;&nbsp;&nbsp;&nbsp;movq &nbsp;&nbsp;%rdx, %rbx<br>
+          &nbsp;&nbsp;&nbsp;&nbsp;call &nbsp;&nbsp;&nbsp;plus<br>
+          &nbsp;&nbsp;&nbsp;&nbsp;movq &nbsp;&nbsp;%rax, (%rbx)<br>
+          &nbsp;&nbsp;&nbsp;&nbsp;popq &nbsp;&nbsp;%rbx<br>
+          &nbsp;&nbsp;&nbsp;&nbsp;ret
+        </div>
+      </div>
+    </div>
+    <p>用 <code>gcc -Og -S sum.c</code> 得到文件 <code>sum.s</code>。</p>
+    <div class="box warn"><div class="t">警告：不要照抄书上的汇编</div>
+      不同的 gcc 版本、不同的编译器设置会生成<b>很不一样</b>的结果（Andrew Linux、Mac OS-X 都不同）。必须在你自己的机器上重新生成。
+    </div>
+
+    <h3>2.4 真实 .s 文件长什么样</h3>
+    <p>实际上编译器输出的 <code>.s</code> 里还会有一堆<b>伪指令</b>（directives）：</p>
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：三种视图对照（切换标签，点行查看说明）</span>
+        <div class="seg" id="sumView">
+          <button class="on" data-v="asm">编译器输出</button>
+          <button data-v="real">真实 .s（含伪指令）</button>
+          <button data-v="obj">反汇编</button>
+        </div>
+      </div>
+      <div id="sumOut"></div>
+    </div>
+    <p style="font-size:14.5px;color:var(--muted)"><b>识别窍门：</b>凡是<b>以 <code>.</code> 开头</b>、并且写作 <code>.type name, @function</code> 这种形式的，都是<b>伪指令</b> —— 它们不是机器指令，是给汇编器与链接器看的说明。</p>
+  </section>
+
+  <!-- ================= 3 ================= -->
+  <section id="s3">
+    <h2>3. 机器码与反汇编<span class="srcref">原第 18–24 页</span></h2>
+    <p class="lede">汇编是给人看的文本，机器码才是处理器执行的字节。两者一一对应 —— 这正是反汇编能工作的原因。</p>
+
+    <h3>3.1 汇编的特征</h3>
+    <div class="grid g2">
+      <div class="card"><h5>数据类型</h5>
+        <ul style="margin:0">
+          <li>「整数」数据：<b>1、2、4、8 字节</b> —— 既可表示数据值，也可表示地址（无类型指针）。</li>
+          <li>浮点数据 4、8、10 字节；SIMD 向量数据 8、16、32、64 字节。</li>
+          <li>代码：编码了一串指令的字节序列。</li>
+          <li><b>没有数组、结构体这类聚合类型</b> —— 内存里只是连续分配的字节。</li>
+        </ul>
+      </div>
+      <div class="card"><h5>操作</h5>
+        <ul style="margin:0">
+          <li><b>在内存与寄存器之间传送数据</b>：从内存 load 到寄存器、把寄存器 store 到内存。</li>
+          <li>对寄存器或内存数据做<b>算术</b>运算。</li>
+          <li><b>控制转移</b>：过程的无条件跳转、条件分支、间接跳转。</li>
+        </ul>
+      </div>
+    </div>
+
+    <h3>3.2 目标代码：sumstore 的 14 个字节</h3>
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：机器码字节查看器（点字节或点指令）</span>
+      </div>
+      <div id="objOut"></div>
+    </div>
+    <div class="grid g2" style="margin-top:12px">
+      <div class="card"><h5>汇编器 assembler</h5>
+        <ul style="margin:0">
+          <li>把 <code>.s</code> 翻译成 <code>.o</code>；</li>
+          <li>给出每条指令的<b>二进制编码</b>；</li>
+          <li>是近乎完整的可执行代码映像；</li>
+          <li>但<b>缺少不同文件之间的链接信息</b>。</li>
+        </ul>
+      </div>
+      <div class="card"><h5>链接器 linker</h5>
+        <ul style="margin:0">
+          <li>解析文件之间的引用；</li>
+          <li>与静态运行库合并（如 <code>malloc</code>、<code>printf</code> 的代码）；</li>
+          <li>有些库是<b>动态链接</b>的；</li>
+          <li>链接发生在<b>程序开始执行时</b>（动态链接）。</li>
+        </ul>
+      </div>
+    </div>
+
+    <h3>3.3 一条指令的三个层次</h3>
+    <p>以 <code>*dest = t;</code> 为例：</p>
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：C ↔ 汇编 ↔ 机器码对照</span>
+      </div>
+      <div id="threeOut"></div>
+    </div>
+
+    <h3>3.4 反汇编 Disassembly</h3>
+    <p>反汇编器分析指令的位模式，还原出近似的汇编代码。用 <code>objdump –d sum</code>（可对 <code>a.out</code> 完整可执行文件或 <code>.o</code> 文件运行）：</p>
+    <div class="mono" style="font-size:13px;line-height:1.8;background:var(--code-bg);border:1px solid var(--code-bd);border-radius:8px;padding:12px 15px;overflow-x:auto">
+      0000000000400595 &lt;sumstore&gt;:<br>
+      &nbsp;&nbsp;400595: &nbsp;53 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;push &nbsp;&nbsp;%rbx<br>
+      &nbsp;&nbsp;400596: &nbsp;48 89 d3 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;mov &nbsp;&nbsp;&nbsp;%rdx,%rbx<br>
+      &nbsp;&nbsp;400599: &nbsp;e8 f2 ff ff ff &nbsp;callq &nbsp;400590 &lt;plus&gt;<br>
+      &nbsp;&nbsp;40059e: &nbsp;48 89 03 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;mov &nbsp;&nbsp;&nbsp;%rax,(%rbx)<br>
+      &nbsp;&nbsp;4005a1: &nbsp;5b &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;pop &nbsp;&nbsp;&nbsp;%rbx<br>
+      &nbsp;&nbsp;4005a2: &nbsp;c3 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;retq
+    </div>
+    <p><b>gdb 里也可以：</b><code>disassemble sumstore</code> 反汇编该过程；<code>x/14xb sumstore</code> 查看从 sumstore 开始的 14 个字节。</p>
+    <div class="box"><div class="t">什么都能被反汇编</div>
+      「任何能被解释为可执行代码的东西」都可以被反汇编 —— 反汇编器检查字节并重建汇编源码。课件里演示了对 <code>WINWORD.EXE</code> 的 objdump：即使<b>没有符号表</b>也能反汇编出 <code>.text</code> 段。当然，微软的最终用户许可协议禁止这样逆向工程。
+    </div>
+  </section>
+
+  <!-- ================= 4 ================= -->
+  <section id="s4">
+    <h2>4. 寄存器与操作数<span class="srcref">原第 26–29 页</span></h2>
+    <p class="lede">x86-64 有 16 个整数寄存器。mov 是使用最频繁的指令，它的操作数有三种类型。</p>
+
+    <h3>4.1 16 个整数寄存器</h3>
+    <p>每个寄存器都能用 64 / 32 / 16 / 8 位四个名字来引用 —— 这是从 16 位时代一路兼容下来的结果：</p>
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：寄存器查看器（点一个寄存器，看它的四层名字与用途）</span>
+      </div>
+      <div id="regOut"></div>
+    </div>
+
+    <h3>4.2 寄存器名字的来历</h3>
+    <p>这些名字来自它们在 IA32 时代的用途（现在大多已过时）：</p>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th class="mono">64 位</th><th class="mono">32 位</th><th class="mono">16 位</th><th class="mono">高/低 8 位</th><th>原意</th></tr>
+      <tr><td class="mono">%rax</td><td class="mono">%eax</td><td class="mono">%ax</td><td class="mono">%ah / %al</td><td>accumulate（累加器）</td></tr>
+      <tr><td class="mono">%rcx</td><td class="mono">%ecx</td><td class="mono">%cx</td><td class="mono">%ch / %cl</td><td>counter（计数器）</td></tr>
+      <tr><td class="mono">%rdx</td><td class="mono">%edx</td><td class="mono">%dx</td><td class="mono">%dh / %dl</td><td>data（数据）</td></tr>
+      <tr><td class="mono">%rbx</td><td class="mono">%ebx</td><td class="mono">%bx</td><td class="mono">%bh / %bl</td><td>base（基址）</td></tr>
+      <tr><td class="mono">%rsi</td><td class="mono">%esi</td><td class="mono">%si</td><td class="mono">—</td><td>source index（源变址）</td></tr>
+      <tr><td class="mono">%rdi</td><td class="mono">%edi</td><td class="mono">%di</td><td class="mono">—</td><td>destination index（目的变址）</td></tr>
+      <tr><td class="mono">%rsp</td><td class="mono">%esp</td><td class="mono">%sp</td><td class="mono">—</td><td>stack pointer（栈指针）</td></tr>
+      <tr><td class="mono">%rbp</td><td class="mono">%ebp</td><td class="mono">%bp</td><td class="mono">—</td><td>base pointer（基址指针）</td></tr>
+      <tr><td class="mono">%r8–%r15</td><td class="mono">%r8d–%r15d</td><td class="mono">%r8w–%r15w</td><td class="mono">%r8b–%r15b</td><td>64 位新增，没有历史包袱</td></tr>
+    </table></div>
+    <p style="font-size:14.5px;color:var(--muted)">可以只引用低 4 字节（也能只引用低 1、2 字节）。注意 <code>%r8</code>–<code>%r15</code> 的 32 位形式是加 <code>d</code> 后缀（<code>%r8d</code>），不是 <code>%e8</code>。</p>
+
+    <h3>4.3 mov：三种操作数</h3>
+    <div class="formula">movq &nbsp;Source, Dest &nbsp;&nbsp;<span style="font-size:.72em;color:var(--muted)">（AT&amp;T 语法：源在前、目的在后）</span></div>
+    <div class="grid g3">
+      <div class="card"><h5>① 立即数 Immediate</h5>
+        <p style="margin:0;font-size:14px">常量整数，写作 <code>$0x400</code>、<code>$-533</code> —— 像 C 常量，但要加前缀 <code>$</code>；编码用 1、2 或 4 字节。</p>
+      </div>
+      <div class="card"><h5>② 寄存器 Register</h5>
+        <p style="margin:0;font-size:14px">16 个整数寄存器之一，如 <code>%rax</code>、<code>%r13</code>。<b>但 <code>%rsp</code> 被保留作特殊用途</b>；其它寄存器在某些指令里也有专门用途。</p>
+      </div>
+      <div class="card"><h5>③ 内存 Memory</h5>
+        <p style="margin:0;font-size:14px">由寄存器给出地址的<b>连续 8 字节</b>内存，最简单的写法是 <code>(%rax)</code>。还有各种其它「寻址模式」。</p>
+      </div>
+    </div>
+    <div class="box warn"><div class="t">最容易踩的坑：参数顺序</div>
+      AT&amp;T 语法是 <code>movq Source, Dest</code>，而 <b>Intel 官方文档写的是 <code>mov Dest, Source</code></b> —— 顺序正好相反。我们全程使用 AT&amp;T 语法。
+    </div>
+
+    <h3>4.4 哪些 mov 组合是合法的</h3>
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：选源与目的类型，看是否合法、对应哪句 C</span>
+        <div class="seg" id="movSrc">
+          <button class="on" data-s="imm">立即数</button>
+          <button data-s="reg">寄存器</button>
+          <button data-s="mem">内存</button>
+        </div>
+        <span style="color:var(--muted)">→</span>
+        <div class="seg" id="movDst">
+          <button class="on" data-d="reg">寄存器</button>
+          <button data-d="mem">内存</button>
+        </div>
+      </div>
+      <div id="movOut"></div>
+    </div>
+  </section>
+
+  <!-- ================= 5 ================= -->
+  <section id="s5">
+    <h2>5. 内存寻址模式<span class="srcref">原第 30–40 页</span></h2>
+    <p class="lede">内存操作数怎么写，是这一讲最实用的部分 —— C 里的数组、指针、结构体访问，全都落在这几种寻址模式上。</p>
+
+    <h3>5.1 两种最简单的形式</h3>
+    <div class="grid g2">
+      <div class="card"><h5>Normal &nbsp;<code>(R)</code></h5>
+        <p style="margin:6px 0" class="mono">Mem[Reg[R]]</p>
+        <ul style="margin:0">
+          <li>寄存器 R 直接给出内存地址；</li>
+          <li>这就是 C 里的<b>指针解引用</b>。</li>
+          <li class="mono">movq (%rcx),%rax</li>
+        </ul>
+      </div>
+      <div class="card"><h5>Displacement &nbsp;<code>D(R)</code></h5>
+        <p style="margin:6px 0" class="mono">Mem[Reg[R] + D]</p>
+        <ul style="margin:0">
+          <li>寄存器 R 给出内存区域的起点；</li>
+          <li>常量偏移 D 给出位移。</li>
+          <li class="mono">movq 8(%rbp),%rdx</li>
+        </ul>
+      </div>
+    </div>
+
+    <h3>5.2 完整形式 D(Rb, Ri, S)</h3>
+    <div class="formula big">D(Rb, Ri, S) &nbsp;=&nbsp; Mem[Reg[Rb] + S × Reg[Ri] + D]</div>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>字段</th><th>取值</th><th>说明</th></tr>
+      <tr><td class="mono">D</td><td>常量位移，1 / 2 / 4 字节</td><td>displacement</td></tr>
+      <tr><td class="mono">Rb</td><td>基址寄存器：16 个整数寄存器中任意一个</td><td>base</td></tr>
+      <tr><td class="mono">Ri</td><td>变址寄存器：任意一个，<b>但不能是 %rsp</b></td><td>index</td></tr>
+      <tr><td class="mono">S</td><td>比例因子：<b>1 / 2 / 4 / 8</b></td><td>scale</td></tr>
+    </table></div>
+    <div class="box"><div class="t">为什么 S 只能是 1、2、4、8？</div>
+      因为数据类型的宽度就是 1、2、4、8 字节 —— 这个比例因子正是为了访问「数组元素」而设计的：<code>D(Rb, Ri, S)</code> 恰好对应 <code>*(base + index * sizeof(elem) + offset)</code>。
+    </div>
+    <p><b>几个特例（其它字段可以省略）：</b></p>
+    <div class="mono" style="font-size:14px;line-height:1.9">
+      (Rb,Ri) &nbsp;&nbsp;&nbsp;→ Mem[Reg[Rb]+Reg[Ri]]<br>
+      D(Rb,Ri) &nbsp;→ Mem[Reg[Rb]+Reg[Ri]+D]<br>
+      (Rb,Ri,S) → Mem[Reg[Rb]+S*Reg[Ri]]
+    </div>
+
+    <h3>5.3 交互：地址计算器</h3>
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">输入表达式与寄存器值，看地址是怎么算出来的</span>
+        <label class="fld">表达式 <input type="text" id="addrIn" value="0x80(,%rdx,2)" size="18" spellcheck="false" style="min-width:150px"></label>
+        <label class="fld">%rdx <input type="text" id="addrRdx" value="0xf000" size="8" spellcheck="false"></label>
+        <label class="fld">%rcx <input type="text" id="addrRcx" value="0x0100" size="8" spellcheck="false"></label>
+        <button class="p" id="addrGo">计算</button>
+      </div>
+      <div class="ctrls">
+        <span style="font-size:13.5px;color:var(--muted)">课件原例：</span>
+        <button class="sm" data-addr="0x8(%rdx)">0x8(%rdx)</button>
+        <button class="sm" data-addr="(%rdx,%rcx)">(%rdx,%rcx)</button>
+        <button class="sm" data-addr="(%rdx,%rcx,4)">(%rdx,%rcx,4)</button>
+        <button class="sm" data-addr="0x80(,%rdx,2)">0x80(,%rdx,2)</button>
+      </div>
+      <div id="addrOut"></div>
+    </div>
+
+    <h3>5.4 交互：swap 逐步执行</h3>
+    <p>课件用连续 5 页演示了 <code>swap</code> 的每一步怎么改内存和寄存器。下面把它做成可单步执行的模拟器：</p>
+    <div class="mono" style="font-size:13.5px;line-height:1.8;background:var(--code-bg);border:1px solid var(--code-bd);border-radius:8px;padding:12px 15px;overflow-x:auto">
+      void swap(long *xp, long *yp) {<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;long t0 = *xp;&nbsp;&nbsp;<span style="color:var(--muted)"># movq (%rdi), %rax</span><br>
+      &nbsp;&nbsp;&nbsp;&nbsp;long t1 = *yp;&nbsp;&nbsp;<span style="color:var(--muted)"># movq (%rsi), %rdx</span><br>
+      &nbsp;&nbsp;&nbsp;&nbsp;*xp = t1;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:var(--muted)"># movq %rdx, (%rdi)</span><br>
+      &nbsp;&nbsp;&nbsp;&nbsp;*yp = t0;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:var(--muted)"># movq %rax, (%rsi)</span><br>
+      }
+    </div>
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：单步执行（寄存器 %rdi = xp，%rsi = yp）</span>
+        <button class="p" id="swapStep">执行下一条</button>
+        <button class="sm" id="swapRun">全部执行</button>
+        <button class="sm" id="swapReset">重置</button>
+      </div>
+      <div id="swapOut"></div>
+    </div>
+    <div class="box"><div class="t">这个例子真正想说明什么</div>
+      函数参数 <code>xp</code>、<code>yp</code> 是<b>指针</b>（地址），分别放在 <code>%rdi</code>、<code>%rsi</code> 里；
+      <code>(%rdi)</code> 这种写法就是「去那个地址取值」。所以 4 条 mov 恰好完成了 C 的四行赋值 —— 没有任何一行是多余的。
+    </div>
+  </section>
+
+  <!-- ================= 6 ================= -->
+  <section id="s6">
+    <h2>6. 算术与逻辑运算<span class="srcref">原第 42–44 页</span></h2>
+    <p class="lede">只有两类算术指令：带两个操作数的，和带一个操作数的。</p>
+
+    <h3>6.1 leaq：地址计算指令</h3>
+    <div class="formula">leaq &nbsp;Src, Dst &nbsp;&nbsp;<span style="font-size:.72em;color:var(--muted)">把 Src 的<b>地址</b>写进 Dst（Src 是寻址模式表达式）</span></div>
+    <p><b>两个用途：</b></p>
+    <ol>
+      <li><b>计算地址而不用访问内存</b> —— 例如 <code>p = &amp;x[i];</code> 的翻译。</li>
+      <li><b>计算形如 <code>x + k*y</code> 的算术表达式</b>，其中 k ∈ {1, 2, 4, 8}。它不访问内存，所以常被编译器当「廉价的三操作数加法」用。</li>
+    </ol>
+    <div class="box"><div class="t">课件例子：乘以 12</div>
+      <div class="mono" style="font-size:13.5px;line-height:1.9">
+        long m12(long x) { return x*12; }<br><br>
+        leaq (%rdi,%rdi,2), %rax &nbsp;<span style="color:var(--muted)"># t ← x + x*2 = 3x</span><br>
+        salq $2, %rax &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:var(--muted)"># return t &lt;&lt; 2 = 12x</span>
+      </div>
+      <p style="margin:8px 0 0;font-size:14px;color:var(--muted)">编译器用「一次 leaq + 一次左移」代替了乘法 —— 因为这两条指令比 imul 更快。</p>
+    </div>
+
+    <h3>6.2 二元指令（两个操作数）</h3>
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：点一条指令，看它的语义与例子</span>
+      </div>
+      <div id="arithOut"></div>
+    </div>
+    <div class="box warn"><div class="t">两个必须记住的点</div>
+      <ul style="margin:4px 0 0">
+        <li><b>注意参数顺序！</b><code>subq Src, Dest</code> 计算的是 <code>Dest = Dest − Src</code>（Intel 文档写成 <code>op Dest, Src</code>，顺序相反）。</li>
+        <li><b>有符号与无符号没有区分</b> —— 想一想为什么？（因为两者的位级运算完全相同，区别只在解释方式；需要区分时看条件码。）</li>
+      </ul>
+    </div>
+
+    <h3>6.3 一元指令</h3>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th class="mono">指令</th><th class="mono">计算</th><th>说明</th></tr>
+      <tr><td class="mono">incq Dest</td><td class="mono">Dest = Dest + 1</td><td>自增</td></tr>
+      <tr><td class="mono">decq Dest</td><td class="mono">Dest = Dest − 1</td><td>自减</td></tr>
+      <tr><td class="mono">negq Dest</td><td class="mono">Dest = −Dest</td><td>取负</td></tr>
+      <tr><td class="mono">notq Dest</td><td class="mono">Dest = ~Dest</td><td>按位取反</td></tr>
+    </table></div>
+    <p style="font-size:14.5px;color:var(--muted)">更多指令见教材。</p>
+
+    <h3>6.4 交互：指令模拟器</h3>
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">选一条指令并给出操作数，看寄存器与内存怎么变</span>
+        <label class="fld">指令
+          <select id="simOp">
+            <option value="movq">movq</option>
+            <option value="addq">addq</option>
+            <option value="subq">subq</option>
+            <option value="imulq">imulq</option>
+            <option value="salq">salq</option>
+            <option value="sarq">sarq</option>
+            <option value="shrq">shrq</option>
+            <option value="xorq">xorq</option>
+            <option value="andq">andq</option>
+            <option value="orq">orq</option>
+          </select>
+        </label>
+        <label class="fld">Src <input type="text" id="simSrc" value="$0x10" size="10" spellcheck="false"></label>
+        <label class="fld">Dest <input type="text" id="simDst" value="%rax" size="10" spellcheck="false"></label>
+        <button class="p" id="simGo">执行</button>
+      </div>
+      <div class="ctrls">
+        <span style="font-size:13.5px;color:var(--muted)">例子：</span>
+        <button class="sm" data-sim="movq|$0x4|%rax">movq $0x4,%rax</button>
+        <button class="sm" data-sim="addq|%rdx|%rax">addq %rdx,%rax</button>
+        <button class="sm" data-sim="salq|$4|%rdx">salq $4,%rdx</button>
+        <button class="sm" data-sim="movq|%rax|(%rdx)">movq %rax,(%rdx)</button>
+        <button class="sm" data-sim="movq|(%rax)|%rdx">movq (%rax),%rdx</button>
+      </div>
+      <div id="simOut"></div>
+    </div>
+  </section>
+
+  <!-- ================= 7 ================= -->
+  <section id="s7">
+    <h2>7. 实战：追踪一个算术表达式<span class="srcref">原第 45–46 页</span></h2>
+    <p class="lede">把 C 的 6 行语句和 6 条汇编指令一行行对上，是这一讲最值得反复看的一页。</p>
+
+    <h3>7.1 C 代码与汇编对照</h3>
+    <div class="grid g2">
+      <div class="card"><h5>C 代码</h5>
+        <div class="mono" style="font-size:13px;line-height:1.85">
+          long arith(long x, long y, long z)<br>
+          {<br>
+          &nbsp;&nbsp;long t1 = x + y;<br>
+          &nbsp;&nbsp;long t2 = z + t1;<br>
+          &nbsp;&nbsp;long t3 = x + 4;<br>
+          &nbsp;&nbsp;long t4 = y * 48;<br>
+          &nbsp;&nbsp;long t5 = t3 + t4;<br>
+          &nbsp;&nbsp;long rval = t2 * t5;<br>
+          &nbsp;&nbsp;return rval;<br>
+          }
+        </div>
+      </div>
+      <div class="card"><h5>生成的汇编</h5>
+        <div class="mono" style="font-size:13px;line-height:1.85">
+          arith:<br>
+          &nbsp;&nbsp;leaq &nbsp;(%rdi,%rsi), %rax &nbsp;<span style="color:var(--muted)"># t1</span><br>
+          &nbsp;&nbsp;addq &nbsp;%rdx, %rax &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:var(--muted)"># t2</span><br>
+          &nbsp;&nbsp;leaq &nbsp;(%rsi,%rsi,2), %rdx <span style="color:var(--muted)"># 3y</span><br>
+          &nbsp;&nbsp;salq &nbsp;$4, %rdx &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:var(--muted)"># t4</span><br>
+          &nbsp;&nbsp;leaq &nbsp;4(%rdi,%rdx), %rcx &nbsp;<span style="color:var(--muted)"># t5</span><br>
+          &nbsp;&nbsp;imulq %rcx, %rax &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:var(--muted)"># rval</span><br>
+          &nbsp;&nbsp;ret
+        </div>
+      </div>
+    </div>
+    <div class="box"><div class="t">三个值得注意的地方</div>
+      <ul style="margin:4px 0 0">
+        <li><code>t3 = x + 4</code> 和 <code>t5 = t3 + t4</code> <b>没有单独的指令</b> —— 它们被合并进了 <code>leaq 4(%rdi,%rdx), %rcx</code>：地址计算顺便完成了加法。</li>
+        <li><code>t4 = y * 48</code> 被拆成 <code>leaq (%rsi,%rsi,2)</code>（得 3y）加 <code>salq $4</code>（乘 16，3y × 16 = 48y）。</li>
+        <li>整段代码里 <code>imulq</code> <b>只出现一次</b>，而且只在最后算 rval 时用。</li>
+      </ul>
+    </div>
+
+    <h3>7.2 交互：逐行追踪（自己填 x、y、z）</h3>
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <label class="fld">x = <input type="number" id="arX" value="3" style="width:80px"></label>
+        <label class="fld">y = <input type="number" id="arY" value="5" style="width:80px"></label>
+        <label class="fld">z = <input type="number" id="arZ" value="7" style="width:80px"></label>
+        <button class="p" id="arGo">追踪</button>
+      </div>
+      <div id="arOut"></div>
+    </div>
+    <p style="font-size:14.5px;color:var(--muted)">追踪表会同时给出「C 层面的表达式值」和「对应寄存器里的值」—— 两者应当一致，这就是「编译器翻译正确」的含义。</p>
+  </section>
+
+  <!-- ================= 8 ================= -->
+  <section id="s8">
+    <h2>8. 总结与测验<span class="srcref">原第 47 页</span></h2>
+
+    <h3>8.1 本讲总结</h3>
+    <div class="grid g2">
+      <div class="card"><h5>Intel 处理器与体系结构的历史</h5>
+        <p style="margin:0;font-size:14.5px"><b>演化式设计</b>导致了很多怪癖和遗留物 —— 这是理解 x86 的关键前提。</p>
+      </div>
+      <div class="card"><h5>C、汇编、机器码</h5>
+        <ul style="margin:0">
+          <li>出现了新的「可见状态」：程序计数器、寄存器……</li>
+          <li>编译器必须把语句、表达式、过程<b>变换成底层指令序列</b>。</li>
+        </ul>
+      </div>
+      <div class="card"><h5>汇编基础</h5>
+        <p style="margin:0;font-size:14.5px">x86-64 的 mov 指令覆盖了很广的数据传送形式。</p>
+      </div>
+      <div class="card"><h5>算术运算</h5>
+        <p style="margin:0;font-size:14.5px">C 编译器会自己找出不同的指令组合来完成计算 —— 所以<b>不要手写这些优化</b>，写出清晰的 C 就好。</p>
+      </div>
+    </div>
+
+    <h3>8.2 判断题</h3>
+    <p>判断下列说法是否正确。答完会给出解释。</p>
+    <div class="ctrls">
+      <span id="tfScore" class="chip gray">已答 0 / 8 · 正确 0</span>
+      <button class="sm" id="tfReset">重做</button>
+    </div>
+    <div id="tfList"></div>
+
+    <h3>8.3 小测验</h3>
+    <p>做完这 6 道题，检查一下是否真的掌握了。<span id="qzScore" class="chip gray">得分 0 / 6</span></p>
+    <div id="qzList"></div>
+    <div class="ctrls"><button class="p" id="qzSubmit">提交答案</button><button class="sm" id="qzReset">重做</button></div>
+    <div id="qzResult"></div>
+  </section>
+  </main>
+</div>
+
+<div class="footer">
+本页由 <code>ICS04-machine-basics-20260917.pdf</code> 翻译整理而成 · 数值计算与可视化均为页面内实时计算。
+</div>
+<button class="totop" id="toTop">↑ 顶部</button>
+
+<script>
+"use strict";
+/* ============================================================
+   机器级编程 I：基础 · 交互式课件 —— 全部逻辑
+   约定：所有计算在页面内实时完成；无效输入必须给出提示而不是抛错。
+   ============================================================ */
+
+const $  = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+/** 64 位整数统一用 BigInt，显示成 0x… 或十进制 */
+const hex = (v, w = 0) => {
+  const s = BigInt(v).toString(16).toUpperCase();
+  return '0x' + (w ? s.padStart(w, '0') : s);
+};
+const dec = v => BigInt(v).toLocaleString('en-US');
+const MASK64 = (1n << 64n) - 1n;
+function wrap64(v) {
+  let x = BigInt(v) & MASK64;
+  if (x >= (1n << 63n)) x -= (1n << 64n);
+  return x;
+}
+
+/* ============================================================
+   1.2 晶体管数量 / 制程
+   ============================================================ */
+const EVO = {
+  tr: [
+    ['8086', 1978, 29e3], ['386', 1985, 275e3], ['Pentium', 1993, 3.1e6],
+    ['Pentium Pro', 1995, 6.5e6], ['Pentium/MMX', 1997, 4.5e6], ['Pentium 4', 2000, 42e6],
+    ['Core 2 Duo', 2006, 291e6], ['Core i7', 2008, 731e6],
+    ['Core i7 Skylake', 2015, 1.9e9], ['Xeon Skylake-SP', 2017, 8e9],
+  ],
+  nm: [
+    ['Pentium Pro', 1995, 600], ['Pentium III', 1999, 250], ['Pentium 4', 2000, 180],
+    ['Core 2 Duo', 2006, 65], ['Nehalem', 2008, 45], ['Sandy Bridge', 2011, 32],
+    ['Ivy Bridge', 2012, 22], ['Haswell', 2013, 22], ['Broadwell', 2014, 14],
+    ['Skylake', 2015, 14], ['Kaby Lake', 2016, 14], ['Coffee Lake', 2017, 14],
+    ['Cannon Lake', 2018, 10], ['Ice Lake', 2019, 10], ['Tiger Lake', 2020, 10],
+  ],
+};
+const fmtBig = n => n >= 1e9 ? (n / 1e9).toFixed(n >= 1e10 ? 0 : 1) + 'B'
+  : n >= 1e6 ? (n / 1e6).toFixed(n >= 1e7 ? 0 : 1) + 'M'
+  : n >= 1e3 ? Math.round(n / 1e3) + 'K' : String(n);
+
+function renderEvo(mode) {
+  const data = EVO[mode];
+  const isTr = mode === 'tr';
+  const W = 720, H = 270, padL = 62, padR = 16, padT = 20, padB = 54;
+  const years = data.map(d => d[1]);
+  const y0 = Math.min(...years), y1 = Math.max(...years);
+  const vals = data.map(d => d[2]);
+  const logMin = Math.log10(Math.min(...vals)), logMax = Math.log10(Math.max(...vals));
+  const X = yr => padL + (yr - y0) / (y1 - y0 || 1) * (W - padL - padR);
+  const Y = v => H - padB - ((Math.log10(v) - logMin) / (logMax - logMin || 1)) * (H - padT - padB);
+  let svg = `<svg viewBox="0 0 ${W} ${H}" width="100%" style="max-width:${W}px;height:auto;display:block">`;
+  for (let e = Math.ceil(logMin); e <= Math.floor(logMax); e++) {
+    const yy = Y(Math.pow(10, e));
+    svg += `<line class="axisline" x1="${padL}" y1="${yy.toFixed(1)}" x2="${W - padR}" y2="${yy.toFixed(1)}" opacity=".4"/>`;
+    svg += `<text class="ticklabel" x="${padL - 8}" y="${(yy + 4).toFixed(1)}" text-anchor="end">${isTr ? fmtBig(Math.pow(10, e)) : Math.pow(10, e)}</text>`;
+  }
+  svg += `<polyline points="${data.map(d => X(d[1]).toFixed(1) + ',' + Y(d[2]).toFixed(1)).join(' ')}"
+    fill="none" stroke="var(--accent)" stroke-width="2"/>`;
+  data.forEach(d => {
+    svg += `<circle cx="${X(d[1]).toFixed(1)}" cy="${Y(d[2]).toFixed(1)}" r="3.6" fill="var(--accent)"/>`;
+    svg += `<text class="ticklabel" x="${X(d[1]).toFixed(1)}" y="${(Y(d[2]) - 9).toFixed(1)}" text-anchor="middle">${isTr ? fmtBig(d[2]) : d[2]}</text>`;
+    svg += `<text class="ticklabel" x="${X(d[1]).toFixed(1)}" y="${H - padB + 15}" text-anchor="end"
+      transform="rotate(-38 ${X(d[1]).toFixed(1)} ${H - padB + 15})">${d[0]}</text>`;
+  });
+  svg += `</svg>`;
+  $('#evoOut').innerHTML = svg + `
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>处理器</th><th>年份</th><th class="mono">${isTr ? '晶体管数' : '制程'}</th></tr>
+      ${data.map(d => `<tr><td>${esc(d[0])}</td><td class="mono">${d[1]}</td><td class="mono">${isTr ? fmtBig(d[2]) : d[2] + ' nm'}</td></tr>`).join('')}
+    </table></div>
+    <p style="font-size:13.5px;color:var(--muted);margin:8px 0 0">
+      ${isTr
+        ? `从 8086 的 2.9 万到 Xeon Skylake-SP 的 80 亿，40 年涨了约 <b>${Math.round(8e9 / 29e3).toLocaleString()} 倍</b>。纵轴是对数刻度 —— 图上是直线，就意味着指数增长。`
+        : `制程从 600 nm 缩到 10 nm，缩小了 <b>60 倍</b>；10 nm 大约相当于 100 个原子宽。`}
+    </p>`;
+}
+
+/* ============================================================
+   2.2 编译流水线
+   ============================================================ */
+const PIPE = [
+  { name: 'C 程序', file: 'p1.c p2.c', tool: '—（你写的）', cmd: '—',
+    desc: '源代码，纯文本。' },
+  { name: '汇编程序', file: 'p1.s p2.s', tool: '编译器 gcc -Og -S', cmd: 'gcc -Og -S p1.c',
+    desc: '编译器把 C 翻译成汇编：文本 → 文本。<code>-S</code> 表示「只到汇编为止」，不生成机器码。' },
+  { name: '目标程序', file: 'p1.o p2.o', tool: '汇编器 gcc / as', cmd: 'gcc -c p1.s',
+    desc: '汇编器把汇编翻译成机器码：每条指令变成二进制编码。<b>缺少不同文件之间的链接信息</b>，还没法直接运行。' },
+  { name: '可执行程序', file: 'p', tool: '链接器 gcc / ld（+ 静态库 .a）', cmd: 'gcc -Og p1.c p2.c -o p',
+    desc: '链接器解析文件之间的引用，并与静态运行库（如 <code>malloc</code>、<code>printf</code>）合并。有些库是<b>动态链接</b>的，那部分在程序开始执行时才链接。' },
+];
+let pipeStep = 1;
+function renderPipe() {
+  $('#pipeOut').innerHTML = `
+    <div style="display:flex;flex-wrap:wrap;gap:8px;margin:12px 0">
+      ${PIPE.map((p, i) => `<button class="${i === pipeStep ? 'p' : ''}" style="flex:1;min-width:118px"
+        data-pipe="${i}">${i + 1}. ${esc(p.name)}</button>`).join('')}
+    </div>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>当前步骤</th><td><b>${esc(PIPE[pipeStep].name)}</b>（${esc(PIPE[pipeStep].file)}）</td></tr>
+      <tr><th>由谁产生</th><td>${esc(PIPE[pipeStep].tool)}</td></tr>
+      <tr><th>命令</th><td class="mono">${esc(PIPE[pipeStep].cmd)}</td></tr>
+      <tr><th>说明</th><td>${PIPE[pipeStep].desc}</td></tr>
+    </table></div>
+    <p style="font-size:13.5px;color:var(--muted);margin:8px 0 0">
+      <code>-Og</code> 是「基本优化」等级（较新版本 GCC 新增的选项）；<code>-o p</code> 指定输出的二进制文件名。
+    </p>`;
+  $$('#pipeOut [data-pipe]').forEach(b => b.addEventListener('click', () => {
+    pipeStep = +b.dataset.pipe; renderPipe();
+  }));
+}
+
+/* ============================================================
+   2.4 三种视图（编译器输出 / 真实 .s / 反汇编）
+   ============================================================ */
+const SUM_VIEWS = {
+  asm: {
+    title: '编译器生成的汇编（要点版，略去伪指令）',
+    note: '这是最该记住的形态：6 条指令完成一个函数。',
+    lines: [
+      ['sumstore:', '过程入口 —— 函数名就是标号'],
+      ['    pushq  %rbx', '把 %rbx 的旧值压栈。因为下面要占用 %rbx，而它是「被调用者保存」寄存器，用完必须还原'],
+      ['    movq   %rdx, %rbx', '第三个参数 dest 原本在 %rdx 里；先搬进 %rbx 保存 —— 因为 call plus 会覆盖 %rdx'],
+      ['    call   plus', '调用 plus(x, y)；返回值按约定放在 %rax'],
+      ['    movq   %rax, (%rbx)', '把返回值写进 *dest —— 这就是 C 里的 *dest = t;'],
+      ['    popq   %rbx', '恢复 %rbx 的旧值'],
+      ['    ret', '返回'],
+    ],
+  },
+  real: {
+    title: '真实的 .s 文件（含大量伪指令）',
+    note: '凡是<b>以 . 开头</b>、并且写作 .type name, @function 这种形式的，都是伪指令 —— 不是机器指令，只是给汇编器与链接器看的说明。',
+    lines: [
+      ['    .globl sumstore', '伪指令：把 sumstore 声明为全局符号（其它文件可见）'],
+      ['    .type  sumstore, @function', '伪指令：说明 sumstore 是一个函数'],
+      ['sumstore:', '真正的标号，过程入口'],
+      ['    pushq  %rbx', '机器指令'],
+      ['    .cfi_def_cfa_offset 16', '伪指令：调用帧信息，供调试器/异常处理使用，不影响执行'],
+      ['    .cfi_offset 3, -16', '伪指令：同上'],
+      ['    movq   %rdx, %rbx', '机器指令'],
+      ['    call   plus', '机器指令'],
+      ['    movq   %rax, (%rbx)', '机器指令'],
+      ['    popq   %rbx', '机器指令'],
+      ['    .cfi_def_cfa_offset 8', '伪指令'],
+      ['    ret', '机器指令'],
+      ['    .cfi_endproc', '伪指令：调用帧信息结束'],
+      ['    .LFE35:', '编译器内部的标号（本地标号）'],
+      ['    .size  sumstore, .-sumstore', '伪指令：声明函数大小（当前位置减去起始位置）'],
+    ],
+  },
+  obj: {
+    title: 'objdump –d sum 的反汇编输出',
+    note: '反汇编器分析位模式还原汇编。每条指令 1、3 或 5 字节不等，整个 sumstore 共 14 字节。',
+    lines: [
+      ['0000000000400595 <sumstore>:', '函数起始地址与符号名'],
+      ['  400595:  53                push   %rbx', '1 字节指令'],
+      ['  400596:  48 89 d3          mov    %rdx,%rbx', '3 字节指令'],
+      ['  400599:  e8 f2 ff ff ff    callq  400590 <plus>', '5 字节指令；e8 后面 4 字节是相对偏移 0xfffffff2（=-14），反汇编器已经换算成目标地址 0x400590'],
+      ['  40059e:  48 89 03          mov    %rax,(%rbx)', '3 字节指令：这里就是 C 里的 *dest = t;'],
+      ['  4005a1:  5b                pop    %rbx', '1 字节指令'],
+      ['  4005a2:  c3                retq', '1 字节指令'],
+    ],
+  },
+};
+let sumView = 'asm';
+function renderSum() {
+  const v = SUM_VIEWS[sumView];
+  $('#sumOut').innerHTML = `
+    <div style="font-weight:650;font-size:14.5px;margin:4px 0 8px">${esc(v.title)}</div>
+    <div class="mono" style="font-size:13px;line-height:1.9;background:var(--code-bg);
+      border:1px solid var(--code-bd);border-radius:8px;padding:10px 14px;overflow-x:auto">
+      ${v.lines.map((l, i) => `<div data-sumline="${i}" style="cursor:pointer;padding:1px 5px;border-radius:4px;white-space:pre">${esc(l[0])}</div>`).join('')}
+    </div>
+    <div class="box" style="margin:12px 0 0"><div class="t">说明</div>${v.note}</div>
+    <div id="sumLineNote"></div>`;
+  $$('#sumOut [data-sumline]').forEach(el => el.addEventListener('click', () => {
+    const l = v.lines[+el.dataset.sumline];
+    $('#sumLineNote').innerHTML = `<div class="box ok" style="margin:10px 0 0">
+      <div class="t mono">${esc(l[0].trim())}</div>${esc(l[1])}</div>`;
+  }));
+}
+
+/* ============================================================
+   3.2 机器码字节查看器（sumstore 的 14 字节）
+   ============================================================ */
+const OBJ_BYTES = [
+  { b: '53', asm: 'push %rbx', c: null, bytes: 1 },
+  { b: '48 89 d3', asm: 'mov %rdx,%rbx', c: '把参数 dest 保存到 %rbx', bytes: 3 },
+  { b: 'e8 f2 ff ff ff', asm: 'callq 400590 <plus>', c: '调用 plus(x, y)', bytes: 5 },
+  { b: '48 89 03', asm: 'mov %rax,(%rbx)', c: '*dest = t;', bytes: 3 },
+  { b: '5b', asm: 'pop %rbx', c: null, bytes: 1 },
+  { b: 'c3', asm: 'retq', c: null, bytes: 1 },
+];
+let objSel = 3;
+function renderObj() {
+  let byteIdx = 0;
+  const rows = OBJ_BYTES.map((ins, i) => {
+    const cells = ins.b.split(' ').map(x => {
+      const idx = byteIdx++;
+      return `<span data-ins="${i}" title="第 ${idx} 个字节"
+        style="display:inline-block;padding:3px 7px;margin:1px;border-radius:4px;cursor:pointer;
+        font-family:var(--font-mono);font-size:13.5px;font-weight:600;
+        ${i === objSel ? 'background:var(--accent);color:var(--accent-ink)' : 'background:var(--paper-soft);border:1px solid var(--line)'}">${x}</span>`;
+    }).join('');
+    return `<div style="margin:5px 0;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+      <span style="min-width:132px;font-family:var(--font-mono);font-size:12.5px;color:var(--muted)">${esc(ins.asm.split(' ')[0])}</span>
+      <span>${cells}</span>
+      <span style="font-family:var(--font-mono);font-size:12px;color:var(--muted)">${ins.bytes} 字节</span>
+    </div>`;
+  }).join('');
+  const sel = OBJ_BYTES[objSel];
+  const total = OBJ_BYTES.reduce((a, x) => a + x.bytes, 0);
+  $('#objOut').innerHTML = `
+    <div style="margin:10px 0 14px">${rows}</div>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>选中指令</th><td class="mono"><b>${esc(sel.asm)}</b></td></tr>
+      <tr><th>编码</th><td class="mono">${esc(sel.b)}（${sel.bytes} 字节）</td></tr>
+      <tr><th>对应的 C</th><td>${sel.c ? esc(sel.c) : '<span style="color:var(--muted)">过程序言或收尾，没有直接对应的 C</span>'}</td></tr>
+    </table></div>
+    <p style="font-size:13.5px;color:var(--muted);margin:10px 0 0">
+      整段 sumstore 共 <b>${total} 字节</b>，起始地址 0x0400595，每条指令 1、3 或 5 字节 —— 这就是「机器码是一串字节」的直观含义。
+    </p>`;
+  $$('#objOut [data-ins]').forEach(el => el.addEventListener('click', () => {
+    objSel = +el.dataset.ins; renderObj();
+  }));
+}
+
+/* ============================================================
+   3.3 C ↔ 汇编 ↔ 机器码
+   ============================================================ */
+function renderThree() {
+  $('#threeOut').innerHTML = `
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>层次</th><th>写法</th><th>含义</th></tr>
+      <tr><td>C 代码</td><td class="mono">*dest = t;</td><td>把 t 的值写到 dest 指向的位置</td></tr>
+      <tr><td>汇编</td><td class="mono">movq %rax, (%rbx)</td><td>把 8 字节值送进内存（x86-64 里 8 字节叫 quad word，所以后缀是 q）</td></tr>
+      <tr><td>操作数对应</td><td class="mono">t → %rax<br>dest → %rbx<br>*dest → M[%rbx]</td>
+          <td>指针放在寄存器里；解引用就是「拿寄存器的值当地址」</td></tr>
+      <tr><td>机器码</td><td class="mono">0x40059e: 48 89 03</td><td>3 字节指令，存放在地址 0x40059e</td></tr>
+    </table></div>
+    <p style="font-size:13.5px;color:var(--muted);margin:10px 0 0">
+      <b>一眼分辨：</b>AT&amp;T 语法里带括号 = 访问内存。所以 <code>movq %rax, (%rbx)</code> 是「把 %rax 存到 %rbx 指向的地址」，
+      而 <code>movq %rax, %rbx</code> 是「把 %rax 的值复制进 %rbx」。<b>括号的有无，就是 store 与寄存器复制的区别。</b>
+    </p>`;
+}
+
+/* ============================================================
+   4.1 寄存器查看器
+   ============================================================ */
+const REGS = [
+  { r64: '%rax', r32: '%eax', r16: '%ax', r8: '%ah / %al', origin: 'accumulate（累加器）',
+    use: '历史上是算术运算的默认累加器；现在主要用来放<b>函数返回值</b>，乘除法也会隐含用到它。' },
+  { r64: '%rbx', r32: '%ebx', r16: '%bx', r8: '%bh / %bl', origin: 'base（基址）',
+    use: '历史上是基址寄存器。现在没有特殊用途，属于「被调用者保存」寄存器。' },
+  { r64: '%rcx', r32: '%ecx', r16: '%cx', r8: '%ch / %cl', origin: 'counter（计数器）',
+    use: '历史上用于循环计数；现在移位指令仍然用它 —— 移位量必须放在 <code>%cl</code>。' },
+  { r64: '%rdx', r32: '%edx', r16: '%dx', r8: '%dh / %dl', origin: 'data（数据）',
+    use: '历史上是数据寄存器；乘除法用它存放结果高位。也是函数<b>第 3 个参数</b>。' },
+  { r64: '%rsi', r32: '%esi', r16: '%si', r8: '—', origin: 'source index（源变址）',
+    use: '历史上用于字符串操作的源指针；现在是函数<b>第 2 个参数</b>。' },
+  { r64: '%rdi', r32: '%edi', r16: '%di', r8: '—', origin: 'destination index（目的变址）',
+    use: '历史上用于字符串操作的目的指针；现在是函数<b>第 1 个参数</b>。' },
+  { r64: '%rsp', r32: '%esp', r16: '%sp', r8: '—', origin: 'stack pointer（栈指针）',
+    use: '<b>特殊用途</b>：指向栈顶。不能被随意当作普通寄存器，也<b>不能当变址寄存器</b>。' },
+  { r64: '%rbp', r32: '%ebp', r16: '%bp', r8: '—', origin: 'base pointer（基址指针）',
+    use: '历史上用于标记栈帧基址；现代编译器常把它当普通寄存器（被调用者保存）。' },
+  { r64: '%r8', r32: '%r8d', r16: '%r8w', r8: '%r8b', origin: '64 位新增',
+    use: 'x86-64 新增，没有历史包袱；函数<b>第 5 个参数</b>用它。' },
+  { r64: '%r9', r32: '%r9d', r16: '%r9w', r8: '%r9b', origin: '64 位新增',
+    use: '函数<b>第 6 个参数</b>用它；再多就只能通过栈传递了。' },
+  { r64: '%r10', r32: '%r10d', r16: '%r10w', r8: '%r10b', origin: '64 位新增', use: '调用者保存寄存器。' },
+  { r64: '%r11', r32: '%r11d', r16: '%r11w', r8: '%r11b', origin: '64 位新增', use: '调用者保存寄存器。' },
+  { r64: '%r12', r32: '%r12d', r16: '%r12w', r8: '%r12b', origin: '64 位新增', use: '被调用者保存寄存器。' },
+  { r64: '%r13', r32: '%r13d', r16: '%r13w', r8: '%r13b', origin: '64 位新增', use: '被调用者保存寄存器。' },
+  { r64: '%r14', r32: '%r14d', r16: '%r14w', r8: '%r14b', origin: '64 位新增', use: '被调用者保存寄存器。' },
+  { r64: '%r15', r32: '%r15d', r16: '%r15w', r8: '%r15b', origin: '64 位新增', use: '被调用者保存寄存器。' },
+];
+let regSel = 0;
+function renderReg() {
+  const r = REGS[regSel];
+  $('#regOut').innerHTML = `
+    <div style="display:flex;flex-wrap:wrap;gap:6px;margin:10px 0 14px">
+      ${REGS.map((x, i) => `<button class="sm ${i === regSel ? 'p' : ''}" data-reg="${i}"
+        style="font-family:var(--font-mono)">${esc(x.r64)}</button>`).join('')}
+    </div>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>64 位</th><th>32 位</th><th>16 位</th><th>高/低 8 位</th><th>名字原意</th></tr>
+      <tr><td class="mono"><b>${esc(r.r64)}</b></td><td class="mono">${esc(r.r32)}</td>
+          <td class="mono">${esc(r.r16)}</td><td class="mono">${esc(r.r8)}</td><td>${esc(r.origin)}</td></tr>
+    </table></div>
+    <div class="box" style="margin:12px 0 0"><div class="t">${esc(r.r64)} 的用途</div>${r.use}</div>
+    <p style="font-size:13.5px;color:var(--muted);margin:10px 0 0">
+      四个名字指的是<b>同一块物理存储</b>的不同部分：写 <code>%eax</code> 会把 <code>%rax</code> 的<b>高 32 位清零</b>（x86-64 的规定），
+      而写 <code>%ax</code> 或 <code>%al</code> 只改低 16 / 8 位，高位保持不变。
+    </p>`;
+  $$('#regOut [data-reg]').forEach(b => b.addEventListener('click', () => {
+    regSel = +b.dataset.reg; renderReg();
+  }));
+}
+
+/* ============================================================
+   4.4 mov 操作数组合
+   ============================================================ */
+const MOV = {
+  imm: { name: '立即数', code: '$0x4 / $-147' },
+  reg: { name: '寄存器', code: '%rax' },
+  mem: { name: '内存', code: '(%rax)' },
+};
+const MOV_COMBOS = {
+  'immreg': { ok: true, eg: 'movq $0x4, %rax', c: 'temp = 0x4;', note: '把常量装进寄存器 —— 最常见的形式。' },
+  'immmem': { ok: true, eg: 'movq $-147, (%rax)', c: '*p = -147;', note: '把常量直接写进内存。' },
+  'regreg': { ok: true, eg: 'movq %rax, %rdx', c: 'temp2 = temp1;', note: '寄存器之间复制。' },
+  'regmem': { ok: true, eg: 'movq %rax, (%rdx)', c: '*p = temp;', note: '把寄存器 store 到内存。' },
+  'memreg': { ok: true, eg: 'movq (%rax), %rdx', c: 'temp = *p;', note: '从内存 load 到寄存器。' },
+  'memmem': { ok: false, eg: 'movq (%rax), (%rdx)', c: null,
+    note: '<b>单条指令不能做「内存到内存」的传送</b>。要实现 <code>*p = *q;</code> 必须分两步：先 load 到一个寄存器，再从该寄存器 store 回去（编译器通常借用一个临时寄存器）。' },
+};
+let movSrc = 'imm', movDst = 'reg';
+function renderMov() {
+  const c = MOV_COMBOS[movSrc + movDst];
+  $('#movOut').innerHTML = `
+    <div class="formula mono" style="margin:12px 0;text-align:left">
+      movq &nbsp;<b>${esc(MOV[movSrc].code)}</b>&nbsp;, &nbsp;<b>${esc(MOV[movDst].code)}</b>
+      &nbsp;&nbsp;${c.ok ? '<span class="chip ok">合法</span>' : '<span class="chip bad">非法</span>'}
+    </div>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>示例</th><td class="mono">${c.ok ? esc(c.eg) : '<span style="color:var(--sign)">' + esc(c.eg) + ' ✗</span>'}</td></tr>
+      <tr><th>对应的 C</th><td class="mono">${c.c ? esc(c.c) : '—'}</td></tr>
+    </table></div>
+    <div class="box ${c.ok ? '' : 'bad'}" style="margin:12px 0 0">${c.note}</div>
+    <p style="font-size:13.5px;color:var(--muted);margin:10px 0 0">
+      三种操作数：<b>立即数</b> <code>$0x400</code>（1/2/4 字节编码）、
+      <b>寄存器</b> <code>%rax</code>（16 个之一，但 <code>%rsp</code> 保留）、
+      <b>内存</b> <code>(%rax)</code>（由寄存器给出地址的连续 8 字节）。
+    </p>`;
+}
+
+/* ============================================================
+   5.3 地址计算器
+   ============================================================ */
+function parseNum(s) {
+  s = String(s).trim().replace(/[\s_,]/g, '');
+  try {
+    if (/^[+-]?0[xX][0-9a-fA-F]+$/.test(s)) {
+      const neg = s[0] === '-';
+      const v = BigInt(s.replace(/^[+-]/, ''));
+      return neg ? -v : v;
+    }
+    if (/^[+-]?\d+$/.test(s)) return BigInt(s);
+  } catch (e) { /* ignore */ }
+  return null;
+}
+/** 解析 D(Rb,Ri,S) 的各种子集 */
+function parseAddrExpr(s) {
+  const str = String(s).trim();
+  const m = /^(0[xX][0-9a-fA-F]+|\d+)?\s*\(\s*([^,()]*)\s*(?:,\s*([^,()]*)\s*(?:,\s*([^,()]*)\s*)?)?\)$/.exec(str);
+  if (!m) return null;
+  return {
+    D: m[1] ? parseNum(m[1]) : 0n,
+    Rb: (m[2] || '').trim() || null,
+    Ri: (m[3] || '').trim() || null,
+    S: m[4] ? parseNum(m[4]) : 1n,
+  };
+}
+function renderAddr(expr, rdxVal, rcxVal) {
+  const a = parseAddrExpr(expr);
+  if (!a) {
+    $('#addrOut').innerHTML = `<div class="box bad" style="margin:8px 0">
+      看不懂这个表达式。请用 <code>D(Rb,Ri,S)</code> 的形式，例如 <code>0x8(%rdx)</code>、<code>(%rdx,%rcx,4)</code>、<code>0x80(,%rdx,2)</code>。</div>`;
+    return;
+  }
+  const rdx = parseNum(rdxVal), rcx = parseNum(rcxVal);
+  if (rdx === null || rcx === null) {
+    $('#addrOut').innerHTML = '<div class="box bad" style="margin:8px 0">寄存器值请填十六进制（如 0xf000）或十进制。</div>';
+    return;
+  }
+  const vals = { '%rdx': rdx, '%rcx': rcx };
+  const used = [a.Rb, a.Ri].filter(Boolean);
+  const unknown = used.filter(r => !(r in vals));
+  if (unknown.length) {
+    $('#addrOut').innerHTML = `<div class="box warn" style="margin:8px 0">
+      本页只提供了 <code>%rdx</code> 与 <code>%rcx</code> 的值，表达式里出现了 ${unknown.map(esc).join('、')}。
+      课件原例只用这两个寄存器，请改成它们之一。</div>`;
+    return;
+  }
+  const rb = a.Rb ? vals[a.Rb] : 0n, ri = a.Ri ? vals[a.Ri] : 0n;
+  const addr = rb + a.S * ri + a.D;
+  const S = a.S;
+  const parts = [];
+  if (a.Rb) parts.push(`%${a.Rb.slice(1)} = ${hex(rb)}`);
+  if (a.Ri) parts.push(`${S} × %${a.Ri.slice(1)} = ${S} × ${hex(ri)} = ${hex(S * ri)}`);
+  if (a.D) parts.push(`D = ${hex(a.D)}`);
+  $('#addrOut').innerHTML = `
+    <div class="formula" style="margin:12px 0;text-align:left">
+      <span class="mono">${esc(expr)}</span> &nbsp;=&nbsp;
+      <b class="mono">${hex(addr)}</b>
+      <div style="font-size:13.5px;color:var(--muted);margin-top:6px">
+        ${a.Rb ? `基址 %${a.Rb.slice(1)}` : '无基址'}${a.Ri ? `，变址 %${a.Ri.slice(1)}（比例 ${S}）` : ''}${a.D ? `，位移 ${hex(a.D)}` : ''}
+      </div>
+    </div>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>字段</th><th>取值</th><th class="mono">贡献</th></tr>
+      <tr><td class="mono">Rb（基址）</td><td class="mono">${a.Rb ? esc(a.Rb) : '<span style="color:var(--muted)">缺省 = 0</span>'}</td><td class="mono">${hex(rb)}</td></tr>
+      <tr><td class="mono">Ri（变址）</td><td class="mono">${a.Ri ? esc(a.Ri) : '<span style="color:var(--muted)">缺省 = 0</span>'}</td><td class="mono">${a.Ri ? hex(S * ri) + ` = ${S} × ${hex(ri)}` : '0'}</td></tr>
+      <tr><td class="mono">D（位移）</td><td class="mono">${a.D ? hex(a.D) : '<span style="color:var(--muted)">缺省 = 0</span>'}</td><td class="mono">${hex(a.D)}</td></tr>
+      <tr><td colspan="2"><b>地址 Mem[...]</b></td><td class="mono"><b>${hex(addr)}</b></td></tr>
+    </table></div>
+    <p style="font-size:13.5px;color:var(--muted);margin:10px 0 0">
+      计算过程：<span class="mono">${parts.join(' ＋ ') || '0'} = ${hex(addr)}</span>
+      ${!a.Rb && a.Ri ? '<br>注意这个形式没有基址（<code>0x80(,%rdx,2)</code> 里逗号前是空的）—— 这是允许的。' : ''}
+    </p>`;
+}
+
+/* ============================================================
+   5.4 swap 逐步执行模拟器
+   ============================================================ */
+const SWAP_INIT = () => ({
+  regs: { '%rdi': 0x120n, '%rsi': 0x100n, '%rax': 0n, '%rdx': 0n },
+  mem: { '0x120': 123n, '0x100': 456n },
+  step: 0,
+  log: [],
+});
+const SWAP_STEPS = [
+  { asm: 'movq (%rdi), %rax', c: 'long t0 = *xp;', reg: '%rax',
+    run: st => { st.regs['%rax'] = st.mem['0x120']; return `%rax ← M[%rdi] = M[0x120] = ${st.regs['%rax']}`; } },
+  { asm: 'movq (%rsi), %rdx', c: 'long t1 = *yp;', reg: '%rdx',
+    run: st => { st.regs['%rdx'] = st.mem['0x100']; return `%rdx ← M[%rsi] = M[0x100] = ${st.regs['%rdx']}`; } },
+  { asm: 'movq %rdx, (%rdi)', c: '*xp = t1;', reg: 'mem 0x120',
+    run: st => { st.mem['0x120'] = st.regs['%rdx']; return `M[%rdi] = M[0x120] ← %rdx = ${st.mem['0x120']}`; } },
+  { asm: 'movq %rax, (%rsi)', c: '*yp = t0;', reg: 'mem 0x100',
+    run: st => { st.mem['0x100'] = st.regs['%rax']; return `M[%rsi] = M[0x100] ← %rax = ${st.mem['0x100']}`; } },
+];
+let swap = SWAP_INIT();
+function renderSwap() {
+  const cell = (addr, val, hl) => `
+    <div style="border:1px solid ${hl ? 'var(--accent)' : 'var(--line)'};border-radius:8px;overflow:hidden;min-width:96px;
+      ${hl ? 'box-shadow:0 0 0 2px var(--accent-soft)' : ''}">
+      <div class="mono" style="background:var(--paper-soft);font-size:11px;padding:3px 6px;text-align:center;
+        color:var(--muted);border-bottom:1px solid var(--line)">${addr}</div>
+      <div class="mono" style="font-size:15px;font-weight:700;padding:5px 8px;text-align:center">${val}</div>
+    </div>`;
+  const done = swap.step >= SWAP_STEPS.length;
+  const justMem = swap.step === 3 ? '0x120' : swap.step === 4 ? '0x100' : null;
+  const justReg = swap.step === 1 ? '%rax' : swap.step === 2 ? '%rdx' : null;
+  $('#swapOut').innerHTML = `
+    <div class="grid g2" style="margin:12px 0 0">
+      <div>
+        <div style="font-weight:650;font-size:14px;margin-bottom:6px">寄存器</div>
+        <div class="tbl-wrap"><table class="tbl" style="margin:0">
+          <tr><th>寄存器</th><th>存放</th><th class="mono">值</th></tr>
+          <tr style="${justReg === '%rdi' ? 'background:var(--accent-soft)' : ''}"><td class="mono">%rdi</td><td>xp（指针）</td><td class="mono">${hex(swap.regs['%rdi'])}</td></tr>
+          <tr style="${justReg === '%rsi' ? 'background:var(--accent-soft)' : ''}"><td class="mono">%rsi</td><td>yp（指针）</td><td class="mono">${hex(swap.regs['%rsi'])}</td></tr>
+          <tr style="${justReg === '%rax' ? 'background:var(--accent-soft)' : ''}"><td class="mono">%rax</td><td>t0</td><td class="mono">${swap.step >= 1 ? hex(swap.regs['%rax']) : '<span style="color:var(--muted)">?</span>'}</td></tr>
+          <tr style="${justReg === '%rdx' ? 'background:var(--accent-soft)' : ''}"><td class="mono">%rdx</td><td>t1</td><td class="mono">${swap.step >= 2 ? hex(swap.regs['%rdx']) : '<span style="color:var(--muted)">?</span>'}</td></tr>
+        </table></div>
+      </div>
+      <div>
+        <div style="font-weight:650;font-size:14px;margin-bottom:6px">内存（地址从高到低）</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          ${cell('0x120', swap.mem['0x120'], justMem === '0x120')}
+          ${cell('0x100', swap.mem['0x100'], justMem === '0x100')}
+        </div>
+        <p style="font-size:13px;color:var(--muted);margin:8px 0 0">
+          xp 指向 0x120，yp 指向 0x100。<br>
+          初始：*xp = 123，*yp = 456。
+        </p>
+      </div>
+    </div>
+    <div class="mono" style="font-size:13px;line-height:1.9;background:var(--code-bg);border:1px solid var(--code-bd);
+      border-radius:8px;padding:10px 14px;margin:14px 0;overflow-x:auto">
+      swap:<br>
+      ${SWAP_STEPS.map((s, i) => `<div style="padding:1px 5px;border-radius:4px;
+        ${i < swap.step ? 'color:var(--frac)' : i === swap.step ? 'background:var(--accent-soft)' : 'color:var(--muted)'}">
+        ${i < swap.step ? '✓ ' : i === swap.step ? '▶ ' : '  '}${esc(s.asm)} &nbsp;<span style="opacity:.7"># ${esc(s.c)}</span></div>`).join('')}
+    </div>
+    ${swap.log.length ? `<div class="box" style="margin:0"><div class="t">已执行的步骤</div>
+      <ol style="margin:4px 0 0" class="mono">${swap.log.map(l => `<li>${esc(l)}</li>`).join('')}</ol></div>` : ''}
+    ${done ? `<div class="box ok" style="margin:12px 0 0"><div class="t">交换完成</div>
+      现在 *xp = ${swap.mem['0x120']}，*yp = ${swap.mem['0x100']} —— 两个值确实换过来了。
+      注意整个过程<b>只用了一个中间寄存器对</b>（%rax 存 t0、%rdx 存 t1），没有任何一行是多余的。</div>` : ''}`;
+  $('#swapStep').disabled = done;
+  $('#swapStep').style.opacity = done ? .5 : 1;
+}
+
+/* ============================================================
+   6.2 二元算术指令
+   ============================================================ */
+const ARITH = [
+  { op: 'addq', f: 'Dest = Dest + Src', zh: '加', ex: 'addq %rdx, %rax → %rax = %rax + %rdx' },
+  { op: 'subq', f: 'Dest = Dest − Src', zh: '减（注意顺序！）', ex: 'subq %rdx, %rax → %rax = %rax − %rdx' },
+  { op: 'imulq', f: 'Dest = Dest * Src', zh: '有符号乘', ex: 'imulq %rcx, %rax → %rax = %rax × %rcx' },
+  { op: 'salq', f: 'Dest = Dest << Src', zh: '左移（又叫 shlq）', ex: 'salq $4, %rdx → %rdx = %rdx << 4，即 ×16' },
+  { op: 'sarq', f: 'Dest = Dest >> Src', zh: '算术右移（补符号位）', ex: 'sarq $1, %rax → 负数也能保持符号' },
+  { op: 'shrq', f: 'Dest = Dest >> Src', zh: '逻辑右移（补 0）', ex: 'shrq $1, %rax → 左边一律补 0' },
+  { op: 'xorq', f: 'Dest = Dest ^ Src', zh: '按位异或', ex: 'xorq %rax, %rax → 把 %rax 清零（常用技巧）' },
+  { op: 'andq', f: 'Dest = Dest & Src', zh: '按位与', ex: 'andq $0xF, %rax → 只保留低 4 位' },
+  { op: 'orq', f: 'Dest = Dest | Src', zh: '按位或', ex: 'orq %rdx, %rax → 合并位' },
+];
+let arithSel = 3;
+function renderArith() {
+  const a = ARITH[arithSel];
+  $('#arithOut').innerHTML = `
+    <div style="display:flex;flex-wrap:wrap;gap:6px;margin:10px 0 14px">
+      ${ARITH.map((x, i) => `<button class="sm ${i === arithSel ? 'p' : ''}" data-ar="${i}"
+        style="font-family:var(--font-mono)">${x.op}</button>`).join('')}
+    </div>
+    <div class="formula mono" style="margin:12px 0;text-align:left">
+      ${esc(a.op)} &nbsp;Src, Dest &nbsp;&nbsp;→&nbsp;&nbsp; <b>${esc(a.f)}</b>
+    </div>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>含义</th><td>${esc(a.zh)}</td></tr>
+      <tr><th>例子</th><td class="mono">${esc(a.ex)}</td></tr>
+    </table></div>
+    <p style="font-size:13.5px;color:var(--muted);margin:10px 0 0">
+      所有二元指令的形式都是 <code>op Src, Dest</code>，计算的都是 <b>Dest = Dest op Src</b> —— 目的操作数既参与运算、又接收结果。
+      注意这与 Intel 文档的 <code>op Dest, Src</code> 顺序相反。
+    </p>`;
+  $$('#arithOut [data-ar]').forEach(b => b.addEventListener('click', () => {
+    arithSel = +b.dataset.ar; renderArith();
+  }));
+}
+
+/* ============================================================
+   6.4 指令模拟器
+   ============================================================ */
+const SIM_INIT = () => ({
+  regs: { '%rax': 0x100n, '%rbx': 0n, '%rcx': 3n, '%rdx': 0x120n, '%rsi': 0x140n, '%rdi': 0x160n },
+  mem: { '0x100': 0x2An, '0x120': 0x7Bn, '0x140': 0x99n },
+});
+let sim = SIM_INIT();
+function simOperand(s) {
+  s = String(s).trim();
+  if (!s) return null;
+  if (s[0] === '$') { const v = parseNum(s.slice(1)); return v === null ? null : { t: 'imm', v }; }
+  if (s[0] === '%') return { t: 'reg', n: s };
+  const m = /^(0[xX][0-9a-fA-F]+|\d+)?\s*\(\s*(%[a-z0-9]+)?\s*(?:,\s*(%[a-z0-9]+)\s*(?:,\s*(\d+)\s*)?)?\)$/.exec(s);
+  if (m) return { t: 'mem', d: m[1] ? parseNum(m[1]) : 0n, b: m[2] || null, i: m[3] || null, sc: m[4] ? BigInt(m[4]) : 1n };
+  return null;
+}
+function simAddr(o) {
+  const rb = o.b ? (sim.regs[o.b] ?? 0n) : 0n;
+  const ri = o.i ? (sim.regs[o.i] ?? 0n) : 0n;
+  return rb + o.sc * ri + o.d;
+}
+function simRead(o) {
+  if (o.t === 'imm') return { v: o.v, txt: `$${hex(o.v)}` };
+  if (o.t === 'reg') return { v: sim.regs[o.n] ?? 0n, txt: `${o.n} = ${hex(sim.regs[o.n] ?? 0n)}` };
+  const a = simAddr(o), key = hex(a);
+  return { v: sim.mem[key] ?? 0n, txt: `M[${key}] = ${hex(sim.mem[key] ?? 0n)}`, addr: key };
+}
+function simWrite(o, v) {
+  const key = hex(simAddr(o));
+  sim.mem[key] = wrap64(v);
+  return key;
+}
+function renderSim(op, srcTxt, dstTxt, ran) {
+  const src = simOperand(srcTxt), dst = simOperand(dstTxt);
+  if (!src || !dst) {
+    $('#simOut').innerHTML = `<div class="box bad" style="margin:8px 0">
+      操作数格式看不懂。可用形式：<code>$0x10</code>（立即数）、<code>%rax</code>（寄存器）、<code>(%rax)</code>、<code>0x8(%rbp)</code>、<code>(%rax,%rcx,4)</code>。</div>`;
+    return;
+  }
+  if (dst.t === 'imm') {
+    $('#simOut').innerHTML = '<div class="box bad" style="margin:8px 0">目的操作数不能是立即数 —— 立即数只读，不能作为写入目标。</div>';
+    return;
+  }
+  let extra = '';
+  if (ran) {
+    const sv = simRead(src).v;
+    if (op === 'movq') {
+      if (dst.t === 'reg' && src.t === 'mem') {
+        const r = simRead(src);
+        sim.regs[dst.n] = r.v;
+        extra = `${dst.n} ← ${r.txt}`;
+      } else if (dst.t === 'mem' && src.t === 'imm') {
+        const k = simWrite(dst, sv);
+        extra = `M[${k}] ← $${hex(sv)}`;
+      } else if (dst.t === 'mem') {
+        const k = simWrite(dst, sv);
+        extra = `M[${k}] ← ${src.t === 'reg' ? `${src.n} = ${hex(sv)}` : hex(sv)}`;
+      } else {
+        sim.regs[dst.n] = sv;
+        extra = `${dst.n} ← ${src.t === 'imm' ? '$' + hex(sv) : (src.t === 'reg' ? src.n + ' = ' + hex(sv) : hex(sv))}`;
+      }
+    } else if (op === 'movq-mem-mem') {
+      // 不会走到这里
+    } else {
+      // 二元运算指令：Dest = Dest op Src
+      if (src.t === 'mem' && dst.t === 'mem') {
+        $('#simOut').innerHTML = '<div class="box bad" style="margin:8px 0">单条指令不能同时对两个内存操作数做运算。</div>';
+        return;
+      }
+      const cur = dst.t === 'reg' ? (sim.regs[dst.n] ?? 0n) : (sim.mem[hex(simAddr(dst))] ?? 0n);
+      const sv2 = src.t === 'imm' ? src.v : simRead(src).v;
+      let res;
+      if (op === 'addq') res = cur + sv2;
+      else if (op === 'subq') res = cur - sv2;
+      else if (op === 'imulq') res = cur * sv2;
+      else if (op === 'salq') res = cur << (sv2 & 63n);
+      else if (op === 'sarq') res = cur >> (sv2 & 63n);
+      else if (op === 'shrq') res = (cur & MASK64) >> (sv2 & 63n);
+      else if (op === 'xorq') res = cur ^ sv2;
+      else if (op === 'andq') res = cur & sv2;
+      else if (op === 'orq') res = cur | sv2;
+      res = wrap64(res);
+      if (dst.t === 'reg') { sim.regs[dst.n] = res; extra = `${dst.n}: ${hex(cur)} → ${hex(res)}`; }
+      else { const k = simWrite(dst, res); extra = `M[${k}]: ${hex(cur)} → ${hex(res)}`; }
+    }
+  }
+  const regRows = Object.keys(sim.regs).map(k =>
+    `<tr><td class="mono">${k}</td><td class="mono">${hex(sim.regs[k])}</td><td class="mono">${dec(sim.regs[k])}</td></tr>`).join('');
+  const memRows = Object.keys(sim.mem).map(k =>
+    `<tr><td class="mono">${k}</td><td class="mono">${hex(sim.mem[k])}</td><td class="mono">${dec(sim.mem[k])}</td></tr>`).join('');
+  $('#simOut').innerHTML = `
+    ${ran ? `<div class="box ok" style="margin:12px 0 0"><div class="t mono">${esc(op)} ${esc(srcTxt)}, ${esc(dstTxt)}</div>
+      ${esc(extra)}</div>`
+      : `<div class="box" style="margin:12px 0 0">点「执行」来看这条指令的效果。当前状态见下表。</div>`}
+    <div class="grid g2" style="margin-top:12px">
+      <div><div style="font-weight:650;font-size:14px;margin-bottom:6px">寄存器</div>
+        <div class="tbl-wrap"><table class="tbl" style="margin:0">
+          <tr><th>寄存器</th><th class="mono">十六进制</th><th class="mono">十进制</th></tr>${regRows}</table></div></div>
+      <div><div style="font-weight:650;font-size:14px;margin-bottom:6px">内存</div>
+        <div class="tbl-wrap"><table class="tbl" style="margin:0">
+          <tr><th>地址</th><th class="mono">十六进制</th><th class="mono">十进制</th></tr>${memRows}</table></div>
+        <button class="sm" id="simReset" style="margin-top:8px">重置寄存器与内存</button></div>
+    </div>
+    <p style="font-size:13px;color:var(--muted);margin:10px 0 0">
+      所有运算都在 64 位内完成（用 BigInt 精确计算后截到 64 位），所以不会出现 JS 浮点误差。
+      注意 <code>salq</code>/<code>sarq</code>/<code>shrq</code> 的移位量必须放在 <code>%cl</code>，这里为了演示允许直接写立即数。
+    </p>`;
+  $('#simReset')?.addEventListener('click', () => { sim = SIM_INIT(); renderSim(op, srcTxt, dstTxt, false); });
+}
+
+/* ============================================================
+   7.2 arith 逐行追踪
+   ============================================================ */
+function renderArithTrace(xs, ys, zs) {
+  const x = BigInt(xs), y = BigInt(ys), z = BigInt(zs);
+  const r = { rax: x, rdx: z, rcx: 0n };
+  const rows = [];
+  const step = (asm, cTxt, regNow, valNow) => {
+    rows.push({ asm, cTxt, reg: regNow, val: valNow });
+  };
+  r.rax = wrap64(x + y);
+  step('leaq (%rdi,%rsi), %rax', 't1 = x + y', '%rax', `${hex(r.rax)} = ${dec(r.rax)}`);
+  r.rax = wrap64(r.rax + z);
+  step('addq %rdx, %rax', 't2 = z + t1', '%rax', `${hex(r.rax)} = ${dec(r.rax)}`);
+  const threeY = wrap64(y + 2n * y);
+  r.rdx = threeY;
+  step('leaq (%rsi,%rsi,2), %rdx', '3y（中间值，C 里没有对应变量）', '%rdx', `${hex(r.rdx)} = ${dec(r.rdx)}`);
+  r.rdx = wrap64(r.rdx << 4n);
+  step('salq $4, %rdx', 't4 = y * 48', '%rdx', `${hex(r.rdx)} = ${dec(r.rdx)}`);
+  r.rcx = wrap64(x + 4n + r.rdx);
+  step('leaq 4(%rdi,%rdx), %rcx', 't5 = t3 + t4，其中 t3 = x + 4', '%rcx', `${hex(r.rcx)} = ${dec(r.rcx)}`);
+  r.rax = wrap64(r.rax * r.rcx);
+  step('imulq %rcx, %rax', 'rval = t2 * t5', '%rax', `${hex(r.rax)} = ${dec(r.rax)}`);
+  const t1 = x + y, t2 = z + t1, t4 = y * 48n, t5 = (x + 4n) + t4, rval = t2 * t5;
+  $('#arOut').innerHTML = `
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>#</th><th>汇编</th><th>C 层面</th><th>执行的寄存器</th><th class="mono">执行后的值</th></tr>
+      ${rows.map((r2, i) => `<tr><td>${i + 1}</td><td class="mono">${esc(r2.asm)}</td><td>${esc(r2.cTxt)}</td>
+        <td class="mono">${esc(r2.reg)}</td><td class="mono"><b>${esc(r2.val)}</b></td></tr>`).join('')}
+    </table></div>
+    <div class="tbl-wrap" style="margin-top:12px"><table class="tbl">
+      <tr><th>C 变量</th><th class="mono">值</th><th>说明</th></tr>
+      <tr><td class="mono">t1 = x + y</td><td class="mono">${dec(t1)}</td><td>leaq 顺带算出来的</td></tr>
+      <tr><td class="mono">t2 = z + t1</td><td class="mono">${dec(t2)}</td><td>addq</td></tr>
+      <tr><td class="mono">t3 = x + 4</td><td class="mono">${dec(x + 4n)}</td><td><b>没有单独的指令</b>，被合并进下一条 leaq 的位移里</td></tr>
+      <tr><td class="mono">t4 = y * 48</td><td class="mono">${dec(t4)}</td><td>leaq（3y）+ salq（×16）＝ 48y</td></tr>
+      <tr><td class="mono">t5 = t3 + t4</td><td class="mono">${dec(t5)}</td><td>leaq 4(%rdi,%rdx) 的地址计算顺便完成了加法</td></tr>
+      <tr><td class="mono">rval = t2 * t5</td><td class="mono">${dec(rval)}</td><td>整段代码里唯一一次 imulq</td></tr>
+    </table></div>
+    <div class="box ok" style="margin:12px 0 0"><div class="t">一致性检查</div>
+      汇编最后算出的 <code>%rax</code> = <b>${dec(r.rax)}</b>，
+      C 层面算出的 rval = <b>${dec(rval)}</b> —— 两者相同，说明这段翻译是正确的。
+      （这里 x = ${dec(x)}、y = ${dec(y)}、z = ${dec(z)}）</div>`;
+}
+
+/* ============================================================
+   8.2 判断题
+   ============================================================ */
+const TF = [
+  { s: '%rax、%eax、%ax、%al 指的是同一个寄存器的不同部分。', a: true,
+    w: '对。它们是同一块物理存储的不同宽度视图。写 %eax 会把高 32 位清零，写 %ax/%al 则保留高位。' },
+  { s: '单条 mov 指令可以把一个内存单元的值直接复制到另一个内存单元。', a: false,
+    w: '错。mov 不支持「内存到内存」，必须经过一个寄存器：先 load 再 store。' },
+  { s: 'AT&T 语法的操作数顺序是「源, 目的」，与 Intel 文档正好相反。', a: true,
+    w: '对。AT&T 写作 movq Source, Dest，Intel 写作 mov Dest, Source。看书时一定要先看清用的是哪种语法。' },
+  { s: 'movq 指令会区分操作数是有符号还是无符号。', a: false,
+    w: '错。传送指令只搬位，不解释位；算术指令也不区分，因为位级运算完全相同。需要区分时靠条件码。' },
+  { s: 'leaq 会访问内存以取得操作数的值。', a: false,
+    w: '错。leaq 只<b>计算地址</b>，不访存 —— 正因如此它常被编译器当成「不访存的加法」来用（如 ×12 的例子）。' },
+  { s: '寻址模式 D(Rb,Ri,S) 中，比例因子 S 只能是 1、2、4、8。', a: true,
+    w: '对。因为数据宽度就是 1、2、4、8 字节 —— 这个设计正是为了访问数组元素。' },
+  { s: '汇编里以 . 开头的行是伪指令，不会被翻译成机器指令。', a: true,
+    w: '对。如 .globl、.type、.cfi_*、.size 都是给汇编器/链接器看的说明，不产生机器码。' },
+  { s: '汇编器产出的 .o 目标文件已经可以直接运行。', a: false,
+    w: '错。目标文件里不同文件之间的引用还没解析，也缺少库代码 —— 必须经过链接器才能得到可执行文件。' },
+];
+const tfState = { answered: 0, correct: 0 };
+function renderTF() {
+  tfState.answered = 0; tfState.correct = 0;
+  updateTfScore();
+  $('#tfList').innerHTML = TF.map((t, i) => `
+    <div class="puzzle" data-tf="${i}">
+      <div class="q" style="font-family:var(--font-sans);white-space:normal">${esc(t.s)}</div>
+      <div class="btns"><button class="sm" data-a="1">对</button><button class="sm" data-a="0">错</button></div>
+      <div class="exp"></div>
+    </div>`).join('');
+}
+function updateTfScore() {
+  $('#tfScore').textContent = `已答 ${tfState.answered} / ${TF.length} · 正确 ${tfState.correct}`;
+  $('#tfScore').className = 'chip ' + (tfState.answered === TF.length && tfState.correct === TF.length ? 'ok' : 'gray');
+}
+
+/* ============================================================
+   8.3 小测验
+   ============================================================ */
+const QUIZ = [
+  { q: '<code>gcc -Og -S sum.c</code> 会产生什么？', o: ['可执行文件 sum', '汇编文件 sum.s', '目标文件 sum.o', '什么也不产生'], a: 1,
+    w: '<code>-S</code> 表示「只到汇编为止」，产出 <code>sum.s</code>。要目标文件用 <code>-c</code>，要可执行文件去掉 <code>-S</code> 并加 <code>-o</code>。' },
+  { q: '<code>movq %rax, (%rbx)</code> 与 <code>movq %rax, %rbx</code> 的区别是？', o: ['没有区别', '前者把 %rax 写入 %rbx 指向的内存，后者复制到 %rbx 寄存器', '前者是非法指令', '后者会清空 %rbx'], a: 1,
+    w: '括号就是「访问内存」。带括号 → store 到内存；不带括号 → 寄存器之间复制。这是本讲最核心的一条读法。' },
+  { q: '按 x86-64 的调用约定，<code>%rsi</code> 通常存放第几个参数？', o: ['第 1 个', '第 2 个', '第 3 个', '第 6 个'], a: 1,
+    w: '顺序是 %rdi（1）、%rsi（2）、%rdx（3）、%rcx（4）、%r8（5）、%r9（6），再多就通过栈传递。' },
+  { q: '<code>0x8(%rdx)</code> 表示的地址是？', o: ['0x8', 'M[%rdx] + 8', 'M[%rdx + 8]', '%rdx × 8'], a: 2,
+    w: 'D(R) 形式：Mem[Reg[R] + D]，即「以 %rdx 的值为基址、再加 8 字节偏移」的那个内存地址。注意不是把取到的值加 8。' },
+  { q: '<code>D(Rb,Ri,S)</code> 中 S 不能取下列哪个值？', o: ['1', '2', '3', '4'], a: 2,
+    w: 'S 只能是 1、2、4、8 —— 对应 1/2/4/8 字节的数据宽度，这样它才能直接用来做数组元素寻址。' },
+  { q: '执行 <code>leaq (%rdi,%rdi,2), %rax</code> 后，%rax 的值是（x 在 %rdi 中）？', o: ['x + 2', '3x', 'x²', '2x'], a: 1,
+    w: '地址计算 = %rdi + 2 × %rdi = 3x。leaq 不访存，所以编译器用它做「乘以 3」这类算术 —— 教材里的 m12 例子接着再 salq $2 就得到 12x。' },
+];
+function renderQuiz() {
+  $('#qzList').innerHTML = QUIZ.map((item, i) => `
+    <div class="card" style="margin:10px 0" data-q="${i}">
+      <h5>${i + 1}. ${item.q}</h5>
+      <div>${item.o.map((o, j) => `<label style="display:block;margin:5px 0;font-size:14.5px;cursor:pointer">
+        <input type="radio" name="q${i}" value="${j}"> ${esc(o)}</label>`).join('')}</div>
+      <div class="qexp" style="display:none;margin-top:8px;padding-top:8px;border-top:1px dashed var(--line);font-size:14px"></div>
+    </div>`).join('');
+  $('#qzResult').innerHTML = '';
+  $('#qzScore').textContent = '得分 0 / ' + QUIZ.length;
+  $('#qzScore').className = 'chip gray';
+}
+
+/* ============================================================
+   导航、进度、初始化
+   ============================================================ */
+function initNav() {
+  const secs = $$('main section');
+  const links = $$('nav.toc a');
+  const io = new IntersectionObserver(entries => {
+    entries.forEach(en => {
+      if (en.isIntersecting) links.forEach(a => a.classList.toggle('active', a.getAttribute('href') === '#' + en.target.id));
+    });
+  }, { rootMargin: '-72px 0px -70% 0px', threshold: 0 });
+  secs.forEach(s => io.observe(s));
+  const onScroll = () => {
+    const h = document.documentElement;
+    const max = h.scrollHeight - h.clientHeight;
+    const p = max > 0 ? Math.min(100, Math.round(h.scrollTop / max * 100)) : 0;
+    $('#pgBar').style.width = p + '%';
+    $('#pgText').textContent = '学习进度 ' + p + '%';
+    $('#toTop').style.display = h.scrollTop > 600 ? 'block' : 'none';
+  };
+  window.addEventListener('scroll', onScroll, { passive: true });
+  onScroll();
+  $('#toTop').addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
+}
+
+function initAll() {
+  initNav();
+
+  // 1.2
+  renderEvo('tr');
+  $('#evoMode').addEventListener('click', e => {
+    const b = e.target.closest('button'); if (!b) return;
+    $$('#evoMode button').forEach(x => x.classList.toggle('on', x === b));
+    renderEvo(b.dataset.m);
+  });
+
+  // 2.2 / 2.4
+  renderPipe(); renderSum();
+  $('#sumView').addEventListener('click', e => {
+    const b = e.target.closest('button'); if (!b) return;
+    $$('#sumView button').forEach(x => x.classList.toggle('on', x === b));
+    sumView = b.dataset.v; renderSum();
+  });
+
+  // 3.2 / 3.3
+  renderObj(); renderThree();
+
+  // 4.1 / 4.4
+  renderReg(); renderMov();
+  $('#movSrc').addEventListener('click', e => {
+    const b = e.target.closest('button'); if (!b) return;
+    $$('#movSrc button').forEach(x => x.classList.toggle('on', x === b));
+    movSrc = b.dataset.s; renderMov();
+  });
+  $('#movDst').addEventListener('click', e => {
+    const b = e.target.closest('button'); if (!b) return;
+    $$('#movDst button').forEach(x => x.classList.toggle('on', x === b));
+    movDst = b.dataset.d; renderMov();
+  });
+
+  // 5.3 地址计算器
+  renderAddr($('#addrIn').value, $('#addrRdx').value, $('#addrRcx').value);
+  $('#addrGo').addEventListener('click', () => renderAddr($('#addrIn').value, $('#addrRdx').value, $('#addrRcx').value));
+  ['#addrIn', '#addrRdx', '#addrRcx'].forEach(s => $(s).addEventListener('keydown', e => {
+    if (e.key === 'Enter') renderAddr($('#addrIn').value, $('#addrRdx').value, $('#addrRcx').value);
+  }));
+  $$('[data-addr]').forEach(b => b.addEventListener('click', () => {
+    $('#addrIn').value = b.dataset.addr;
+    $('#addrRdx').value = '0xf000'; $('#addrRcx').value = '0x0100';
+    renderAddr(b.dataset.addr, '0xf000', '0x0100');
+  }));
+
+  // 5.4 swap 模拟器
+  renderSwap();
+  $('#swapStep').addEventListener('click', () => {
+    if (swap.step >= SWAP_STEPS.length) return;
+    const s = SWAP_STEPS[swap.step];
+    swap.log.push(s.run(swap));
+    swap.step++;
+    renderSwap();
+  });
+  $('#swapRun').addEventListener('click', () => {
+    while (swap.step < SWAP_STEPS.length) { swap.log.push(SWAP_STEPS[swap.step].run(swap)); swap.step++; }
+    renderSwap();
+  });
+  $('#swapReset').addEventListener('click', () => { swap = SWAP_INIT(); renderSwap(); });
+
+  // 6.2 / 6.4
+  renderArith();
+  renderSim('movq', $('#simSrc').value, $('#simDst').value, false);
+  $('#simGo').addEventListener('click', () => {
+    const op = $('#simOp').value;
+    if (op === 'movq' && simOperand($('#simSrc').value)?.t === 'mem' && simOperand($('#simDst').value)?.t === 'mem') {
+      $('#simOut').innerHTML = '<div class="box bad" style="margin:8px 0">单条 mov 不能做「内存到内存」的传送 —— 必须经过一个寄存器。</div>';
+      return;
+    }
+    renderSim(op, $('#simSrc').value, $('#simDst').value, true);
+  });
+  ['#simSrc', '#simDst'].forEach(s => $(s).addEventListener('keydown', e => { if (e.key === 'Enter') $('#simGo').click(); }));
+  $$('[data-sim]').forEach(b => b.addEventListener('click', () => {
+    const [op, src, dst] = b.dataset.sim.split('|');
+    $('#simOp').value = op; $('#simSrc').value = src; $('#simDst').value = dst;
+    $('#simGo').click();
+  }));
+
+  // 7.2 arith 追踪
+  renderArithTrace($('#arX').value, $('#arY').value, $('#arZ').value);
+  $('#arGo').addEventListener('click', () => renderArithTrace($('#arX').value, $('#arY').value, $('#arZ').value));
+  ['#arX', '#arY', '#arZ'].forEach(s => $(s).addEventListener('input', () => {
+    renderArithTrace($('#arX').value || 0, $('#arY').value || 0, $('#arZ').value || 0);
+  }));
+
+  // 8.2 判断题
+  renderTF();
+  $('#tfList').addEventListener('click', ev => {
+    const btn = ev.target.closest('button[data-a]'); if (!btn) return;
+    const card = btn.closest('.puzzle'), i = +card.dataset.tf, t = TF[i];
+    const ok = (btn.dataset.a === '1') === t.a;
+    if (!card.classList.contains('done')) { tfState.answered++; if (ok) tfState.correct++; }
+    card.classList.add('done');
+    card.classList.toggle('correct', ok);
+    card.classList.toggle('wrong', !ok);
+    card.querySelector('.exp').innerHTML =
+      `<span class="verdict" style="color:${ok ? 'var(--frac)' : 'var(--sign)'}">${ok ? '✓ 判断正确' : '✗ 判断有误'}</span>
+       &nbsp;正确答案：<b>${t.a ? '对' : '错'}</b><br>${t.w}`;
+    updateTfScore();
+  });
+  $('#tfReset').addEventListener('click', renderTF);
+
+  // 8.3 小测验
+  renderQuiz();
+  $('#qzSubmit').addEventListener('click', () => {
+    let score = 0, unanswered = 0;
+    QUIZ.forEach((item, i) => {
+      const card = $(`[data-q="${i}"]`);
+      const sel = card.querySelector(`input[name="q${i}"]:checked`);
+      const exp = card.querySelector('.qexp');
+      exp.style.display = 'block';
+      if (!sel) {
+        unanswered++;
+        exp.innerHTML = `<span style="color:var(--warn)">未作答</span> —— 正确答案：<b>${esc(item.o[item.a])}</b><br>${esc(item.w)}`;
+        card.style.borderColor = '#f0d6a8';
+        return;
+      }
+      const ok = +sel.value === item.a;
+      if (ok) score++;
+      card.style.borderColor = ok ? 'var(--ok-bd)' : 'var(--bad-bd)';
+      card.style.background = ok ? 'var(--ok-bg)' : 'var(--bad-bg)';
+      exp.innerHTML = `<span style="color:${ok ? 'var(--frac)' : 'var(--sign)'};font-weight:700">${ok ? '✓ 正确' : '✗ 错误'}</span>
+        —— 正确答案：<b>${esc(item.o[item.a])}</b><br>${esc(item.w)}`;
+    });
+    $('#qzScore').textContent = `得分 ${score} / ${QUIZ.length}`;
+    $('#qzScore').className = 'chip ' + (score === QUIZ.length ? 'ok' : score >= QUIZ.length / 2 ? 'warn' : 'bad');
+    $('#qzResult').innerHTML = `<div class="box ${score === QUIZ.length ? 'ok' : score >= QUIZ.length / 2 ? 'warn' : 'bad'}" style="margin-top:14px">
+      <div class="t">${score === QUIZ.length ? '全对！' : score >= QUIZ.length / 2 ? '还不错' : '建议回看前面的章节'}</div>
+      你答对了 <b>${score}</b> / ${QUIZ.length} 题${unanswered ? `，另有 ${unanswered} 题未作答` : ''}。</div>`;
+  });
+  $('#qzReset').addEventListener('click', renderQuiz);
+}
+
+document.addEventListener('DOMContentLoaded', initAll);
+</script>
+</body>
+</html>

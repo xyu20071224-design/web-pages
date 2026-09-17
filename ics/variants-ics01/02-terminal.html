@@ -1,0 +1,1600 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-style="terminal" data-deck="ics01">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>计算机系统导论 · 课程概述（交互版）（深色终端版）</title>
+<style>
+/* ==========================================================================
+   base.css —— 结构基础样式（所有风格共用）
+   只使用 CSS 变量，不含任何具体配色；由各主题覆盖变量与少量结构规则。
+   ========================================================================== */
+
+:root{
+  /* 颜色（每个主题必须覆盖） */
+  --bg:#f6f7f9; --card:#fff; --ink:#15181d; --muted:#697586; --line:#e4e7ec;
+  --accent:#2563eb; --accent-ink:#fff; --accent-soft:#eaf1ff;
+  --sign:#e5484d; --exp:#0b7fd4; --frac:#18915a; --warn:#b45309;
+  --sign-bg:#fdecec; --sign-fg:#a3262b; --sign-bd:#f6cdcf;
+  --exp-bg:#e8f2fd;  --exp-fg:#0a5f9e;  --exp-bd:#c7ddf5;
+  --frac-bg:#e9f7ef; --frac-fg:#116b43; --frac-bd:#c8e8d5;
+  --ok-bg:#f2fbf6; --ok-bd:#9ed3b4; --bad-bg:#fff5f5; --bad-bd:#f1b5b8;
+  --warn-bg:#fffbeb; --gray-bg:#eef1f5; --gray-fg:#5b6472;
+  --paper-soft:#fcfdfe; --code-bg:#f1f3f7; --code-bd:#e6e9ef;
+  --tbl-head:#f7f9fc; --tbl-hover:#fafbfd;
+  --sel-bg:#eef1f5;
+
+  /* 字体 */
+  --font-sans:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",system-ui,sans-serif;
+  --font-mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+  --font-display:var(--font-sans);
+  --tracking-title:normal;
+
+  /* 形状 */
+  --radius:12px; --radius-sm:8px; --radius-pill:99px;
+  --border-w:1px; --shadow:0 1px 2px rgba(16,24,40,.06),0 1px 3px rgba(16,24,40,.1);
+  --shadow-card:none;
+  --card-border:var(--border-w) solid var(--line);
+
+  /* 布局 */
+  --page-max:1180px; --nav-w:236px; --gap:26px; --sec-pad:26px 28px;
+  --nav-sticky-top:64px; --anchor-offset:70px;
+  --font-size:16px; --line-height:1.75;
+}
+
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font-sans);
+  font-size:var(--font-size);line-height:var(--line-height);-webkit-font-smoothing:antialiased}
+img{max-width:100%}
+
+/* ---------- 顶栏 ---------- */
+.topbar{position:sticky;top:0;z-index:50;background:var(--card);border-bottom:1px solid var(--line)}
+.topbar-in{max-width:var(--page-max);margin:0 auto;padding:10px 22px;display:flex;align-items:center;gap:14px}
+.brand{font-weight:700;letter-spacing:var(--tracking-title);font-family:var(--font-display)}
+.brand small{font-weight:500;color:var(--muted);margin-left:8px;font-size:12.5px}
+.progress{margin-left:auto;display:flex;align-items:center;gap:10px;font-size:12.5px;color:var(--muted)}
+.progress .bar{width:150px;height:6px;border-radius:var(--radius-pill);background:var(--line);overflow:hidden}
+.progress .bar>i{display:block;height:100%;width:0;background:var(--accent);transition:width .25s}
+
+/* ---------- 主体布局 ---------- */
+.layout{max-width:var(--page-max);margin:0 auto;padding:22px;display:grid;
+  grid-template-columns:var(--nav-w) minmax(0,1fr);gap:var(--gap)}
+main{min-width:0}
+
+/* ---------- 目录 ---------- */
+nav.toc{position:sticky;top:var(--nav-sticky-top);align-self:start;max-height:calc(100vh - 84px);overflow:auto;padding-right:4px}
+nav.toc h4{margin:0 0 8px;font-size:12px;letter-spacing:.12em;color:var(--muted);text-transform:uppercase;font-weight:600}
+nav.toc a{display:block;padding:7px 11px;border-radius:var(--radius-sm);color:var(--ink);opacity:.78;
+  text-decoration:none;font-size:14.5px;border-left:2.5px solid transparent}
+nav.toc a:hover{background:var(--sel-bg);opacity:1}
+nav.toc a.active{background:var(--accent-soft);color:var(--accent);border-left-color:var(--accent);font-weight:600;opacity:1}
+nav.toc a .n{display:inline-block;min-width:20px;color:var(--muted);font-size:12.5px;font-variant-numeric:tabular-nums}
+nav.toc a.active .n{color:var(--accent)}
+nav.toc .sub{padding-left:26px;font-size:13.5px;opacity:.7}
+
+/* ---------- 章节 ---------- */
+section{background:var(--card);border:var(--card-border);border-radius:var(--radius);
+  padding:var(--sec-pad);margin-bottom:22px;box-shadow:var(--shadow);scroll-margin-top:var(--anchor-offset)}
+section>h2{margin:0 0 6px;font-size:25px;letter-spacing:-.01em;font-family:var(--font-display)}
+section>.lede{color:var(--muted);margin:0 0 20px;font-size:14.5px}
+h3{font-size:18.5px;margin:26px 0 10px;padding-left:11px;border-left:3.5px solid var(--accent);font-family:var(--font-display)}
+h4{font-size:16px;margin:18px 0 8px;font-family:var(--font-display)}
+h5{font-size:15px;font-family:var(--font-display)}
+p{margin:10px 0}
+ul,ol{margin:10px 0;padding-left:22px}
+li{margin:5px 0}
+code{font-family:var(--font-mono);font-size:.89em;background:var(--code-bg);border:1px solid var(--code-bd);border-radius:5px;padding:1px 5px}
+.mono{font-family:var(--font-mono)}
+a{color:var(--accent)}
+hr{border:0;border-top:1px dashed var(--line);margin:24px 0}
+.srcref{font-size:11.5px;color:var(--muted);font-weight:500;font-family:var(--font-sans);margin-left:8px;vertical-align:middle;white-space:nowrap;opacity:.75}
+.en{color:var(--muted);font-size:.92em}
+
+/* ---------- 栅格与卡片 ---------- */
+.grid{display:grid;gap:14px}
+.g2{grid-template-columns:repeat(2,minmax(0,1fr))}
+.g3{grid-template-columns:repeat(3,minmax(0,1fr))}
+@media(max-width:820px){.g2,.g3{grid-template-columns:1fr}}
+.card{border:var(--card-border);border-radius:var(--radius-sm);padding:15px 17px;background:var(--paper-soft);box-shadow:var(--shadow-card)}
+.card h5{margin:0 0 7px}
+.card.pad0{padding:0;overflow:hidden}
+
+/* ---------- 提示框 ---------- */
+.box{border:1px solid var(--line);border-left:4px solid var(--accent);background:var(--accent-soft);
+  border-radius:var(--radius-sm);padding:12px 16px;margin:14px 0}
+.box.warn{border-left-color:var(--warn);background:var(--warn-bg)}
+.box.bad{border-left-color:var(--sign);background:var(--bad-bg)}
+.box.ok{border-left-color:var(--frac);background:var(--ok-bg)}
+.box .t{font-weight:650;font-size:14.5px;margin-bottom:2px}
+
+/* ---------- 公式 ---------- */
+.formula{font-family:var(--font-mono);background:var(--paper-soft);border:1px solid var(--line);
+  border-radius:var(--radius-sm);padding:14px 17px;margin:14px 0;font-size:16.5px;text-align:center;overflow-x:auto}
+.formula.big{font-size:20px}
+
+/* ---------- 表格 ---------- */
+table.tbl{width:100%;border-collapse:collapse;font-size:14.5px;margin:14px 0}
+table.tbl th,table.tbl td{border:1px solid var(--line);padding:8px 11px;text-align:left;vertical-align:top}
+table.tbl th{background:var(--tbl-head);font-weight:650;font-size:13.5px;white-space:nowrap}
+table.tbl td.mono,table.tbl th.mono{font-family:var(--font-mono);font-size:13.5px}
+table.tbl tr:hover td{background:var(--tbl-hover)}
+.tbl-wrap{overflow-x:auto}
+
+/* ---------- 位串控件 ---------- */
+.fw{display:flex;flex-wrap:wrap;gap:8px 18px;align-items:flex-start;margin:4px 0 2px}
+.fgrp{min-width:0}
+.fcap{font-size:12px;color:var(--muted);margin-bottom:4px;font-weight:600}
+.fcap b{font-family:var(--font-mono);font-size:12.5px}
+.bits{display:flex;flex-wrap:wrap;gap:2px;font-family:var(--font-mono);margin:4px 0}
+.bits .b{width:25px;height:33px;display:flex;align-items:center;justify-content:center;
+  border-radius:6px;font-size:15px;cursor:pointer;user-select:none;border:1px solid transparent;
+  transition:transform .06s,background .12s;font-weight:600}
+.bits .b:hover{transform:translateY(-2px)}
+.bits .b.s{background:var(--sign-bg);color:var(--sign-fg);border-color:var(--sign-bd)}
+.bits .b.e{background:var(--exp-bg);color:var(--exp-fg);border-color:var(--exp-bd)}
+.bits .b.f{background:var(--frac-bg);color:var(--frac-fg);border-color:var(--frac-bd)}
+.bits .b.sel{outline:2px solid var(--ink);outline-offset:1px}
+.bits.sm .b{width:19px;height:26px;font-size:12px;border-radius:4px}
+.fgrp .bits{flex-wrap:wrap;max-width:100%;gap:2px}
+.fgrp.ge .bits{max-width:300px}
+
+/* ---------- 读数表 ---------- */
+.readout{display:grid;grid-template-columns:auto 1fr;gap:4px 16px;font-size:14.5px;margin:12px 0}
+.readout dt{color:var(--muted);font-weight:600;font-family:var(--font-mono);font-size:13.5px;padding-top:2px}
+.readout dd{margin:0;font-family:var(--font-mono)}
+
+/* ---------- 小标签 ---------- */
+.chip{display:inline-block;font-size:12.5px;padding:2px 9px;border-radius:var(--radius-pill);
+  background:var(--accent-soft);color:var(--accent);font-weight:600}
+.chip.ok{background:var(--frac-bg);color:var(--frac-fg)}
+.chip.bad{background:var(--sign-bg);color:var(--sign-fg)}
+.chip.warn{background:var(--warn-bg);color:var(--warn)}
+.chip.gray{background:var(--gray-bg);color:var(--gray-fg)}
+.kbd{font-family:var(--font-mono);font-size:13px;background:var(--code-bg);border:1px solid var(--code-bd);
+  border-bottom-width:2px;border-radius:6px;padding:1px 7px}
+
+/* ---------- 控件 ---------- */
+.ctrls{display:flex;flex-wrap:wrap;gap:9px;align-items:center;margin:12px 0}
+label.fld{display:inline-flex;align-items:center;gap:7px;font-size:14px;color:var(--ink);max-width:100%;flex-wrap:wrap;min-width:0}
+label.fld select,label.fld input{min-width:0;max-width:100%}
+input[type=text],input[type=number],select{font-family:var(--font-mono);font-size:14px;padding:6px 10px;
+  border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--card);color:var(--ink)}
+input[type=text]:focus,input[type=number]:focus,select:focus{outline:2px solid var(--accent-soft);border-color:var(--accent)}
+button{font-family:var(--font-sans);font-size:14px;font-weight:600;padding:7px 15px;border-radius:var(--radius-sm);
+  border:1px solid var(--line);background:var(--card);color:var(--ink);cursor:pointer}
+button:hover{background:var(--sel-bg)}
+button.p{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+button.sm{padding:4px 10px;font-size:13px}
+button.pill{border-radius:var(--radius-pill)}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:var(--radius-sm);overflow:hidden}
+.seg button{border:0;border-radius:0;border-right:1px solid var(--line);padding:6px 13px}
+.seg button:last-child{border-right:0}
+.seg button.on{background:var(--accent);color:var(--accent-ink)}
+
+/* ---------- 分步演示 ---------- */
+.step{border:1px solid var(--line);border-radius:var(--radius-sm);padding:11px 15px;margin:9px 0;
+  background:var(--paper-soft);opacity:.42;transition:opacity .2s}
+.step.on{opacity:1;background:var(--card)}
+.step .h{font-size:13px;font-weight:700;color:var(--accent);letter-spacing:.02em;margin-bottom:3px}
+.step .m{font-family:var(--font-mono);font-size:14.5px;overflow-x:auto}
+.step .e{font-size:13.5px;color:var(--muted);margin-top:3px}
+
+/* ---------- 折叠与答案 ---------- */
+.reveal{border:1px solid var(--line);border-radius:var(--radius-sm);padding:11px 15px;margin:8px 0;background:var(--paper-soft)}
+.reveal summary{cursor:pointer;font-weight:600;font-size:14.5px}
+.reveal[open]{background:var(--card)}
+.ans{margin-top:8px;padding-top:8px;border-top:1px dashed var(--line);font-size:14.5px}
+
+/* ---------- 判断题 ---------- */
+.puzzle{border:1px solid var(--line);border-radius:var(--radius-sm);padding:12px 15px;margin:9px 0;
+  display:flex;gap:13px;align-items:flex-start;background:var(--paper-soft)}
+.puzzle .q{font-family:var(--font-mono);font-size:15px;flex:1;min-width:0;overflow-x:auto;white-space:nowrap}
+.puzzle .q small{font-family:var(--font-sans);color:var(--muted);display:block;white-space:normal}
+.puzzle .btns{display:flex;gap:6px;flex-shrink:0}
+.puzzle.correct{border-color:var(--ok-bd);background:var(--ok-bg)}
+.puzzle.wrong{border-color:var(--bad-bd);background:var(--bad-bg)}
+.puzzle .exp{margin-top:9px;padding-top:9px;border-top:1px dashed var(--line);font-size:14.5px;
+  display:none;white-space:normal;font-family:var(--font-sans)}
+.puzzle.done .exp{display:block}
+.puzzle .exp .verdict{font-weight:700}
+
+/* ---------- 分布图 ---------- */
+.tick{stroke:#94a3b8;stroke-width:1.4}
+.tick.dn{stroke:var(--exp)}
+.tick.nm{stroke:var(--frac)}
+.ticklabel{font-size:9.5px;fill:var(--muted);font-family:var(--font-mono)}
+.axisline{stroke:var(--line);stroke-width:1.2}
+.axislabel{font-size:11px;fill:var(--muted)}
+
+/* ---------- 页脚 / 回到顶部 ---------- */
+.footer{max-width:var(--page-max);margin:0 auto;padding:8px 22px 40px;color:var(--muted);font-size:13px}
+.totop{position:fixed;right:22px;bottom:22px;z-index:40;box-shadow:var(--shadow);display:none}
+
+/* ---------- 响应式 ---------- */
+@media(max-width:960px){
+  .layout{grid-template-columns:1fr;padding:16px}
+  nav.toc{position:static;max-height:none;display:flex;flex-wrap:wrap;gap:6px;
+    background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:10px}
+  nav.toc h4{width:100%;margin-bottom:2px}
+  nav.toc a{border-left:0;padding:5px 10px;font-size:13px}
+  nav.toc .sub{display:none}
+  section{padding:20px 17px}
+}
+@media print{
+  nav.toc,.topbar,.totop{display:none}
+  .layout{display:block}
+  section{break-inside:avoid;box-shadow:none}
+}
+
+/* ==========================================================================
+   风格 B · 深色终端（Dark IDE / Terminal）
+   深灰底 · 霓虹强调色 · 等宽标题 · 左侧编号导轨 · 寄存器风格的位视图
+   ========================================================================== */
+
+:root{
+  --bg:#0b0f14; --card:#121821; --ink:#d8e2ee; --muted:#7c8b9e; --line:#202b38;
+  --accent:#22d3ee; --accent-ink:#04191e; --accent-soft:#0e2b34;
+  --sign:#ff5c57; --exp:#4cc2ff; --frac:#3ddc84; --warn:#ffb454;
+  --sign-bg:#2a1517; --sign-fg:#ff8a86; --sign-bd:#48211f;
+  --exp-bg:#0c2432;  --exp-fg:#7ad3ff;  --exp-bd:#123c52;
+  --frac-bg:#0d2a1c; --frac-fg:#6ee7a5; --frac-bd:#14452c;
+  --ok-bg:#0d2a1c; --ok-bd:#1d5c39; --bad-bg:#2a1517; --bad-bd:#5a2724;
+  --warn-bg:#2a2113; --gray-bg:#18202b; --gray-fg:#8fa0b4;
+  --paper-soft:#0e141c; --code-bg:#0a1017; --code-bd:#1d2836;
+  --tbl-head:#151d27; --tbl-hover:#141c26;
+  --sel-bg:#1a2431;
+
+  --font-sans:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",system-ui,sans-serif;
+  --font-mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+  --font-display:var(--font-mono);
+  --tracking-title:-.01em;
+
+  --radius:8px; --radius-sm:6px; --radius-pill:99px;
+  --border-w:1px;
+  --shadow:0 1px 0 rgba(0,0,0,.4),0 8px 24px -12px rgba(0,0,0,.6);
+  --shadow-card:none;
+  --card-border:1px solid var(--line);
+
+  --page-max:1240px; --nav-w:186px; --gap:22px;
+  --sec-pad:22px 24px; --nav-sticky-top:76px; --anchor-offset:80px;
+  --font-size:15.5px; --line-height:1.72;
+}
+
+body{background:
+  radial-gradient(1100px 520px at 12% -8%, rgba(34,211,238,.10), transparent 60%),
+  radial-gradient(900px 460px at 96% 4%, rgba(61,220,132,.07), transparent 62%),
+  var(--bg)}
+
+/* ---------- 顶栏：终端窗口标题条 ---------- */
+.topbar{background:rgba(13,18,25,.9);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+.topbar-in{padding:11px 22px;gap:12px}
+.brand{font-family:var(--font-mono);font-weight:600;font-size:15px}
+.brand::before{content:"● ● ●";color:#3b4a5a;letter-spacing:2px;margin-right:14px;font-size:11px;vertical-align:1px}
+.brand small{font-family:var(--font-mono);color:var(--muted);font-size:11.5px}
+.progress{font-family:var(--font-mono);font-size:11.5px;letter-spacing:.04em}
+.progress .bar{width:130px;height:5px;border-radius:var(--radius-pill);background:#18212c}
+.progress .bar>i{background:linear-gradient(90deg,#22d3ee,#3ddc84);box-shadow:0 0 10px rgba(34,211,238,.7)}
+
+/* ---------- 目录：编号导轨 ---------- */
+nav.toc a{font-family:var(--font-mono);font-size:13px;border-left:2px solid transparent;border-radius:0 6px 6px 0;
+  color:var(--muted)}
+nav.toc a:hover{color:var(--ink);background:var(--sel-bg)}
+nav.toc a.active{background:var(--accent-soft);color:var(--accent);border-left-color:var(--accent);
+  box-shadow:inset 0 0 24px -12px var(--accent)}
+nav.toc a .n{color:#4a5a6d;font-size:11.5px}
+nav.toc h4{font-family:var(--font-mono);font-size:10.5px;letter-spacing:.16em;color:#5b6b7e}
+
+/* ---------- 章节：面板 ---------- */
+section{box-shadow:var(--shadow);position:relative;overflow:hidden}
+section::before{content:"";position:absolute;inset:0 auto 0 0;width:2px;
+  background:linear-gradient(180deg,var(--accent),transparent 55%);opacity:.5}
+section>h2{font-family:var(--font-mono);font-size:22px;font-weight:600}
+section>h2::before{content:"❯ ";color:var(--accent)}
+section>.lede{font-family:var(--font-mono);font-size:13px;color:var(--muted)}
+h3{font-family:var(--font-mono);font-size:17px;border-left:3px solid var(--accent);letter-spacing:-.01em}
+h4,h5{font-family:var(--font-mono)}
+
+code{background:var(--code-bg);border-color:var(--code-bd);color:#8ee7f5}
+
+/* ---------- 卡片 / 盒 ---------- */
+.card{border-radius:var(--radius-sm);background:var(--paper-soft)}
+.box{border-radius:var(--radius-sm);border-left-width:3px;background:rgba(34,211,238,.05)}
+.box.warn{background:rgba(255,180,84,.06)}
+.box.bad{background:rgba(255,92,87,.06)}
+.box.ok{background:rgba(61,220,132,.06)}
+.box .t{font-family:var(--font-mono);font-size:13.5px}
+
+.formula{background:var(--code-bg);border-color:var(--code-bd);color:#a9ecf7;
+  box-shadow:inset 0 0 40px -20px rgba(34,211,238,.6)}
+
+/* ---------- 表格 ---------- */
+table.tbl th{background:var(--tbl-head);color:var(--muted);font-family:var(--font-mono);
+  font-size:12.5px;text-transform:uppercase;letter-spacing:.05em}
+table.tbl th,table.tbl td{border-color:var(--line)}
+table.tbl tbody tr:nth-child(even) td{background:rgba(255,255,255,.012)}
+
+/* ---------- 位视图：寄存器样式 ---------- */
+.fw{gap:10px 22px;padding:12px 14px;border:1px solid var(--line);border-radius:var(--radius-sm);
+  background:var(--code-bg)}
+.fcap{font-family:var(--font-mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase}
+.bits .b{width:26px;height:32px;border-radius:4px;font-family:var(--font-mono);font-weight:700;
+  border-width:1px;border-style:solid}
+.bits .b.s{background:var(--sign-bg);color:var(--sign-fg);border-color:var(--sign-bd);text-shadow:0 0 8px rgba(255,92,87,.5)}
+.bits .b.e{background:var(--exp-bg);color:var(--exp-fg);border-color:var(--exp-bd);text-shadow:0 0 8px rgba(76,194,255,.45)}
+.bits .b.f{background:var(--frac-bg);color:var(--frac-fg);border-color:var(--frac-bd);text-shadow:0 0 8px rgba(61,220,132,.4)}
+.bits .b:hover{transform:translateY(-2px);box-shadow:0 4px 14px -6px currentColor}
+.bits .b.sel{outline:2px solid var(--accent);outline-offset:1px}
+
+.readout dt{color:#6b7c91}
+.readout dd{color:var(--ink)}
+
+/* ---------- 控件：终端命令风 ---------- */
+input[type=text],input[type=number],select{background:var(--code-bg);border-color:var(--code-bd);color:var(--ink);
+  font-family:var(--font-mono)}
+input:focus,select:focus{border-color:var(--accent);outline:none;box-shadow:0 0 0 2px rgba(34,211,238,.18)}
+button{background:#161f2a;border-color:var(--line);color:var(--ink);font-family:var(--font-mono);font-size:13px}
+button:hover{border-color:var(--accent);color:var(--accent)}
+button.p{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);font-weight:700}
+button.p:hover{background:#5ee6f7;color:var(--accent-ink);box-shadow:0 0 18px -4px var(--accent)}
+.chip{font-family:var(--font-mono);font-size:11.5px;border-radius:4px}
+.seg{border-color:var(--line)}
+.seg button.on{background:var(--accent-soft);color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
+
+/* ---------- 分步演示：终端输出 ---------- */
+.step{border-radius:var(--radius-sm);background:var(--code-bg);border-color:var(--code-bd)}
+.step.on{border-color:#26374a;box-shadow:inset 0 0 30px -22px var(--accent)}
+.step .h{font-family:var(--font-mono);color:var(--accent);letter-spacing:.03em;font-size:12px}
+.step .h::before{content:"$ ";opacity:.7}
+
+/* ---------- 判断题 / 折叠 ---------- */
+.puzzle{background:var(--paper-soft);border-radius:var(--radius-sm)}
+.puzzle .q{color:#a9ecf7}
+.puzzle.correct{border-color:var(--ok-bd);background:rgba(61,220,132,.05)}
+.puzzle.wrong{border-color:var(--bad-bd);background:rgba(255,92,87,.05)}
+.reveal{background:var(--paper-soft)}
+
+.totop{background:#161f2a;border-color:var(--line);color:var(--accent);font-family:var(--font-mono)}
+.tick{stroke:#41556b}
+.axisline{stroke:#2a3949}
+
+@media(max-width:960px){
+  .brand::before{display:none}
+  .layout{padding:14px}
+  nav.toc{border-radius:var(--radius-sm)}
+}
+
+
+/* ---------- 风格切换条（构建时注入，各主题通用） ---------- */
+.stylebar{max-width:var(--page-max);margin:0 auto;padding:14px 22px 0;display:flex;gap:8px;
+  flex-wrap:wrap;align-items:center;font-size:12.5px;color:var(--muted)}
+.stylebar>span{font-weight:600}
+.stylebar a{text-decoration:none;padding:4px 11px;border:1px solid var(--line);border-radius:var(--radius-pill);
+  color:var(--muted);background:var(--card);font-weight:600}
+.stylebar a:hover{border-color:var(--accent);color:var(--accent)}
+.stylebar a.cur{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+@media(max-width:960px){.stylebar{padding:12px 16px 0}}
+
+</style>
+</head>
+<body>
+
+<header class="topbar"><div class="topbar-in">
+  <div class="brand">课程概述 Course Overview<small>《课程名》第 N 讲 · 深色终端版</small></div>
+  <div class="progress"><span id="pgText">学习进度 0%</span><span class="bar"><i id="pgBar"></i></span></div>
+</div></header>
+
+<div class="stylebar">
+  <span>风格：</span>
+  <a href="../ics01-zh.html">清爽蓝（原版）</a>
+  <a href="01-academic.html">学术讲义</a>
+  <a href="03-brutalist.html">新粗野</a>
+  <a href="04-glass.html">柔和玻璃</a>
+  <a href="index.html">◧ 全部预览</a>
+  <span style="opacity:.5">|</span>
+  <a href="variants-bits/index.html">↗ 第 2 讲 · 位、字节与整数</a>
+  <a href="variants/index.html">↗ 第 3 讲 · 浮点数</a>
+  <a href="variants-ics04/index.html">↗ 第 4 讲 · 机器级编程基础</a>
+  <a href="variants-lab/index.html">↗ Data Lab 实验</a>
+</div>
+
+<div class="layout">
+
+<nav class="toc">
+  <h4>目录</h4>
+  <a href="#s0"><span class="n">0</span>课程导览与起源</a>
+  <a href="#s1"><span class="n">1</span>课程规划</a>
+  <a href="#s2"><span class="n">2</span>五个现实问题</a>
+  <a href="#s3"><span class="n">3</span>课程主体内容</a>
+  <a href="#s4"><span class="n">4</span>注意事项与成绩</a>
+</nav>
+
+<main>
+<!-- ================= 0 ================= -->
+  <section id="s0">
+    <h2>课程导览与起源<span class="srcref">原第 1–6 页</span></h2>
+    <p class="lede">《计算机系统导论》第 1 讲：课程概述。这一讲不讲技术细节，而是回答三个问题 —— 这门课从哪来、要学什么、怎么学。</p>
+
+    <div class="grid g3">
+      <div class="card"><h5>本讲提纲</h5>
+        <ol style="margin:0;padding-left:20px;font-size:14.5px">
+          <li>课程起源</li>
+          <li>课程规划</li>
+          <li>五个有趣的现实问题</li>
+          <li>课程主体内容</li>
+          <li>注意事项</li>
+        </ol>
+      </div>
+      <div class="card"><h5>一句话核心</h5>
+        <p style="margin:0;font-size:14.5px">这门课<b>从程序员视角</b>看计算机系统：不满足于「程序能跑」，而是搞清楚它在机器上<b>怎么跑、为什么快、为什么错</b>。</p>
+      </div>
+      <div class="card"><h5>它和其他课的关系</h5>
+        <p style="margin:0;font-size:14.5px">为后续的<b>编译、网络、操作系统、计算机体系结构</b>等课程打地基 —— 这门课建立的是「整体框架」。</p>
+      </div>
+    </div>
+
+    <h3>0.1 课程的由来</h3>
+    <div class="grid g2">
+      <div class="card"><h5>创立</h5>
+        <ul style="margin:0">
+          <li>由<b>卡耐基梅隆大学（CMU）计算机科学学院</b>创立。</li>
+          <li>全球<b>超过 180 所大学</b>采用了该课程教材、设立了相同或类似的课程。</li>
+          <li>特点：<b>注重实践（程序员视角）</b>，强调对系统的理解。</li>
+        </ul>
+      </div>
+      <div class="card"><h5>发展</h5>
+        <ul style="margin:0">
+          <li><b>2012 年</b>，北大信息科学技术学院与 CMU 计算机科学学院<b>联合对该课程进行升级</b>，并正式引入国内。</li>
+        </ul>
+      </div>
+    </div>
+
+    <h3>0.2 小班教学的由来</h3>
+    <p>2010–2011 学年，学校对本科班级规模做了一次初步统计：</p>
+    <div class="box pad0" style="padding:16px 18px">
+      <div id="sizeStatOut"></div>
+    </div>
+    <p style="font-size:14.5px;color:var(--muted)">结论：当时在绝大多数院系中，<b>小班教学很少开展</b> —— 全校 153 个 20 人以下的小班里，大部分是外国语学院课程（约 67%），其余为公共英语课程。</p>
+
+    <h3>0.3 研讨型小班教学试点</h3>
+    <p><b>2012 年秋</b>开展第一批试点，涉及五个学院、六门必修基础课：</p>
+    <div class="grid g2">
+      <div class="card"><h5>试点课程</h5>
+        <ul style="margin:0">
+          <li>信息科学技术学院 —— <b>计算机系统导论</b></li>
+          <li>数学科学学院 —— 数学分析、抽象代数</li>
+          <li>物理学院 —— 量子力学</li>
+          <li>化学与分子工程学院 —— 无机化学</li>
+          <li>生命科学学院 —— 生物化学</li>
+        </ul>
+      </div>
+      <div class="card"><h5>后续</h5>
+        <p style="margin:0">2013 年春，信息学院增设小班课「<b>算法分析与设计</b>」。</p>
+        <p style="margin:8px 0 0;font-size:14px;color:var(--muted)">本课程采用「大班讲授 + 小班研讨」并行的方式：<b>每周两次大班授课，每周一次小班研讨</b>。</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 1 ================= -->
+  <section id="s1">
+    <h2>课程规划<span class="srcref">原第 8–14 页</span></h2>
+    <p class="lede">一学期 16 周、30 讲大班课、15 次小班研讨、8 个实验 —— 先看清全貌，再谈怎么学。</p>
+
+    <h3>1.1 研讨型教学的两种方式</h3>
+    <div class="grid g2">
+      <div class="card"><h5>方式一</h5><p style="margin:0">一学期由<b>一个教师面对一个小班</b>的学生。</p></div>
+      <div class="card" style="border-left:4px solid var(--accent)"><h5>方式二（本课程采用）</h5>
+        <p style="margin:0"><b>大班讲授课教学，同时辅以小班研讨课</b>。</p>
+      </div>
+    </div>
+
+    <h3>1.2 全学期安排</h3>
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：16 周课程表</span>
+        <label class="fld">筛选 <input type="text" id="schedFilter" placeholder="输入关键词，如 Machine / LAB / 测验" size="22" spellcheck="false"></label>
+        <button class="p" id="schedGo">筛选</button>
+        <button class="sm" data-sched="all">全部</button>
+        <button class="sm" data-sched="lab">有 LAB 的周</button>
+        <button class="sm" data-sched="exam">含测验/考试</button>
+      </div>
+      <div id="schedOut"></div>
+    </div>
+
+    <h3>1.3 大班课的主体内容</h3>
+    <div class="grid g2">
+      <div class="card"><h5>上半学期 · 教材 Part I（第 2–6 章）</h5>
+        <ol style="margin:0;padding-left:20px">
+          <li>信息的表示和处理</li>
+          <li>程序的机器级表示</li>
+          <li>处理器体系结构</li>
+          <li>优化程序性能</li>
+          <li>存储器层级结构</li>
+        </ol>
+      </div>
+      <div class="card"><h5>下半学期 · 教材 Part II / III（第 7–12 章）</h5>
+        <ol style="margin:0;padding-left:20px">
+          <li>链接</li>
+          <li>异常控制流</li>
+          <li>虚拟内存</li>
+          <li>系统级 I/O</li>
+          <li>网络编程</li>
+          <li>并发编程</li>
+        </ol>
+      </div>
+    </div>
+
+    <h3>1.4 课程特点</h3>
+    <div class="grid g3">
+      <div class="card"><h5>① 课时多，教学内容多</h5>
+        <p style="margin:0;font-size:14.5px">16 周覆盖教材 11 章，节奏很快 —— 所以要靠实验和小班研讨来消化。</p>
+      </div>
+      <div class="card"><h5>② 大班教学与小班研讨结合</h5>
+        <p style="margin:0;font-size:14.5px">大班讲原理，小班做讨论、讲实验操作。</p>
+      </div>
+      <div class="card"><h5>③ 实验题系统</h5>
+        <p style="margin:0;font-size:14.5px">学生在指定系统上完成实验题，由<b>智能评价系统</b>自动评分。</p>
+      </div>
+    </div>
+
+    <h3>1.5 实验题系统</h3>
+    <div class="grid g2">
+      <div class="card"><h5>大型特色实验题</h5>
+        <ul style="margin:0">
+          <li>从<b>实际问题</b>出发；</li>
+          <li>具有很强的<b>趣味性</b>；</li>
+          <li>平均<b>每两周完成一个</b>。</li>
+        </ul>
+      </div>
+      <div class="card"><h5>实验题智能评价系统</h5>
+        <ul style="margin:0">
+          <li>自动根据<b>性能、时间、提交次数</b>等对提交的实验题评分；</li>
+          <li>实时公开发布所有同学的完成情况，并分步分题进行比对，<b>鼓励对实验的钻研</b>。</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 2 ================= -->
+  <section id="s2">
+    <h2>五个有趣的现实问题<span class="srcref">原第 16–33 页</span></h2>
+    <p class="lede">这一节是全讲的精华：用五个真实问题说明「为什么必须理解系统」。每个问题都做成了可以动手验证的交互。</p>
+
+    <div class="box"><div class="t">本课程关注的问题与目标</div>
+      <p style="margin:6px 0"><b>关注：</b>计算机抽象概念与实际计算机系统之间的<b>差异</b>，以及抽象概念在真实系统上的<b>实现方式</b>。</p>
+      <p style="margin:0"><b>目标：</b>建立计算机系统的整体知识框架；训练良好的编程习惯（性能、可移植性、健壮性）；为后续专业课奠定基础。</p>
+    </div>
+
+    <h3>问题 1：整型不是整数，浮点型不是实数</h3>
+    <p class="en" style="color:var(--muted);font-size:14px">Ints are not Integers, Floats are not Reals</p>
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：三个反例，点一下亲手验证</span>
+        <div class="seg" id="q1Seg">
+          <button class="on" data-q="1.1">例 1.1 整型溢出</button>
+          <button data-q="1.2">例 1.2 浮点不满足结合律</button>
+          <button data-q="1.3">例 1.3 浮点相等判断</button>
+        </div>
+      </div>
+      <div id="q1Out"></div>
+    </div>
+
+    <h3>问题 2：了解汇编</h3>
+    <p class="en" style="color:var(--muted);font-size:14px">You've Got to Know Assembly</p>
+    <p>可能你永远都不会去写汇编程序，但是 —— 它有助于了解机器层面的程序执行模型。下面四个例子都来自真实场景：</p>
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：四个例子</span>
+        <div class="seg" id="q2Seg">
+          <button class="on" data-q="2.1">例 2.1 查找底层 bug</button>
+          <button data-q="2.2">例 2.2 性能调优</button>
+          <button data-q="2.3">例 2.3 访问硬件</button>
+          <button data-q="2.4">例 2.4 安全分析</button>
+        </div>
+      </div>
+      <div id="q2Out"></div>
+    </div>
+
+    <h3>问题 3：内存对程序性能至关重要</h3>
+    <p class="en" style="color:var(--muted);font-size:14px">Memory Matters — Random Access Memory Is an Unphysical Abstraction</p>
+    <ul>
+      <li><b>内存是有限的</b>：必须合理分配与管理；很多程序受限于内存。</li>
+      <li><b>内存引用错误尤为严重</b>：错误的危害因时间、空间而异（可能立刻崩溃，也可能悄悄改坏数据）。</li>
+      <li><b>内存性能并不是始终如一的</b>：高速缓存与虚拟内存极大影响性能 —— 也可以依此对程序调优。</li>
+    </ul>
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：越界写入会改坏什么？（点数组下标 i 看结果）</span>
+      </div>
+      <div id="q3Out"></div>
+    </div>
+
+    <h3>问题 4：算法性能分析结果 ≠ 实际程序性能</h3>
+    <p class="en" style="color:var(--muted);font-size:14px">There's more to performance than asymptotic complexity</p>
+    <ul>
+      <li>代码写得好坏，可能导致程序性能的<b>数量级差别</b>。</li>
+      <li>程序性能优化有多个层面：<b>算法、数据表达、过程、循环</b>。</li>
+      <li>只有<b>理解了系统实现</b>才能做到有效优化 —— 要了解编译与执行过程中的细节，例如内存访问模式。</li>
+    </ul>
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：同一段拷贝，换个循环顺序差 19 倍</span>
+        <div class="seg" id="q4Seg">
+          <button class="on" data-q="ij">copyij（i 在外）</button>
+          <button data-q="ji">copyji（j 在外）</button>
+        </div>
+      </div>
+      <div id="q4Out"></div>
+    </div>
+
+    <h3>问题 5：计算机网络环境下的新问题</h3>
+    <p class="en" style="color:var(--muted);font-size:14px">Computers do more than execute programs</p>
+    <div class="grid g2">
+      <div class="card"><h5>输入输出无处不在</h5>
+        <ul style="margin:0">
+          <li>程序执行前需要输入数据、执行后需要输出结果；</li>
+          <li>网络环境下数据的来源可能是本地磁盘，也可能是网络中的其它计算机（例如把数据上传到服务器，借服务器的算力做仿真）；</li>
+          <li><b>I/O 系统对程序的稳定性与性能至关重要</b> —— 缺少 I/O 异常处理能力就会出错。</li>
+        </ul>
+      </div>
+      <div class="card"><h5>正确性与并发</h5>
+        <ul style="margin:0">
+          <li>如何保证从别的机器获得数据时的<b>正确性 / 可靠性</b>；</li>
+          <li>不同计算机引起的<b>并发操作会相互干扰</b>：如果计算机之间没有协作（并发控制），会导致数据库中「<b>更新丢失</b>」错误。</li>
+        </ul>
+      </div>
+    </div>
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：例 5.1 库存「更新丢失」是怎么发生的</span>
+        <div class="seg" id="q5Seg">
+          <button class="on" data-q="ok">正确执行（串行）</button>
+          <button data-q="lost">出错执行（同时读）</button>
+        </div>
+      </div>
+      <div id="q5Out"></div>
+    </div>
+  </section>
+
+  <!-- ================= 3 ================= -->
+  <section id="s3">
+    <h2>课程主体内容<span class="srcref">原第 34–43 页</span></h2>
+    <p class="lede">七大主题，每个主题配一个实验。点开看每个主题的知识点、涉及领域和对应实验。</p>
+
+    <h3>3.1 七大主题</h3>
+    <div class="box pad0" style="padding:16px 18px">
+      <div id="topicOut"></div>
+    </div>
+
+    <h3>3.2 八个实验（LAB）</h3>
+    <div class="box pad0" style="padding:16px 18px">
+      <div id="labOut"></div>
+    </div>
+
+    <h3>3.3 实验的通用说明</h3>
+    <div class="grid g2">
+      <div class="card"><h5>提交与截止</h5>
+        <ul style="margin:0">
+          <li>使用 <b>Autolab</b> 下载和提交；</li>
+          <li><b>提交版本数量有限制</b>（通常 16 个）；</li>
+          <li>发布时间通常为<b>对应的大班课后</b>；</li>
+          <li>截止时间通常为 <b>14 天后的 23:59</b>；</li>
+          <li>具体要求以每个 LAB 的发布说明为准；</li>
+          <li>第一次小班课上会讲解 LAB 相关的基本操作。</li>
+        </ul>
+      </div>
+      <div class="card" style="border-left:4px solid var(--sign)"><h5>必须独立完成</h5>
+        <ul style="margin:0">
+          <li>每次 LAB 都可能<b>抽查代码重合度</b>；</li>
+          <li>对比对象包括：<b>本次作业、往年作业、网上代码</b>；</li>
+          <li>发现抄袭的后果（视严重程度）：
+            <ul style="margin:2px 0">
+              <li>本次 LAB <b>0 分</b></li>
+              <li>全部 LAB <b>0 分</b></li>
+              <li>本课程<b>不及格</b></li>
+            </ul>
+          </li>
+          <li><b>提供代码的同学同样处罚。</b></li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 4 ================= -->
+  <section id="s4">
+    <h2>注意事项与成绩评定<span class="srcref">原第 44–49 页</span></h2>
+
+    <h3>4.1 课程主页与教材</h3>
+    <div class="grid g2">
+      <div class="card"><h5>课程主页</h5>
+        <p style="margin:0" class="mono">http://course.pku.edu.cn</p>
+        <p style="margin:6px 0 0;font-size:14.5px;color:var(--muted)">课程通知、课后作业等都在这里发布。</p>
+      </div>
+      <div class="card"><h5>教材</h5>
+        <p style="margin:0"><b>Computer Systems: A Programmer's Perspective</b>（3rd Edition）<br>
+        《深入理解计算机系统》（第 3 版）</p>
+        <p style="margin:6px 0 0;font-size:14.5px;color:var(--muted)">英文版作者：Randal E. Bryant / David O'Hallaron。注意认准<b>第 3 版</b>。</p>
+      </div>
+    </div>
+
+    <h3>4.2 成绩评定占比</h3>
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：自己估算总评（拖动或输入各项得分）</span>
+      </div>
+      <div id="gradeOut"></div>
+    </div>
+    <div class="box warn" style="margin-top:12px"><div class="t">两条值得注意的规则</div>
+      <ul style="margin:4px 0 0">
+        <li>LAB 实验题和 LAB 测验共 30 分，其中 <b>LAB 测验占较大比重</b>；</li>
+        <li>每次阶段测验得到 <b>85 分（百分制）以上</b>的，在下一阶段中不会被扣分。</li>
+      </ul>
+    </div>
+
+    <h3>4.3 常见问题</h3>
+    <div id="faqOut"></div>
+
+    <h3>4.4 小测验</h3>
+    <p>做完这 6 道题，检查一下对课程安排的掌握。<span id="qzScore" class="chip gray">得分 0 / 6</span></p>
+    <div id="qzList"></div>
+    <div class="ctrls"><button class="p" id="qzSubmit">提交答案</button><button class="sm" id="qzReset">重做</button></div>
+    <div id="qzResult"></div>
+  </section>
+</main>
+
+</div>
+
+<div class="footer">
+  本页由原课件 PDF 翻译整理而成 · 数值计算与可视化均为页面内实时计算 · 可对照原课件页码阅读。
+</div>
+<button class="totop" id="toTop">↑ 顶部</button>
+
+<script>
+"use strict";
+/* ============================================================
+   计算机系统导论 · 课程概述 —— 全部逻辑
+   约定：所有计算在页面内实时完成；无效输入必须给出提示而不是抛错。
+   ============================================================ */
+
+const $  = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const fmt = n => Number(n).toLocaleString('en-US');
+
+/* ============================================================
+   0.2 2010–2011 学年本科班级规模统计
+   ============================================================ */
+const SIZE_STAT = [
+  { label: '20 人以下', n: 153, pct: 3.8 },
+  { label: '20~39 人', n: 1387, pct: 34.5 },
+  { label: '40~49 人', n: 186, pct: 4.6 },
+  { label: '50~99 人', n: 1205, pct: 29.9 },
+  { label: '100 人以上', n: 1093, pct: 27.2 },
+];
+function renderSizeStat() {
+  const max = Math.max(...SIZE_STAT.map(d => d.n));
+  const bars = SIZE_STAT.map(d => `
+    <div style="margin:9px 0">
+      <div style="display:flex;justify-content:space-between;font-size:13.5px;margin-bottom:3px">
+        <span>${esc(d.label)}</span>
+        <span class="mono" style="color:var(--muted)">${fmt(d.n)} 门 · ${d.pct}%</span>
+      </div>
+      <div style="height:16px;background:var(--line);border-radius:99px;overflow:hidden">
+        <div style="height:100%;width:${(d.n / max * 100).toFixed(1)}%;
+          background:${d.label === '20 人以下' ? 'var(--sign)' : 'var(--accent)'}"></div>
+      </div>
+    </div>`).join('');
+  $('#sizeStatOut').innerHTML = `
+    ${bars}
+    <div class="tbl-wrap" style="margin-top:14px"><table class="tbl">
+      <tr><th>规模</th>${SIZE_STAT.map(d => `<th class="mono">${esc(d.label)}</th>`).join('')}<th class="mono">合计</th></tr>
+      <tr><td>课程数</td>${SIZE_STAT.map(d => `<td class="mono">${fmt(d.n)}</td>`).join('')}
+          <td class="mono"><b>${fmt(SIZE_STAT.reduce((a, d) => a + d.n, 0))}</b></td></tr>
+      <tr><td>百分比</td>${SIZE_STAT.map(d => `<td class="mono">${d.pct}%</td>`).join('')}<td class="mono"><b>100%</b></td></tr>
+    </table></div>
+    <div class="box" style="margin:14px 0 0">
+      两个数字最值得注意：<b>20 人以下的小班只占 3.8%</b>，而 <b>100 人以上的大课占了 27.2%</b>
+      （进一步统计表明，200 人以上的班级还占 4%）。这就是当时推动「研讨型小班教学」试点的背景。
+      <br>而且这 153 个小班中大部分是外国语学院课程（约 67%），其余为公共英语 —— 说明<b>绝大多数院系几乎没开展过小班教学</b>。
+    </div>`;
+}
+
+/* ============================================================
+   1.2 16 周课程表
+   ============================================================ */
+const SCHED = [
+  [1, '9月 7日', '1 Overview', '9月 9日', '小班 1', '9月 10日', '2 Bits and Bytes / Integers', 'L1 data（周四）'],
+  [2, '9月 14日', '3 Floating Point', '9月 16日', '小班 2', '9月 17日', '4 Machine Prog: Basics', ''],
+  [3, '9月 21日', '5 Machine Prog: Control', '9月 23日', '小班 3', '9月 24日', '6 Machine Prog: Procedures', 'L2 bomb（周一）'],
+  [4, '9月 28日', '7 Machine Prog: Data', '9月 30日', '小班 4', '10月 1日', '国庆放假', ''],
+  [5, '10月 5日', '国庆放假', '10月 7日', '国庆放假', '10月 8日', '8 Machine Prog: Advanced', 'L3 attack（周四）'],
+  [6, '10月 12日', '9 阶段测验（第 1~8 课）', '10月 14日', '小班 5', '10月 15日', '10 Processor Arch: ISA & Logic', ''],
+  [7, '10月 19日', '11 Processor Arch: Sequential', '10月 21日', '小班 6', '10月 22日', '12 Processor Arch: Pipelined', 'L4 arch（周一）'],
+  [8, '10月 26日', '13 The Memory Hierarchy', '10月 28日', '小班 7', '10月 29日', '14 Cache Memories', 'L5 cache（周四）'],
+  [9, '11月 2日', '15 Program optimization', '11月 4日', '小班 8', '11月 5日', '16 Linking', ''],
+  [10, '11月 9日', '17 ECF: Exceptions & Processes', '11月 11日', '小班 9', '11月 12日', '18 ECF: Signals & Nonlocal Jumps', 'L6 tsh（周四）'],
+  [11, '11月 16日', '19 阶段测验（第 10~18 课）', '11月 18日', '小班 10', '11月 19日', '20 专题讲座', ''],
+  [12, '11月 23日', '21 System Level I/O', '11月 25日', '小班 11', '11月 26日', '22 Virtual Memory: Concepts', ''],
+  [13, '11月 30日', '23 Virtual Memory: Systems', '12月 2日', '小班 12', '12月 3日', '24 Dynamic Memory Allocation', 'L7 malloc（周四）'],
+  [14, '12月 7日', '25 Network Programming I', '12月 9日', '小班 13', '12月 10日', '26 Network Programming II', 'L8 proxy（周四）'],
+  [15, '12月 14日', '27 Concurrent Programming', '12月 16日', '小班 14', '12月 17日', '28 Synchronization: Basic', ''],
+  [16, '12月 21日', '29 Synchronization: Advanced', '12月 23日', '小班 15', '12月 24日', '30 LAB 测验', ''],
+];
+let schedMode = 'all', schedKw = '';
+function renderSched() {
+  const kw = schedKw.trim().toLowerCase();
+  const rows = SCHED.filter(r => {
+    if (schedMode === 'lab' && !r[7]) return false;
+    if (schedMode === 'exam' && !/测验|考试/.test(r[2] + r[6])) return false;
+    if (kw && !r.join(' ').toLowerCase().includes(kw)) return false;
+    return true;
+  });
+  $('#schedOut').innerHTML = `
+    <div class="tbl-wrap" style="max-height:420px;overflow:auto"><table class="tbl">
+      <tr><th>周次</th><th>日期</th><th>周一 · 大班课</th><th>日期</th><th>周三 · 小班课</th><th>日期</th><th>周四 · 大班课</th><th>LAB</th></tr>
+      ${rows.map(r => `<tr${r[7] ? ' class="hl"' : ''}>
+        <td class="mono">第 ${r[0]} 周</td>
+        <td class="mono">${esc(r[1])}</td>
+        <td>${esc(r[2])}</td>
+        <td class="mono">${esc(r[3])}</td>
+        <td>${esc(r[4])}</td>
+        <td class="mono">${esc(r[5])}</td>
+        <td>${esc(r[6])}</td>
+        <td class="mono" style="font-size:12.5px">${esc(r[7] || '—')}</td>
+      </tr>`).join('')}
+      <tr><td colspan="8"><b>考试周</b>：12月 28日 期末考试（周一下午）</td></tr>
+    </table></div>
+    <p style="font-size:13.5px;color:var(--muted);margin:10px 0 0">
+      共 <b>30 讲</b>大班课、<b>15 次</b>小班研讨、<b>8 个</b> LAB，两次阶段测验与一次期末考试。
+      显示 ${rows.length} 周${schedMode === 'lab' ? '（只显示有 LAB 的周）' : schedMode === 'exam' ? '（只显示含测验/考试的周）' : ''}${kw ? `，关键词「${esc(schedKw)}」` : ''}。
+      <br>注：教学团队可能会根据实际教学情况进行适度调整。
+    </p>`;
+}
+
+/* ============================================================
+   2.1 问题 1：整型不是整数，浮点型不是实数
+   ============================================================ */
+const Q1 = {
+  '1.1': () => {
+    const a = Math.imul(40000, 40000), b = Math.imul(50000, 50000);
+    return {
+      title: '例 1.1：x² ≥ 0 永远成立吗？',
+      body: `
+        <p>如果 x 是浮点型，成立；<b>如果 x 是整型，不成立</b> —— 因为整型有上界，会溢出。</p>
+        <div class="tbl-wrap"><table class="tbl">
+          <tr><th>表达式</th><th class="mono">数学结果</th><th class="mono">C 中 int 的实际结果</th></tr>
+          <tr><td class="mono">40000 * 40000</td><td class="mono">1,600,000,000</td>
+              <td class="mono"><b>${fmt(a)}</b> <span class="chip ok">未溢出</span></td></tr>
+          <tr><td class="mono">50000 * 50000</td><td class="mono">2,500,000,000</td>
+              <td class="mono"><b>${fmt(b)}</b> <span class="chip bad">溢出为负数</span></td></tr>
+        </table></div>
+        <div class="box bad" style="margin:12px 0 0"><div class="t">为什么会变成负数</div>
+          32 位 int 的最大值是 <code>2,147,483,647</code>。2,500,000,000 超出上界，结果按模 2<sup>32</sup> 回绕：
+          2,500,000,000 − 4,294,967,296 = <b>${fmt(b)}</b>。于是「x² ≥ 0」被打破了。
+          这正是第 2 讲「整数运算」要讲清楚的内容。
+        </div>`,
+    };
+  },
+  '1.2': () => {
+    const l = (1e20 + -1e20) + 3.14, r = 1e20 + (-1e20 + 3.14);
+    return {
+      title: '例 1.2：是否满足结合律 (x + y) + z = x + (y + z)？',
+      body: `
+        <p>如果 x, y, z 是整型，<b>满足</b>结合律；如果它们是浮点型，<b>不满足</b>。</p>
+        <div class="tbl-wrap"><table class="tbl">
+          <tr><th>表达式</th><th class="mono">结果</th></tr>
+          <tr><td class="mono">(1e20 + −1e20) + 3.14</td><td class="mono"><b>${l}</b></td></tr>
+          <tr><td class="mono">1e20 + (−1e20 + 3.14)</td><td class="mono"><b>${r}</b></td></tr>
+          <tr><td>两者相等？</td><td>${l === r ? '<span class="chip ok">相等</span>' : '<span class="chip bad">不相等 —— 结合律不成立</span>'}</td></tr>
+        </table></div>
+        <div class="box" style="margin:12px 0 0"><div class="t">为什么</div>
+          右边先算 <code>−1e20 + 3.14</code>：3.14 相对于 1e20 太小，
+          在 double 的有效数字里<b>被完全舍掉了</b>，这一项就等于 −1e20；再加 1e20 得到 <b>0</b>。
+          而左边先把两个 1e20 抵消，3.14 才得以保留。<br>
+          <b>结论：浮点运算的舍入使结合律失效</b> —— 这对编译器和科学计算程序员尤其重要。
+        </div>`,
+    };
+  },
+  '1.3': () => {
+    const a = 0.1 + 0.2, b = 0.3, eps = 1e-5;
+    return {
+      title: '例 1.3：两个浮点数能直接用 == 比较吗？',
+      body: `
+        <p>两个整型 a 和 b 是否相等，写 <code>a == b</code> 就行；<b>浮点型不能这么比</b> —— 因为两个数的精度可能不同。</p>
+        <div class="tbl-wrap"><table class="tbl">
+          <tr><th>写法</th><th class="mono">结果</th></tr>
+          <tr><td class="mono">0.1 + 0.2 == 0.3</td>
+              <td class="mono"><b>${a === b}</b>&nbsp;<span style="color:var(--muted)">（左边实际是 ${a.toPrecision(20)}）</span></td></tr>
+          <tr><td class="mono">fabs((0.1+0.2) − 0.3) &lt;= 1e-5</td>
+              <td class="mono"><b>${Math.abs(a - b) <= eps}</b>&nbsp;<span style="color:var(--muted)">（差值 ${Math.abs(a - b).toExponential(3)}）</span></td></tr>
+        </table></div>
+        <div class="box ok" style="margin:12px 0 0"><div class="t">正确做法：作差取绝对值</div>
+          <div class="formula" style="margin:8px 0">fabs(a − b) &lt;= epsilon</div>
+          其中 epsilon 是一个很小的数（如 <code>0.00001</code>）。这与「浮点型满足单调性、但不满足结合律」是一类问题：
+          <b>计算机只能表示有限大小的数</b>，运算必然引入舍入误差。
+        </div>
+        <p style="font-size:13.5px;color:var(--muted);margin:10px 0 0">
+          这些内容分别在第 2 讲（整数运算与溢出）和第 3 讲（浮点舍入与类型转换）里详细展开。
+        </p>`,
+    };
+  },
+};
+
+/* ============================================================
+   2.2 问题 2：四个例子
+   ============================================================ */
+const Q2 = {
+  '2.1': () => {
+    const TOTAL = 12, d = -1;
+    return {
+      title: '例 2.1：一个真实的底层 bug —— 比较 int 与 unsigned int',
+      code: `int array[] = {1,2,3};
+#define TOTAL sizeof(array)   /* sizeof 的返回值是 unsigned int */
+
+void main() {
+    int d = -1;
+    if (d <= TOTAL)
+        printf("small\\n");
+    else printf("large\\n");
+}`,
+      body: `
+        <p><code>d = −1 &lt; TOTAL = 12</code>，理应输出 <b>small</b>，但结果却是 <b>large</b>。</p>
+        <p><b>原因：</b><code>sizeof()</code> 的返回值是 <code>unsigned int</code>；
+        在 if 语句里作比较时，编译器会把 <code>d</code> 也当成 <code>unsigned int</code> —— 于是 −1 变成了<b>很大的正整数</b>。</p>
+        <div class="tbl-wrap"><table class="tbl">
+          <tr><th>比较方式</th><th class="mono">d 的值</th><th class="mono">比较</th><th>输出</th></tr>
+          <tr><td>按 int（我们的直觉）</td><td class="mono">−1</td>
+              <td class="mono">−1 ≤ 12 → 真</td><td class="mono">small</td></tr>
+          <tr><td>按 unsigned int（C 的实际行为）</td><td class="mono">${fmt(d >>> 0)}</td>
+              <td class="mono">${fmt(d >>> 0)} ≤ 12 → 假</td><td class="mono"><b>large</b></td></tr>
+        </table></div>
+        <div class="box ok" style="margin:12px 0 0"><div class="t">怎么查出这种 bug</div>
+          通过<b>底层汇编代码或目标程序文件（二进制）</b>查看 d 的实际数值。
+          这类问题的根源 —— 有符号与无符号的隐式转换 —— 正是第 2 讲的重点。
+        </div>`,
+    };
+  },
+  '2.2': () => ({
+    title: '例 2.2：程序性能调优 —— 两段「行为相同」的代码',
+    code: `void fun1(int *x, int *y)        void fun2(int *x, int *y)
+{                                {
+    *x += *y;                        *x += 2 * (*y);
+    *x += *y;
+}                                }`,
+    body: `
+      <p>两个程序似乎有相同的行为，但 <b>fun2 的效率更高</b>。</p>
+      <p><b>原因：</b>通过底层代码可以看出，fun1 需要 <b>6 次</b>存储器引用，fun2 只需 <b>3 次</b> ——
+      因为 <code>*y</code> 被读了两次、<code>*x</code> 被读写了两次；而两个指针<b>可能指向同一块内存</b>（别名问题），
+      编译器不能擅自替我们把这些值缓存起来。</p>
+      <div class="tbl-wrap"><table class="tbl">
+        <tr><th>函数</th><th class="mono">读 *x</th><th class="mono">读 *y</th><th class="mono">写 *x</th><th class="mono">合计</th></tr>
+        <tr><td class="mono">fun1</td><td class="mono">2</td><td class="mono">2</td><td class="mono">2</td><td class="mono"><b>6</b></td></tr>
+        <tr><td class="mono">fun2</td><td class="mono">1</td><td class="mono">1</td><td class="mono">1</td><td class="mono"><b>3</b></td></tr>
+      </table></div>
+      <div class="box" style="margin:12px 0 0"><div class="t">为什么要懂汇编</div>
+        这类优化<b>不在算法层面</b>，而在「编译器实际生成了什么代码」这一层 —— 要做出判断，必须看得懂汇编。
+      </div>`,
+  }),
+  '2.3': () => ({
+    title: '例 2.3：系统软件 / 嵌入式开发 —— 把小段汇编嵌进 C',
+    code: `static unsigned cyc_hi = 0;
+static unsigned cyc_lo = 0;
+/* 把 *hi 与 *lo 设为周期计数器的高位和低位 */
+void access_counter(unsigned *hi, unsigned *lo)
+{
+    asm("rdtsc; movl %%edx,%0; movl %%eax,%1"
+        : "=r" (*hi), "=r" (*lo)
+        :
+        : "%edx", "%eax");
+}`,
+    body: `
+      <p>系统软件工程师常常需要写<b>小段汇编代码</b>。例如把小段汇编加入 C 代码，
+      来访问硬件（处理器）上的<b>周期计数器</b>（cycle counter）。</p>
+      <p>上面的 <code>rdtsc</code> 指令读取 CPU 的时间戳计数器，结果放在 <code>%edx:%eax</code> 里 ——
+      这种操作<b>没有对应的 C 语句</b>，只能用汇编表达。</p>
+      <div class="box" style="margin:12px 0 0"><div class="t">这说明什么</div>
+        C 不是万能的：要访问硬件特性、或写出编译器生成不出来的指令序列时，唯一的办法就是直接写汇编。
+        这也是本课程要求你<b>能读懂</b>汇编的原因。
+      </div>`,
+  }),
+  '2.4': () => ({
+    title: '例 2.4：防范恶意软件 / 分析第三方软件的安全性',
+    code: `/* 不安全的写法 */                  /* 安全的写法 */
+void main() {                      #define BUFSIZE 1024
+    char buf[1024];                void main() {
+    gets(buf);          ←对比→         char buf[BUFSIZE];
+}                                      fgets(buf, BUFSIZE, stdin);
+                                   }   /* 多了限制输入大小的参数 */`,
+    body: `
+      <p>分析没有源代码的软件时需要进行<b>反汇编</b>。常见安全漏洞包括：
+      <b>缓冲区溢出、内存泄露、非授权内存写入</b>等。对反汇编得到的代码做<b>静态分析</b>，
+      是找出已知安全漏洞代码的有效手段。</p>
+      <p><code>gets()</code> <b>不限制输入长度</b>，用户输入超长就会溢出缓冲区；
+      <code>fgets()</code> 多了一个限制输入大小的参数，因此是安全的。</p>
+      <div class="box bad" style="margin:12px 0 0"><div class="t">这正是 L3 attacklab 的主题</div>
+        课程的第三个实验（缓冲区溢出实验）就是让你亲手构造一次缓冲区溢出攻击，
+        从而理解<b>栈的组织方式</b>和缓冲区溢出的本质原理。
+      </div>`,
+  }),
+};
+
+/* ============================================================
+   2.3 问题 3：结构体内存布局与越界写入
+   ============================================================ */
+const FUN_OBSERVED = [
+  ['fun(0)', '3.14', '写 a[0]，不影响 d'],
+  ['fun(1)', '3.14', '写 a[1]，不影响 d'],
+  ['fun(2)', '3.1399998664856', '越界：改到了 d 的低 4 字节'],
+  ['fun(3)', '2.00000061035156', '越界：改到了 d 的高 4 字节'],
+  ['fun(4)', '3.14', '越界但落在未使用区域'],
+  ['fun(6)', 'segmentation fault', '越界太远，访问非法地址'],
+];
+const q3State = { i: 2 };
+function renderQ3() {
+  const WRITE = 1073741824;                        // 0x40000000
+  // 建模整个 16 字节的结构体：a[0]@0, a[1]@4, d@8（x86-64 是小端）
+  const before = new ArrayBuffer(16), bdv = new DataView(before);
+  bdv.setFloat64(8, 3.14, true);                   // 小端写入 d
+  const after = new ArrayBuffer(16), adv = new DataView(after);
+  adv.setFloat64(8, 3.14, true);
+  const off = q3State.i * 4;                       // s.a[i] 的字节偏移
+  const touched = [];
+  for (let k = 0; k < 4; k++) {
+    const at = off + k;
+    touched.push(at);
+    if (at >= 0 && at < 16) adv.setUint8(at, (WRITE >>> (8 * k)) & 0xFF);   // 小端写入 4 字节
+  }
+  const beforeBytes = Array.from({ length: 16 }, (_, k) => bdv.getUint8(k));
+  const afterBytes = Array.from({ length: 16 }, (_, k) => adv.getUint8(k));
+  const newVal = adv.getFloat64(8, true);
+  const insideD = off >= 8 && off < 16;
+  const insideStruct = off + 3 < 16;
+  const region = off < 8 ? 'a 数组的区域内（合法下标才应写这里）'
+    : insideD ? 'd 的字节上（越界！会改坏 d）'
+    : insideStruct ? 'a 与 d 之间的填充区' : '结构体之外的区域';
+  const cell = (k, arr, hl) => `
+    <div style="border:1px solid ${hl ? 'var(--sign)' : 'var(--line)'};border-radius:5px;overflow:hidden;min-width:40px;
+      ${hl ? 'background:var(--sign-bg)' : ''}">
+      <div class="mono" style="font-size:9.5px;padding:1px 3px;text-align:center;color:var(--muted);
+        border-bottom:1px solid var(--line)">+${k}</div>
+      <div class="mono" style="font-size:12px;font-weight:700;padding:2px 4px;text-align:center">${arr[k].toString(16).toUpperCase().padStart(2, '0')}</div>
+    </div>`;
+  const bar = (label, arr, hlSet) => `
+    <div style="margin:8px 0">
+      <div style="font-size:13px;color:var(--muted);margin-bottom:4px">${label}</div>
+      <div style="display:flex;gap:3px;flex-wrap:wrap">${arr.map((b, k) => cell(k, arr, hlSet.includes(k))).join('')}</div>
+    </div>`;
+  $('#q3Out').innerHTML = `
+    <div class="mono" style="font-size:12.5px;line-height:1.75;background:var(--code-bg);border:1px solid var(--code-bd);
+      border-radius:8px;padding:11px 14px;margin:4px 0 14px;overflow-x:auto">
+      typedef struct { int a[2]; double d; } struct_t;<br><br>
+      double fun(int i) {<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;volatile struct_t s;<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;s.d = 3.14;<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;s.a[i] = 1073741824;&nbsp;&nbsp;<span style="color:var(--muted)">/* Possibly out of bounds */</span><br>
+      &nbsp;&nbsp;&nbsp;&nbsp;return s.d;<br>
+      }
+    </div>
+    <div class="ctrls">
+      <span style="font-weight:650;font-size:14.5px">选数组下标 i：</span>
+      <div class="seg" id="q3Seg">
+        ${[0, 1, 2, 3, 4, 6].map(v => `<button class="${v === q3State.i ? 'on' : ''}" data-i="${v}">fun(${v})</button>`).join('')}
+      </div>
+    </div>
+    <div class="tbl-wrap"><table class="tbl" style="margin-bottom:10px">
+      <tr><th>结构体布局（x86-64）</th><th class="mono">字节偏移</th><th class="mono">大小</th><th>说明</th></tr>
+      <tr><td class="mono">a[0]（int）</td><td class="mono">0–3</td><td class="mono">4</td><td>合法下标 0</td></tr>
+      <tr><td class="mono">a[1]（int）</td><td class="mono">4–7</td><td class="mono">4</td><td>合法下标 1</td></tr>
+      <tr><td class="mono">d（double）</td><td class="mono">8–15</td><td class="mono">8</td><td>double 需要 8 字节对齐，所以 d 从偏移 8 开始</td></tr>
+      <tr><td colspan="4" style="font-size:13px;color:var(--muted)">
+        <code>s.a[i]</code> 的地址 = 结构体起始 + <b>4 × i</b>。i ≥ 2 时这个地址已经落在 d 的字节上了。
+      </td></tr>
+    </table></div>
+    ${bar('写入前：16 字节的内存（低地址在左，x86 小端）', beforeBytes, Array.from({length:16},(_,k)=>k>=8&&k<16?k:-1).filter(k=>k>=0))}
+    ${bar(`fun(${q3State.i}) 把 0x40000000 写到偏移 ${off} 起的 4 字节`, afterBytes, touched.filter(k => k < 16))}
+    <div class="box ${insideD ? 'bad' : insideStruct ? 'warn' : 'warn'}" style="margin:12px 0 0">
+      <div class="t">下标 ${q3State.i} 写到了：${esc(region)}</div>
+      ${insideD
+        ? `偏移 ${off} 落在 <code>d</code> 的字节上，把 3.14 的位模式改掉了 —— 于是返回的 d 变成了 <b>${newVal}</b>。`
+        : insideStruct
+          ? `偏移 ${off} 落在结构体内部但不是 d 的起始处，这里不会改到 d 的有效字节，所以 d 仍然是 <b>${newVal}</b>。`
+          : `偏移 ${off} 已经超出 16 字节的结构体。如果这块内存属于别的变量，就会<b>悄悄改坏别人的数据</b>；
+             在原课件的机器上 fun(6) 直接触发了段错误（segmentation fault）。`}
+    </div>
+    <div class="tbl-wrap" style="margin-top:12px"><table class="tbl">
+      <tr><th>原课件实测</th><th class="mono">返回值</th><th>说明</th></tr>
+      ${FUN_OBSERVED.map(r => `<tr${r[0] === `fun(${q3State.i})` ? ' class="hl"' : ''}>
+        <td class="mono">${r[0]}</td><td class="mono">${esc(r[1])}</td><td style="font-size:13px">${esc(r[2])}</td></tr>`).join('')}
+    </table></div>
+    <p style="font-size:13.5px;color:var(--muted);margin:10px 0 0">
+      本页按 x86-64 的布局（<code>a</code> 占 0–7、<code>d</code> 从偏移 8 开始、小端存储）实时算出了上面这些值；
+      原课件特别注明「<b>Result is system specific</b>」—— 具体数值依编译器和机器布局而定，
+      但「越界写入会悄悄改坏相邻数据」这个结论是普遍的。<br>
+      C 和 C++ <b>没有</b>对数组越界、指针错误、滥用 malloc/free 的防范机制。
+      应对办法：改用 Java / Ruby / Python / ML 等语言，或者用工具检测这类内存错误。
+    </p>`;
+  $$('#q3Seg button').forEach(b => b.addEventListener('click', () => {
+    q3State.i = +b.dataset.i; renderQ3();
+  }));
+}
+
+/* ============================================================
+   2.4 问题 4：copyij vs copyji
+   ============================================================ */
+const q4State = { mode: 'ij', step: 0 };
+function renderQ4() {
+  const N = 8;
+  const total = N * N;
+  const seq = [];
+  if (q4State.mode === 'ij') { for (let i = 0; i < N; i++) for (let j = 0; j < N; j++) seq.push([i, j]); }
+  else { for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) seq.push([i, j]); }
+  const cur = seq[q4State.step % total];
+  const grid = [];
+  for (let i = 0; i < N; i++) {
+    const row = [];
+    for (let j = 0; j < N; j++) row.push(`<div class="mono" style="width:29px;height:25px;display:flex;align-items:center;
+      justify-content:center;border:1px solid var(--line);border-radius:4px;font-size:10.5px;
+      ${i === cur[0] && j === cur[1] ? 'background:var(--accent);color:var(--accent-ink);font-weight:700' : 'background:var(--paper-soft)'}">${i}${j}</div>`);
+    grid.push(`<div style="display:flex;gap:3px;margin:3px 0">${row.join('')}</div>`);
+  }
+  const stride = q4State.mode === 'ij' ? 4 : N * 4;
+  $('#q4Out').innerHTML = `
+    <div class="mono" style="font-size:12.5px;line-height:1.75;background:var(--code-bg);border:1px solid var(--code-bd);
+      border-radius:8px;padding:11px 14px;margin:4px 0 14px;overflow-x:auto">
+      void copy${q4State.mode}(int src[2048][2048], int dst[2048][2048]) {<br>
+      &nbsp;&nbsp;int i,j;<br>
+      &nbsp;&nbsp;for (${q4State.mode === 'ij' ? 'i = 0; i &lt; 2048; i++)' : 'j = 0; j &lt; 2048; j++)'}<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;for (${q4State.mode === 'ij' ? 'j = 0; j &lt; 2048; j++)' : 'i = 0; i &lt; 2048; i++)'}<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;dst[i][j] = src[i][j];<br>
+      }
+    </div>
+    <div class="grid g2" style="gap:18px">
+      <div>
+        <div style="font-weight:650;font-size:14px;margin-bottom:6px">访问顺序（8×8 演示，格子里是 [i][j]）</div>
+        ${grid.join('')}
+        <div class="ctrls" style="margin-top:10px">
+          <button class="sm" id="q4Step">下一个访问</button>
+          <button class="sm" id="q4Run">走完一行/一列</button>
+        </div>
+      </div>
+      <div>
+        <div class="tbl-wrap"><table class="tbl" style="margin:0">
+          <tr><th>当前访问</th><td class="mono">dst[${cur[0]}][${cur[1]}] = src[${cur[0]}][${cur[1]}]</td></tr>
+          <tr><th>行内偏移</th><td class="mono">${cur[1] * 4} 字节</td></tr>
+          <tr><th>相邻两次访问的地址间隔</th>
+              <td class="mono">${q4State.mode === 'ij' ? '<b>4 字节</b>（连续）' : `<b>${stride} 字节</b>（跨了一整行）`}</td></tr>
+          <tr><th>已访问</th><td class="mono">${q4State.step % total + 1} / ${total}</td></tr>
+        </table></div>
+        <div class="box ${q4State.mode === 'ij' ? 'ok' : 'bad'}" style="margin:12px 0 0">
+          <div class="t">${q4State.mode === 'ij' ? '行优先访问：与内存布局一致' : '列优先访问：每次都跳到下一行'}</div>
+          ${q4State.mode === 'ij'
+            ? 'C 的二维数组是<b>按行存储</b>的。i 在外层时，内层循环沿同一行连续推进，<b>每次访问都落在同一个缓存行里</b>，命中率极高。'
+            : `i 在内层时，每访问一个元素就跳到 <b>${stride} 字节</b>之外 —— 每次都要换一个缓存行。
+               如果矩阵装不进缓存，几乎每一次访问都会造成缓存缺失。`}
+        </div>
+      </div>
+    </div>
+    <div class="box warn" style="margin:14px 0 0"><div class="t">原课件在 2048×2048 上的实测（2.0 GHz Intel Core i7 Haswell）</div>
+      <div class="tbl-wrap"><table class="tbl" style="margin:8px 0 0">
+        <tr><th>版本</th><th class="mono">耗时</th><th>说明</th></tr>
+        <tr><td class="mono">copyij</td><td class="mono"><b>4.3 ms</b></td><td>行优先访问，与内存布局一致</td></tr>
+        <tr><td class="mono">copyji</td><td class="mono"><b>81.8 ms</b></td><td>列优先访问，每次跨行</td></tr>
+      </table></div>
+      <p style="margin:8px 0 0">同一份拷贝任务，<b>只是换了循环顺序就差了约 19 倍</b>；
+      而两者的算法复杂度完全相同（都是 O(N²)）—— 这就是「算法复杂度不等于实际性能」的最好例证。
+      原课件还给出了一张「读吞吐量 vs 步长与数据规模」的曲线图，说明内存是<b>分层组织</b>的：
+      数据规模一旦超过各级缓存容量，吞吐量就会明显下降。</p>
+    </div>`;
+  $('#q4Step').addEventListener('click', () => { q4State.step++; renderQ4(); });
+  $('#q4Run').addEventListener('click', () => { q4State.step += N; renderQ4(); });
+}
+
+/* ============================================================
+   2.5 问题 5：库存「更新丢失」
+   ============================================================ */
+function renderQ5(mode) {
+  const lost = mode === 'lost';
+  const rows = lost
+    ? [
+      ['t1', '入库业务员', '读取库存 → 100', ''],
+      ['t2', '出库业务员', '读取库存 → 100', '两人读到的是同一份旧数据'],
+      ['t3', '入库业务员', '计算 100 + 50 = 150', ''],
+      ['t4', '出库业务员', '计算 100 − 40 = 60', ''],
+      ['t5', '入库业务员', '写回库存 = 150', ''],
+      ['t6', '出库业务员', '写回库存 = 60', '<b>覆盖了 t5 的写入</b>'],
+    ]
+    : [
+      ['t1', '入库业务员', '读取库存 → 100', ''],
+      ['t2', '入库业务员', '计算 100 + 50 = 150', ''],
+      ['t3', '入库业务员', '写回库存 = 150', ''],
+      ['t4', '出库业务员', '读取库存 → 150', '读到的是更新后的值'],
+      ['t5', '出库业务员', '计算 150 − 40 = 110', ''],
+      ['t6', '出库业务员', '写回库存 = 110', '正确结果'],
+    ];
+  $('#q5Out').innerHTML = `
+    <div class="box" style="margin:4px 0 14px"><div class="t">例 5.1：网上商店仓库某产品存量 100</div>
+      入库业务员读取库存、进货 50、更新库存；出库业务员读取库存、出货 40、更新库存。
+    </div>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>时刻</th><th>谁</th><th>动作</th><th>说明</th></tr>
+      ${rows.map(r => `<tr${r[3].includes('覆盖') ? ' style="background:var(--bad-bg)"' : r[3].includes('正确结果') ? ' style="background:var(--ok-bg)"' : ''}>
+        <td class="mono">${r[0]}</td><td>${r[1]}</td><td class="mono">${r[2]}</td><td style="font-size:13px">${r[3]}</td></tr>`).join('')}
+    </table></div>
+    <div class="box ${lost ? 'bad' : 'ok'}" style="margin:12px 0 0">
+      <div class="t">最终库存 = ${lost ? '<b>60</b>（或 150，取决于谁后写）' : '<b>110</b>'}</div>
+      ${lost
+        ? '如果两次「读取库存」<b>同时发生</b>，两人的计算都基于旧值 100，后写的一方会覆盖先写的一方。正确结果应该是 100 + 50 − 40 = <b>110</b>，但实际却得到 150 或 60 —— 这就是<b>「更新丢失」</b>。'
+        : '两个操作串行执行时结果正确：100 + 50 − 40 = <b>110</b>。关键在于<b>「读取—计算—写回」必须作为一个不可分割的整体</b>，不能被另一个操作插入。'}
+    </div>
+    <p style="font-size:13.5px;color:var(--muted);margin:10px 0 0">
+      这就是「不同计算机引起的并发操作相互干扰」：如果计算机之间没有协作（<b>并发控制</b>），
+      网络中服务器上的数据库就会出现这种错误。本课程后半部分（并发编程、同步）会讲怎么解决。
+    </p>`;
+}
+
+/* ============================================================
+   3.1 七大主题
+   ============================================================ */
+const TOPICS = [
+  {
+    n: '①', zh: '程序与数据', en: 'Programs and Data',
+    points: ['位运算与算术运算', '汇编语言程序', 'C 语言控制结构与数据结构的表示'],
+    fields: ['计算机体系结构', '编译器'],
+    labs: ['L1 datalab', 'L2 bomblab', 'L3 attacklab'],
+    note: '这是全课程的地基：先把「数据在机器里长什么样、指令怎么写」搞明白，后面才谈得上性能与系统。',
+  },
+  {
+    n: '②', zh: '处理器体系结构', en: 'Processor Architecture',
+    points: ['指令集体系结构 ISA', '顺序处理器与流水线处理器', '控制与数据的协同优化'],
+    fields: ['计算机体系结构', '编译器', '操作系统'],
+    labs: ['L4 archlab'],
+    note: '课件把「处理器体系结构」与「程序性能」放在一起讲：理解了处理器怎么执行指令，才知道程序该往哪儿优化。',
+  },
+  {
+    n: '③', zh: '程序性能', en: 'Performance',
+    points: ['在计算机上测量时间', '优化程序性能的方法'],
+    fields: ['计算机体系结构', '编译器', '操作系统'],
+    labs: ['L4 archlab'],
+    note: '关键词是「测量」：性能不能靠感觉，要能在真实机器上量化出来。',
+  },
+  {
+    n: '④', zh: '分级存储器体系', en: 'The Memory Hierarchy',
+    points: ['存储技术', '存储器层级', '高速缓存、磁盘、局部性'],
+    fields: ['计算机体系结构', '操作系统'],
+    labs: ['L5 cachelab'],
+    note: '对应「问题 4」：同样的算法，内存访问模式不同，性能可能差一个数量级。',
+  },
+  {
+    n: '⑤', zh: '异常控制流', en: 'Exceptional Control Flow',
+    points: ['硬件异常、进程、进程控制', 'Unix 信号、非局部跳转'],
+    fields: ['编译器', '操作系统', '计算机体系结构'],
+    labs: ['L6 tshlab'],
+    note: '程序不总是「一行接一行」执行 —— 异常、信号、跳转把控制流变成了网。',
+  },
+  {
+    n: '⑥', zh: '虚拟内存', en: 'Virtual Memory',
+    points: ['虚拟内存', '地址翻译', '动态存储分配'],
+    fields: ['计算机体系结构', '操作系统'],
+    labs: ['L7 malloclab'],
+    note: '对应「问题 3」：内存引用错误为什么危险、内存为什么是有限的。',
+  },
+  {
+    n: '⑦', zh: '网络与并发', en: 'Networking and Concurrency',
+    points: ['高层与低层 I/O、网络编程', '互联网服务、Web 服务器', '并发、并发服务器设计、线程', '用 select 做 I/O 多路复用'],
+    fields: ['计算机网络', '操作系统', '计算机体系结构'],
+    labs: ['L8 proxylab'],
+    note: '对应「问题 5」：多台计算机协作时，正确性与并发控制成为新的难题。',
+  },
+];
+let topicSel = 0;
+function renderTopics() {
+  const t = TOPICS[topicSel];
+  $('#topicOut').innerHTML = `
+    <div style="display:flex;flex-wrap:wrap;gap:6px;margin:10px 0 14px">
+      ${TOPICS.map((x, i) => `<button class="sm ${i === topicSel ? 'p' : ''}" data-topic="${i}">${x.n} ${esc(x.zh)}</button>`).join('')}
+    </div>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>主题</th><td><b>${esc(t.zh)}</b> &nbsp;<span class="en" style="color:var(--muted)">${esc(t.en)}</span></td></tr>
+      <tr><th>主要知识点</th><td><ul style="margin:0;padding-left:18px">${t.points.map(p => `<li>${esc(p)}</li>`).join('')}</ul></td></tr>
+      <tr><th>涉及领域</th><td>${t.fields.map(f => `<span class="chip gray" style="margin-right:4px">${esc(f)}</span>`).join('')}</td></tr>
+      <tr><th>对应实验</th><td>${t.labs.map(l => `<span class="chip" style="margin-right:4px">${esc(l)}</span>`).join('')}</td></tr>
+    </table></div>
+    <div class="box" style="margin:12px 0 0">${esc(t.note)}</div>`;
+  $$('#topicOut [data-topic]').forEach(b => b.addEventListener('click', () => {
+    topicSel = +b.dataset.topic; renderTopics();
+  }));
+}
+
+/* ============================================================
+   3.2 八个 LAB
+   ============================================================ */
+const LABS = [
+  { id: 'L1', en: 'Datalab', zh: '位级数据操作实验',
+    desc: '在<b>严格限制操作类型</b>的前提下，通过编程解决一系列「难题」，实现各种「简单」的逻辑和算术功能。',
+    goal: '理解各种数据类型的<b>位一级表达方式</b>，以及位级数据操作的实际行为，加深对二进制和硬件指令的理解。',
+    topic: '① 程序与数据' },
+  { id: 'L2', en: 'Bomblab', zh: '拆解二进制炸弹实验',
+    desc: '「二进制炸弹」是一个二进制可执行程序，拆解共 <b>6 个关卡</b>，需要分别输入 6 次正确的数据；任何一次错误都会引爆炸弹、拆解失败。',
+    goal: '理解高级语言是<b>如何编译成汇编语言</b>的，加深对数据在内存中的存储方式、以及数据/指针/指令之间关联的理解。',
+    topic: '① 程序与数据' },
+  { id: 'L3', en: 'Attacklab', zh: '缓冲区溢出实验',
+    desc: '缓冲区溢出是操作系统和网络服务器的常见安全隐患。本实验通过<b>模拟缓冲区溢出攻击</b>来修改程序运行时的行为。',
+    goal: '理解<b>栈的组织方式</b>与缓冲区溢出的本质原理，增强计算机系统的安全防范意识。',
+    topic: '① 程序与数据' },
+  { id: 'L4', en: 'Archlab', zh: '处理器结构实验',
+    desc: '需要<b>优化一个流水线处理器和一个评测程序</b>，使程序在处理器上运行时的性能尽可能好。',
+    goal: '理解处理器体系结构，并通过实践掌握<b>优化程序性能</b>的各种方法。',
+    topic: '② 处理器体系结构 / ③ 程序性能' },
+  { id: 'L5', en: 'Cachelab', zh: '性能优化实验',
+    desc: '需要优化两个矩阵算法的变换与计算，以获得尽可能好的应用程序性能。',
+    goal: '理解<b>高速缓存的特性与重要性</b>，增强对底层程序优化的认识。',
+    topic: '④ 分级存储器体系' },
+  { id: 'L6', en: 'Tshlab', zh: '定制 shell 程序实验',
+    desc: '实现一个简单的 <b>shell 程序</b>，需要包含作业控制（如 ctrl-c、ctrl-z 等按键处理）以及前台、后台等执行方式。',
+    goal: '理解应用程序级别如何实现并行，加深对<b>进程控制、信号、信号处理</b>的认识。',
+    topic: '⑤ 异常控制流' },
+  { id: 'L7', en: 'Malloclab', zh: '动态内存管理实验',
+    desc: '实现一个动态内存管理器，包括 <code>malloc</code>、<code>free</code> 和 <code>realloc</code> 接口函数。',
+    goal: '理解<b>数据布局与组织</b>，并权衡不同实现方案在空间与时间上的性能。',
+    topic: '⑥ 虚拟内存' },
+  { id: 'L8', en: 'Proxylab', zh: 'Web 代理实验',
+    desc: '实现一个 <b>Web 代理服务</b>：当浏览器想访问 Web 服务器上的页面时，实际上是从代理服务器获取数据。',
+    goal: '理解网络程序设计与 <b>HTTP 协议</b>的基本原理，在实践中掌握<b>并发与同步</b>这两个关键概念。',
+    topic: '⑦ 网络与并发' },
+];
+let labSel = 0;
+function renderLabs() {
+  const l = LABS[labSel];
+  $('#labOut').innerHTML = `
+    <div style="display:flex;flex-wrap:wrap;gap:6px;margin:10px 0 14px">
+      ${LABS.map((x, i) => `<button class="sm ${i === labSel ? 'p' : ''}" data-lab="${i}">${x.id} ${esc(x.en)}</button>`).join('')}
+    </div>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>实验</th><td><b>${esc(l.id)} ${esc(l.en)}</b> —— ${esc(l.zh)}</td></tr>
+      <tr><th>做什么</th><td>${l.desc}</td></tr>
+      <tr><th>学到什么</th><td>${l.goal}</td></tr>
+      <tr><th>对应主题</th><td><span class="chip">${esc(l.topic)}</span></td></tr>
+    </table></div>
+    <p style="font-size:13.5px;color:var(--muted);margin:10px 0 0">
+      八个实验平均<b>每两周完成一个</b>，全部使用 <b>Autolab</b> 下载与提交（提交次数有限制，通常 16 个）。
+    </p>`;
+  $$('#labOut [data-lab]').forEach(b => b.addEventListener('click', () => {
+    labSel = +b.dataset.lab; renderLabs();
+  }));
+}
+
+/* ============================================================
+   4.2 成绩评定计算器
+   ============================================================ */
+const GRADE = [
+  { k: 'final', name: '期末考试', max: 30, note: '占 30 分' },
+  { k: 'q1', name: '阶段测验 1', max: 10, note: '覆盖第 1~8 课' },
+  { k: 'q2', name: '阶段测验 2', max: 10, note: '覆盖第 10~18 课' },
+  { k: 'lab', name: 'LAB 实验题 + LAB 测验', max: 30, note: 'LAB 测验会占较大比重' },
+  { k: 'small', name: '小班评分', max: 15, note: '含小班研讨表现和平时作业等' },
+  { k: 'big', name: '大班评分', max: 5, note: '含大班互动表现，可能有随堂小测或点名' },
+];
+function renderGrade() {
+  const inputs = GRADE.map(g => {
+    const el = $(`#gr_${g.k}`);
+    const v = el ? Math.max(0, Math.min(g.max, +el.value || 0)) : g.max;
+    return { ...g, v };
+  });
+  const total = inputs.reduce((a, g) => a + g.v, 0);
+  const full = inputs.reduce((a, g) => a + g.max, 0);
+  const pct = (total / full * 100);
+  $('#gradeOut').innerHTML = `
+    <div class="grid g3" style="gap:10px;margin:6px 0 14px">
+      ${inputs.map(g => `<label class="fld" style="display:block">
+        <span style="font-size:13.5px">${esc(g.name)}<br><span style="color:var(--muted);font-size:12.5px">满分 ${g.max}</span></span>
+        <input type="number" id="gr_${g.k}" data-k="${g.k}" value="${g.v}" min="0" max="${g.max}" style="width:100%">
+      </label>`).join('')}
+    </div>
+    <div class="formula" style="margin:12px 0;text-align:left">
+      <b>总评 = <span style="font-size:1.25em">${total}</span> / ${full}</b>
+      <span style="color:var(--muted)">（${pct.toFixed(1)}%）</span>
+    </div>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>项目</th><th class="mono">得分</th><th class="mono">满分</th><th>备注</th></tr>
+      ${inputs.map(g => `<tr><td>${esc(g.name)}</td><td class="mono">${g.v}</td><td class="mono">${g.max}</td>
+        <td style="font-size:13px;color:var(--muted)">${esc(g.note)}</td></tr>`).join('')}
+    </table></div>
+    <div style="height:14px;background:var(--line);border-radius:99px;overflow:hidden;margin:12px 0">
+      <div style="height:100%;width:${pct.toFixed(1)}%;background:linear-gradient(90deg,var(--accent),var(--frac))"></div>
+    </div>
+    <p style="font-size:13.5px;color:var(--muted);margin:8px 0 0">
+      两项加起来正好 <b>100 分</b>。注意 <b>LAB（30 分）与期末考试（30 分）权重相同</b> ——
+      这是这门课「注重实践」的直接体现。改动上面的输入即可实时重算。
+    </p>`;
+  $$('#gradeOut input[data-k]').forEach(el => el.addEventListener('input', () => {
+    const g = GRADE.find(x => x.k === el.dataset.k);
+    el.value = Math.max(0, Math.min(g.max, +el.value || 0));
+    renderGrade();
+  }));
+}
+
+/* ============================================================
+   4.3 常见问题
+   ============================================================ */
+const FAQ = [
+  ['为什么教学网的小班和安排的不一致？',
+   '根据往年情况，开学前几周教学网选课名单可能不稳定，使用会有不便；补选结束后就能正常使用。'],
+  ['小班是怎么安排的？',
+   '小班<b>不用选课</b>，由教师统一安排分配，预计周三会在教学网公布分班名单。根据班号到指定教室上课，<b>不可自行换班</b>。'],
+  ['如果小班分班名单里没有我怎么办？',
+   '少数同学可能会因为补选等原因没有出现在分班名单里。请随时关注教学网的更新通知；如果课前还没分到班，可以<b>先在某个小班参与</b>，待选课最终确定后小班名单也会最终确定。'],
+  ['可否手动选课？',
+   '本课程<b>不安排手动选课</b>，所有学生在学校规定的时间段内通过选课系统选课。'],
+];
+function renderFaq() {
+  $('#faqOut').innerHTML = FAQ.map(([q, a], i) => `
+    <details class="reveal"${i === 0 ? ' open' : ''}>
+      <summary>Q：${esc(q)}</summary>
+      <div class="ans"><b>A：</b>${a}</div>
+    </details>`).join('');
+}
+
+/* ============================================================
+   4.4 小测验
+   ============================================================ */
+const QUIZ = [
+  { q: '本课程的大班课主体内容大致覆盖教材的哪些部分？',
+    o: ['只有 Part I（第 2–6 章）', 'Part I（第 2–6 章）与 Part II/III（第 7–12 章）', '只有第 1 章', '教材之外的自编内容'],
+    a: 1, w: '上半学期覆盖 Part I（信息的表示与处理、程序的机器级表示、处理器体系结构、优化程序性能、存储器层级结构），下半学期覆盖 Part II/III（链接、异常控制流、虚拟内存、系统级 I/O、网络编程、并发编程）。' },
+  { q: '「平均每两周完成一个」指的是什么？',
+    o: ['阶段测验', '大型特色实验题（LAB）', '小班研讨', '随堂小测'],
+    a: 1, w: '课程有 8 个大型特色实验题，从实际问题出发、趣味性强，平均每两周完成一个。' },
+  { q: 'LAB 通过 Autolab 提交，提交版本数量通常限制为多少？',
+    o: ['1 个', '5 个', '16 个', '不限'], a: 2,
+    w: '通常 16 个。发布时间通常为对应的大班课后，截止时间通常为 14 天后的 23:59。' },
+  { q: '成绩评定中，权重与「期末考试」并列最高的是哪一项？',
+    o: ['阶段测验', 'LAB 实验题和 LAB 测验', '小班评分', '大班评分'], a: 1,
+    w: '期末考试 30 分、LAB 实验题与 LAB 测验 30 分，两者权重相同 —— 这正是「注重实践」的体现。' },
+  { q: '例 5.1 的库存「更新丢失」属于哪一类问题？',
+    o: ['整型溢出', '浮点舍入误差', '并发操作相互干扰', '内存越界写入'], a: 2,
+    w: '它属于并发控制问题：两个操作的「读取—计算—写回」互相插入，后写的一方覆盖了先写的一方。本课程后半部分会讲如何用同步机制解决。' },
+  { q: '为什么两个浮点数不能直接用 == 判断相等？',
+    o: ['编译器不支持', '两个数的精度可能不同，运算会引入舍入误差', '浮点数不能用 == 比较语法', '因为浮点数没有符号'], a: 1,
+    w: '正确做法是作差取绝对值：fabs(a − b) <= epsilon。这与「计算机只能表示有限大小的数」是同一根源。' },
+];
+function renderQuiz() {
+  $('#qzList').innerHTML = QUIZ.map((item, i) => `
+    <div class="card" style="margin:10px 0" data-q="${i}">
+      <h5>${i + 1}. ${esc(item.q)}</h5>
+      <div>${item.o.map((o, j) => `<label style="display:block;margin:5px 0;font-size:14.5px;cursor:pointer">
+        <input type="radio" name="q${i}" value="${j}"> ${esc(o)}</label>`).join('')}</div>
+      <div class="qexp" style="display:none;margin-top:8px;padding-top:8px;border-top:1px dashed var(--line);font-size:14px"></div>
+    </div>`).join('');
+  $('#qzResult').innerHTML = '';
+  $('#qzScore').textContent = '得分 0 / ' + QUIZ.length;
+  $('#qzScore').className = 'chip gray';
+}
+
+/* ============================================================
+   导航、进度、初始化
+   ============================================================ */
+function initNav() {
+  const secs = $$('main section');
+  const links = $$('nav.toc a');
+  const io = new IntersectionObserver(entries => {
+    entries.forEach(en => {
+      if (en.isIntersecting) links.forEach(a => a.classList.toggle('active', a.getAttribute('href') === '#' + en.target.id));
+    });
+  }, { rootMargin: '-72px 0px -70% 0px', threshold: 0 });
+  secs.forEach(s => io.observe(s));
+  const onScroll = () => {
+    const h = document.documentElement;
+    const max = h.scrollHeight - h.clientHeight;
+    const p = max > 0 ? Math.min(100, Math.round(h.scrollTop / max * 100)) : 0;
+    $('#pgBar').style.width = p + '%';
+    $('#pgText').textContent = '学习进度 ' + p + '%';
+    $('#toTop').style.display = h.scrollTop > 600 ? 'block' : 'none';
+  };
+  window.addEventListener('scroll', onScroll, { passive: true });
+  onScroll();
+  $('#toTop').addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
+}
+
+function initAll() {
+  initNav();
+
+  // 0.2 班级规模
+  renderSizeStat();
+
+  // 1.2 课程表
+  renderSched();
+  $('#schedGo').addEventListener('click', () => { schedKw = $('#schedFilter').value; schedMode = 'all'; renderSched(); });
+  $('#schedFilter').addEventListener('keydown', e => {
+    if (e.key === 'Enter') { schedKw = $('#schedFilter').value; schedMode = 'all'; renderSched(); }
+  });
+  $$('[data-sched]').forEach(b => b.addEventListener('click', () => {
+    schedMode = b.dataset.sched;
+    if (b.dataset.sched !== 'all') { $('#schedFilter').value = ''; schedKw = ''; }
+    renderSched();
+  }));
+
+  // 2.1 问题 1
+  let q1 = '1.1';
+  const showQ1 = () => {
+    const r = Q1[q1]();
+    $('#q1Out').innerHTML = `
+      <div style="font-weight:650;font-size:15px;margin:4px 0 8px">${esc(r.title)}</div>${r.body}`;
+  };
+  showQ1();
+  $('#q1Seg').addEventListener('click', e => {
+    const b = e.target.closest('button'); if (!b) return;
+    $$('#q1Seg button').forEach(x => x.classList.toggle('on', x === b));
+    q1 = b.dataset.q; showQ1();
+  });
+
+  // 2.2 问题 2
+  let q2 = '2.1';
+  const showQ2 = () => {
+    const r = Q2[q2]();
+    $('#q2Out').innerHTML = `
+      <div style="font-weight:650;font-size:15px;margin:4px 0 8px">${esc(r.title)}</div>
+      <div class="mono" style="font-size:12.5px;line-height:1.7;background:var(--code-bg);border:1px solid var(--code-bd);
+        border-radius:8px;padding:11px 14px;margin:0 0 12px;overflow-x:auto;white-space:pre">${esc(r.code)}</div>
+      ${r.body}`;
+  };
+  showQ2();
+  $('#q2Seg').addEventListener('click', e => {
+    const b = e.target.closest('button'); if (!b) return;
+    $$('#q2Seg button').forEach(x => x.classList.toggle('on', x === b));
+    q2 = b.dataset.q; showQ2();
+  });
+
+  // 2.3 / 2.4 / 2.5
+  renderQ3(); renderQ4(); renderQ5('ok');
+  $('#q5Seg').addEventListener('click', e => {
+    const b = e.target.closest('button'); if (!b) return;
+    $$('#q5Seg button').forEach(x => x.classList.toggle('on', x === b));
+    renderQ5(b.dataset.q);
+  });
+  $('#q4Seg').addEventListener('click', e => {
+    const b = e.target.closest('button'); if (!b) return;
+    $$('#q4Seg button').forEach(x => x.classList.toggle('on', x === b));
+    q4State.mode = b.dataset.q; q4State.step = 0; renderQ4();
+  });
+
+  // 3.1 / 3.2
+  renderTopics(); renderLabs();
+
+  // 4.2 / 4.3
+  renderGrade(); renderFaq();
+
+  // 4.4 小测验
+  renderQuiz();
+  $('#qzSubmit').addEventListener('click', () => {
+    let score = 0, unanswered = 0;
+    QUIZ.forEach((item, i) => {
+      const card = $(`[data-q="${i}"]`);
+      const sel = card.querySelector(`input[name="q${i}"]:checked`);
+      const exp = card.querySelector('.qexp');
+      exp.style.display = 'block';
+      if (!sel) {
+        unanswered++;
+        exp.innerHTML = `<span style="color:var(--warn)">未作答</span> —— 正确答案：<b>${esc(item.o[item.a])}</b><br>${esc(item.w)}`;
+        card.style.borderColor = '#f0d6a8';
+        return;
+      }
+      const ok = +sel.value === item.a;
+      if (ok) score++;
+      card.style.borderColor = ok ? 'var(--ok-bd)' : 'var(--bad-bd)';
+      card.style.background = ok ? 'var(--ok-bg)' : 'var(--bad-bg)';
+      exp.innerHTML = `<span style="color:${ok ? 'var(--frac)' : 'var(--sign)'};font-weight:700">${ok ? '✓ 正确' : '✗ 错误'}</span>
+        —— 正确答案：<b>${esc(item.o[item.a])}</b><br>${esc(item.w)}`;
+    });
+    $('#qzScore').textContent = `得分 ${score} / ${QUIZ.length}`;
+    $('#qzScore').className = 'chip ' + (score === QUIZ.length ? 'ok' : score >= QUIZ.length / 2 ? 'warn' : 'bad');
+    $('#qzResult').innerHTML = `<div class="box ${score === QUIZ.length ? 'ok' : score >= QUIZ.length / 2 ? 'warn' : 'bad'}" style="margin-top:14px">
+      <div class="t">${score === QUIZ.length ? '全对！' : score >= QUIZ.length / 2 ? '还不错' : '建议回看前面的章节'}</div>
+      你答对了 <b>${score}</b> / ${QUIZ.length} 题${unanswered ? `，另有 ${unanswered} 题未作答` : ''}。</div>`;
+  });
+  $('#qzReset').addEventListener('click', renderQuiz);
+}
+
+document.addEventListener('DOMContentLoaded', initAll);
+</script>
+</body>
+</html>

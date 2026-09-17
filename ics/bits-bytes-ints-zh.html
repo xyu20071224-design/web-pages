@@ -1,0 +1,2534 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-deck="ics02">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>位、字节与整数 · 交互式课件（中文）</title>
+<style>
+
+  :root{
+    --bg:#f6f7f9; --card:#ffffff; --ink:#15181d; --muted:#697586; --line:#e4e7ec;
+    --accent:#2563eb; --accent-soft:#eaf1ff;
+    --sign:#e5484d; --exp:#0b7fd4; --frac:#18915a; --warn:#b45309;
+    --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+    --sans:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",system-ui,sans-serif;
+    --radius:12px; --shadow:0 1px 2px rgba(16,24,40,.06),0 1px 3px rgba(16,24,40,.1);
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:16px;line-height:1.75;-webkit-font-smoothing:antialiased}
+
+  /* ---------- layout ---------- */
+  .topbar{position:sticky;top:0;z-index:50;background:rgba(255,255,255,.88);backdrop-filter:saturate(180%) blur(12px);border-bottom:1px solid var(--line)}
+  .topbar-in{max-width:1180px;margin:0 auto;padding:10px 22px;display:flex;align-items:center;gap:14px}
+  .brand{font-weight:700;letter-spacing:.2px}
+  .brand small{font-weight:500;color:var(--muted);margin-left:8px;font-size:12.5px}
+  .progress{margin-left:auto;display:flex;align-items:center;gap:10px;font-size:12.5px;color:var(--muted)}
+  .progress .bar{width:150px;height:6px;border-radius:99px;background:#e9ecf1;overflow:hidden}
+  .progress .bar>i{display:block;height:100%;width:0;background:linear-gradient(90deg,#60a5fa,#2563eb);transition:width .25s}
+
+  .layout{max-width:1180px;margin:0 auto;padding:22px;display:grid;grid-template-columns:236px minmax(0,1fr);gap:26px}
+  nav.toc{position:sticky;top:64px;align-self:start;max-height:calc(100vh - 84px);overflow:auto;padding-right:4px}
+  nav.toc h4{margin:0 0 8px;font-size:12px;letter-spacing:.12em;color:var(--muted);text-transform:uppercase;font-weight:600}
+  nav.toc a{display:block;padding:7px 11px;border-radius:9px;color:#3c4450;text-decoration:none;font-size:14.5px;border-left:2.5px solid transparent}
+  nav.toc a:hover{background:#eef1f5;color:#111}
+  nav.toc a.active{background:var(--accent-soft);color:var(--accent);border-left-color:var(--accent);font-weight:600}
+  nav.toc a .n{display:inline-block;min-width:20px;color:#9aa4b2;font-size:12.5px;font-variant-numeric:tabular-nums}
+  nav.toc a.active .n{color:var(--accent)}
+  nav.toc .sub{padding-left:26px;font-size:13.5px;color:#5b6472}
+
+  main{min-width:0}
+  section{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:26px 28px;margin-bottom:22px;box-shadow:var(--shadow);scroll-margin-top:70px}
+  section>h2{margin:0 0 6px;font-size:25px;letter-spacing:-.01em}
+  section>.lede{color:var(--muted);margin:0 0 20px;font-size:14.5px}
+  h3{font-size:18.5px;margin:26px 0 10px;padding-left:11px;border-left:3.5px solid var(--accent)}
+  h4{font-size:16px;margin:18px 0 8px}
+  p{margin:10px 0}
+  ul,ol{margin:10px 0;padding-left:22px}
+  li{margin:5px 0}
+  code{font-family:var(--mono);font-size:.89em;background:#f1f3f7;border:1px solid #e6e9ef;border-radius:5px;padding:1px 5px}
+  .mono{font-family:var(--mono)}
+  a{color:var(--accent)}
+  hr{border:0;border-top:1px dashed var(--line);margin:24px 0}
+
+  .srcref{font-size:11.5px;color:#9aa4b2;font-weight:500;font-family:var(--sans);margin-left:8px;vertical-align:middle;white-space:nowrap}
+  .en{color:var(--muted);font-size:.92em}
+
+  /* ---------- blocks ---------- */
+  .grid{display:grid;gap:14px}
+  .g2{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .g3{grid-template-columns:repeat(3,minmax(0,1fr))}
+  @media(max-width:820px){.g2,.g3{grid-template-columns:1fr}}
+
+  .card{border:1px solid var(--line);border-radius:10px;padding:15px 17px;background:#fcfdfe}
+  .card h5{margin:0 0 7px;font-size:15px}
+  .card.pad0{padding:0;overflow:hidden}
+
+  .box{border:1px solid var(--line);border-left:4px solid var(--accent);background:#f8faff;border-radius:9px;padding:12px 16px;margin:14px 0}
+  .box.warn{border-left-color:#f59e0b;background:#fffbeb}
+  .box.bad{border-left-color:var(--sign);background:#fff5f5}
+  .box.ok{border-left-color:var(--frac);background:#f2fbf6}
+  .box .t{font-weight:650;font-size:14.5px;margin-bottom:2px}
+
+  .formula{font-family:var(--mono);background:#f8fafc;border:1px solid var(--line);border-radius:9px;padding:14px 17px;margin:14px 0;font-size:16.5px;text-align:center;overflow-x:auto}
+  .formula.big{font-size:20px}
+
+  table.tbl{width:100%;border-collapse:collapse;font-size:14.5px;margin:14px 0}
+  table.tbl th,table.tbl td{border:1px solid var(--line);padding:8px 11px;text-align:left;vertical-align:top}
+  table.tbl th{background:#f7f9fc;font-weight:650;font-size:13.5px;white-space:nowrap}
+  table.tbl td.mono,table.tbl th.mono{font-family:var(--mono);font-size:13.5px}
+  table.tbl tr:hover td{background:#fafbfd}
+  .tbl-wrap{overflow-x:auto}
+
+  /* ---------- bit widgets ---------- */
+  .bits{display:flex;flex-wrap:wrap;gap:2px;font-family:var(--mono);margin:4px 0}
+  .bits.wrap8{row-gap:9px}
+  .bits .b{width:25px;height:33px;display:flex;align-items:center;justify-content:center;
+    border-radius:6px;font-size:15px;cursor:pointer;user-select:none;border:1px solid transparent;
+    transition:transform .06s,background .12s;font-weight:600}
+  .bits .b:hover{transform:translateY(-2px)}
+  .bits .b.s{background:#fdecec;color:#a3262b;border-color:#f6cdcf}
+  .bits .b.e{background:#e8f2fd;color:#0a5f9e;border-color:#c7ddf5}
+  .bits .b.f{background:#e9f7ef;color:#116b43;border-color:#c8e8d5}
+  .bits .b.sel{outline:2px solid var(--ink);outline-offset:1px}
+  .bits .grp{display:flex;gap:2px;padding:3px;border-radius:9px}
+  .bits .grp.gs{background:#fff5f5}
+  .bits .grp.ge{background:#f5faff}
+  .bits .grp.gf{background:#f4fcf7}
+  .bits.sm .b{width:19px;height:26px;font-size:12px;border-radius:4px}
+  .fw{display:flex;flex-wrap:wrap;gap:8px 18px;align-items:flex-start;margin:4px 0 2px}
+  .fgrp{min-width:0}
+  .fcap{font-size:12px;color:var(--muted);margin-bottom:4px;font-weight:600}
+  .fcap b{font-family:var(--mono);font-size:12.5px}
+  .fgrp .bits{flex-wrap:wrap;max-width:100%;gap:2px}
+  .fgrp.ge .bits{max-width:300px}
+  .fgrp.gf .bits{max-width:100%}
+  .bitlab{font-family:var(--mono);font-size:11.5px;color:var(--muted);display:flex;gap:2px}
+  .bitlab .grp{display:flex;gap:2px;padding:0 3px}
+  .bitlab span{width:25px;text-align:center}
+
+  .readout{display:grid;grid-template-columns:auto 1fr;gap:4px 16px;font-size:14.5px;margin:12px 0}
+  .readout dt{color:#4b5563;font-weight:600;font-family:var(--mono);font-size:13.5px;padding-top:2px}
+  .readout dd{margin:0;font-family:var(--mono)}
+  .kbd{font-family:var(--mono);font-size:13px;background:#eef1f5;border:1px solid #dfe3ea;border-bottom-width:2px;border-radius:6px;padding:1px 7px}
+  .chip{display:inline-block;font-size:12.5px;padding:2px 9px;border-radius:99px;background:var(--accent-soft);color:var(--accent);font-weight:600}
+  .chip.ok{background:#e9f7ef;color:#116b43}
+  .chip.bad{background:#fdecec;color:#a3262b}
+  .chip.warn{background:#fffbeb;color:var(--warn)}
+  .chip.gray{background:#eef1f5;color:#5b6472}
+
+  /* ---------- controls ---------- */
+  .ctrls{display:flex;flex-wrap:wrap;gap:9px;align-items:center;margin:12px 0}
+  label.fld{display:inline-flex;align-items:center;gap:7px;font-size:14px;color:#3c4450;max-width:100%;flex-wrap:wrap;min-width:0}
+  label.fld select,label.fld input{min-width:0;max-width:100%}
+  input[type=text],input[type=number],select{font-family:var(--mono);font-size:14px;padding:6px 10px;border:1px solid #d5dae2;border-radius:8px;background:#fff;color:var(--ink)}
+  input[type=text]:focus,input[type=number]:focus,select:focus{outline:2px solid #bfd6fb;border-color:var(--accent)}
+  button{font-family:var(--sans);font-size:14px;font-weight:600;padding:7px 15px;border-radius:9px;border:1px solid #d5dae2;background:#fff;color:#2b323c;cursor:pointer}
+  button:hover{background:#f4f6f9}
+  button.p{background:var(--accent);border-color:var(--accent);color:#fff}
+  button.p:hover{background:#1d4ed8}
+  button.sm{padding:4px 10px;font-size:13px}
+  button.pill{border-radius:99px}
+  .seg{display:inline-flex;border:1px solid #d5dae2;border-radius:9px;overflow:hidden}
+  .seg button{border:0;border-radius:0;border-right:1px solid #e6e9ef;padding:6px 13px}
+  .seg button:last-child{border-right:0}
+  .seg button.on{background:var(--accent);color:#fff}
+
+  .steps{counter-reset:st}
+  .step{border:1px solid var(--line);border-radius:9px;padding:11px 15px;margin:9px 0;background:#fcfdfe;opacity:.42;transition:opacity .2s}
+  .step.on{opacity:1;background:#fff;border-color:#c9d6ea;box-shadow:0 1px 2px rgba(37,99,235,.08)}
+  .step .h{font-size:13px;font-weight:700;color:var(--accent);letter-spacing:.02em;margin-bottom:3px}
+  .step .m{font-family:var(--mono);font-size:14.5px;overflow-x:auto}
+  .step .e{font-size:13.5px;color:var(--muted);margin-top:3px}
+
+  .reveal{border:1px solid var(--line);border-radius:9px;padding:11px 15px;margin:8px 0;background:#fcfdfe}
+  .reveal summary{cursor:pointer;font-weight:600;font-size:14.5px}
+  .reveal[open]{background:#fff}
+  .ans{margin-top:8px;padding-top:8px;border-top:1px dashed var(--line);font-size:14.5px}
+
+  .puzzle{border:1px solid var(--line);border-radius:9px;padding:12px 15px;margin:9px 0;display:flex;gap:13px;align-items:flex-start;background:#fcfdfe}
+  .puzzle .q{font-family:var(--mono);font-size:15px;flex:1;min-width:0;overflow-x:auto;white-space:nowrap}
+  .puzzle .q small{font-family:var(--sans);color:var(--muted);display:block;white-space:normal}
+  .puzzle .btns{display:flex;gap:6px;flex-shrink:0}
+  .puzzle.correct{border-color:#9ed3b4;background:#f4fcf7}
+  .puzzle.wrong{border-color:#f1b5b8;background:#fef6f6}
+  .puzzle .exp{margin-top:9px;padding-top:9px;border-top:1px dashed var(--line);font-size:14.5px;display:none;white-space:normal;font-family:var(--sans)}
+  .puzzle.done .exp{display:block}
+  .puzzle .exp .verdict{font-weight:700}
+
+  .tick{stroke:#94a3b8;stroke-width:1.4}
+  .tick.dn{stroke:var(--exp)}
+  .tick.nm{stroke:var(--frac)}
+  .ticklabel{font-size:9.5px;fill:#64748b;font-family:var(--mono)}
+  .axisline{stroke:#c8cfd9;stroke-width:1.2}
+  .axislabel{font-size:11px;fill:#64748b}
+
+  .footer{max-width:1180px;margin:0 auto;padding:8px 22px 40px;color:var(--muted);font-size:13px}
+  .totop{position:fixed;right:22px;bottom:22px;z-index:40;box-shadow:var(--shadow);display:none}
+  @media(max-width:960px){
+    .layout{grid-template-columns:1fr;padding:16px}
+    nav.toc{position:static;max-height:none;display:flex;flex-wrap:wrap;gap:6px;background:#fff;border:1px solid var(--line);border-radius:12px;padding:10px}
+    nav.toc h4{width:100%;margin-bottom:2px}
+    nav.toc a{border-left:0;padding:5px 10px;font-size:13px}
+    nav.toc .sub{display:none}
+    section{padding:20px 17px}
+  }
+  @media print{nav.toc,.topbar,.totop{display:none}.layout{display:block}section{break-inside:avoid;box-shadow:none}}
+  /* ---------- 风格切换条 ---------- */
+  .stylebar{max-width:1180px;margin:0 auto;padding:14px 22px 0;display:flex;gap:8px;flex-wrap:wrap;align-items:center;font-size:12.5px;color:var(--muted)}
+  .stylebar>span{font-weight:600}
+  .stylebar a{text-decoration:none;padding:4px 11px;border:1px solid var(--line);border-radius:99px;color:var(--muted);background:var(--card);font-weight:600}
+  .stylebar a:hover{border-color:var(--accent);color:var(--accent)}
+  .stylebar a.cur{background:var(--accent);color:#fff;border-color:var(--accent)}
+  @media(max-width:960px){.stylebar{padding:12px 16px 0}}
+
+  /* ---------- 本讲新增的少量样式 ---------- */
+  table.tbl tr.hl td{background:var(--accent-soft)}
+  table.tbl tr.hl td:first-child{box-shadow:inset 3px 0 0 var(--accent)}
+  .bit-inline{display:inline-flex;gap:1px;vertical-align:middle}
+  #truthOut .card table.tbl{margin-top:4px}
+  #truthOut .card table.tbl td{padding:4px 9px;font-size:13.5px}
+
+</style>
+</head>
+<body>
+
+<div class="topbar"><div class="topbar-in">
+  <div class="brand">位、字节与整数 Bits, Bytes &amp; Integers<small>《计算机系统导论》第 2 讲 · 中文交互版</small></div>
+  <div class="progress"><span id="pgText">学习进度 0%</span><span class="bar"><i id="pgBar"></i></span></div>
+</div></div>
+
+<div class="stylebar">
+  <span>课件：</span>
+  <a href="floating-point-zh.html">第 3 讲 · 浮点数</a>
+  <a href="#" class="cur" onclick="return false">第 2 讲 · 位、字节与整数（当前）</a>
+  <a href="variants-bits/index.html">◧ 本讲风格预览</a>
+  <a href="variants/index.html">◧ 浮点数风格预览</a>
+</div>
+
+<div class="layout">
+  <nav class="toc">
+    <h4>目录</h4>
+    <a href="#s0"><span class="n">0</span>课程导览</a>
+    <a href="#s1"><span class="n">1</span>从位到字节</a>
+    <a href="#s2"><span class="n">2</span>位级运算</a>
+    <a href="#s3"><span class="n">3</span>整数的表示</a>
+    <a href="#s4"><span class="n">4</span>转换与强制转换</a>
+    <a href="#s5"><span class="n">5</span>扩展与截断</a>
+    <a href="#s6"><span class="n">6</span>整数运算</a>
+    <a href="#s7"><span class="n">7</span>无符号的坑</a>
+    <a href="#s8"><span class="n">8</span>内存与字节序</a>
+    <a href="#s9"><span class="n">9</span>总结与测验</a>
+  </nav>
+
+  <main>
+<!-- ================= 0 ================= -->
+  <section id="s0">
+    <h2>课程导览<span class="srcref">原第 1–2、5 页</span></h2>
+    <p class="lede">北京大学《计算机系统导论》第 2 讲「位、字节与整数」。本页把原课件的英文内容整理为中文，并把每一个可以手算的结论都做成了能动手操作的工具。</p>
+
+    <div class="grid g3">
+      <div class="card"><h5>本讲提纲</h5>
+        <ol style="margin:0;padding-left:20px;font-size:14.5px">
+          <li>把信息表示为位
+            <ul style="margin:2px 0"><li>位级运算</li></ul>
+          </li>
+          <li>整数
+            <ul style="margin:2px 0">
+              <li>表示：无符号与有符号</li>
+              <li>转换、强制类型转换</li>
+              <li>扩展、截断</li>
+              <li>加法、取负、乘法、移位</li>
+              <li>小结</li>
+            </ul>
+          </li>
+          <li>内存中的表示、指针、字符串</li>
+        </ol>
+      </div>
+      <div class="card"><h5>一句话核心</h5>
+        <p style="margin:0;font-size:14.5px">计算机里<b>只有位</b>。同一个位模式，按不同的类型去解释，就得到不同的值 —— 本讲几乎所有的「坑」都源于此。</p>
+        <div class="formula" style="margin:10px 0 0;padding:10px">位模式 0xC4 0x93<br><span style="font-size:13px;color:var(--muted)">→ int16: −15213<br>→ uint16: 50323</span></div>
+      </div>
+      <div class="card"><h5>为什么要认真学</h5>
+        <p style="margin:0;font-size:14.5px">整数溢出与有符号/无符号混用是真实漏洞的常见成因（缓冲区溢出、死循环、越界访问）。本页第 7 节有两个真实代码陷阱。</p>
+      </div>
+    </div>
+
+    <h3>0.1 一张表看懂 C 数据类型的宽度</h3>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>C 数据类型</th><th>典型 32 位</th><th>Intel IA32</th><th>x86-64</th></tr>
+      <tr><td class="mono">char</td><td class="mono">1</td><td class="mono">1</td><td class="mono">1</td></tr>
+      <tr><td class="mono">short</td><td class="mono">2</td><td class="mono">2</td><td class="mono">2</td></tr>
+      <tr><td class="mono">int</td><td class="mono">4</td><td class="mono">4</td><td class="mono">4</td></tr>
+      <tr><td class="mono">long</td><td class="mono">4</td><td class="mono">4</td><td class="mono"><b>8</b></td></tr>
+      <tr><td class="mono">float</td><td class="mono">4</td><td class="mono">4</td><td class="mono">4</td></tr>
+      <tr><td class="mono">double</td><td class="mono">8</td><td class="mono">8</td><td class="mono">8</td></tr>
+      <tr><td class="mono">long double</td><td class="mono">−</td><td class="mono">−</td><td class="mono">10 / 16</td></tr>
+      <tr><td class="mono">pointer</td><td class="mono">4</td><td class="mono">4</td><td class="mono"><b>8</b></td></tr>
+    </table></div>
+    <p style="font-size:14.5px;color:var(--muted)">单位是字节。注意 <code>long</code> 和指针在 64 位机器上变成 8 字节 —— 这是同一份 C 代码在不同平台上行为不同的根源之一。</p>
+
+    <div class="box"><div class="t">本页使用说明</div>
+      标有 <span class="chip gray">可交互</span> 的地方都能直接点击或输入。所有计算都在浏览器里实时完成，无需联网；每个交互区都给出了与课件对应的例题数值，方便对照。
+    </div>
+  </section>
+
+  <!-- ================= 1 ================= -->
+  <section id="s1">
+    <h2>1. 从位到字节<span class="srcref">原第 3–5 页</span></h2>
+    <p class="lede">一切信息最终都变成一串 0 和 1。先看看这些 0/1 是怎么组织的。</p>
+
+    <h3>1.1 二进制表示</h3>
+    <p>同一个数，可以有多种表示方式：</p>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>十进制</th><th>其它进制表示</th></tr>
+      <tr><td class="mono">15213<sub>10</sub></td><td class="mono">11101101101101<sub>2</sub></td></tr>
+      <tr><td class="mono">1.20<sub>10</sub></td><td class="mono">1.0011001100110011[0011]…<sub>2</sub></td></tr>
+      <tr><td class="mono">1.5213 × 10<sup>4</sup></td><td class="mono">1.1101101101101 × 2<sup>13</sup></td></tr>
+    </table></div>
+
+    <h4>为什么计算机用二进制？</h4>
+    <p>因为用电路实现二进制最简单：只需要区分「有电压」和「没电压」两种状态。电压不必精确，落在区间里就算数：</p>
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：点一下电压值，看它被判为 0 还是 1</span>
+        <div class="seg" id="voltSeg">
+          <button data-v="3.3">3.3 V</button>
+          <button data-v="2.8">2.8 V</button>
+          <button data-v="1.65">1.65 V（中间区）</button>
+          <button data-v="0.5">0.5 V</button>
+          <button data-v="0.0">0.0 V</button>
+        </div>
+      </div>
+      <div id="voltOut"></div>
+    </div>
+
+    <h3>1.2 字节与十六进制</h3>
+    <ul>
+      <li><b>字节（byte）= 8 位（bit）</b>。</li>
+      <li>一个字节的二进制范围：<code>00000000<sub>2</sub></code> 到 <code>11111111<sub>2</sub></code>；十进制 <code>0<sub>10</sub></code> 到 <code>255<sub>10</sub></code>；十六进制 <code>00<sub>16</sub></code> 到 <code>FF<sub>16</sub></code>。</li>
+      <li>十六进制（base 16）用 <code>0</code>–<code>9</code> 和 <code>A</code>–<code>F</code> 表示。</li>
+      <li>在 C 里写作 <code>0xFA1D37B</code> 或 <code>0xfa1d37b</code>（大小写都行）。</li>
+    </ul>
+    <p style="font-size:14.5px;color:var(--muted)">为什么十六进制好用？因为<b>一个十六进制位正好对应 4 个二进制位</b>，所以 1 字节 = 2 个十六进制位，读写和口算都方便。</p>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：字节的三种表示</span>
+        <label class="fld">输入 <input type="text" id="byteIn" value="0x3B" size="10" spellcheck="false"></label>
+        <label class="fld">按
+          <select id="byteBase">
+            <option value="hex">十六进制</option>
+            <option value="dec">十进制</option>
+            <option value="bin">二进制</option>
+          </select>
+          解释
+        </label>
+        <button class="p" id="byteGo">转换</button>
+        <button class="sm" data-byte="0x3B">0x3B (15213 的低字节)</button>
+        <button class="sm" data-byte="0xFF">0xFF</button>
+        <button class="sm" data-byte="170">170</button>
+      </div>
+      <div id="byteOut"></div>
+    </div>
+
+    <h3>1.3 交互：数据类型的大小与范围</h3>
+    <p>选一个类型和平台，看看它占几个字节、能表示哪些数。</p>
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <label class="fld">类型
+          <select id="dtsType">
+            <option value="char">char</option>
+            <option value="short">short</option>
+            <option value="int" selected>int</option>
+            <option value="long">long</option>
+            <option value="pointer">pointer</option>
+          </select>
+        </label>
+        <label class="fld">平台
+          <select id="dtsPlat">
+            <option value="32">典型 32 位</option>
+            <option value="ia32">Intel IA32</option>
+            <option value="x64" selected>x86-64</option>
+          </select>
+        </label>
+        <div class="seg" id="dtsSign">
+          <button class="on" data-sg="1">有符号</button>
+          <button data-sg="0">无符号</button>
+        </div>
+      </div>
+      <div id="dtsOut"></div>
+    </div>
+  </section>
+
+  <!-- ================= 2 ================= -->
+  <section id="s2">
+    <h2>2. 位级运算<span class="srcref">原第 7–12 页</span></h2>
+    <p class="lede">布尔代数只有四个运算，但它们构成了计算机里所有逻辑运算的基础。</p>
+
+    <h3>2.1 布尔代数</h3>
+    <p>19 世纪由 George Boole 提出，是逻辑的代数表示：把「真」编码为 1、「假」编码为 0。</p>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：切换 A、B，四张真值表里对应的行会高亮</span>
+        <div class="seg" id="boolA">
+          <button class="on" data-b="0">A = 0</button>
+          <button data-b="1">A = 1</button>
+        </div>
+        <div class="seg" id="boolB">
+          <button class="on" data-b="0">B = 0</button>
+          <button data-b="1">B = 1</button>
+        </div>
+      </div>
+      <div class="grid g2" id="truthOut"></div>
+    </div>
+
+    <h3>2.2 位向量：把一组位当成一个整体</h3>
+    <p>运算<b>逐位</b>进行（bitwise）：</p>
+    <div class="formula mono" style="font-size:14.5px;line-height:1.9;text-align:left">
+      01101001 &nbsp;&nbsp;01101001 &nbsp;&nbsp;01101001 &nbsp;&nbsp;~01010101<br>
+      &amp; 01010101 &nbsp;&nbsp;| 01010101 &nbsp;&nbsp;^ 01010101<br>
+      01000001 &nbsp;&nbsp;01111101 &nbsp;&nbsp;00111100 &nbsp;&nbsp;10101010
+    </div>
+
+    <h4>用位向量表示集合</h4>
+    <p>宽度为 w 的位向量可以表示集合 {0, …, w−1} 的子集：<b>第 j 位为 1 就表示 j 在集合里</b>。于是位运算正好对应集合运算：</p>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>位运算</th><th>集合含义</th><th>课件例子</th></tr>
+      <tr><td class="mono">&amp;</td><td>交集 Intersection</td><td class="mono">01000001 → {0, 6}</td></tr>
+      <tr><td class="mono">|</td><td>并集 Union</td><td class="mono">01111101 → {0, 2, 3, 4, 5, 6}</td></tr>
+      <tr><td class="mono">^</td><td>对称差 Symmetric difference</td><td class="mono">00111100 → {2, 3, 4, 5}</td></tr>
+      <tr><td class="mono">~</td><td>补集 Complement</td><td class="mono">10101010 → {1, 3, 5, 7}</td></tr>
+    </table></div>
+    <p style="font-size:14.5px;color:var(--muted)">其中 <code>01101001 = {0, 3, 5, 6}</code>、<code>01010101 = {0, 2, 4, 6}</code>。位是从右往左编号 7…0 的，别数反了。</p>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：位运算实验台（点击位即可翻转）</span>
+        <label class="fld">A = <input type="text" id="bwA" value="0x69" size="6" spellcheck="false"></label>
+        <label class="fld">B = <input type="text" id="bwB" value="0x55" size="6" spellcheck="false"></label>
+        <div class="seg" id="bwOp">
+          <button class="on" data-op="and">A &amp; B</button>
+          <button data-op="or">A | B</button>
+          <button data-op="xor">A ^ B</button>
+          <button data-op="notA">~A</button>
+        </div>
+      </div>
+      <div id="bitwiseOut"></div>
+    </div>
+
+    <h3>2.3 C 中的位运算</h3>
+    <p><code>&</code>、<code>|</code>、<code>~</code>、<code>^</code> 可用于任何「整型」数据类型（<code>long</code>、<code>int</code>、<code>short</code>、<code>char</code>、<code>unsigned</code>）：把参数看作位向量，逐位运算。</p>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>C 表达式（char）</th><th>二进制</th><th>结果</th></tr>
+      <tr><td class="mono">~0x41</td><td class="mono">~01000001<sub>2</sub> → 10111110<sub>2</sub></td><td class="mono">0xBE</td></tr>
+      <tr><td class="mono">~0x00</td><td class="mono">~00000000<sub>2</sub> → 11111111<sub>2</sub></td><td class="mono">0xFF</td></tr>
+      <tr><td class="mono">0x69 &amp; 0x55</td><td class="mono">01101001<sub>2</sub> &amp; 01010101<sub>2</sub> → 01000001<sub>2</sub></td><td class="mono">0x41</td></tr>
+      <tr><td class="mono">0x69 | 0x55</td><td class="mono">01101001<sub>2</sub> | 01010101<sub>2</sub> → 01111101<sub>2</sub></td><td class="mono">0x7D</td></tr>
+    </table></div>
+
+    <h3>2.4 对比：C 中的逻辑运算</h3>
+    <p>逻辑运算 <code>&amp;&amp;</code>、<code>||</code>、<code>!</code> 和位运算完全是两回事：</p>
+    <ul>
+      <li><b>0 表示「假」，任何非 0 值表示「真」</b>；</li>
+      <li><b>结果永远是 0 或 1</b>；</li>
+      <li><b>会短路求值</b>（early termination）：<code>a &amp;&amp; b</code> 里如果 a 为假就不再计算 b。</li>
+    </ul>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>C 表达式（char）</th><th>结果</th><th>说明</th></tr>
+      <tr><td class="mono">!0x41</td><td class="mono">0x00</td><td>0x41 非 0 → 真，取非得假</td></tr>
+      <tr><td class="mono">!0x00</td><td class="mono">0x01</td><td>0 是假，取非得真（注意结果是 1 而不是 0xFF）</td></tr>
+      <tr><td class="mono">!!0x41</td><td class="mono">0x01</td><td>把任意非 0 值规范化成 1</td></tr>
+      <tr><td class="mono">0x69 &amp;&amp; 0x55</td><td class="mono">0x01</td><td>两者都非 0 → 真</td></tr>
+      <tr><td class="mono">0x69 || 0x55</td><td class="mono">0x01</td><td>两者都非 0 → 真</td></tr>
+    </table></div>
+    <div class="box warn"><div class="t">最常见的笔误之一</div>
+      把 <code>&amp;&amp;</code> 写成 <code>&amp;</code>（或把 <code>||</code> 写成 <code>|</code>）。<code>0x69 &amp; 0x55</code> 得到 <code>0x41</code>（非 0 仍是真，可能侥幸不出错），而 <code>0x01 &amp; 0x02</code> 得到 <code>0</code>（假），但 <code>0x01 &amp;&amp; 0x02</code> 却是真 —— 二者并不等价。
+    </div>
+    <p>另一个典型用法是 <code>p &amp;&amp; *p</code>：先判断指针非空，再解引用，<b>利用短路避免空指针访问</b>。</p>
+
+    <h3>2.5 移位运算</h3>
+    <div class="grid g2">
+      <div class="card"><h5>左移 <code>x &lt;&lt; y</code></h5>
+        <ul style="margin:0">
+          <li>把位向量 x 向左移 y 位；</li>
+          <li>左边多出来的位<b>丢弃</b>；</li>
+          <li>右边<b>补 0</b>。</li>
+        </ul>
+      </div>
+      <div class="card"><h5>右移 <code>x &gt;&gt; y</code></h5>
+        <ul style="margin:0">
+          <li>右边多出来的位<b>丢弃</b>；</li>
+          <li><b>逻辑右移</b>：左边补 0；</li>
+          <li><b>算术右移</b>：左边复制最高位（符号位）。</li>
+        </ul>
+      </div>
+    </div>
+    <div class="box bad"><div class="t">未定义行为</div>
+      移位量 <b>&lt; 0</b> 或 <b>≥ 字长</b>时，C 标准规定行为未定义。例如对 32 位 <code>int</code> 写 <code>x &gt;&gt; 32</code> 是错的（不同编译器结果可能不同）。
+    </div>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：移位可视化（8 位）</span>
+        <label class="fld">x = <input type="text" id="shIn" value="0x62" size="7" spellcheck="false"></label>
+        <label class="fld">移位量 <input type="number" id="shAmt" value="2" min="-1" max="9" style="width:64px"></label>
+        <div class="seg" id="shDir">
+          <button class="on" data-d="right">右移 &gt;&gt;</button>
+          <button data-d="left">左移 &lt;&lt;</button>
+        </div>
+        <div class="seg" id="shKind">
+          <button class="on" data-k="arith">算术右移</button>
+          <button data-k="logic">逻辑右移</button>
+        </div>
+        <button class="p" id="shGo">移位</button>
+      </div>
+      <div id="shOut"></div>
+    </div>
+  </section>
+
+  <!-- ================= 3 ================= -->
+  <section id="s3">
+    <h2>3. 整数的表示<span class="srcref">原第 14–19 页</span></h2>
+    <p class="lede">同一串位，用「无符号」和「补码」两种方式解释，会得到两个不同的整数。</p>
+
+    <h3>3.1 无符号与补码</h3>
+    <div class="grid g2">
+      <div class="card"><h5>无符号（Unsigned）</h5>
+        <div class="formula" style="margin:8px 0;font-size:14.5px">B2U(X) = Σ<sub>i=0..w−1</sub> x<sub>i</sub> × 2<sup>i</sup></div>
+        <p style="margin:0;font-size:14.5px">每一位都按正的 2 的幂加权求和。</p>
+      </div>
+      <div class="card"><h5>补码（Two's Complement）</h5>
+        <div class="formula" style="margin:8px 0;font-size:14.5px">B2T(X) = −x<sub>w−1</sub> × 2<sup>w−1</sup> + Σ<sub>i=0..w−2</sub> x<sub>i</sub> × 2<sup>i</sup></div>
+        <p style="margin:0;font-size:14.5px">最高位带<b>负权</b> −2<sup>w−1</sup>，其余位同无符号。最高位因此也叫<b>符号位</b>。</p>
+      </div>
+    </div>
+    <p><b>符号位：</b>补码的最高位表示正负 —— <code>0</code> 表示非负，<code>1</code> 表示负数。</p>
+    <div class="box"><div class="t">课件例子（short，2 字节）</div>
+      <div class="mono" style="font-size:14px;line-height:1.9">
+        short int x = &nbsp;15213; &nbsp;→ 十进制 15213 &nbsp; 十六进制 3B 6D &nbsp; 二进制 00111011 01101101<br>
+        short int y = −15213; &nbsp;→ 十进制 −15213 &nbsp; 十六进制 C4 93 &nbsp; 二进制 11000100 10010011
+      </div>
+      <p style="margin:6px 0 0;font-size:14px;color:var(--muted)">注意 x 与 y 的位模式「按位取反再加一」互为相反数：<code>~(0x3B6D) + 1 = 0xC493</code>。</p>
+    </div>
+
+    <h3>3.2 补码的直观理解：带正负号的权重</h3>
+    <p>用 5 位来举例，最高位权重是 −16，其余是 8、4、2、1：</p>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>位</th><th class="mono">−16</th><th class="mono">8</th><th class="mono">4</th><th class="mono">2</th><th class="mono">1</th><th>求和</th></tr>
+      <tr><td>10</td><td class="mono">0</td><td class="mono">1</td><td class="mono">0</td><td class="mono">1</td><td class="mono">0</td><td class="mono">8 + 2 = 10</td></tr>
+      <tr><td>−10</td><td class="mono">1</td><td class="mono">0</td><td class="mono">1</td><td class="mono">1</td><td class="mono">0</td><td class="mono">−16 + 4 + 2 = −10</td></tr>
+    </table></div>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：位模式编辑器（点位翻转，看它怎么变成数）</span>
+        <label class="fld">位宽
+          <select id="wcBits">
+            <option value="4">4 位</option>
+            <option value="5" selected>5 位</option>
+            <option value="8">8 位</option>
+            <option value="16">16 位（short）</option>
+          </select>
+        </label>
+        <button class="p" id="wcGo">重算</button>
+        <button class="sm" data-wc="15213">15213</button>
+        <button class="sm" data-wc="-15213">−15213</button>
+        <button class="sm" data-wc="10">10</button>
+        <button class="sm" data-wc="-10">−10</button>
+      </div>
+      <div id="wcOut"></div>
+    </div>
+
+    <h3>3.3 逐位权重表（课件原例）</h3>
+    <p>把 15213 与 −15213 的 16 位权重逐位展开，可以看到补码的对称性：</p>
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <label class="fld"><input type="checkbox" id="weightAll"> 展开全部 16 行（默认只显示进位为 1 或权为负的行）</label>
+      </div>
+      <div class="tbl-wrap" style="max-height:420px;overflow:auto"><table class="tbl" id="weightTbl"></table></div>
+    </div>
+
+    <h3>3.4 数值范围</h3>
+    <div class="grid g2">
+      <div class="card"><h5>无符号</h5>
+        <ul style="margin:0">
+          <li>最小值 <code>UMin = 0</code>（位模式 <code>000…0</code>）</li>
+          <li>最大值 <code>UMax = 2<sup>w</sup> − 1</code>（位模式 <code>111…1</code>）</li>
+        </ul>
+      </div>
+      <div class="card"><h5>补码</h5>
+        <ul style="margin:0">
+          <li>最小值 <code>TMin = −2<sup>w−1</sup></code>（位模式 <code>100…0</code>）</li>
+          <li>最大值 <code>TMax = 2<sup>w−1</sup> − 1</code>（位模式 <code>011…1</code>）</li>
+          <li>另外 <code>−1</code> 的位模式是 <code>111…1</code></li>
+        </ul>
+      </div>
+    </div>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>w</th><th>8</th><th>16</th><th>32</th><th>64</th></tr>
+      <tr><td class="mono">UMax</td><td class="mono">255</td><td class="mono">65,535</td><td class="mono">4,294,967,295</td><td class="mono">18,446,744,073,709,551,615</td></tr>
+      <tr><td class="mono">TMax</td><td class="mono">127</td><td class="mono">32,767</td><td class="mono">2,147,483,647</td><td class="mono">9,223,372,036,854,775,807</td></tr>
+      <tr><td class="mono">TMin</td><td class="mono">−128</td><td class="mono">−32,768</td><td class="mono">−2,147,483,648</td><td class="mono">−9,223,372,036,854,775,808</td></tr>
+    </table></div>
+    <div class="grid g3">
+      <div class="card"><h5>观察 1</h5><p style="margin:0" class="mono">|TMin| = TMax + 1</p><p style="margin:4px 0 0;font-size:14px;color:var(--muted)">负数比正数多一个 —— 范围是<b>不对称</b>的。</p></div>
+      <div class="card"><h5>观察 2</h5><p style="margin:0" class="mono">UMax = 2 × TMax + 1</p><p style="margin:4px 0 0;font-size:14px;color:var(--muted)">无符号范围正好是补码正数范围的两倍多一个。</p></div>
+      <div class="card"><h5>C 编程</h5><p style="margin:0;font-size:14px">头文件 <code>&lt;limits.h&gt;</code> 里声明了这些常量：<code>ULONG_MAX</code>、<code>LONG_MAX</code>、<code>LONG_MIN</code>。<b>具体取值依平台而定</b>，不要写死。</p></div>
+    </div>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：字长与范围计算器</span>
+        <label class="fld">字长 w = <input type="number" id="wrIn" value="32" min="1" max="128" style="width:74px"> 位</label>
+        <button class="p" id="wrGo">计算</button>
+      </div>
+      <div id="wrOut"></div>
+    </div>
+
+    <h3>3.5 有符号 / 无符号数值对照（以 4 位为例）</h3>
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：鼠标移到某一行，看它的两种解释</span>
+        <div class="seg" id="mapSeg">
+          <button class="on" data-m="all">全部 16 行</button>
+          <button data-m="neg">只看最高位为 1 的行</button>
+        </div>
+      </div>
+      <div class="tbl-wrap"><table class="tbl" id="mapTbl"></table></div>
+      <p style="font-size:13.5px;color:var(--muted);margin:8px 0 0">
+        两条重要性质：<b>非负数的编码相同</b>（0000–0111 段两侧一致）；<b>每个位模式唯一对应一个值</b>，且每个可表示的值都有唯一的位模式 —— 所以两种映射都是可逆的。
+      </p>
+    </div>
+  </section>
+
+  <!-- ================= 4 ================= -->
+  <section id="s4">
+    <h2>4. 转换与强制类型转换<span class="srcref">原第 21–28 页</span></h2>
+    <p class="lede">有符号与无符号之间的转换规则只有一句话：<b>位模式不变，只是重新解释</b>。但它的后果常常出人意料。</p>
+
+    <h3>4.1 映射的方向</h3>
+    <div class="formula" style="font-size:15px;line-height:2">
+      补码 x &nbsp;—<span class="mono">T2B</span>→&nbsp; 位模式 X &nbsp;—<span class="mono">B2U</span>→&nbsp; 无符号 ux<br>
+      无符号 ux &nbsp;—<span class="mono">U2B</span>→&nbsp; 位模式 X &nbsp;—<span class="mono">B2T</span>→&nbsp; 补码 x
+    </div>
+    <p>两条路径都<b>保持相同的位模式</b>（Maintain Same Bit Pattern），只是换了套解释规则。</p>
+
+    <h3>4.2 数学关系（T2U）</h3>
+    <div class="formula big">
+      ux = <span style="display:inline-block;text-align:left">x + 2<sup>w</sup> &nbsp;(x &lt; 0)<br>x &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; (x ≥ 0)</span>
+    </div>
+    <p>道理很简单：最高位在补码里是「大负权」−2<sup>w−1</sup>，在无符号里是「大正权」+2<sup>w−1</sup>，一进一出正好差 2<sup>w</sup>。</p>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：T2U / U2T 转换器</span>
+        <label class="fld">位宽
+          <select id="cvtBits"><option value="4">4 位</option><option value="8">8 位</option><option value="16" selected>16 位</option><option value="32">32 位</option></select>
+        </label>
+        <div class="seg" id="cvtDir">
+          <button class="on" data-d="t2u">有符号 → 无符号</button>
+          <button data-d="u2t">无符号 → 有符号</button>
+        </div>
+        <label class="fld">值 <input type="text" id="cvtIn" value="-15213" size="12" spellcheck="false"></label>
+        <button class="p" id="cvtGo">转换</button>
+      </div>
+      <div id="cvtOut"></div>
+    </div>
+
+    <h3>4.3 转换的可视化：顺序被「折断」</h3>
+    <p>把补码映射到无符号时，负数段整体平移到了大正数区，于是数值大小顺序发生了反转：</p>
+    <div class="box pad0" style="padding:16px 18px">
+      <div id="cvtChart"></div>
+      <p style="font-size:13.5px;color:var(--muted);margin:8px 0 0">
+        所以 <code>TMax &lt; TMin</code> 之类的「怪事」就出现了：转换成无符号后，<b>最小的负数变成了最大的正数</b>（<code>−1 → UMax</code>）。这就是后面所有比较运算陷阱的来源。
+      </p>
+    </div>
+
+    <h3>4.4 C 中的有符号与无符号</h3>
+    <ul>
+      <li><b>常量</b>默认视为有符号整数；带后缀 <code>U</code> 的才是无符号，如 <code>0U</code>、<code>4294967259U</code>。</li>
+      <li><b>显式转换</b>：<code>(int) ux</code>、<code>(unsigned) ty</code>，效果就是 U2T 和 T2U。</li>
+      <li><b>隐式转换</b>：赋值和函数调用时也会发生，如 <code>tx = ux;</code>、<code>uy = ty;</code>。</li>
+    </ul>
+    <div class="box bad"><div class="t">表达式求值规则（最重要的一条）</div>
+      如果一个表达式里<b>同时出现有符号和无符号</b>，那么<b>有符号值会被隐式转换成无符号</b> —— 包括 <code>&lt;</code>、<code>&gt;</code>、<code>==</code>、<code>&lt;=</code>、<code>&gt;=</code> 这些比较运算。
+    </div>
+
+    <h3>4.5 转换陷阱表（w = 32）</h3>
+    <p>课件给出的这些例子，全部是「看着像，其实不是」。点一行看它的实际求值过程。</p>
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：点任意一行，查看实际比较过程</span>
+        <button class="sm" id="csAll">全部展开</button>
+      </div>
+      <div class="tbl-wrap"><table class="tbl" id="castTbl"></table></div>
+      <div id="castOut" style="margin-top:10px"></div>
+    </div>
+
+    <h3>4.6 小结：有符号 ↔ 无符号的基本规则</h3>
+    <ul>
+      <li><b>位模式保持不变</b>，但被<b>重新解释</b>。</li>
+      <li>效果可能出乎意料：相当于<b>加上或减去 2<sup>w</sup></b>。</li>
+      <li>含 <code>int</code> 与 <code>unsigned</code> 的表达式里，<b><code>int</code> 会被转成 <code>unsigned</code></b>。</li>
+    </ul>
+  </section>
+
+  <!-- ================= 5 ================= -->
+  <section id="s5">
+    <h2>5. 扩展与截断<span class="srcref">原第 30–34 页</span></h2>
+    <p class="lede">把数从窄类型搬到宽类型（扩展）或反过来（截断），位模式会怎么变？</p>
+
+    <h3>5.1 符号扩展（Sign Extension）</h3>
+    <p><b>任务：</b>给定 w 位有符号整数 x，把它转成 w+k 位但数值不变。</p>
+    <p><b>规则：</b>在最左边<b>复制 k 份符号位</b>：<code>X' = x<sub>w−1</sub>, …, x<sub>w−1</sub>, x<sub>w−1</sub>, x<sub>w−2</sub>, …, x<sub>0</sub></code>。</p>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>符号</th><th>5 位</th><th>6 位（扩展后）</th></tr>
+      <tr><td>正数</td><td class="mono">0 1 0 1 0 = 10</td><td class="mono">0 0 1 0 1 0 = 10</td></tr>
+      <tr><td>负数</td><td class="mono">1 0 1 1 0 = −10</td><td class="mono">1 1 0 1 1 0 = −10</td></tr>
+    </table></div>
+    <p style="font-size:14.5px;color:var(--muted)">为什么负数补 1 也对？因为新补上的最高位是 −2<sup>w+k−1</sup>，而原来的最高位变成 +2<sup>w+k−2</sup>，两者相加正好等于原来的 −2<sup>w−1</sup>。</p>
+
+    <h3>5.2 课件原例：short → int</h3>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>变量</th><th>十进制</th><th>十六进制</th><th>二进制</th></tr>
+      <tr><td class="mono">short x</td><td class="mono">15213</td><td class="mono">3B 6D</td><td class="mono">00111011 01101101</td></tr>
+      <tr><td class="mono">int ix</td><td class="mono">15213</td><td class="mono">00 00 3B 6D</td><td class="mono">00000000 00000000 00111011 01101101</td></tr>
+      <tr><td class="mono">short y</td><td class="mono">−15213</td><td class="mono">C4 93</td><td class="mono">11000100 10010011</td></tr>
+      <tr><td class="mono">int iy</td><td class="mono">−15213</td><td class="mono">FF FF C4 93</td><td class="mono">11111111 11111111 11000100 10010011</td></tr>
+    </table></div>
+    <p>把窄类型赋给宽类型时，<b>C 会自动做符号扩展</b>。</p>
+
+    <h3>5.3 截断（Truncation）</h3>
+    <p>把 w 位截成 k 位：<b>丢掉高 w−k 位</b>，剩下的位按新类型重新解释。数值上等价于取模：</p>
+    <div class="formula">x' = x mod 2<sup>k</sup>（无符号）&nbsp;&nbsp;&nbsp; x' = U2T(x mod 2<sup>k</sup>)（有符号）</div>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>情形</th><th>5 位</th><th>4 位（截断后）</th><th>说明</th></tr>
+      <tr><td>符号不变</td><td class="mono">0 0 0 1 0 = 2</td><td class="mono">0 0 1 0 = 2</td><td class="mono">2 mod 16 = 2</td></tr>
+      <tr><td>符号改变</td><td class="mono">0 1 0 1 0 = 10</td><td class="mono">1 0 1 0 = −6</td><td class="mono">10 mod 16 = 10<sub>U</sub> = −6</td></tr>
+      <tr><td>负数</td><td class="mono">1 1 0 1 0 = −6</td><td class="mono">1 0 1 0 = −6</td><td class="mono">−6 mod 16 = 26<sub>U</sub> mod 16 = 10<sub>U</sub> = −6</td></tr>
+      <tr><td>负数变正</td><td class="mono">1 0 1 1 0 = −10</td><td class="mono">0 1 1 0 = 6</td><td class="mono">−10 mod 16 = 22<sub>U</sub> mod 16 = 6</td></tr>
+    </table></div>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：扩展 / 截断工具</span>
+        <label class="fld">值 <input type="text" id="extIn" value="-15213" size="12" spellcheck="false"></label>
+        <label class="fld">从 <select id="extFrom"><option>8</option><option selected>16</option><option>32</option></select> 位</label>
+        <label class="fld">到 <select id="extTo"><option>4</option><option>8</option><option selected>32</option></select> 位</label>
+        <button class="p" id="extGo">变换</button>
+      </div>
+      <div id="extOut"></div>
+    </div>
+
+    <h3>5.4 小结：扩展与截断的基本规则</h3>
+    <div class="grid g2">
+      <div class="card"><h5>扩展（如 short int → int）</h5>
+        <ul style="margin:0">
+          <li>无符号：左侧补 0；</li>
+          <li>有符号：符号扩展；</li>
+          <li>两者都能得到预期结果。</li>
+        </ul>
+      </div>
+      <div class="card"><h5>截断（如 unsigned → unsigned short）</h5>
+        <ul style="margin:0">
+          <li>无论有无符号，都是直接丢弃高位；</li>
+          <li>结果重新解释；</li>
+          <li>无符号：相当于取模；有符号：类似取模。</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 6 ================= -->
+  <section id="s6">
+    <h2>6. 整数运算<span class="srcref">原第 36–50 页</span></h2>
+    <p class="lede">计算机的整数加法不具备「数学加法」的全部性质 —— 因为它会溢出并默默地绕回来。</p>
+
+    <h3>6.1 无符号加法：丢弃进位的模运算</h3>
+    <div class="formula" style="font-size:15px;line-height:2">
+      操作数：w 位 &nbsp;&nbsp;u<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;+&nbsp; v<br>
+      真和：w+1 位 &nbsp;&nbsp;u + v<br>
+      丢弃进位：w 位 &nbsp;&nbsp;UAdd<sub>w</sub>(u, v)
+    </div>
+    <p>标准的加法电路就是<b>忽略进位输出</b>，所以它实现的是<b>模运算</b>：</p>
+    <div class="formula">s = UAdd<sub>w</sub>(u, v) = u + v mod 2<sup>w</sup></div>
+    <div class="box"><div class="t">课件例子（unsigned char，8 位）</div>
+      <div class="mono" style="font-size:14px;line-height:1.9">
+        &nbsp;&nbsp;1110 1001 &nbsp;&nbsp;E9 &nbsp;&nbsp;233<br>
+        + 1101 0101 &nbsp;&nbsp;D5 &nbsp;&nbsp;213<br>
+        1 1011 1110 &nbsp; 1BE &nbsp; 446 &nbsp;← 真和<br>
+        &nbsp;&nbsp;1011 1110 &nbsp;&nbsp;BE &nbsp;&nbsp;190 &nbsp;← 丢弃第 9 位后的结果
+      </div>
+    </div>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：加法器（无符号 / 补码，含溢出判定）</span>
+        <div class="seg" id="addMode">
+          <button class="on" data-md="u">无符号</button>
+          <button data-md="t">补码（有符号）</button>
+        </div>
+        <label class="fld">位宽 <select id="addBits"><option value="8" selected>8 位</option><option value="16">16 位</option></select></label>
+        <label class="fld">u/x <input type="text" id="addA" value="233" size="8" spellcheck="false"></label>
+        <label class="fld">v/y <input type="text" id="addB" value="213" size="8" spellcheck="false"></label>
+        <button class="p" id="addGo">相加</button>
+      </div>
+      <div id="addOut"></div>
+    </div>
+
+    <h3>6.2 溢出的两种方向</h3>
+    <div class="grid g2">
+      <div class="card"><h5>无符号：只有一种「环绕」</h5>
+        <p style="margin:0">真和 ≥ 2<sup>w</sup> 时，结果<b>绕回</b>到小值段。最多绕一次。</p>
+      </div>
+      <div class="card"><h5>补码：两个方向都可能溢出</h5>
+        <ul style="margin:0">
+          <li><b>正溢出 PosOver</b>：和 ≥ 2<sup>w−1</sup>，结果变成负数；</li>
+          <li><b>负溢出 NegOver</b>：和 &lt; −2<sup>w−1</sup>，结果变成正数；</li>
+          <li>同样最多各发生一次。</li>
+        </ul>
+      </div>
+    </div>
+    <div class="box pad0" style="padding:16px 18px">
+      <div id="ringOut"></div>
+    </div>
+
+    <h3>6.3 补码加法与无符号加法的关系</h3>
+    <p><b>两者在位级上的行为完全相同</b>：都是「正常相加后丢弃最高进位」。差别只在于最后怎么解释结果的位模式。</p>
+    <div class="mono" style="font-size:14px;line-height:1.9;background:var(--code-bg);border:1px solid var(--code-bd);border-radius:8px;padding:12px 15px">
+      int s, t, u, v;<br>
+      s = (int) ((unsigned) u + (unsigned) v);<br>
+      t = u + v &nbsp;&nbsp;&nbsp;// 一定有 s == t
+    </div>
+    <div class="box"><div class="t">课件例子（8 位补码）</div>
+      <div class="mono" style="font-size:14px;line-height:1.9">
+        &nbsp;&nbsp;1110 1001 &nbsp;&nbsp;E9 &nbsp;&nbsp;−23<br>
+        + 1101 0101 &nbsp;&nbsp;D5 &nbsp;&nbsp;−43<br>
+        1 1011 1110 &nbsp; 1BE<br>
+        &nbsp;&nbsp;1011 1110 &nbsp;&nbsp;BE &nbsp;&nbsp;−66 &nbsp;&nbsp;✓ 正好在范围内
+      </div>
+    </div>
+
+    <h3>6.4 TAdd 的分段公式</h3>
+    <div class="formula" style="font-size:15px;line-height:2.2">
+      TAdd<sub>w</sub>(u, v) =
+      <span style="display:inline-block;text-align:left">
+        u + v + 2<sup>w</sup> &nbsp;&nbsp;当 u + v &lt; TMin<sub>w</sub> &nbsp;（负溢出）<br>
+        u + v &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;当 TMin<sub>w</sub> ≤ u + v ≤ TMax<sub>w</sub><br>
+        u + v − 2<sup>w</sup> &nbsp;&nbsp;当 TMax<sub>w</sub> &lt; u + v &nbsp;（正溢出）
+      </span>
+    </div>
+    <p style="font-size:14.5px;color:var(--muted)">换句话说：先按数学算，如果超界就<b>加一次或减一次 2<sup>w</sup></b>把它拉回可表示范围内。</p>
+
+    <h3>6.5 乘法</h3>
+    <p>两个 w 位整数相乘，<b>精确结果可能需要 2w 位</b>：</p>
+    <ul>
+      <li><b>无符号</b>：最多 2w 位，范围 <code>0 ≤ x·y ≤ (2<sup>w</sup>−1)<sup>2</sup> = 2<sup>2w</sup> − 2<sup>w+1</sup> + 1</code>。</li>
+      <li><b>补码最小值（负）</b>：最多 2w−1 位，<code>x·y ≥ (−2<sup>w−1</sup>)(2<sup>w−1</sup>−1) = −2<sup>2w−2</sup> + 2<sup>w−1</sup></code>。</li>
+      <li><b>补码最大值（正）</b>：最多 2w 位，但只有 <code>(TMin<sub>w</sub>)<sup>2</sup></code> 这一个取值会达到。</li>
+    </ul>
+    <p>所以要做到「精确」，字长必须随每次乘法不断加宽 —— 这由软件实现，例如各种<b>任意精度算术库</b>。</p>
+    <p>而在 C 里，乘法<b>丢弃高 w 位</b>，只保留低 w 位：<code>UMult<sub>w</sub>(u,v) = u·v mod 2<sup>w</sup></code>。有符号与无符号的高位不同，但<b>低位完全相同</b>。</p>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>类型</th><th>算式</th><th>十六进制</th><th>解释</th></tr>
+      <tr><td>无符号</td><td class="mono">233 × 213 = 49629</td><td class="mono">C1DD → DD</td><td class="mono">221（49629 mod 256）</td></tr>
+      <tr><td>补码</td><td class="mono">−23 × −43 = 989</td><td class="mono">03DD → DD</td><td class="mono">−35</td></tr>
+    </table></div>
+    <p style="font-size:14.5px;color:var(--muted)">注意两行的<b>结果字节都是 DD</b>，但解释成有符号时是 −35、无符号时是 221。</p>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：乘法器（看到 2w 位真积如何被截断）</span>
+        <label class="fld">位宽 <select id="mulBits"><option value="8" selected>8 位</option><option value="4">4 位</option><option value="16">16 位</option></select></label>
+        <div class="seg" id="mulMode"><button class="on" data-md="u">无符号</button><button data-md="t">补码</button></div>
+        <label class="fld">x <input type="text" id="mulA" value="233" size="8" spellcheck="false"></label>
+        <label class="fld">y <input type="text" id="mulB" value="213" size="8" spellcheck="false"></label>
+        <button class="p" id="mulGo">相乘</button>
+      </div>
+      <div id="mulOut"></div>
+    </div>
+
+    <h3>6.6 乘以 2 的幂：左移</h3>
+    <div class="formula">u &lt;&lt; k &nbsp;等价于&nbsp; u × 2<sup>k</sup></div>
+    <ul>
+      <li>有符号、无符号都成立；</li>
+      <li><code>u &lt;&lt; 3 == u * 8</code></li>
+      <li><code>(u &lt;&lt; 5) − (u &lt;&lt; 3) == u * 24</code>（24 = 32 − 8，用移位加组合出乘法）</li>
+    </ul>
+    <div class="box ok"><div class="t">重要的一课：相信你的编译器</div>
+      大多数机器上<b>移位加比乘法快</b>，而编译器会自动把「乘以常数」优化成移位与加法的组合。所以<b>不要手写这种优化</b>，写出 <code>u * 24</code> 就好。
+    </div>
+
+    <h3>6.7 除以 2 的幂：右移</h3>
+    <p>无符号数用<b>逻辑右移</b>：<code>u &gt;&gt; k</code> 得到 ⌊u / 2<sup>k</sup>⌋（向下取整）。</p>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>运算</th><th>精确值</th><th>结果</th><th>十六进制</th><th>二进制</th></tr>
+      <tr><td class="mono">x</td><td class="mono">15213</td><td class="mono">15213</td><td class="mono">3B 6D</td><td class="mono">00111011 01101101</td></tr>
+      <tr><td class="mono">x &gt;&gt; 1</td><td class="mono">7606.5</td><td class="mono">7606</td><td class="mono">1D B6</td><td class="mono">00011101 10110110</td></tr>
+      <tr><td class="mono">x &gt;&gt; 4</td><td class="mono">950.8125</td><td class="mono">950</td><td class="mono">03 B6</td><td class="mono">00000011 10110110</td></tr>
+      <tr><td class="mono">x &gt;&gt; 8</td><td class="mono">59.4257813</td><td class="mono">59</td><td class="mono">00 3B</td><td class="mono">00000000 00111011</td></tr>
+    </table></div>
+    <div class="box warn"><div class="t">有符号数不能直接这么用</div>
+      对负数，算术右移是<b>向下取整</b>（朝 −∞），而 C 的除法是<b>向零取整</b>。例如 <code>−1 &gt;&gt; 1 = −1</code>，但 <code>−1 / 2 = 0</code>。编译器若要用移位实现有符号除法，必须先加一个偏置（如 <code>(x + (1&lt;&lt;k) − 1) &gt;&gt; k</code>）。
+    </div>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：移位 = 乘除 2 的幂（观察有符号除法的差异）</span>
+        <label class="fld">位宽 <select id="pmBits"><option value="8" selected>8 位</option><option value="16">16 位</option><option value="32">32 位</option></select></label>
+        <label class="fld">x <input type="text" id="pmIn" value="-23" size="8" spellcheck="false"></label>
+        <label class="fld">k = <input type="number" id="pmK" value="2" min="0" max="7" style="width:60px"></label>
+        <button class="p" id="pmGo">计算</button>
+      </div>
+      <div id="pmOut"></div>
+    </div>
+
+    <h3>6.8 算术运算的基本规则</h3>
+    <div class="grid g2">
+      <div class="card"><h5>加法</h5>
+        <ul style="margin:0">
+          <li>无符号/有符号：<b>正常相加后截断</b>，位级操作相同；</li>
+          <li>无符号：模 2<sup>w</sup> 加法（数学加法，可能减去一次 2<sup>w</sup>）；</li>
+          <li>有符号：修正后的模 2<sup>w</sup> 加法（结果落在正确范围），数学加法，可能加上或减去一次 2<sup>w</sup>。</li>
+        </ul>
+      </div>
+      <div class="card"><h5>乘法</h5>
+        <ul style="margin:0">
+          <li>无符号/有符号：<b>正常相乘后截断</b>，位级操作相同；</li>
+          <li>无符号：模 2<sup>w</sup> 乘法；</li>
+          <li>有符号：修正后的模 2<sup>w</sup> 乘法。</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 7 ================= -->
+  <section id="s7">
+    <h2>7. 该不该用无符号？<span class="srcref">原第 51–53 页</span></h2>
+    <p class="lede">无符号不是「更安全的写法」。不懂它的语义就用，只会埋下更隐蔽的 bug。</p>
+
+    <h3>7.1 陷阱一：用无符号倒着循环</h3>
+    <div class="grid g2">
+      <div class="card" style="border-left:4px solid var(--sign)"><h5>✗ 错误写法</h5>
+        <div class="mono" style="font-size:13.5px;line-height:1.8">unsigned i;<br>for (i = cnt-2; i &gt;= 0; i--)<br>&nbsp;&nbsp;&nbsp;&nbsp;a[i] += a[i+1];</div>
+        <p style="margin:8px 0 0;font-size:14px;color:var(--muted)">无符号数永远 ≥ 0，所以 <code>i &gt;= 0</code> <b>恒为真</b>。当 i 减到 0 再减 1 时，它会绕回 <code>UMax</code>，循环变成死循环。</p>
+      </div>
+      <div class="card" style="border-left:4px solid var(--frac)"><h5>✓ 正确写法</h5>
+        <div class="mono" style="font-size:13.5px;line-height:1.8">unsigned i;<br>for (i = cnt-2; i &lt; cnt; i--)<br>&nbsp;&nbsp;&nbsp;&nbsp;a[i] += a[i+1];</div>
+        <p style="margin:8px 0 0;font-size:14px;color:var(--muted)">用 <code>i &lt; cnt</code> 作条件：绕回后 i 变成 UMax，必然不小于 cnt，循环正常结束。</p>
+      </div>
+    </div>
+    <div class="box"><div class="t">为什么这是「有保证」的</div>
+      C 标准保证无符号加法是<b>模运算</b>：<code>0 − 1 → UMax</code>。所以依赖这个回绕来终止循环是合法且可移植的。参见 Robert Seacord《Secure Coding in C and C++》。
+    </div>
+    <p><b>更好的写法</b>是用 <code>size_t</code>：它的长度等于机器字长，即使 <code>cnt = UMax</code> 也能正常工作。<br>
+    <span style="color:var(--muted);font-size:14.5px">（想一想：如果 <code>cnt</code> 是有符号且小于 0，这段代码会怎样？）</span></p>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：循环模拟器（看它到底跑多少次）</span>
+        <label class="fld">cnt = <input type="number" id="loopCnt" value="5" min="1" max="8" style="width:64px"></label>
+        <div class="seg" id="loopCond">
+          <button class="on" data-c="bad">i &gt;= 0（无符号）</button>
+          <button data-c="good">i &lt; cnt</button>
+        </div>
+        <button class="p" id="loopGo">运行</button>
+      </div>
+      <div id="loopOut"></div>
+    </div>
+
+    <h3>7.2 什么时候该用无符号</h3>
+    <div class="grid g2">
+      <div class="card"><h5>✓ 做模运算时</h5><p style="margin:0">例如多精度算术（multiprecision arithmetic）：你要的正是「回绕」语义。</p></div>
+      <div class="card"><h5>✓ 用位表示集合时</h5><p style="margin:0">需要逻辑右移（左侧补 0，不做符号扩展），无符号正合适。</p></div>
+    </div>
+    <div class="box bad"><div class="t">结论</div>
+      不懂就别用。<b>大多数情况下有符号更安全</b>；只有在明确需要模运算或位集合语义时才用无符号。
+    </div>
+  </section>
+
+  <!-- ================= 8 ================= -->
+  <section id="s8">
+    <h2>8. 内存中的表示<span class="srcref">原第 55–66 页</span></h2>
+    <p class="lede">程序按地址访问数据。多字节数据在内存里的排列顺序（字节序）依机器而异 —— 这是跨平台 bug 的经典来源。</p>
+
+    <h3>8.1 面向字节的内存组织</h3>
+    <ul>
+      <li>程序通过<b>地址</b>引用数据。可以想象内存是一个非常巨大的<b>字节数组</b>，地址就是数组下标；<b>指针变量存的就是地址</b>。</li>
+      <li>系统为每个「进程」（正在执行的程序）提供<b>私有的地址空间</b>，所以程序可以破坏自己的数据，但碰不到别的进程的。</li>
+    </ul>
+
+    <h3>8.2 机器字长</h3>
+    <div class="grid g2">
+      <div class="card"><h5>32 位字长</h5>
+        <p style="margin:0">整数与地址的名义宽度都是 32 位（4 字节），地址空间上限 <b>4 GB</b>（2<sup>32</sup> 字节）。</p>
+      </div>
+      <div class="card"><h5>64 位字长</h5>
+        <p style="margin:0">可寻址内存理论上可达 <b>18 EB</b>（18.4 × 10<sup>18</sup> 字节）。</p>
+      </div>
+    </div>
+    <p>机器仍然支持多种数据格式，但都是字长的<b>分数或整数倍</b>，并且永远是<b>整数个字节</b>。</p>
+    <p><b>字与地址的关系：</b>一个字的地址 = 其中第一个字节的地址；相邻字的地址相差 4（32 位）或 8（64 位）。</p>
+
+    <h3>8.3 字节序（Byte Ordering）</h3>
+    <div class="grid g2">
+      <div class="card"><h5>大端 Big Endian</h5>
+        <p style="margin:0">Sun、PowerPC Mac、<b>互联网</b>。<br>最低有效字节放在<b>最高</b>地址。</p>
+      </div>
+      <div class="card"><h5>小端 Little Endian</h5>
+        <p style="margin:0">x86、ARM（跑 Android / iOS / Windows 时）。<br>最低有效字节放在<b>最低</b>地址。</p>
+      </div>
+    </div>
+    <div class="box"><div class="t">课件例子</div>
+      变量 x 是 4 字节的值 <code>0x01234567</code>，地址 <code>&amp;x = 0x100</code>：
+      <div class="mono" style="font-size:14px;line-height:1.9;margin-top:6px">
+        大端：&nbsp;0x100: <b>01</b> &nbsp; 0x101: <b>23</b> &nbsp; 0x102: <b>45</b> &nbsp; 0x103: <b>67</b><br>
+        小端：&nbsp;0x100: <b>67</b> &nbsp; 0x101: <b>45</b> &nbsp; 0x102: <b>23</b> &nbsp; 0x103: <b>01</b>
+      </div>
+    </div>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：字节序可视化 + show_bytes 模拟</span>
+        <label class="fld">值 <input type="text" id="boIn" value="0x01234567" size="12" spellcheck="false"></label>
+        <label class="fld">基地址 <input type="text" id="boAddr" value="0x100" size="7" spellcheck="false"></label>
+        <label class="fld">类型宽度 <select id="boSize"><option value="2">2 字节 short</option><option value="4" selected>4 字节 int</option><option value="8">8 字节 long/指针</option></select></label>
+        <button class="p" id="boGo">排列</button>
+      </div>
+      <div id="boOut"></div>
+    </div>
+
+    <h3>8.4 整数的内存表示（课件原例）</h3>
+    <p>十进制 15213 = 二进制 0011 1011 0110 1101 = 十六进制 3B 6D。把这个值放进内存，不同的机器会排出不同的字节顺序：</p>
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：15213 / −15213 在各平台下的字节序列</span>
+        <div class="seg" id="memVal">
+          <button class="on" data-v="15213">int A = 15213</button>
+          <button data-v="-15213">int B = −15213</button>
+        </div>
+      </div>
+      <div id="memOut"></div>
+    </div>
+
+    <h3>8.5 show_bytes：把数据的字节打出来</h3>
+    <p>把指针强制转换成 <code>unsigned char *</code>，就可以把任意数据当成字节数组来查看：</p>
+    <div class="mono" style="font-size:13.5px;line-height:1.85;background:var(--code-bg);border:1px solid var(--code-bd);border-radius:8px;padding:13px 16px;overflow-x:auto">
+      typedef unsigned char *pointer;<br>
+      <br>
+      void show_bytes(pointer start, int len) {<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;int i;<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;for (i = 0; i &lt; len; i++)<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;printf("%p\t0x%.2x\n", start+i, start[i]);<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;printf("\n");<br>
+      }
+    </div>
+    <p style="font-size:14.5px;color:var(--muted)">printf 的格式：<code>%p</code> 打印指针，<code>%x</code> 打印十六进制。</p>
+    <div class="box"><div class="t">执行示例（Linux x86-64）</div>
+      <div class="mono" style="font-size:13.5px;line-height:1.8">
+        int a = 15213;<br>
+        0x7fffb7f71dbc &nbsp;6d<br>
+        0x7fffb7f71dbd &nbsp;3b<br>
+        0x7fffb7f71dbe &nbsp;00<br>
+        0x7fffb7f71dbf &nbsp;00
+      </div>
+      <p style="margin:8px 0 0;font-size:14px;color:var(--muted)">低字节 <code>6d</code> 在低地址 → <b>小端</b>。地址本身每次都不同，但字节顺序是稳定的。</p>
+    </div>
+
+    <h3>8.6 指针与字符串</h3>
+    <div class="grid g2">
+      <div class="card"><h5>指针</h5>
+        <ul style="margin:0">
+          <li>不同编译器、不同机器会给对象分配<b>不同位置</b>；</li>
+          <li>甚至同一程序每次运行结果都不同（地址空间随机化）。</li>
+        </ul>
+      </div>
+      <div class="card"><h5>字符串</h5>
+        <ul style="margin:0">
+          <li>C 里字符串是<b>字符数组</b>，每个字符用 ASCII 编码（7 位字符集）；</li>
+          <li>字符 <code>"0"</code> 的编码是 <code>0x30</code>，所以数字字符 <code>i</code> 的编码是 <code>0x30 + i</code>；</li>
+          <li>字符串必须以 <b>null（0）结尾</b>；</li>
+          <li><b>字节序与字符串无关</b>（每个字符只占 1 字节），所以跨平台兼容。</li>
+        </ul>
+      </div>
+    </div>
+    <div class="box"><div class="t">课件例子：char S[6] = "18213";</div>
+      <div id="strOut"></div>
+    </div>
+
+    <h3>8.7 读懂反汇编里的字节序</h3>
+    <p>反汇编（disassembly）是机器码的文本表示。看到 <code>add $0x12ab,%ebx</code> 时，指令里那 4 个字节其实是这样来的：</p>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>步骤</th><th class="mono">结果</th></tr>
+      <tr><td>取值</td><td class="mono">0x12ab</td></tr>
+      <tr><td>补齐到 32 位</td><td class="mono">0x000012ab</td></tr>
+      <tr><td>按字节拆开</td><td class="mono">00 00 12 ab</td></tr>
+      <tr><td>反转（小端）</td><td class="mono">ab 12 00 00 &nbsp;← 这就是机器码里的顺序</td></tr>
+    </table></div>
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：把常数值转成机器码字节序列</span>
+        <label class="fld">值 <input type="text" id="disIn" value="0x12ab" size="10" spellcheck="false"></label>
+        <label class="fld">宽度 <select id="disSize"><option value="4" selected>4 字节</option><option value="2">2 字节</option><option value="8">8 字节</option></select></label>
+        <button class="p" id="disGo">转换</button>
+      </div>
+      <div id="disOut"></div>
+    </div>
+  </section>
+
+  <!-- ================= 9 ================= -->
+  <section id="s9">
+    <h2>9. 总结与测验<span class="srcref">原第 67–68 页</span></h2>
+
+    <h3>9.1 总结</h3>
+    <ul>
+      <li><b>把信息表示为位</b>：一切数据最终都是位模式。</li>
+      <li><b>位级运算</b>：布尔代数（&amp; | ~ ^）、位向量、集合表示、移位。</li>
+      <li><b>整数</b>：无符号与补码的表示、转换与强制类型转换、扩展与截断、加法/取负/乘法/移位。</li>
+      <li><b>内存中的表示</b>：指针、字符串、字节序。</li>
+    </ul>
+    <div class="box warn"><div class="t">一句话回顾</div>
+      同一串位，按不同类型解释就得到不同的值；运算在位级上往往完全相同，<b>差异全部来自「怎么解释」</b>。
+    </div>
+
+    <h3>9.2 整数 C 谜题</h3>
+    <p>对下面每个表达式，判断它是否<b>对所有取值都成立</b>。前提是：</p>
+    <div class="mono" style="font-size:14px;line-height:1.85;background:var(--code-bg);border:1px solid var(--code-bd);border-radius:8px;padding:12px 15px">
+      int x = foo();&nbsp;&nbsp;&nbsp;int y = bar();<br>
+      unsigned ux = x;&nbsp;&nbsp;&nbsp;unsigned uy = y;
+    </div>
+    <p style="font-size:14.5px;color:var(--muted)">原课件第 68 页在每个表达式右侧印了 <span style="color:#c62828;font-weight:700">✗</span> 或 <span style="color:#2e7d32;font-weight:700">✓</span> 图标（共 9 个 ✗、4 个 ✓）。点「真 / 假」立即看到判定与原课件的标记是否一致。</p>
+    <div class="ctrls">
+      <span id="ipScore" class="chip gray">已答 0 / 13 · 正确 0</span>
+      <button class="sm" id="ipReset">重做</button>
+    </div>
+    <div id="ipList"></div>
+
+    <h3>9.3 小测验</h3>
+    <p>做完这 8 道题，检查一下是否真的掌握了。<span id="qz2Score" class="chip gray">得分 0 / 8</span></p>
+    <div id="qz2List"></div>
+    <div class="ctrls"><button class="p" id="qz2Submit">提交答案</button><button class="sm" id="qz2Reset">重做</button></div>
+    <div id="qz2Result"></div>
+  </section>
+  </main>
+</div>
+
+<div class="footer">
+  本页由 <code>ICS02-bits-bytes-ints-20260910.pdf</code> 翻译整理而成 · 所有计算与可视化均为页面内实时计算 · 可对照原课件页码阅读。
+</div>
+<button class="totop" id="toTop">↑ 顶部</button>
+
+<script>
+"use strict";
+/* ============================================================
+   位、字节与整数 · 交互式课件 —— 全部逻辑
+   ============================================================ */
+
+/* ---------- 基础工具 ---------- */
+const $  = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+/** BigInt 千分位 */
+const fmtBig = v => v.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+
+/** 位宽相关 */
+const MASK = w => (1n << BigInt(w)) - 1n;
+const POW2 = w => 1n << BigInt(w);
+function uMax(w) { return MASK(w); }
+function tMin(w) { return -(1n << BigInt(w - 1)); }
+function tMax(w) { return (1n << BigInt(w - 1)) - 1n; }
+
+/** 把可能为负的整数写成 w 位补码位串 */
+function toBits(v, w) {
+  const m = POW2(w);
+  let x = BigInt(v) % m;
+  if (x < 0n) x += m;
+  return x.toString(2).padStart(w, '0');
+}
+/** 位串 → 无符号值 */
+const bitsU = b => BigInt('0b' + b);
+/** 位串 → 补码值 */
+function bitsT(b) {
+  const w = b.length, u = BigInt('0b' + b);
+  return u >= (1n << BigInt(w - 1)) ? u - POW2(w) : u;
+}
+/** 位串 → 十六进制（按 4 位一组） */
+function bitsHex(b) {
+  const pad = (4 - b.length % 4) % 4;
+  const s = '0'.repeat(pad) + b;
+  let h = '';
+  for (let i = 0; i < s.length; i += 4) h += parseInt(s.slice(i, i + 4), 2).toString(16).toUpperCase();
+  return h;
+}
+/** 解析用户输入：支持 0x 十六进制、0b 二进制、十进制 */
+function parseNum(str) {
+  const s = String(str).trim().replace(/[\s_,]/g, '');
+  try {
+    if (/^[+-]?0[xX][0-9a-fA-F]+$/.test(s)) {
+      const neg = s[0] === '-';
+      const v = BigInt(s.replace(/^[+-]/, ''));
+      return neg ? -v : v;
+    }
+    if (/^[+-]?0[bB][01]+$/.test(s)) {
+      const neg = s[0] === '-';
+      const v = BigInt(s.replace(/^[+-]/, ''));
+      return neg ? -v : v;
+    }
+    if (/^[+-]?\d+$/.test(s)) return BigInt(s);
+  } catch (e) { /* fallthrough */ }
+  return null;
+}
+/** 位串渲染：把位分组显示，可点击（data-i 为位序号，从左到右 0 起） */
+function bitCells(bits, cls = 'f') {
+  return bits.split('').map((b, i) =>
+    `<div class="b ${cls}" data-i="${i}" title="第 ${bits.length - 1 - i} 位（权重 2^${bits.length - 1 - i}）">${b}</div>`).join('');
+}
+/** 集合表示：位串 → { 元素 } */
+function bitSet(bits) {
+  const w = bits.length, out = [];
+  for (let i = 0; i < w; i++) if (bits[w - 1 - i] === '1') out.push(i);
+  return '{ ' + (out.length ? out.join(', ') : '') + ' }';
+}
+/** 把数字按位宽排版（每 4 位空一格） */
+const groupBits = b => b.replace(/(.{4})/g, '$1 ').trim();
+
+/* ============================================================
+   1.1 电压 → 0/1
+   ============================================================ */
+function renderVolt(v) {
+  const inLow = v <= 0.9, inHigh = v >= 2.2;
+  const isOne = inHigh, mid = !inLow && !inHigh;
+  const bar = (label, from, to, color) => `
+    <div style="display:flex;align-items:center;gap:10px;margin:6px 0">
+      <span class="mono" style="width:120px;font-size:13px;color:var(--muted)">${label}</span>
+      <span style="flex:1;height:14px;background:var(--line);border-radius:99px;overflow:hidden;position:relative">
+        <span style="position:absolute;left:${from}%;width:${to - from}%;top:0;bottom:0;background:${color}"></span>
+      </span>
+    </div>`;
+  const pos = Math.max(0, Math.min(100, v / 3.5 * 100));
+  $('#voltOut').innerHTML = `
+    <div style="position:relative;margin:16px 0 4px">
+      ${bar('逻辑 1（高电平）', 0, 100, 'var(--frac-bg)')}
+      ${bar('逻辑 0（低电平）', 0, 100, 'var(--sign-bg)')}
+      <div style="position:absolute;left:calc(120px + 10px + ${pos}% * (100% - 130px) / 100%);top:-6px;bottom:-6px;width:3px;background:var(--ink);border-radius:2px"></div>
+    </div>
+    <div class="tbl-wrap"><table class="tbl" style="margin-top:14px">
+      <tr><th>判据</th><th>电压区间</th><th>逻辑值</th></tr>
+      <tr><td>低电平</td><td class="mono">0.0 V – 0.9 V</td><td class="mono">0</td></tr>
+      <tr><td>中间区（不允许 / 不确定）</td><td class="mono">0.9 V – 2.2 V</td><td class="mono">?</td></tr>
+      <tr><td>高电平</td><td class="mono">2.2 V – 3.3 V</td><td class="mono">1</td></tr>
+    </table></div>
+    <div class="box ${mid ? 'warn' : isOne ? 'ok' : 'bad'}" style="margin:12px 0 0">
+      <div class="t">${v.toFixed(2)} V → ${mid ? '处于中间区，逻辑值不确定' : (isOne ? '判为逻辑 1' : '判为逻辑 0')}</div>
+      ${mid ? '这正是二进制可靠的原因之一：电路设计会避免让信号停在中间区。只要电压落在两端区间内，具体是多少并不重要。'
+            : `落在${isOne ? '高' : '低'}电平区间内，因此判为 ${isOne ? 1 : 0}。注意 2.8 V 和 3.3 V 都算 1 —— <b>电压不需要精确</b>。`}
+    </div>`;
+}
+
+/* ============================================================
+   1.2 字节的三种表示
+   ============================================================ */
+function renderByte(raw, base) {
+  const s = String(raw).trim();
+  let v = null;
+  if (base === 'hex') {
+    const h = s.replace(/^0[xX]/, '');
+    if (/^[0-9a-fA-F]{1,2}$/.test(h)) v = parseInt(h, 16);
+  } else if (base === 'dec') {
+    if (/^\d{1,3}$/.test(s) && +s <= 255) v = +s;
+  } else {
+    const b = s.replace(/^0[bB]/, '');
+    if (/^[01]{1,8}$/.test(b)) v = parseInt(b, 2);
+  }
+  if (v === null) {
+    $('#byteOut').innerHTML = `<div class="box bad" style="margin:8px 0">请输入一个字节的值：十六进制 0–FF、十进制 0–255、或最多 8 位二进制。</div>`;
+    return;
+  }
+  const bits = v.toString(2).padStart(8, '0');
+  const nib = [bits.slice(0, 4), bits.slice(4)];
+  $('#byteOut').innerHTML = `
+    <div class="formula" style="margin:12px 0;text-align:left">
+      <b>${v}<sub>10</sub> = 0x${v.toString(16).toUpperCase().padStart(2, '0')} = ${bits}<sub>2</sub></b>
+    </div>
+    <div class="fw">
+      <div class="fgrp"><div class="fcap">高 4 位（1 个十六进制位）</div>
+        <div class="bits">${bitCells(nib[0], 'e')}</div></div>
+      <div class="fgrp"><div class="fcap">低 4 位</div>
+        <div class="bits">${bitCells(nib[1], 'f')}</div></div>
+    </div>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>表示</th><th>值</th><th>说明</th></tr>
+      <tr><td>十进制</td><td class="mono">${v}</td><td>0 – 255</td></tr>
+      <tr><td>十六进制</td><td class="mono">0x${v.toString(16).toUpperCase().padStart(2, '0')}</td><td>每 4 位二进制 = 1 个十六进制位</td></tr>
+      <tr><td>二进制</td><td class="mono">${nib[0]} ${nib[1]}</td><td>${nib[0]}<sub>2</sub> = ${parseInt(nib[0], 2)}，${nib[1]}<sub>2</sub> = ${parseInt(nib[1], 2)}</td></tr>
+      <tr><td>无符号解释</td><td class="mono">${v}</td><td>0 – 255</td></tr>
+      <tr><td>补码解释（char）</td><td class="mono">${v >= 128 ? v - 256 : v}</td><td>−128 – 127</td></tr>
+    </table></div>`;
+}
+
+/* ============================================================
+   1.3 数据类型大小
+   ============================================================ */
+const DTS = {
+  char:    { 32: 1, ia32: 1, x64: 1, signed: true },
+  short:   { 32: 2, ia32: 2, x64: 2, signed: true },
+  int:     { 32: 4, ia32: 4, x64: 4, signed: true },
+  long:    { 32: 4, ia32: 4, x64: 8, signed: true },
+  pointer: { 32: 4, ia32: 4, x64: 8, signed: false },
+};
+function renderDts() {
+  const type = $('#dtsType').value, plat = $('#dtsPlat').value;
+  const sg = $('#dtsSign .on')?.dataset.sg === '1';
+  const bytes = DTS[type][plat];
+  const w = bytes * 8;
+  const isPtr = type === 'pointer';
+  let lo, hi, rangeTxt;
+  if (isPtr || !sg) {
+    lo = 0n; hi = uMax(w);
+    rangeTxt = `0 … ${fmtBig(hi)}`;
+  } else {
+    lo = tMin(w); hi = tMax(w);
+    rangeTxt = `${fmtBig(lo)} … ${fmtBig(hi)}`;
+  }
+  const cells = Array.from({ length: bytes }, (_, i) =>
+    `<span style="display:inline-flex;align-items:center;justify-content:center;width:44px;height:34px;
+      border:1px solid var(--line);border-radius:6px;background:var(--paper-soft);font-family:var(--font-mono);font-size:12px;margin-right:5px">字节 ${i}</span>`).join('');
+  $('#dtsOut').innerHTML = `
+    <div class="formula" style="margin:12px 0;text-align:left">
+      <b class="mono">${type}</b> 在 <b>${$('#dtsPlat').selectedOptions[0].textContent}</b> 上占 <b>${bytes} 字节</b>（${w} 位）
+    </div>
+    <div style="margin:12px 0">${cells}</div>
+    <dl class="readout">
+      <dt>位宽 w</dt><dd>${w}</dd>
+      <dt>${(isPtr || !sg) ? '取值范围' : '有符号范围'}</dt><dd>${rangeTxt}</dd>
+      ${(isPtr || !sg) ? '' : `<dt>UMax</dt><dd>${fmtBig(uMax(w))}</dd>`}
+      ${isPtr ? '<dt>说明</dt><dd>指针宽度 = 机器字长（与 long 同宽）</dd>' : ''}
+    </dl>
+    ${type === 'long' && plat === 'x64' ? '<div class="box warn" style="margin:10px 0 0"><div class="t">注意</div>同一份代码在 32 位和 64 位平台上的 <code>long</code> 宽度不同（4 vs 8 字节），移植时容易出问题。这也是 C99 引入 <code>int32_t</code> / <code>int64_t</code> 的原因。</div>' : ''}
+    ${type === 'pointer' && plat !== 'x64' ? '<div class="box" style="margin:10px 0 0">32 位平台上指针只有 4 字节，所以地址空间上限是 4 GB。</div>' : ''}`;
+}
+
+/* ============================================================
+   2.1 布尔代数真值表
+   ============================================================ */
+const boolState = { a: 0, b: 0 };
+function renderTruth() {
+  const { a, b } = boolState;
+  const defs = [
+    { name: '与 And', sym: 'A & B', f: (x, y) => x & y, expr: 'A=1 且 B=1 时才为 1' },
+    { name: '或 Or', sym: 'A | B', f: (x, y) => x | y, expr: 'A=1 或 B=1 时为 1' },
+    { name: '异或 Xor', sym: 'A ^ B', f: (x, y) => x ^ y, expr: 'A、B 恰好一个为 1 时为 1' },
+    { name: '非 Not', sym: '~A', f: x => 1 - x, expr: 'A=0 时为 1' },
+  ];
+  $('#truthOut').innerHTML = defs.map(d => {
+    const rows = [];
+    for (let x = 0; x < 2; x++) for (let y = 0; y < 2; y++) {
+      if (d.sym === '~A' && y === 1) continue;
+      const hl = (x === a && y === b) ? ' class="hl"' : '';
+      rows.push(`<tr${hl}><td class="mono">${x}</td><td class="mono">${y}</td><td class="mono"><b>${d.f(x, y)}</b></td></tr>`);
+    }
+    return `<div class="card"><h5>${d.name} &nbsp;<span class="mono" style="color:var(--accent)">${d.sym}</span></h5>
+      <p style="margin:0 0 6px;font-size:13.5px;color:var(--muted)">${d.expr}</p>
+      <table class="tbl" style="margin:0"><tr><th class="mono">A</th><th class="mono">B</th><th class="mono">结果</th></tr>${rows.join('')}</table></div>`;
+  }).join('');
+}
+
+/* ============================================================
+   2.2 位运算实验台
+   ============================================================ */
+const bwState = { a: '01101001', b: '01010101', op: 'and' };
+const BW_OPS = {
+  and: { name: 'A & B', f: (x, y) => x & y, set: '交集' },
+  or:  { name: 'A | B', f: (x, y) => x | y, set: '并集' },
+  xor: { name: 'A ^ B', f: (x, y) => x ^ y, set: '对称差' },
+  notA:{ name: '~A',    f: x => 1 - x,  set: '补集' },
+};
+function bwSync() {
+  $('#bwA').value = '0x' + bitsHex(bwState.a);
+  $('#bwB').value = '0x' + bitsHex(bwState.b);
+}
+function renderBitwise() {
+  const A = bwState.a, B = bwState.b;
+  const res = A.split('').map((c, i) => BW_OPS[bwState.op].f(+c, +B[i])).join('');
+  const opName = BW_OPS[bwState.op].name;
+  const rows = (label, bits, cls) => `
+    <div class="fgrp ${cls === 's' ? 'gs' : cls === 'e' ? 'ge' : 'gf'}" style="min-width:0">
+      <div class="fcap">${label}</div>
+      <div class="bits">${bitCells(bits, cls)}</div>
+    </div>`;
+  $('#bitwiseOut').innerHTML = `
+    <div class="fw" style="flex-direction:column;align-items:stretch;gap:8px">
+      ${rows('A（点击翻转）', A, 'e')}
+      ${rows('B（点击翻转）', B, 'f')}
+      ${rows(`结果 = ${opName}`, res, 's')}
+    </div>
+    <div class="tbl-wrap"><table class="tbl" style="margin-top:12px">
+      <tr><th>项</th><th class="mono">二进制</th><th class="mono">十六进制</th><th>集合表示（bit j ↔ 元素 j）</th></tr>
+      <tr><td>A</td><td class="mono">${groupBits(A)}</td><td class="mono">0x${bitsHex(A)}</td><td class="mono">${bitSet(A)}</td></tr>
+      <tr><td>B</td><td class="mono">${groupBits(B)}</td><td class="mono">0x${bitsHex(B)}</td><td class="mono">${bitSet(B)}</td></tr>
+      <tr><td><b>${opName}</b></td><td class="mono"><b>${groupBits(res)}</b></td><td class="mono"><b>0x${bitsHex(res)}</b></td><td class="mono"><b>${bitSet(res)}</b></td></tr>
+    </table></div>
+    <p style="font-size:13.5px;color:var(--muted);margin:8px 0 0">
+      <code>${opName}</code> 对应集合的<b>${BW_OPS[bwState.op].set}</b>运算。位是<b>从右往左</b>编号 7…0 的：
+      最左边那一位是 bit 7，最右边是 bit 0。
+    </p>`;
+  bwSync();
+}
+
+/* ============================================================
+   2.5 移位可视化
+   ============================================================ */
+const shState = { bits: '01100010', amt: 2, kind: 'arith', dir: 'right' };
+function renderShift() {
+  const A = shState.bits, n = shState.amt, w = 8;
+  const bad = n < 0 || n >= w;
+  const left = shState.dir === 'left';
+  const kindTxt = shState.kind === 'arith' ? '算术右移' : '逻辑右移';
+  let res, filled = '', dropped = '';
+  if (bad) {
+    res = '—';
+  } else if (left) {
+    res = A.slice(n) + '0'.repeat(n);
+    dropped = A.slice(0, n); filled = '0'.repeat(n);
+  } else {
+    const fillBit = shState.kind === 'arith' ? A[0] : '0';
+    res = fillBit.repeat(n) + A.slice(0, w - n);
+    dropped = A.slice(w - n); filled = fillBit.repeat(n);
+  }
+  const markRow = (label, bits, cls, dropIdx, fillIdx) => `
+    <div class="fgrp" style="min-width:0">
+      <div class="fcap">${label}</div>
+      <div class="bits">${bits.split('').map((b, i) => {
+        const isDrop = dropIdx.includes(i), isFill = fillIdx.includes(i);
+        const color = isDrop ? 'var(--sign)' : isFill ? 'var(--frac)' : 'inherit';
+        const deco = isDrop ? 'text-decoration:line-through;' : '';
+        return `<div class="b ${cls}" style="${deco}color:${color}">${b}</div>`;
+      }).join('')}</div>
+    </div>`;
+  $('#shOut').innerHTML = `
+    <div class="formula" style="margin:12px 0;text-align:left">
+      <b class="mono">0x${bitsHex(A)} &nbsp;${left ? '&lt;&lt;' : '&gt;&gt;'}&nbsp; ${n}</b>
+      ${bad ? '' : ` &nbsp;=&nbsp; <b class="mono">0x${bitsHex(res)}</b>（${bitsT(res)} 作为有符号，${bitsU(res)} 作为无符号）`}
+    </div>
+    <div class="fw" style="flex-direction:column;align-items:stretch;gap:8px">
+      ${markRow('原始值', A, 'e', [], [])}
+      ${bad ? '' : markRow(left ? `左移 ${n} 位后` : `${kindTxt} ${n} 位后`, res, 'f',
+        left ? Array.from({ length: w }, (_, i) => i >= w - n ? i : -1).filter(i => i >= 0) : [],
+        [])}
+    </div>
+    <div class="tbl-wrap"><table class="tbl" style="margin-top:12px">
+      <tr><th>项</th><th class="mono">位串</th><th>说明</th></tr>
+      <tr><td>原始值</td><td class="mono">${groupBits(A)}</td><td class="mono">有符号 ${bitsT(A)}，无符号 ${bitsU(A)}</td></tr>
+      <tr><td>被丢弃的位</td><td class="mono">${bad ? '—' : (left ? dropped : dropped)}</td><td>${bad ? '—' : (left ? '左侧高位被丢弃' : '右侧低位被丢弃')}</td></tr>
+      <tr><td>补入的位</td><td class="mono">${bad ? '—' : filled}</td><td>${bad ? '—' : (left ? '右端补 0' : (shState.kind === 'arith' ? `左端复制符号位 ${A[0]}` : '左端补 0'))}</td></tr>
+      <tr><td><b>结果</b></td><td class="mono"><b>${bad ? '—' : groupBits(res)}</b></td><td>${bad ? '—' : (left ? `数学上等于 × 2^${n}` : `数学上等于 ⌊ x / 2^${n} ⌋`)}</td></tr>
+    </table></div>
+    ${bad ? `<div class="box bad" style="margin:12px 0 0"><div class="t">未定义行为</div>
+      移位量 ${n} 不在 [0, 8) 范围内。C 标准规定这是<b>未定义行为</b>，不同编译器/平台可能给出完全不同的结果，绝不能这么写。</div>`
+      : `<div class="box" style="margin:12px 0 0"><div class="t">观察</div>
+      移位量必须满足 <code>0 ≤ n &lt; 字长</code>。这里字长是 8 位，所以 n 只能是 0–7。</div>`}`;
+}
+
+/* ============================================================
+   3.2 位模式编辑器（补码权重）
+   ============================================================ */
+const wcState = { w: 5, bits: '01010' };
+function renderWc() {
+  const w = wcState.w, bits = wcState.bits;
+  const u = bitsU(bits), t = bitsT(bits);
+  const rowCells = [];
+  for (let i = 0; i < w; i++) {
+    const weight = i === 0 ? -(1n << BigInt(w - 1)) : (1n << BigInt(w - 1 - i));
+    const on = bits[i] === '1';
+    let contrib = 0n;
+    if (on) contrib = weight;
+    rowCells.push(`<tr style="${on ? '' : 'opacity:.45'}">
+      <td class="mono">b<sub>${w - 1 - i}</sub></td>
+      <td class="mono">${bits[i]}</td>
+      <td class="mono">${weight < 0n ? '−' : '+'}${fmtBig(weight < 0n ? -weight : weight)}${i === 0 ? '（负权）' : ''}</td>
+      <td class="mono">${on ? fmtBig(contrib) : '0'}</td></tr>`);
+  }
+  const cls = i => (i === 0 ? 's' : 'f');
+  $('#wcOut').innerHTML = `
+    <div class="fw" style="justify-content:center">
+      <div class="fgrp"><div class="fcap">${w} 位（左端是符号位，权重 −2^${w - 1}）</div>
+        <div class="bits">${bits.split('').map((b, i) => `<div class="b ${i === 0 ? 's' : 'f'}" data-i="${i}">${b}</div>`).join('')}</div>
+      </div>
+    </div>
+    <div class="formula" style="margin:14px 0;text-align:left">
+      <b>补码解释：${fmtBig(t)}</b> &nbsp;&nbsp;<span style="color:var(--muted)">|</span>&nbsp;&nbsp;
+      <b>无符号解释：${fmtBig(u)}</b> &nbsp;&nbsp;<span style="color:var(--muted)">|</span>&nbsp;&nbsp;
+      十六进制 0x${bitsHex(bits)}
+    </div>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>位</th><th>取值</th><th>权重</th><th>贡献</th></tr>${rowCells.join('')}
+      <tr><td colspan="3"><b>求和</b></td><td class="mono"><b>${fmtBig(t)}</b></td></tr>
+    </table></div>
+    ${t < 0n ? `<div class="box" style="margin:10px 0 0">最高位（符号位）为 1，它的负权 ${fmtBig(-(1n << BigInt(w - 1)))} 压过了其余所有正权之和 ${fmtBig((1n << BigInt(w - 1)) - 1n)}，所以结果是负数。</div>` : ''}`;
+}
+
+/* ============================================================
+   3.3 逐位权重表（±15213）
+   ============================================================ */
+function renderWeightTable() {
+  const all = $('#weightAll').checked;
+  const xb = toBits(15213, 16), yb = toBits(-15213, 16);
+  let rows = `<tr><th class="mono">权重</th><th class="mono">x = 15213</th><th class="mono">y = −15213</th><th>说明</th></tr>`;
+  for (let i = 0; i < 16; i++) {
+    const weight = i === 0 ? -(1n << 15n) : (1n << BigInt(15 - i));
+    const bx = xb[i], by = yb[i];
+    const cx = bx === '1' ? weight : 0n, cy = by === '1' ? weight : 0n;
+    const interesting = bx === '1' || by === '1' || weight < 0n;
+    if (!all && !interesting) continue;
+    rows += `<tr style="${all && !interesting ? 'opacity:.4' : ''}">
+      <td class="mono">${weight < 0n ? '−' + fmtBig(-weight) : fmtBig(weight)}</td>
+      <td class="mono">${bx}${bx === '1' ? ` <span style="color:var(--muted)">→ ${fmtBig(cx)}</span>` : ''}</td>
+      <td class="mono">${by}${by === '1' ? ` <span style="color:var(--muted)">→ ${fmtBig(cy)}</span>` : ''}</td>
+      <td style="font-size:13px;color:var(--muted)">${weight < 0n ? '符号位（负权）' : ''}</td></tr>`;
+  }
+  rows += `<tr><td colspan="3"><b>合计</b></td><td class="mono"><b>15213</b> / <b>−15213</b></td></tr>`;
+  $('#weightTbl').innerHTML = rows;
+}
+
+/* ============================================================
+   3.4 字长与范围计算器
+   ============================================================ */
+function renderWordRange(w) {
+  if (!(w >= 1 && w <= 128)) {
+    $('#wrOut').innerHTML = '<div class="box bad" style="margin:8px 0">字长请在 1–128 之间。</div>';
+    return;
+  }
+  const um = uMax(w), tm = tMax(w), tn = tMin(w);
+  const hexW = Math.ceil(w / 4);
+  $('#wrOut').innerHTML = `
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>项目</th><th>公式</th><th class="mono">值</th><th>位模式 / 十六进制</th></tr>
+      <tr><td>UMin</td><td class="mono">0</td><td class="mono">0</td><td class="mono">${'0'.repeat(Math.min(w, 32))}${w > 32 ? '…' : ''} / 0x${'0'.repeat(hexW)}</td></tr>
+      <tr><td>UMax</td><td class="mono">2<sup>${w}</sup> − 1</td><td class="mono">${fmtBig(um)}</td><td class="mono">${'1'.repeat(Math.min(w, 32))}${w > 32 ? '…' : ''} / 0x${'F'.repeat(hexW)}</td></tr>
+      <tr><td>TMin</td><td class="mono">−2<sup>${w - 1}</sup></td><td class="mono">${fmtBig(tn)}</td><td class="mono">1${'0'.repeat(Math.min(w - 1, 31))}${w > 32 ? '…' : ''} / 0x8${'0'.repeat(hexW - 1)}</td></tr>
+      <tr><td>TMax</td><td class="mono">2<sup>${w - 1}</sup> − 1</td><td class="mono">${fmtBig(tm)}</td><td class="mono">0${'1'.repeat(Math.min(w - 1, 31))}${w > 32 ? '…' : ''} / 0x7${'F'.repeat(hexW - 1)}</td></tr>
+      <tr><td>−1</td><td class="mono">—</td><td class="mono">−1</td><td class="mono">${'1'.repeat(Math.min(w, 32))}${w > 32 ? '…' : ''} / 0x${'F'.repeat(hexW)}</td></tr>
+    </table></div>
+    <div class="grid g3" style="margin-top:12px">
+      <div class="card"><h5>|TMin| = TMax + 1</h5><p class="mono" style="margin:0;font-size:13.5px">${fmtBig(-tn)} = ${fmtBig(tm + 1n)} ✓</p></div>
+      <div class="card"><h5>UMax = 2 × TMax + 1</h5><p class="mono" style="margin:0;font-size:13.5px">${fmtBig(um)} = ${fmtBig(2n * tm + 1n)} ✓</p></div>
+      <div class="card"><h5>不对称性</h5><p style="margin:0;font-size:13.5px">负数比正数多一个：<b>${fmtBig(tn)}</b> 没有对应的正数（它的相反数会溢出）。</p></div>
+    </div>`;
+}
+
+/* ============================================================
+   3.5 有符号/无符号对照表（4 位）
+   ============================================================ */
+const mapState = { mode: 'all' };
+function renderMap() {
+  let rows = `<tr><th class="mono">位</th><th class="mono">有符号</th><th class="mono">无符号</th><th>说明</th></tr>`;
+  for (let i = 0; i < 16; i++) {
+    const b = i.toString(2).padStart(4, '0');
+    if (mapState.mode === 'neg' && b[0] !== '1') continue;
+    const t = BigInt(i >= 8 ? i - 16 : i), u = BigInt(i);
+    const note = b[0] === '1'
+      ? `<span style="color:var(--warn)">最高位为 1：${fmtBig(t)} = ${fmtBig(u)} − 16</span>`
+      : '<span style="color:var(--muted)">非负段：两种解释相同</span>';
+    rows += `<tr><td class="mono">${b}</td><td class="mono">${fmtBig(t)}</td><td class="mono">${fmtBig(u)}</td><td style="font-size:13px">${note}</td></tr>`;
+  }
+  $('#mapTbl').innerHTML = rows;
+}
+
+/* ============================================================
+   4.2 T2U / U2T 转换器
+   ============================================================ */
+const cvtState = { w: 16, dir: 't2u' };
+function renderCvt() {
+  const w = cvtState.w, m = POW2(w);
+  const raw = parseNum($('#cvtIn').value);
+  if (raw === null) { $('#cvtOut').innerHTML = '<div class="box bad" style="margin:8px 0">请输入一个整数（可用 0x / 0b 前缀）。</div>'; return; }
+  let from, to, bits, note;
+  if (cvtState.dir === 't2u') {
+    // 输入按补码 w 位解释
+    const lo = tMin(w), hi = tMax(w);
+    if (raw < lo || raw > hi) { $('#cvtOut').innerHTML = `<div class="box bad" style="margin:8px 0">${w} 位补码的范围是 ${fmtBig(lo)} … ${fmtBig(hi)}，输入超出范围。</div>`; return; }
+    from = raw; bits = toBits(from, w); to = bitsU(bits);
+    note = from < 0n
+      ? `x = ${fmtBig(from)} < 0，所以 ux = x + 2<sup>${w}</sup> = ${fmtBig(from)} + ${fmtBig(m)} = <b>${fmtBig(to)}</b>`
+      : `x = ${fmtBig(from)} ≥ 0，所以 ux = x = <b>${fmtBig(to)}</b>`;
+  } else {
+    const hi = uMax(w);
+    if (raw < 0n || raw > hi) { $('#cvtOut').innerHTML = `<div class="box bad" style="margin:8px 0">${w} 位无符号的范围是 0 … ${fmtBig(hi)}，输入超出范围。</div>`; return; }
+    from = raw; bits = toBits(from, w); to = bitsT(bits);
+    note = from > tMax(w)
+      ? `ux = ${fmtBig(from)} > TMax<sub>${w}</sub> = ${fmtBig(tMax(w))}，最高位为 1，所以 x = ux − 2<sup>${w}</sup> = <b>${fmtBig(to)}</b>`
+      : `ux = ${fmtBig(from)} ≤ TMax<sub>${w}</sub>，最高位为 0，所以 x = ux = <b>${fmtBig(to)}</b>`;
+  }
+  $('#cvtOut').innerHTML = `
+    <div class="fw"><div class="fgrp"><div class="fcap">位模式（保持不变）</div>
+      <div class="bits">${bitCells(bits, 'e')}</div></div></div>
+    <div class="formula" style="margin:12px 0;text-align:left">
+      ${cvtState.dir === 't2u' ? '补码' : '无符号'} <b class="mono">${fmtBig(from)}</b>
+      &nbsp;→&nbsp; 位模式 <b class="mono">${bits}</b>（0x${bitsHex(bits)}）
+      &nbsp;→&nbsp; ${cvtState.dir === 't2u' ? '无符号' : '补码'} <b class="mono">${fmtBig(to)}</b>
+    </div>
+    <div class="box"><div class="t">推导</div>${note}</div>
+    <p style="font-size:14px;color:var(--muted);margin:8px 0 0">
+      注意位模式<b>一位都没变</b>，变的只是解释方式。这也是为什么这类 bug 特别难查：数据看起来「没问题」。
+    </p>`;
+}
+
+/* ============================================================
+   4.3 转换可视化：顺序反转
+   ============================================================ */
+function renderCvtChart() {
+  const w = 4, m = 16;
+  const W = 720, H = 250, pad = 34;
+  const x = u => pad + (u / (m - 1)) * (W - 2 * pad);
+  const yA = 70, yB = 180;
+  let svg = `<svg viewBox="0 0 ${W} ${H}" width="100%" style="max-width:${W}px;height:auto;display:block">`;
+  const line = (y, label, color) => {
+    let s = `<line class="axisline" x1="${pad}" y1="${y}" x2="${W - pad}" y2="${y}"/>`;
+    s += `<text class="axislabel" x="${pad}" y="${y - 12}" fill="${color}">${label}</text>`;
+    return s;
+  };
+  svg += line(yA, '补码数值（−8 … 7）', 'var(--sign)');
+  svg += line(yB, '无符号数值（0 … 15）', 'var(--frac)');
+  for (let i = 0; i < m; i++) {
+    const t = i >= 8 ? i - 16 : i;
+    // 补码轴：按有符号值的大小排序位置
+    svg += `<circle cx="${x(i)}" cy="${yA}" r="3.5" fill="var(--sign)"/>`;
+    if (i % 2 === 1 || m <= 16) svg += `<text class="ticklabel" x="${x(i)}" y="${yA - 7}" text-anchor="middle">${t}</text>`;
+    svg += `<circle cx="${x(i)}" cy="${yB}" r="3.5" fill="var(--frac)"/>`;
+    if (m <= 16) svg += `<text class="ticklabel" x="${x(i)}" y="${yB + 15}" text-anchor="middle">${i}</text>`;
+    // 映射连线
+    const isNeg = t < 0;
+    svg += `<path d="M ${x(i)} ${yA + 5} C ${x(i)} ${(yA + yB) / 2}, ${x(i)} ${(yA + yB) / 2}, ${x(i)} ${yB - 5}"
+      fill="none" stroke="${isNeg ? 'var(--warn)' : 'var(--line)'}" stroke-width="${isNeg ? 1.6 : 1}"
+      stroke-dasharray="${isNeg ? '4 3' : 'none'}" opacity="${isNeg ? .9 : .5}"/>`;
+  }
+  svg += `<text class="axislabel" x="${pad}" y="${H - 12}">橙色虚线：负数段被整体平移到 8…15 —— 最小的负数 −8 变成最大的无符号数 8，−1 变成 15</text>`;
+  svg += '</svg>';
+  $('#cvtChart').innerHTML = svg;
+}
+
+/* ============================================================
+   4.5 转换陷阱表（w = 32）
+   ============================================================ */
+const W32 = 32n;
+const CAST_ROWS = [
+  { l: '0',            lv: 0n,          lt: 's', op: '==', r: '0U',                  rv: 0n,          rt: 'u' },
+  { l: '-1',           lv: -1n,         lt: 's', op: '<',  r: '0',                   rv: 0n,          rt: 's' },
+  { l: '-1',           lv: -1n,         lt: 's', op: '>',  r: '0U',                  rv: 0n,          rt: 'u' },
+  { l: '2147483647',   lv: 2147483647n, lt: 's', op: '>',  r: '-2147483647-1',       rv: -2147483648n,rt: 's' },
+  { l: '2147483647U',  lv: 2147483647n, lt: 'u', op: '<',  r: '-2147483647-1',       rv: -2147483648n,rt: 's' },
+  { l: '-1',           lv: -1n,         lt: 's', op: '>',  r: '-2',                  rv: -2n,         rt: 's' },
+  { l: '(unsigned)-1', lv: 4294967295n, lt: 'u', op: '>',  r: '-2',                  rv: -2n,         rt: 's' },
+  { l: '2147483647',   lv: 2147483647n, lt: 's', op: '<',  r: '2147483648U',         rv: 2147483648n, rt: 'u' },
+  { l: '2147483647',   lv: 2147483647n, lt: 's', op: '>',  r: '(int)2147483648U',    rv: -2147483648n,rt: 's' },
+];
+const cmp = (a, b, op) => op === '==' ? a === b : op === '<' ? a < b : op === '>' ? a > b : false;
+function renderCast() {
+  let rows = `<tr><th>表达式</th><th>C 用什么类型比较</th><th>实际结果</th><th>为什么</th></tr>`;
+  CAST_ROWS.forEach((r, i) => {
+    const useU = r.lt === 'u' || r.rt === 'u';
+    const asU = useU;
+    const l = asU ? BigInt('0b' + toBits(r.lv, 32)) : r.lv;
+    const rr = asU ? BigInt('0b' + toBits(r.rv, 32)) : r.rv;
+    const actual = cmp(l, rr, r.op);
+    // 另一种解释的结果
+    const l2 = !asU ? BigInt('0b' + toBits(r.lv, 32)) : r.lv;
+    const r2 = !asU ? BigInt('0b' + toBits(r.rv, 32)) : r.rv;
+    const other = cmp(l2, r2, r.op);
+    const surprise = actual !== other;
+    rows += `<tr data-i="${i}" style="cursor:pointer">
+      <td class="mono">${esc(r.l)} ${r.op === '==' ? '==' : r.op} ${esc(r.r)}</td>
+      <td>${useU ? '<span class="chip warn">unsigned</span>' : '<span class="chip ok">signed</span>'}</td>
+      <td>${actual ? '<span class="chip ok">真</span>' : '<span class="chip bad">假</span>'}</td>
+      <td style="font-size:13px">${surprise
+        ? `若按 ${asU ? 'signed' : 'unsigned'} 理解会得到<b>相反</b>的结论`
+        : '两种解释结论一致'}</td></tr>`;
+  });
+  $('#castTbl').innerHTML = rows;
+  $$('#castTbl tr[data-i]').forEach(tr => tr.addEventListener('click', () => showCast(+tr.dataset.i)));
+}
+function showCast(i) {
+  const r = CAST_ROWS[i];
+  const useU = r.lt === 'u' || r.rt === 'u';
+  const lb = toBits(r.lv, 32), rb = toBits(r.rv, 32);
+  const lU = BigInt('0b' + lb), rU = BigInt('0b' + rb);
+  const lS = bitsT(lb), rS = bitsT(rb);
+  const l = useU ? lU : lS, rr = useU ? rU : rS;
+  const res = cmp(l, rr, r.op);
+  const lOther = useU ? lS : lU, rOther = useU ? rS : rU;
+  const resOther = cmp(lOther, rOther, r.op);
+  $('#castOut').innerHTML = `
+    <div class="box" style="margin:0">
+      <div class="t">${esc(r.l)} ${r.op} ${esc(r.r)}</div>
+      <div class="tbl-wrap"><table class="tbl">
+        <tr><th>操作数</th><th class="mono">位模式</th><th class="mono">按 signed 解释</th><th class="mono">按 unsigned 解释</th></tr>
+        <tr><td class="mono">${esc(r.l)}${r.lt === 'u' ? '（本身就是 unsigned）' : ''}</td><td class="mono">${groupBits(lb)}</td>
+            <td class="mono">${fmtBig(lS)}</td><td class="mono">${fmtBig(lU)}</td></tr>
+        <tr><td class="mono">${esc(r.r)}${r.rt === 'u' ? '（本身就是 unsigned）' : ''}</td><td class="mono">${groupBits(rb)}</td>
+            <td class="mono">${fmtBig(rS)}</td><td class="mono">${fmtBig(rU)}</td></tr>
+      </table></div>
+      <p style="margin:10px 0 0">
+        ${useU
+          ? `因为表达式里出现了无符号常量，<b>两边都按 unsigned 比较</b>：${fmtBig(l)} ${r.op} ${fmtBig(rr)} → <b>${res}</b>。`
+          : `两边都是有符号，<b>按 signed 比较</b>：${fmtBig(l)} ${r.op} ${fmtBig(rr)} → <b>${res}</b>。`}
+        ${res !== resOther
+          ? `<br><span style="color:var(--sign)">但如果按 ${useU ? 'signed' : 'unsigned'} 解释，结果是 ${resOther} —— 完全相反。</span> 这正是「看着像，其实不是」的来源。`
+          : `<br><span style="color:var(--muted)">按另一种解释结果也是 ${resOther}，这一行不会踩坑。</span>`}
+      </p>
+    </div>`;
+}
+
+/* ============================================================
+   5.3 扩展 / 截断工具
+   ============================================================ */
+function renderExt() {
+  const from = +$('#extFrom').value, to = +$('#extTo').value;
+  const raw = parseNum($('#extIn').value);
+  if (raw === null) { $('#extOut').innerHTML = '<div class="box bad" style="margin:8px 0">请输入一个整数。</div>'; return; }
+  if (raw < tMin(from) || raw > tMax(from)) {
+    $('#extOut').innerHTML = `<div class="box bad" style="margin:8px 0">${from} 位补码的范围是 ${fmtBig(tMin(from))} … ${fmtBig(tMax(from))}，输入超出范围。</div>`;
+    return;
+  }
+  const bits = toBits(raw, from);
+  const uVal = bitsU(bits);
+  let rows = '';
+  if (to > from) {
+    const signExt = toBits(raw, to);
+    const zeroExt = bitsU(bits).toString(2).padStart(to, '0');
+    rows = `
+      <tr><td>有符号扩展（符号扩展）</td><td class="mono">${groupBits(signExt)}</td><td class="mono">${fmtBig(bitsT(signExt))}</td><td>左侧复制符号位 ${bits[0]} 共 ${to - from} 份</td></tr>
+      <tr><td>无符号扩展（补零）</td><td class="mono">${groupBits(zeroExt)}</td><td class="mono">${fmtBig(BigInt('0b' + zeroExt))}</td><td>左侧补 ${to - from} 个 0</td></tr>`;
+    $('#extOut').innerHTML = `
+      <div class="formula" style="margin:12px 0;text-align:left">
+        ${from} 位 → ${to} 位（扩展）：原值 <b>${fmtBig(raw)}</b>
+      </div>
+      <div class="tbl-wrap"><table class="tbl">
+        <tr><th>方式</th><th class="mono">结果位模式</th><th class="mono">数值</th><th>规则</th></tr>${rows}
+      </table></div>
+      <p style="font-size:14px;color:var(--muted);margin:8px 0 0">
+        C 在把窄的有符号类型赋给宽的（如 <code>short → int</code>）时，用的是<b>符号扩展</b>，所以数值不变。
+        这也是为什么 <code>-15213</code> 从 <code>0xC493</code> 变成 <code>0xFFFFC493</code> 而不是 <code>0x0000C493</code>。
+      </p>`;
+  } else if (to < from) {
+    const mod = ((raw % POW2(to)) + POW2(to)) % POW2(to);
+    const trunc = toBits(raw, to);
+    rows = `
+      <tr><td>截断后的位模式</td><td class="mono">${groupBits(trunc)}</td><td class="mono">0x${bitsHex(trunc)}</td><td>丢弃高 ${from - to} 位</td></tr>
+      <tr><td>作为无符号解释</td><td class="mono">${fmtBig(mod)}</td><td class="mono">${fmtBig(mod)} mod ${fmtBig(POW2(to))}</td><td>无符号：等价于取模</td></tr>
+      <tr><td>作为补码解释</td><td class="mono">${fmtBig(bitsT(trunc))}</td><td class="mono">${fmtBig(bitsT(trunc))}</td><td>有符号：类似取模（再减去 2<sup>${to}</sup>）</td></tr>`;
+    $('#extOut').innerHTML = `
+      <div class="formula" style="margin:12px 0;text-align:left">
+        ${from} 位 → ${to} 位（截断）：原值 <b>${fmtBig(raw)}</b>
+      </div>
+      <div class="tbl-wrap"><table class="tbl">
+        <tr><th>项目</th><th class="mono">结果</th><th class="mono">数值 / 公式</th><th>规则</th></tr>${rows}
+      </table></div>
+      ${bitsT(trunc) !== raw ? `<div class="box warn" style="margin:10px 0 0"><div class="t">数值变了</div>
+        ${fmtBig(raw)} 截断成 ${to} 位后变成 ${fmtBig(bitsT(trunc))}。截断会<b>丢弃高位信息</b>，数值一般不相等。</div>`
+        : `<div class="box ok" style="margin:10px 0 0"><div class="t">数值恰好不变</div>
+        原值落在 ${to} 位能表示的范围内，所以截断后数值恰好相同 —— 但这只是巧合，不能依赖。</div>`}`;
+  } else {
+    $('#extOut').innerHTML = `<div class="box" style="margin:8px 0">宽度相同（${from} 位），位模式不变：<span class="mono">${groupBits(bits)}</span>。</div>`;
+  }
+}
+
+/* ============================================================
+   6.1 加法器（无符号 / 补码 + 溢出）
+   ============================================================ */
+const addState = { mode: 'u', w: 8 };
+function renderAdd() {
+  const w = addState.w, m = POW2(w);
+  const a = parseNum($('#addA').value), b = parseNum($('#addB').value);
+  const name = addState.mode === 'u' ? '无符号' : '补码';
+  const lo = addState.mode === 'u' ? 0n : tMin(w), hi = addState.mode === 'u' ? uMax(w) : tMax(w);
+  if (a === null || b === null) { $('#addOut').innerHTML = '<div class="box bad" style="margin:8px 0">请输入两个整数。</div>'; return; }
+  if (a < lo || a > hi || b < lo || b > hi) {
+    $('#addOut').innerHTML = `<div class="box bad" style="margin:8px 0">${name} ${w} 位的范围是 ${fmtBig(lo)} … ${fmtBig(hi)}，操作数超出范围。</div>`;
+    return;
+  }
+  const ba = toBits(a, w), bb = toBits(b, w);
+  const trueSum = a + b;
+  const modSum = ((trueSum % m) + m) % m;
+  const resBits = modSum.toString(2).padStart(w, '0');
+  const carry = trueSum >= m || trueSum < 0n ? 1 : 0;
+  const resU = modSum, resT = bitsT(resBits);
+  let overflow, ovTxt;
+  if (addState.mode === 'u') {
+    overflow = trueSum >= m;
+    ovTxt = overflow
+      ? `<b>发生环绕</b>：真和 ${fmtBig(trueSum)} ≥ 2<sup>${w}</sup> = ${fmtBig(m)}，进位被丢弃，结果绕回到 ${fmtBig(resU)}。`
+      : `真和 ${fmtBig(trueSum)} 在 [0, ${fmtBig(uMax(w))}] 范围内，<b>没有溢出</b>。`;
+  } else {
+    const pos = trueSum > tMax(w), neg = trueSum < tMin(w);
+    overflow = pos || neg;
+    ovTxt = pos
+      ? `<b>正溢出 PosOver</b>：和 ${fmtBig(trueSum)} &gt; TMax<sub>${w}</sub> = ${fmtBig(tMax(w))}，结果绕成负数 ${fmtBig(resT)}。`
+      : neg
+        ? `<b>负溢出 NegOver</b>：和 ${fmtBig(trueSum)} &lt; TMin<sub>${w}</sub> = ${fmtBig(tMin(w))}，结果绕成正数 ${fmtBig(resT)}。`
+        : `和 ${fmtBig(trueSum)} 落在 [${fmtBig(tMin(w))}, ${fmtBig(tMax(w))}] 内，<b>没有溢出</b>。`;
+  }
+  const sumBitsFull = trueSum < 0n ? null : trueSum.toString(2).padStart(w + 1, '0');
+  $('#addOut').innerHTML = `
+    <div class="fw" style="flex-direction:column;align-items:stretch;gap:6px">
+      <div class="fgrp"><div class="fcap">a = ${fmtBig(a)}（${addState.mode === 'u' ? '无符号' : '补码'}）</div>
+        <div class="bits">${bitCells(ba, 'e')}</div></div>
+      <div class="fgrp"><div class="fcap">b = ${fmtBig(b)}</div>
+        <div class="bits">${bitCells(bb, 'e')}</div></div>
+      <div class="fgrp"><div class="fcap">结果（${w} 位，0x${bitsHex(resBits)}）</div>
+        <div class="bits">${bitCells(resBits, addState.mode === 'u' ? 'f' : 's')}</div></div>
+    </div>
+    <div class="tbl-wrap"><table class="tbl" style="margin-top:12px">
+      <tr><th>项目</th><th class="mono">值</th><th>说明</th></tr>
+      <tr><td>真和（数学加法）</td><td class="mono">${fmtBig(trueSum)}</td><td>可能需要 w+1 位${sumBitsFull ? `：<span class="mono">${groupBits(sumBitsFull)}</span>` : ''}</td></tr>
+      <tr><td>丢弃进位</td><td class="mono">${carry ? '1' : '0'}</td><td>${carry ? '最高位进位被丢弃' : '没有进位'}</td></tr>
+      <tr><td><b>结果位模式</b></td><td class="mono"><b>${groupBits(resBits)}</b></td><td class="mono">0x${bitsHex(resBits)}</td></tr>
+      <tr><td>作为无符号</td><td class="mono">${fmtBig(resU)}</td><td class="mono">${fmtBig(trueSum)} mod ${fmtBig(m)}</td></tr>
+      <tr><td>作为补码</td><td class="mono">${fmtBig(resT)}</td><td class="mono">U2T(${fmtBig(resU)})</td></tr>
+    </table></div>
+    <div class="box ${overflow ? 'warn' : 'ok'}" style="margin:12px 0 0"><div class="t">${overflow ? '溢出' : '正常'}</div>${ovTxt}</div>
+    <p style="font-size:14px;color:var(--muted);margin:8px 0 0">
+      无论按无符号还是补码解释，<b>结果的位模式和加法过程完全相同</b>（都是正常相加后丢弃最高进位），
+      区别只在最后一步：怎么解释这 ${w} 位。
+    </p>`;
+}
+
+/* ============================================================
+   6.2 环绕示意（4 位补码的模运算圆环）
+   ============================================================ */
+function renderRing() {
+  const w = 4, n = 16, R = 88, cx = 150, cy = 132;
+  let svg = `<svg viewBox="0 0 640 280" width="100%" style="max-width:640px;height:auto;display:block;margin:0 auto">`;
+  for (let i = 0; i < n; i++) {
+    const ang = -Math.PI / 2 + i / n * 2 * Math.PI;
+    const x = cx + R * Math.cos(ang), y = cy + R * Math.sin(ang);
+    const t = i >= 8 ? i - 16 : i;
+    svg += `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="13" fill="var(--paper-soft)" stroke="var(--line)"/>`;
+    svg += `<text x="${x.toFixed(1)}" y="${(y + 4).toFixed(1)}" text-anchor="middle"
+      style="font-family:var(--font-mono);font-size:11px;fill:var(--ink)">${t}</text>`;
+  }
+  // 环绕路径示意：7 → −8 → −7（正溢出）
+  const arc = (from, to, color, label, dy) => {
+    const a1 = -Math.PI / 2 + from / n * 2 * Math.PI, a2 = -Math.PI / 2 + to / n * 2 * Math.PI;
+    const x1 = cx + (R + 26) * Math.cos(a1), y1 = cy + (R + 26) * Math.sin(a1);
+    const x2 = cx + (R + 26) * Math.cos(a2), y2 = cy + (R + 26) * Math.sin(a2);
+    return `<path d="M ${x1.toFixed(1)} ${y1.toFixed(1)} A ${R + 26} ${R + 26} 0 0 1 ${x2.toFixed(1)} ${y2.toFixed(1)}"
+      fill="none" stroke="${color}" stroke-width="2.2" marker-end="url(#arrow-${color === 'var(--sign)' ? 'r' : 'g'})"/>
+      <text x="${(x1 + x2) / 2 + 6}" y="${(y1 + y2) / 2 + dy}" class="axislabel" fill="${color}">${label}</text>`;
+  };
+  svg += `<defs>
+    <marker id="arrow-r" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M0,0 L9,4.5 L0,9 z" fill="var(--sign)"/></marker>
+    <marker id="arrow-g" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M0,0 L9,4.5 L0,9 z" fill="var(--frac)"/></marker>
+  </defs>`;
+  svg += arc(7, 8, 'var(--sign)', '正溢出：7 + 1 → −8', -8);
+  svg += arc(0, 15, 'var(--frac)', '负溢出：−8 − 1 → 7', 16);
+  svg += `<text x="470" y="60" class="axislabel" style="font-size:12px">4 位补码：−8 … 7</text>`;
+  svg += `<text x="470" y="84" class="axislabel" style="font-size:11.5px">共 16 个值，绕一圈就是 2⁴ = 16</text>`;
+  svg += `<text x="470" y="112" class="axislabel" style="font-size:11.5px;fill:var(--sign)">正溢出：和超过 7，绕到负数端</text>`;
+  svg += `<text x="470" y="132" class="axislabel" style="font-size:11.5px;fill:var(--frac)">负溢出：和低于 −8，绕到正数端</text>`;
+  svg += `<text x="470" y="160" class="axislabel" style="font-size:11.5px">最多各绕一次 —— 因为两个 w 位数</text>`;
+  svg += `<text x="470" y="178" class="axislabel" style="font-size:11.5px">的和不会超过 2^(w+1)</text>`;
+  svg += '</svg>';
+  $('#ringOut').innerHTML = svg;
+}
+
+/* ============================================================
+   6.5 乘法器
+   ============================================================ */
+const mulState = { mode: 'u', w: 8 };
+function renderMul() {
+  const w = mulState.w, m = POW2(w);
+  const a = parseNum($('#mulA').value), b = parseNum($('#mulB').value);
+  if (a === null || b === null) { $('#mulOut').innerHTML = '<div class="box bad" style="margin:8px 0">请输入两个整数。</div>'; return; }
+  const lo = mulState.mode === 'u' ? 0n : tMin(w), hi = mulState.mode === 'u' ? uMax(w) : tMax(w);
+  if (a < lo || a > hi || b < lo || b > hi) {
+    $('#mulOut').innerHTML = `<div class="box bad" style="margin:8px 0">${mulState.mode === 'u' ? '无符号' : '补码'} ${w} 位的范围是 ${fmtBig(lo)} … ${fmtBig(hi)}。</div>`;
+    return;
+  }
+  const ba = toBits(a, w), bb = toBits(b, w);
+  const trueProd = a * b;                    // 数学乘积
+  const ua = BigInt('0b' + ba), ub = BigInt('0b' + bb);
+  const trueU = ua * ub;                     // 无符号真积
+  const modU = trueU % m;
+  const resBits = modU.toString(2).padStart(w, '0');
+  const resU = modU, resT = bitsT(resBits);
+  const trueBits = trueU.toString(2).padStart(2 * w, '0');
+  const lowBits = trueBits.slice(w), highBits = trueBits.slice(0, w);
+  $('#mulOut').innerHTML = `
+    <div class="fw" style="flex-direction:column;align-items:stretch;gap:6px">
+      <div class="fgrp"><div class="fcap">x = ${fmtBig(a)}</div><div class="bits">${bitCells(ba, 'e')}</div></div>
+      <div class="fgrp"><div class="fcap">y = ${fmtBig(b)}</div><div class="bits">${bitCells(bb, 'e')}</div></div>
+      <div class="fgrp"><div class="fcap">低 ${w} 位（保留，0x${bitsHex(resBits)}）</div>
+        <div class="bits">${bitCells(resBits, mulState.mode === 'u' ? 'f' : 's')}</div></div>
+    </div>
+    <div class="tbl-wrap"><table class="tbl" style="margin-top:12px">
+      <tr><th>项目</th><th class="mono">值</th><th>说明</th></tr>
+      <tr><td>无符号真积（2w 位）</td><td class="mono">${groupBits(trueBits)}</td><td class="mono">${fmtBig(trueU)} = 0x${bitsHex(trueBits)}</td></tr>
+      <tr><td>高 ${w} 位（丢弃）</td><td class="mono">${groupBits(highBits)}</td><td>乘法电路会算出 2w 位，但只保留低 w 位</td></tr>
+      <tr><td><b>低 ${w} 位（保留）</b></td><td class="mono"><b>${groupBits(lowBits)}</b></td><td class="mono">0x${bitsHex(resBits)}</td></tr>
+      <tr><td>作为无符号解释</td><td class="mono">${fmtBig(resU)}</td><td class="mono">${fmtBig(trueU)} mod ${fmtBig(m)}</td></tr>
+      <tr><td>作为补码解释</td><td class="mono">${fmtBig(resT)}</td><td class="mono">U2T(${fmtBig(resU)})</td></tr>
+    </table></div>
+    ${mulState.mode === 't' ? `<div class="box warn" style="margin:12px 0 0"><div class="t">补码乘法为什么也对</div>
+      数学上 x·y 与 ua·ub 只相差 2<sup>w</sup> 的整数倍，而我们要的正是<b>模 2<sup>${w}</sup> 的结果</b>，所以两者相同。
+      换句话说：有符号与无符号乘法的<b>低位完全相同</b>，只有高位不同（而高位会被丢弃）。</div>` : ''}
+    ${mulState.mode === 't' && resT !== trueProd ? `<div class="box" style="margin:10px 0 0">
+      数学乘积是 ${fmtBig(trueProd)}，但 ${w} 位补码存不下，保留低 ${w} 位后解释为 <b>${fmtBig(resT)}</b>。</div>` : ''}`;
+}
+
+/* ============================================================
+   6.7 移位 = 乘除 2 的幂
+   ============================================================ */
+function renderPow2() {
+  const w = +$('#pmBits').value, m = POW2(w), k = Math.max(0, Math.min(w - 1, +$('#pmK').value || 0));
+  const x = parseNum($('#pmIn').value);
+  if (x === null) { $('#pmOut').innerHTML = '<div class="box bad" style="margin:8px 0">请输入一个整数。</div>'; return; }
+  if (x < tMin(w) || x > tMax(w)) {
+    $('#pmOut').innerHTML = `<div class="box bad" style="margin:8px 0">${w} 位补码范围 ${fmtBig(tMin(w))} … ${fmtBig(tMax(w))}。</div>`;
+    return;
+  }
+  const bits = toBits(x, w);
+  const u = bitsU(bits);
+  const kBig = BigInt(k), p = POW2(k);
+  // 左移 = ×2^k（模 2^w）
+  const shlBits = toBits((u << kBig) % m, w);
+  const shlU = bitsU(shlBits), shlT = bitsT(shlBits);
+  const exactMul = x * p;
+  // 无符号右移 = floor(u / 2^k)
+  const shruU = u >> kBig;
+  // 算术右移 = floor(x / 2^k)
+  const ashr = x >> kBig;
+  // C 的除法 = 向零取整
+  const cdiv = x / p;   // BigInt 除法向零取整
+  $('#pmOut').innerHTML = `
+    <div class="formula" style="margin:12px 0;text-align:left">
+      x = <b>${fmtBig(x)}</b>（位模式 ${bits} = 0x${bitsHex(bits)}），k = ${k}
+    </div>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>运算</th><th class="mono">位级结果</th><th class="mono">数值</th><th>说明</th></tr>
+      <tr><td class="mono">x &lt;&lt; ${k}</td><td class="mono">${groupBits(shlBits)}</td>
+          <td class="mono">补码 ${fmtBig(shlT)} / 无符号 ${fmtBig(shlU)}</td>
+          <td>数学上 = x × 2<sup>${k}</sup> = ${fmtBig(exactMul)}${exactMul !== shlT && mulStateNoOverflow(x, k, w) ? '<span style="color:var(--sign)">（已溢出，位级结果被截断）</span>' : ''}</td></tr>
+      <tr><td class="mono">ux &gt;&gt; ${k}</td><td class="mono">${groupBits(shruU.toString(2).padStart(w, '0'))}</td>
+          <td class="mono">${fmtBig(shruU)}</td><td>无符号逻辑右移 = ⌊${fmtBig(u)} / ${fmtBig(p)}⌋</td></tr>
+      <tr><td class="mono">x &gt;&gt; ${k}</td><td class="mono">${groupBits(toBits(ashr, w))}</td>
+          <td class="mono">${fmtBig(ashr)}</td><td>算术右移 = ⌊${fmtBig(x)} / ${fmtBig(p)}⌋（向 −∞ 取整）</td></tr>
+      <tr><td class="mono">x / ${fmtBig(p)}</td><td class="mono">—</td><td class="mono">${fmtBig(cdiv)}</td>
+          <td>C 的除法<b>向零取整</b>${ashr !== cdiv ? ' &nbsp;<span style="color:var(--sign)">← 与上面的算术右移不同！</span>' : ''}</td></tr>
+    </table></div>
+    ${ashr !== cdiv ? `<div class="box warn" style="margin:12px 0 0"><div class="t">有符号除法不能用移位直接替代</div>
+      ${fmtBig(x)} &gt;&gt; ${k} 得到 ${fmtBig(ashr)}（向下取整），而 ${fmtBig(x)} / ${fmtBig(p)} 得到 ${fmtBig(cdiv)}（向零取整），
+      两者相差 ${fmtBig(ashr - cdiv)}。编译器若要生成移位代码，必须<b>先加一个偏置</b>：<code>(x + (1 &lt;&lt; ${k}) − 1) &gt;&gt; ${k}</code> ${x < 0n ? `= ${fmtBig(cdiv)}` : ''}。
+      </div>` : `<div class="box ok" style="margin:12px 0 0">这一组取值下两者恰好相同（正数、或刚好整除时），但负数一般会不同。</div>`}`;
+}
+function mulStateNoOverflow(x, k, w) {
+  const v = x * POW2(k);
+  return v >= tMin(w) && v <= tMax(w);
+}
+
+/* ============================================================
+   7.1 无符号循环陷阱模拟器
+   ============================================================ */
+const loopState = { cond: 'bad' };
+function renderLoop() {
+  const cnt = Math.max(1, Math.min(8, +$('#loopCnt').value || 5));
+  const UMAX32 = 4294967295n;
+  const bad = loopState.cond === 'bad';
+  const seq = [];
+  let i = BigInt(cnt - 2);
+  if (cnt < 2) {
+    $('#loopOut').innerHTML = `<div class="box warn" style="margin:8px 0">cnt = ${cnt} 时 <code>cnt-2</code> 是负数，赋给无符号变量会立刻绕成 UMax，循环体一次都不执行（或者按错误写法直接跑飞）。请把 cnt 设成 ≥ 2 试试。</div>`;
+    return;
+  }
+  const LIMIT = cnt + 3;
+  let iterations = 0, ended = false;
+  for (let n = 0; n < LIMIT; n++) {
+    const cond = bad ? i >= 0n : i < BigInt(cnt);
+    if (!cond) { ended = true; break; }
+    seq.push(i);
+    iterations++;
+    i = i - 1n;
+    if (i < 0n) i += 1n << 32n;   // 32 位无符号回绕
+  }
+  const done = bad ? false : ended;
+  const rows = seq.map((v, n) => {
+    const wrapped = v > BigInt(cnt) && n > 0;
+    return `<tr${wrapped ? ' style="background:var(--bad-bg)"' : ''}><td>${n + 1}</td><td class="mono">${fmtBig(v)}</td>
+      <td class="mono">${bad ? 'i &gt;= 0' : `i &lt; ${cnt}`} → ${wrapped ? '<b>仍然为真</b>' : '真'}</td>
+      <td class="mono">${wrapped ? '执行 a[' + fmtBig(v) + '] —— <b>越界！</b>' : '执行 a[' + fmtBig(v) + ']'}</td></tr>`;
+  }).join('');
+  $('#loopOut').innerHTML = `
+    <div class="mono" style="font-size:13.5px;line-height:1.8;background:var(--code-bg);border:1px solid var(--code-bd);border-radius:8px;padding:12px 15px;margin:12px 0">
+      unsigned i;<br>
+      for (i = cnt-2; ${bad ? 'i >= 0' : 'i < cnt'}; i--) &nbsp;&nbsp;// cnt = ${cnt}<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;a[i] += a[i+1];
+    </div>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>第几次</th><th class="mono">i</th><th class="mono">循环条件</th><th>行为</th></tr>${rows}
+    </table></div>
+    ${done
+      ? `<div class="box ok" style="margin:12px 0 0"><div class="t">正常结束</div>
+          共执行 <b>${iterations}</b> 次（i 从 ${cnt - 2} 递减到 0）。i 减到 −1 时回绕成 ${fmtBig(UMAX32)}，
+          它不小于 cnt，循环条件为假，正常退出。</div>`
+      : `<div class="box bad" style="margin:12px 0 0"><div class="t">死循环（还会越界）</div>
+          i 减到 0 再减 1 时回绕成 <b>${fmtBig(UMAX32)}</b>（UMax），而 <code>i &gt;= 0</code> 对它<b>仍然为真</b>，
+          于是循环永远不会结束 —— 并且每次都在用巨大的下标访问 <code>a[]</code>，直接造成越界读写。
+          实际程序里这通常表现为崩溃或段错误。</div>`}`;
+}
+
+/* ============================================================
+   8.3 字节序可视化 + show_bytes
+   ============================================================ */
+function renderByteOrder() {
+  const raw = $('#boIn').value.trim();
+  const addrRaw = $('#boAddr').value.trim();
+  const size = +$('#boSize').value;
+  const bitsTotal = size * 8;
+  // 解析值：支持 0x 前缀
+  const s = raw.replace(/^0[xX]/, '');
+  if (!/^[0-9a-fA-F]{1,16}$/.test(s)) {
+    $('#boOut').innerHTML = '<div class="box bad" style="margin:8px 0">请输入十六进制值（最多 16 位数字）。</div>';
+    return;
+  }
+  const value = BigInt('0x' + s);
+  if (value >= POW2(bitsTotal)) {
+    $('#boOut').innerHTML = `<div class="box bad" style="margin:8px 0">这个值超过了 ${size} 字节能表示的范围。</div>`;
+    return;
+  }
+  const bin = value.toString(2).padStart(bitsTotal, '0');
+  const bytes = [];
+  for (let i = 0; i < size; i++) bytes.push(bin.slice(i * 8, (i + 1) * 8));   // 从最高有效字节到最低
+  const be = bytes.slice();                      // 大端：高有效字节在低地址
+  const le = bytes.slice().reverse();            // 小端：低有效字节在低地址
+  const addr = (() => {
+    const a = addrRaw.replace(/^0[xX]/, '');
+    if (!/^[0-9a-fA-F]+$/.test(a)) return null;
+    return BigInt('0x' + a);
+  })();
+  const addrStr = i => '0x' + (addr + BigInt(i)).toString(16);
+  const byteRow = (arr, title, note) => `
+    <div style="margin:10px 0">
+      <div style="font-weight:650;font-size:14.5px;margin-bottom:6px">${title} <span style="font-weight:400;color:var(--muted);font-size:13px">${note}</span></div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px">
+        ${arr.map((b, i) => `<div style="border:1px solid var(--line);border-radius:8px;overflow:hidden;min-width:52px">
+          <div class="mono" style="background:var(--paper-soft);font-size:11px;padding:3px 6px;text-align:center;color:var(--muted);border-bottom:1px solid var(--line)">${addr ? addrStr(i) : '地址 ' + i}</div>
+          <div class="mono" style="font-size:15px;font-weight:700;padding:5px 8px;text-align:center">${b}</div>
+          <div class="mono" style="font-size:10.5px;padding:0 6px 5px;text-align:center;color:var(--muted)">0x${parseInt(b, 2).toString(16).toUpperCase().padStart(2, '0')}</div>
+        </div>`).join('')}
+      </div>
+    </div>`;
+  $('#boOut').innerHTML = `
+    <div class="formula" style="margin:12px 0;text-align:left">
+      值 <b class="mono">0x${s.toUpperCase().padStart(size * 2, '0')}</b>
+      = ${groupBits(bin)}<sub>2</sub> &nbsp;，占 ${size} 字节
+    </div>
+    ${byteRow(be, '大端 Big Endian', '（Sun / PowerPC / 网络字节序）最低有效字节在最高地址')}
+    ${byteRow(le, '小端 Little Endian', '（x86 / ARM）最低有效字节在最低地址')}
+    <div style="margin-top:16px">
+      <div style="font-weight:650;font-size:14.5px;margin-bottom:6px">如果用 show_bytes 打印（小端机器）</div>
+      <div class="mono" style="font-size:13px;line-height:1.8;background:var(--code-bg);border:1px solid var(--code-bd);border-radius:8px;padding:12px 15px">
+        ${le.map((b, i) => `${addr ? addrStr(i) : '0x??'} &nbsp;0x${parseInt(b, 2).toString(16).padStart(2, '0')}`).join('<br>')}
+      </div>
+      <p style="font-size:13.5px;color:var(--muted);margin:8px 0 0">
+        每行是「地址 + 该地址上的一个字节」。地址递增，字节顺序正是<b>从最低有效字节到最高有效字节</b>。
+      </p>
+    </div>`;
+}
+
+/* ============================================================
+   8.4 ±15213 的内存表示
+   ============================================================ */
+const memState = { val: 15213n };
+function renderMem() {
+  const v = memState.val;
+  const v16 = toBits(v, 16);
+  const hex16 = bitsHex(v16).padStart(4, '0');   // 3B6D / C493
+  const bytes2 = [hex16.slice(0, 2), hex16.slice(2)];   // 高有效、低有效
+  const mk = (size) => {
+    // 符号扩展到 size 字节
+    const bits = toBits(v, size * 8);
+    const h = bitsHex(bits);
+    const arr = [];
+    for (let i = 0; i < size; i++) arr.push(h.slice(i * 2, i * 2 + 2));
+    return arr;
+  };
+  const row = (label, arr, be) => {
+    const ordered = be ? arr.slice() : arr.slice().reverse();
+    return `<tr><td class="mono">${label}</td><td class="mono">${ordered.map(b => b.toUpperCase()).join(' ')}</td>
+      <td class="mono">${arr.map(b => b.toUpperCase()).join(' ')}</td>
+      <td style="font-size:13px">${be ? '高有效字节在前' : '低有效字节在前'}</td></tr>`;
+  };
+  $('#memOut').innerHTML = `
+    <div class="formula" style="margin:12px 0;text-align:left">
+      int ${v < 0n ? 'B = −15213' : 'A = 15213'} → 十六进制 <b class="mono">${v < 0n ? 'C4 93' : '3B 6D'}</b>
+      （二进制 ${groupBits(v16)}）
+    </div>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>数据形式</th><th>内存中的字节（从低地址到高地址）</th><th>逻辑顺序（高→低有效）</th><th>说明</th></tr>
+      ${row('int（4 字节）· IA32 / x86-64', mk(4), false)}
+      ${row('long（8 字节）· x86-64', mk(8), false)}
+      ${row('int（4 字节）· Sun 大端', mk(4), true)}
+      ${row('long（8 字节）· Sun 大端', mk(8), true)}
+    </table></div>
+    <div class="box" style="margin:12px 0 0">
+      注意<div style="margin:6px 0 0" class="mono; font-family:var(--font-mono);font-size:13.5px;line-height:1.8">
+        ${v < 0n
+          ? '负数的高位全是 1（符号扩展），所以小端机器上高地址处是 FF FF …，低地址处才是真正的数据 93 C4。'
+          : '正数的高位全是 0，所以小端机器上高地址处是 00 00 …，低地址处才是真正的数据 6D 3B。'}
+      </div>
+    </div>`;
+}
+
+/* ============================================================
+   8.6 字符串的字节
+   ============================================================ */
+function renderStr() {
+  const s = '18213';
+  const bytes = [];
+  for (const ch of s) bytes.push(ch.codePointAt(0));
+  bytes.push(0);
+  $('#strOut').innerHTML = `
+    <div class="mono" style="font-size:13.5px;margin-bottom:8px">char S[6] = "18213";</div>
+    <div style="display:flex;flex-wrap:wrap;gap:6px">
+      ${bytes.map((b, i) => `<div style="border:1px solid var(--line);border-radius:8px;overflow:hidden;min-width:64px">
+        <div style="background:var(--paper-soft);font-size:11px;padding:3px 6px;text-align:center;color:var(--muted);border-bottom:1px solid var(--line)">S[${i}]</div>
+        <div class="mono" style="font-size:15px;font-weight:700;padding:5px 8px;text-align:center">${b === 0 ? '\\0' : (i < 5 ? `'${s[i]}'` : '')}</div>
+        <div class="mono" style="font-size:11px;padding:0 6px 5px;text-align:center;color:var(--muted)">0x${b.toString(16).toUpperCase().padStart(2, '0')}${b === 0x30 + (+s[i] || 0) && i < 5 ? ` = 0x30+${s[i]}` : ''}</div>
+      </div>`).join('')}
+    </div>
+    <p style="margin:10px 0 0;font-size:14px">
+      字符 <code>'0'</code> 的 ASCII 码是 <code>0x30</code>，所以数字字符 <code>i</code> 的编码是 <code>0x30 + i</code>：
+      <span class="mono">'1' = 0x31 = 0x30+1，'8' = 0x38 = 0x30+8</span> …
+      <b>结尾的 <code>0x00</code> 是字符串结束符</b>（null terminator），C 靠它判断字符串到哪结束。
+    </p>
+    <p style="margin:8px 0 0;font-size:14px;color:var(--muted)">
+      因为每个字符只占 1 字节，<b>字符串的表示与字节序无关</b> —— 这也是文本数据能跨平台通用的原因。
+    </p>`;
+}
+
+/* ============================================================
+   8.7 反汇编中的字节序
+   ============================================================ */
+function renderDis() {
+  const s = $('#disIn').value.trim().replace(/^0[xX]/, '');
+  const size = +$('#disSize').value;
+  if (!/^[0-9a-fA-F]{1,16}$/.test(s)) { $('#disOut').innerHTML = '<div class="box bad" style="margin:8px 0">请输入十六进制值。</div>'; return; }
+  const v = BigInt('0x' + s);
+  const digits = size * 2;
+  const pad = v.toString(16).toUpperCase().padStart(digits, '0');
+  const bytes = [];
+  for (let i = 0; i < size; i++) bytes.push(pad.slice(i * 2, i * 2 + 2));
+  const rev = bytes.slice().reverse();
+  $('#disOut').innerHTML = `
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>步骤</th><th class="mono">结果</th><th>说明</th></tr>
+      <tr><td>取值</td><td class="mono">0x${s.toUpperCase()}</td><td>汇编里看到的立即数</td></tr>
+      <tr><td>补齐到 ${size * 8} 位</td><td class="mono">0x${pad}</td><td>左侧补 0 到 ${size} 字节</td></tr>
+      <tr><td>按字节拆开</td><td class="mono">${bytes.join(' ')}</td><td>高有效字节 → 低有效字节</td></tr>
+      <tr><td><b>反转（小端）</b></td><td class="mono"><b>${rev.join(' ')}</b></td><td>这才是机器码里<b>从低地址到高地址</b>的字节顺序</td></tr>
+    </table></div>
+    <div class="box" style="margin:12px 0 0"><div class="t">为什么要反转</div>
+      指令里的立即数按<b>数值</b>书写（高有效字节在前），而内存里按<b>小端</b>存放（低有效字节在前），
+      所以读机器码时要反过来看。看到 <code>ab 12 00 00</code> 就应该反应过来：这是 <code>0x000012ab</code>。
+    </div>`;
+}
+
+/* ============================================================
+   9.2 整数 C 谜题（答案已与原课件的 ✗/✓ 标记核对一致）
+   ============================================================ */
+const IPUZZLES = [
+  { e: 'x < 0  ⇒  ((x*2) < 0)', a: false,
+    w: '反例：x = TMin = 0x80000000（−2147483648）。x*2 溢出后等于 <b>0</b>，而 0 &lt; 0 是假。负数的两倍不一定还是负数。' },
+  { e: 'ux >= 0', a: true,
+    w: '无符号数的定义就决定了它非负，恒为真。' },
+  { e: '(x & 7) == 7  ⇒  (x<<30) < 0', a: true,
+    w: '低 3 位全为 1 说明 bit 1 也是 1。左移 30 位后 bit 1 被移到 bit 31（符号位），结果必然为负。<br><span style="color:var(--warn)">注意优先级：C 里 <code>==</code> 比 <code>&amp;</code> 优先级高，所以原文 <code>x &amp; 7 == 7</code> 实际是 <code>x &amp; (7==7)</code> = <code>x &amp; 1</code>，那种写法下 x = 1 就能推翻它。课件此处是按 <code>(x&amp;7)==7</code> 的本意讲解的。</span>' },
+  { e: 'ux > -1', a: false,
+    w: '表达式里有无符号数，−1 会被转换成 <b>UMax</b>（4294967295），于是这是 <code>ux &gt; UMax</code>，恒为假。' },
+  { e: 'x > y  ⇒  -x < -y', a: false,
+    w: '反例：x = 0，y = TMin。<code>x &gt; y</code> 为真，但 −y = TMin（取负溢出，TMin 的相反数还是 TMin），而 0 &lt; TMin 为假。' },
+  { e: 'x * x >= 0', a: false,
+    w: '反例：x = 65535。65535² = 4294836225 超出 32 位 int 的范围，截断后是 <b>−131071</b>，小于 0。' },
+  { e: 'x > 0 && y > 0  ⇒  x + y > 0', a: false,
+    w: '反例：x = y = TMax = 2147483647。两者都是正数，但和溢出后变成 <b>−2</b>（正溢出）。' },
+  { e: 'x >= 0  ⇒  -x <= 0', a: true,
+    w: 'x = 0 时 −0 = 0 ≤ 0；x &gt; 0 时 −x 是负数。恒成立（注意 TMin 不满足前提 x ≥ 0）。' },
+  { e: 'x <= 0  ⇒  -x >= 0', a: false,
+    w: '反例：x = TMin = −2147483648。−TMin 溢出后仍是 TMin，即 −2147483648 &lt; 0，不满足 −x ≥ 0。' },
+  { e: '(x|-x) >> 31 == -1', a: false,
+    w: '反例：x = 0。(0|0) >> 31 = 0，而 0 ≠ −1。<br><span style="color:var(--muted)">（对任何非 0 的 x 它都成立：x 或 −x 总有一个最高位为 1。）</span>' },
+  { e: 'ux >> 3 == ux/8', a: true,
+    w: '无符号右移是<b>逻辑</b>右移（左侧补 0），等价于向下取整除以 8；而无符号除法本身就是向下取整。两者一致。' },
+  { e: 'x >> 3 == x/8', a: false,
+    w: '反例：x = −1。算术右移 <code>−1 &gt;&gt; 3 = −1</code>（向 −∞ 取整），而 <code>−1/8 = 0</code>（向零取整）。' },
+  { e: 'x & (x-1) != 0', a: false,
+    w: '反例：x = 8。<code>8 &amp; 7 = 0</code>。实际上 <code>x &amp; (x−1)</code> 的作用是<b>清除最低位的 1</b>：当 x 是 2 的幂或 0 时结果为 0，所以这个断言不是恒真。（反过来说，<code>x &amp; (x-1) == 0</code> 正是「x 是 2 的幂或 0」的判定技巧。）' },
+];
+const ipState = { answered: 0, correct: 0 };
+function renderPuzzles() {
+  ipState.answered = 0; ipState.correct = 0;
+  updateIpScore();
+  $('#ipList').innerHTML = IPUZZLES.map((p, i) => `
+    <div class="puzzle" data-i="${i}">
+      <div class="q">${esc(p.e)}<small>判断：是否对任意取值都成立？</small></div>
+      <div class="btns"><button class="sm" data-ans="1">真</button><button class="sm" data-ans="0">假</button></div>
+      <div class="exp"></div>
+    </div>`).join('');
+}
+function updateIpScore() {
+  $('#ipScore').textContent = `已答 ${ipState.answered} / ${IPUZZLES.length} · 正确 ${ipState.correct}`;
+  $('#ipScore').className = 'chip ' + (ipState.answered === IPUZZLES.length && ipState.correct === IPUZZLES.length ? 'ok' : 'gray');
+}
+function initPuzzles() {
+  renderPuzzles();
+  $('#ipList').addEventListener('click', ev => {
+    const btn = ev.target.closest('button[data-ans]');
+    if (!btn) return;
+    const card = btn.closest('.puzzle'), i = +card.dataset.i, p = IPUZZLES[i];
+    const ok = (btn.dataset.ans === '1') === p.a;
+    if (!card.classList.contains('done')) { ipState.answered++; if (ok) ipState.correct++; }
+    card.classList.add('done');
+    card.classList.toggle('correct', ok);
+    card.classList.toggle('wrong', !ok);
+    card.querySelector('.exp').innerHTML =
+      `<span class="verdict" style="color:${ok ? 'var(--frac)' : 'var(--sign)'}">${ok ? '✓ 判断正确' : '✗ 判断有误'}</span>
+       &nbsp;正确答案：<b>${p.a ? '真（恒成立）' : '假（存在反例）'}</b>
+       &nbsp;<span class="chip ${p.a ? 'ok' : 'bad'}" style="font-size:11px">原课件标记 ${p.a ? '✓' : '✗'}</span><br>${p.w}`;
+    updateIpScore();
+  });
+  $('#ipReset').addEventListener('click', renderPuzzles);
+}
+
+/* ============================================================
+   9.3 小测验
+   ============================================================ */
+const QUIZ2 = [
+  { q: '一个字节（byte）等于多少位？', o: ['4 位', '8 位', '16 位', '取决于平台'], a: 1,
+    w: '字节 = 8 位。所以一个字节的十六进制正好是 2 位数字（如 0x3B）。' },
+  { q: '十六进制 0x3B 对应的二进制是？', o: ['0011 1011', '0011 1010', '1011 0011', '0011 1101'], a: 0,
+    w: '3 = 0011，B = 1011，拼起来就是 0011 1011。每个十六进制位固定对应 4 个二进制位。' },
+  { q: '8 位补码（two\'s complement）能表示的范围是？', o: ['−127 … 127', '−128 … 127', '0 … 255', '−128 … 128'], a: 1,
+    w: 'TMin = −2^7 = −128，TMax = 2^7 − 1 = 127。负数比正数多一个，范围不对称。' },
+  { q: '−1 的补码位模式（任意位宽 w）是？', o: ['1000…0', '0111…1', '1111…1', '0000…1'], a: 2,
+    w: '−1 = 全 1。这也是它与 UMax 位模式相同的原因（−1 转成无符号就是 UMax）。' },
+  { q: '一个有符号 int 和一个 unsigned 出现在同一个表达式里，C 语言会怎么做？', o: ['把无符号转成有符号', '把有符号转成无符号', '报错', '按数值大小自动选择'], a: 1,
+    w: '有符号值被隐式转换成无符号 —— 包括 <、>、== 等比较运算。这是所有「比较陷阱」的根源。' },
+  { q: 'x86-64 上 int 和 long 各占几字节？', o: ['4 和 4', '4 和 8', '8 和 8', '8 和 4'], a: 1,
+    w: 'x86-64 上 int 仍是 4 字节，long 变成 8 字节（与指针同宽）；而 IA32 上 long 是 4 字节。' },
+  { q: '大端（Big Endian）字节序的含义是？', o: ['最低有效字节放在最低地址', '最低有效字节放在最高地址', '和字符串一样处理', '由编译器决定'], a: 1,
+    w: '大端：最高有效字节在最低地址（即「最低有效字节在最高地址」）。Sun、PowerPC、网络字节序用大端；x86/ARM 用小端。' },
+  { q: '对负数 x，x >> 3 与 x / 8 的结果一样吗？', o: ['一样', '不一样：右移向 −∞ 取整，除法向零取整', '不一样：右移向零取整', '取决于编译器'], a: 1,
+    w: '算术右移是向下取整（朝 −∞），C 的除法是向零取整。例如 −1 >> 3 = −1，而 −1/8 = 0。' },
+];
+function renderQuiz() {
+  $('#qz2List').innerHTML = QUIZ2.map((item, i) => `
+    <div class="card" style="margin:10px 0" data-q2="${i}">
+      <h5>${i + 1}. ${esc(item.q)}</h5>
+      <div>${item.o.map((o, j) => `<label style="display:block;margin:5px 0;font-size:14.5px;cursor:pointer">
+        <input type="radio" name="q2_${i}" value="${j}"> ${esc(o)}</label>`).join('')}</div>
+      <div class="qexp" style="display:none;margin-top:8px;padding-top:8px;border-top:1px dashed var(--line);font-size:14px"></div>
+    </div>`).join('');
+  $('#qz2Result').innerHTML = '';
+  $('#qz2Score').textContent = '得分 0 / ' + QUIZ2.length;
+  $('#qz2Score').className = 'chip gray';
+}
+function initQuiz() {
+  renderQuiz();
+  $('#qz2Submit').addEventListener('click', () => {
+    let score = 0, unanswered = 0;
+    QUIZ2.forEach((item, i) => {
+      const card = $(`[data-q2="${i}"]`);
+      const sel = card.querySelector(`input[name="q2_${i}"]:checked`);
+      const exp = card.querySelector('.qexp');
+      exp.style.display = 'block';
+      if (!sel) {
+        unanswered++;
+        exp.innerHTML = `<span style="color:var(--warn)">未作答</span> —— 正确答案：<b>${esc(item.o[item.a])}</b><br>${esc(item.w)}`;
+        card.style.borderColor = '#f0d6a8';
+        return;
+      }
+      const ok = +sel.value === item.a;
+      if (ok) score++;
+      card.style.borderColor = ok ? 'var(--ok-bd)' : 'var(--bad-bd)';
+      card.style.background = ok ? 'var(--ok-bg)' : 'var(--bad-bg)';
+      exp.innerHTML = `<span style="color:${ok ? 'var(--frac)' : 'var(--sign)'};font-weight:700">${ok ? '✓ 正确' : '✗ 错误'}</span>
+        —— 正确答案：<b>${esc(item.o[item.a])}</b><br>${esc(item.w)}`;
+    });
+    $('#qz2Score').textContent = `得分 ${score} / ${QUIZ2.length}`;
+    $('#qz2Score').className = 'chip ' + (score === QUIZ2.length ? 'ok' : score >= QUIZ2.length / 2 ? 'warn' : 'bad');
+    $('#qz2Result').innerHTML = `<div class="box ${score === QUIZ2.length ? 'ok' : score >= QUIZ2.length / 2 ? 'warn' : 'bad'}" style="margin-top:14px">
+      <div class="t">${score === QUIZ2.length ? '全对！' : score >= QUIZ2.length / 2 ? '还不错' : '建议回看前面的章节'}</div>
+      你答对了 <b>${score}</b> / ${QUIZ2.length} 题${unanswered ? `，另有 ${unanswered} 题未作答` : ''}。</div>`;
+  });
+  $('#qz2Reset').addEventListener('click', renderQuiz);
+}
+
+/* ============================================================
+   导航、进度、初始化
+   ============================================================ */
+function initNav() {
+  const secs = $$('main section');
+  const links = $$('nav.toc a');
+  const io = new IntersectionObserver(entries => {
+    entries.forEach(en => {
+      if (en.isIntersecting) links.forEach(a => a.classList.toggle('active', a.getAttribute('href') === '#' + en.target.id));
+    });
+  }, { rootMargin: '-72px 0px -70% 0px', threshold: 0 });
+  secs.forEach(s => io.observe(s));
+  const onScroll = () => {
+    const h = document.documentElement;
+    const max = h.scrollHeight - h.clientHeight;
+    const p = max > 0 ? Math.min(100, Math.round(h.scrollTop / max * 100)) : 0;
+    $('#pgBar').style.width = p + '%';
+    $('#pgText').textContent = '学习进度 ' + p + '%';
+    $('#toTop').style.display = h.scrollTop > 600 ? 'block' : 'none';
+  };
+  window.addEventListener('scroll', onScroll, { passive: true });
+  onScroll();
+  $('#toTop').addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
+}
+
+function initAll() {
+  initNav();
+  initPuzzles();
+  initQuiz();
+
+  // 1.1 电压
+  renderVolt(3.3);
+  $('#voltSeg').addEventListener('click', e => {
+    const b = e.target.closest('button'); if (!b) return;
+    $$('#voltSeg button').forEach(x => x.classList.toggle('on', x === b));
+    renderVolt(+b.dataset.v);
+  });
+
+  // 1.2 字节
+  renderByte('0x3B', 'hex');
+  $('#byteGo').addEventListener('click', () => renderByte($('#byteIn').value, $('#byteBase').value));
+  $('#byteIn').addEventListener('keydown', e => { if (e.key === 'Enter') renderByte($('#byteIn').value, $('#byteBase').value); });
+  $('#byteBase').addEventListener('change', () => renderByte($('#byteIn').value, $('#byteBase').value));
+  $$('[data-byte]').forEach(b => b.addEventListener('click', () => {
+    const v = b.dataset.byte;
+    $('#byteIn').value = v;
+    $('#byteBase').value = /^0x/i.test(v) ? 'hex' : 'dec';
+    renderByte(v, $('#byteBase').value);
+  }));
+
+  // 1.3 数据类型
+  renderDts();
+  $('#dtsType').addEventListener('change', renderDts);
+  $('#dtsPlat').addEventListener('change', renderDts);
+  $('#dtsSign').addEventListener('click', e => {
+    const b = e.target.closest('button'); if (!b) return;
+    $$('#dtsSign button').forEach(x => x.classList.toggle('on', x === b));
+    renderDts();
+  });
+
+  // 2.1 真值表
+  renderTruth();
+  $('#boolA').addEventListener('click', e => {
+    const b = e.target.closest('button'); if (!b) return;
+    $$('#boolA button').forEach(x => x.classList.toggle('on', x === b));
+    boolState.a = +b.dataset.b; renderTruth();
+  });
+  $('#boolB').addEventListener('click', e => {
+    const b = e.target.closest('button'); if (!b) return;
+    $$('#boolB button').forEach(x => x.classList.toggle('on', x === b));
+    boolState.b = +b.dataset.b; renderTruth();
+  });
+
+  // 2.2 位运算实验台
+  renderBitwise();
+  $('#bitwiseOut').addEventListener('click', e => {
+    const b = e.target.closest('.b'); if (!b) return;
+    const i = +b.dataset.i;
+    const groups = $$('#bitwiseOut .bits');
+    const which = groups[0].contains(b) ? 'a' : groups[1].contains(b) ? 'b' : null;
+    if (!which) return;
+    const arr = bwState[which].split('');
+    arr[i] = arr[i] === '0' ? '1' : '0';
+    bwState[which] = arr.join('');
+    renderBitwise();
+  });
+  ['#bwA', '#bwB'].forEach(sel => {
+    const el = $(sel);
+    el.addEventListener('change', () => {
+      const v = parseNum(el.value);
+      const key = sel === '#bwA' ? 'a' : 'b';
+      if (v !== null && v >= 0n && v <= 255n) bwState[key] = toBits(v, 8);
+      renderBitwise();
+    });
+    el.addEventListener('keydown', e => { if (e.key === 'Enter') el.dispatchEvent(new Event('change')); });
+  });
+  $('#bwOp').addEventListener('click', e => {
+    const b = e.target.closest('button'); if (!b) return;
+    $$('#bwOp button').forEach(x => x.classList.toggle('on', x === b));
+    bwState.op = b.dataset.op; renderBitwise();
+  });
+
+  // 2.5 移位
+  renderShift();
+  $('#shGo').addEventListener('click', () => {
+    const v = parseNum($('#shIn').value);
+    if (v !== null && v >= 0n && v <= 255n) shState.bits = toBits(v, 8);
+    shState.amt = +$('#shAmt').value;
+    renderShift();
+  });
+  $('#shIn').addEventListener('keydown', e => { if (e.key === 'Enter') $('#shGo').click(); });
+  $('#shAmt').addEventListener('input', () => { shState.amt = +$('#shAmt').value; renderShift(); });
+  $('#shKind').addEventListener('click', e => {
+    const b = e.target.closest('button'); if (!b) return;
+    $$('#shKind button').forEach(x => x.classList.toggle('on', x === b));
+    shState.kind = b.dataset.k; renderShift();
+  });
+  $('#shDir').addEventListener('click', e => {
+    const b = e.target.closest('button'); if (!b) return;
+    $$('#shDir button').forEach(x => x.classList.toggle('on', x === b));
+    shState.dir = b.dataset.d; renderShift();
+  });
+
+  // 3.2 位模式编辑器
+  renderWc();
+  $('#wcOut').addEventListener('click', e => {
+    const b = e.target.closest('.b'); if (!b) return;
+    const i = +b.dataset.i;
+    const arr = wcState.bits.split('');
+    arr[i] = arr[i] === '0' ? '1' : '0';
+    wcState.bits = arr.join('');
+    renderWc();
+  });
+  $('#wcBits').addEventListener('change', () => {
+    const w = +$('#wcBits').value;
+    wcState.w = w;
+    wcState.bits = toBits(bitsT(wcState.bits), w);
+    $('#wcBits').value = String(w);
+    renderWc();
+  });
+  $('#wcGo').addEventListener('click', renderWc);
+  $$('[data-wc]').forEach(b => b.addEventListener('click', () => {
+    const v = BigInt(b.dataset.wc);
+    let w = 4;
+    for (const cand of [4, 5, 8, 16]) { if (v >= tMin(cand) && v <= tMax(cand)) { w = cand; break; } w = 16; }
+    wcState.w = w; wcState.bits = toBits(v, w);
+    $('#wcBits').value = String(w);
+    renderWc();
+  }));
+
+  // 3.3 权重表
+  renderWeightTable();
+  $('#weightAll').addEventListener('change', renderWeightTable);
+
+  // 3.4 字长范围
+  renderWordRange(32);
+  $('#wrGo').addEventListener('click', () => renderWordRange(+$('#wrIn').value));
+  $('#wrIn').addEventListener('input', () => renderWordRange(+$('#wrIn').value));
+
+  // 3.5 对照表
+  renderMap();
+  $('#mapSeg').addEventListener('click', e => {
+    const b = e.target.closest('button'); if (!b) return;
+    $$('#mapSeg button').forEach(x => x.classList.toggle('on', x === b));
+    mapState.mode = b.dataset.m; renderMap();
+  });
+
+  // 4.2 / 4.3
+  renderCvt(); renderCvtChart();
+  $('#cvtGo').addEventListener('click', renderCvt);
+  $('#cvtIn').addEventListener('keydown', e => { if (e.key === 'Enter') renderCvt(); });
+  $('#cvtBits').addEventListener('change', () => { cvtState.w = +$('#cvtBits').value; renderCvt(); });
+  $('#cvtDir').addEventListener('click', e => {
+    const b = e.target.closest('button'); if (!b) return;
+    $$('#cvtDir button').forEach(x => x.classList.toggle('on', x === b));
+    cvtState.dir = b.dataset.d;
+    $('#cvtIn').value = b.dataset.d === 't2u' ? '-15213' : '50323';
+    renderCvt();
+  });
+
+  // 4.5 转换陷阱
+  renderCast();
+  $('#csAll').addEventListener('click', () => { for (let i = 0; i < CAST_ROWS.length; i++) showCast(i); });
+
+  // 5.3 扩展/截断
+  renderExt();
+  $('#extGo').addEventListener('click', renderExt);
+  $('#extIn').addEventListener('keydown', e => { if (e.key === 'Enter') renderExt(); });
+  $('#extFrom').addEventListener('change', renderExt);
+  $('#extTo').addEventListener('change', renderExt);
+
+  // 6.1 加法器
+  renderAdd(); renderRing();
+  $('#addGo').addEventListener('click', renderAdd);
+  $('#addA').addEventListener('keydown', e => { if (e.key === 'Enter') renderAdd(); });
+  $('#addB').addEventListener('keydown', e => { if (e.key === 'Enter') renderAdd(); });
+  $('#addBits').addEventListener('change', () => { addState.w = +$('#addBits').value; renderAdd(); });
+  $('#addMode').addEventListener('click', e => {
+    const b = e.target.closest('button'); if (!b) return;
+    $$('#addMode button').forEach(x => x.classList.toggle('on', x === b));
+    addState.mode = b.dataset.md;
+    $('#addA').value = addState.mode === 'u' ? '233' : '-23';
+    $('#addB').value = addState.mode === 'u' ? '213' : '-43';
+    renderAdd();
+  });
+
+  // 6.5 乘法器
+  renderMul();
+  $('#mulGo').addEventListener('click', renderMul);
+  $('#mulA').addEventListener('keydown', e => { if (e.key === 'Enter') renderMul(); });
+  $('#mulB').addEventListener('keydown', e => { if (e.key === 'Enter') renderMul(); });
+  $('#mulBits').addEventListener('change', () => { mulState.w = +$('#mulBits').value; renderMul(); });
+  $('#mulMode').addEventListener('click', e => {
+    const b = e.target.closest('button'); if (!b) return;
+    $$('#mulMode button').forEach(x => x.classList.toggle('on', x === b));
+    mulState.mode = b.dataset.md;
+    $('#mulA').value = mulState.mode === 'u' ? '233' : '-23';
+    $('#mulB').value = mulState.mode === 'u' ? '213' : '-43';
+    renderMul();
+  });
+
+  // 6.7 移位乘除
+  renderPow2();
+  $('#pmGo').addEventListener('click', renderPow2);
+  $('#pmIn').addEventListener('keydown', e => { if (e.key === 'Enter') renderPow2(); });
+  $('#pmK').addEventListener('input', renderPow2);
+  $('#pmBits').addEventListener('change', renderPow2);
+
+  // 7.1 循环
+  renderLoop();
+  $('#loopGo').addEventListener('click', renderLoop);
+  $('#loopCnt').addEventListener('input', renderLoop);
+  $('#loopCond').addEventListener('click', e => {
+    const b = e.target.closest('button'); if (!b) return;
+    $$('#loopCond button').forEach(x => x.classList.toggle('on', x === b));
+    loopState.cond = b.dataset.c; renderLoop();
+  });
+
+  // 8.3 字节序
+  renderByteOrder();
+  $('#boGo').addEventListener('click', renderByteOrder);
+  $('#boIn').addEventListener('keydown', e => { if (e.key === 'Enter') renderByteOrder(); });
+  $('#boAddr').addEventListener('keydown', e => { if (e.key === 'Enter') renderByteOrder(); });
+  $('#boSize').addEventListener('change', renderByteOrder);
+
+  // 8.4 内存表示
+  renderMem();
+  $('#memVal').addEventListener('click', e => {
+    const b = e.target.closest('button'); if (!b) return;
+    $$('#memVal button').forEach(x => x.classList.toggle('on', x === b));
+    memState.val = BigInt(b.dataset.v); renderMem();
+  });
+
+  // 8.6 字符串 / 8.7 反汇编
+  renderStr(); renderDis();
+  $('#disGo').addEventListener('click', renderDis);
+  $('#disIn').addEventListener('keydown', e => { if (e.key === 'Enter') renderDis(); });
+  $('#disSize').addEventListener('change', renderDis);
+}
+
+document.addEventListener('DOMContentLoaded', initAll);
+</script>
+</body>
+</html>

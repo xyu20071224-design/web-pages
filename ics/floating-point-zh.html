@@ -1,0 +1,2027 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>浮点数 · 交互式课件（中文）</title>
+<style>
+  :root{
+    --bg:#f6f7f9; --card:#ffffff; --ink:#15181d; --muted:#697586; --line:#e4e7ec;
+    --accent:#2563eb; --accent-soft:#eaf1ff;
+    --sign:#e5484d; --exp:#0b7fd4; --frac:#18915a; --warn:#b45309;
+    --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+    --sans:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",system-ui,sans-serif;
+    --radius:12px; --shadow:0 1px 2px rgba(16,24,40,.06),0 1px 3px rgba(16,24,40,.1);
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:16px;line-height:1.75;-webkit-font-smoothing:antialiased}
+
+  /* ---------- layout ---------- */
+  .topbar{position:sticky;top:0;z-index:50;background:rgba(255,255,255,.88);backdrop-filter:saturate(180%) blur(12px);border-bottom:1px solid var(--line)}
+  .topbar-in{max-width:1180px;margin:0 auto;padding:10px 22px;display:flex;align-items:center;gap:14px}
+  .brand{font-weight:700;letter-spacing:.2px}
+  .brand small{font-weight:500;color:var(--muted);margin-left:8px;font-size:12.5px}
+  .progress{margin-left:auto;display:flex;align-items:center;gap:10px;font-size:12.5px;color:var(--muted)}
+  .progress .bar{width:150px;height:6px;border-radius:99px;background:#e9ecf1;overflow:hidden}
+  .progress .bar>i{display:block;height:100%;width:0;background:linear-gradient(90deg,#60a5fa,#2563eb);transition:width .25s}
+
+  .layout{max-width:1180px;margin:0 auto;padding:22px;display:grid;grid-template-columns:236px minmax(0,1fr);gap:26px}
+  nav.toc{position:sticky;top:64px;align-self:start;max-height:calc(100vh - 84px);overflow:auto;padding-right:4px}
+  nav.toc h4{margin:0 0 8px;font-size:12px;letter-spacing:.12em;color:var(--muted);text-transform:uppercase;font-weight:600}
+  nav.toc a{display:block;padding:7px 11px;border-radius:9px;color:#3c4450;text-decoration:none;font-size:14.5px;border-left:2.5px solid transparent}
+  nav.toc a:hover{background:#eef1f5;color:#111}
+  nav.toc a.active{background:var(--accent-soft);color:var(--accent);border-left-color:var(--accent);font-weight:600}
+  nav.toc a .n{display:inline-block;min-width:20px;color:#9aa4b2;font-size:12.5px;font-variant-numeric:tabular-nums}
+  nav.toc a.active .n{color:var(--accent)}
+  nav.toc .sub{padding-left:26px;font-size:13.5px;color:#5b6472}
+
+  main{min-width:0}
+  section{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:26px 28px;margin-bottom:22px;box-shadow:var(--shadow);scroll-margin-top:70px}
+  section>h2{margin:0 0 6px;font-size:25px;letter-spacing:-.01em}
+  section>.lede{color:var(--muted);margin:0 0 20px;font-size:14.5px}
+  h3{font-size:18.5px;margin:26px 0 10px;padding-left:11px;border-left:3.5px solid var(--accent)}
+  h4{font-size:16px;margin:18px 0 8px}
+  p{margin:10px 0}
+  ul,ol{margin:10px 0;padding-left:22px}
+  li{margin:5px 0}
+  code{font-family:var(--mono);font-size:.89em;background:#f1f3f7;border:1px solid #e6e9ef;border-radius:5px;padding:1px 5px}
+  .mono{font-family:var(--mono)}
+  a{color:var(--accent)}
+  hr{border:0;border-top:1px dashed var(--line);margin:24px 0}
+
+  .srcref{font-size:11.5px;color:#9aa4b2;font-weight:500;font-family:var(--sans);margin-left:8px;vertical-align:middle;white-space:nowrap}
+  .en{color:var(--muted);font-size:.92em}
+
+  /* ---------- blocks ---------- */
+  .grid{display:grid;gap:14px}
+  .g2{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .g3{grid-template-columns:repeat(3,minmax(0,1fr))}
+  @media(max-width:820px){.g2,.g3{grid-template-columns:1fr}}
+
+  .card{border:1px solid var(--line);border-radius:10px;padding:15px 17px;background:#fcfdfe}
+  .card h5{margin:0 0 7px;font-size:15px}
+  .card.pad0{padding:0;overflow:hidden}
+
+  .box{border:1px solid var(--line);border-left:4px solid var(--accent);background:#f8faff;border-radius:9px;padding:12px 16px;margin:14px 0}
+  .box.warn{border-left-color:#f59e0b;background:#fffbeb}
+  .box.bad{border-left-color:var(--sign);background:#fff5f5}
+  .box.ok{border-left-color:var(--frac);background:#f2fbf6}
+  .box .t{font-weight:650;font-size:14.5px;margin-bottom:2px}
+
+  .formula{font-family:var(--mono);background:#f8fafc;border:1px solid var(--line);border-radius:9px;padding:14px 17px;margin:14px 0;font-size:16.5px;text-align:center;overflow-x:auto}
+  .formula.big{font-size:20px}
+
+  table.tbl{width:100%;border-collapse:collapse;font-size:14.5px;margin:14px 0}
+  table.tbl th,table.tbl td{border:1px solid var(--line);padding:8px 11px;text-align:left;vertical-align:top}
+  table.tbl th{background:#f7f9fc;font-weight:650;font-size:13.5px;white-space:nowrap}
+  table.tbl td.mono,table.tbl th.mono{font-family:var(--mono);font-size:13.5px}
+  table.tbl tr:hover td{background:#fafbfd}
+  .tbl-wrap{overflow-x:auto}
+
+  /* ---------- bit widgets ---------- */
+  .bits{display:flex;flex-wrap:wrap;gap:2px;font-family:var(--mono);margin:4px 0}
+  .bits.wrap8{row-gap:9px}
+  .bits .b{width:25px;height:33px;display:flex;align-items:center;justify-content:center;
+    border-radius:6px;font-size:15px;cursor:pointer;user-select:none;border:1px solid transparent;
+    transition:transform .06s,background .12s;font-weight:600}
+  .bits .b:hover{transform:translateY(-2px)}
+  .bits .b.s{background:#fdecec;color:#a3262b;border-color:#f6cdcf}
+  .bits .b.e{background:#e8f2fd;color:#0a5f9e;border-color:#c7ddf5}
+  .bits .b.f{background:#e9f7ef;color:#116b43;border-color:#c8e8d5}
+  .bits .b.sel{outline:2px solid var(--ink);outline-offset:1px}
+  .bits .grp{display:flex;gap:2px;padding:3px;border-radius:9px}
+  .bits .grp.gs{background:#fff5f5}
+  .bits .grp.ge{background:#f5faff}
+  .bits .grp.gf{background:#f4fcf7}
+  .bits.sm .b{width:19px;height:26px;font-size:12px;border-radius:4px}
+  .fw{display:flex;flex-wrap:wrap;gap:8px 18px;align-items:flex-start;margin:4px 0 2px}
+  .fgrp{min-width:0}
+  .fcap{font-size:12px;color:var(--muted);margin-bottom:4px;font-weight:600}
+  .fcap b{font-family:var(--mono);font-size:12.5px}
+  .fgrp .bits{flex-wrap:wrap;max-width:100%;gap:2px}
+  .fgrp.ge .bits{max-width:300px}
+  .fgrp.gf .bits{max-width:100%}
+  .bitlab{font-family:var(--mono);font-size:11.5px;color:var(--muted);display:flex;gap:2px}
+  .bitlab .grp{display:flex;gap:2px;padding:0 3px}
+  .bitlab span{width:25px;text-align:center}
+
+  .readout{display:grid;grid-template-columns:auto 1fr;gap:4px 16px;font-size:14.5px;margin:12px 0}
+  .readout dt{color:#4b5563;font-weight:600;font-family:var(--mono);font-size:13.5px;padding-top:2px}
+  .readout dd{margin:0;font-family:var(--mono)}
+  .kbd{font-family:var(--mono);font-size:13px;background:#eef1f5;border:1px solid #dfe3ea;border-bottom-width:2px;border-radius:6px;padding:1px 7px}
+  .chip{display:inline-block;font-size:12.5px;padding:2px 9px;border-radius:99px;background:var(--accent-soft);color:var(--accent);font-weight:600}
+  .chip.ok{background:#e9f7ef;color:#116b43}
+  .chip.bad{background:#fdecec;color:#a3262b}
+  .chip.warn{background:#fffbeb;color:var(--warn)}
+  .chip.gray{background:#eef1f5;color:#5b6472}
+
+  /* ---------- controls ---------- */
+  .ctrls{display:flex;flex-wrap:wrap;gap:9px;align-items:center;margin:12px 0}
+  label.fld{display:inline-flex;align-items:center;gap:7px;font-size:14px;color:#3c4450;max-width:100%;flex-wrap:wrap;min-width:0}
+  label.fld select,label.fld input{min-width:0;max-width:100%}
+  input[type=text],input[type=number],select{font-family:var(--mono);font-size:14px;padding:6px 10px;border:1px solid #d5dae2;border-radius:8px;background:#fff;color:var(--ink)}
+  input[type=text]:focus,input[type=number]:focus,select:focus{outline:2px solid #bfd6fb;border-color:var(--accent)}
+  button{font-family:var(--sans);font-size:14px;font-weight:600;padding:7px 15px;border-radius:9px;border:1px solid #d5dae2;background:#fff;color:#2b323c;cursor:pointer}
+  button:hover{background:#f4f6f9}
+  button.p{background:var(--accent);border-color:var(--accent);color:#fff}
+  button.p:hover{background:#1d4ed8}
+  button.sm{padding:4px 10px;font-size:13px}
+  button.pill{border-radius:99px}
+  .seg{display:inline-flex;border:1px solid #d5dae2;border-radius:9px;overflow:hidden}
+  .seg button{border:0;border-radius:0;border-right:1px solid #e6e9ef;padding:6px 13px}
+  .seg button:last-child{border-right:0}
+  .seg button.on{background:var(--accent);color:#fff}
+
+  .steps{counter-reset:st}
+  .step{border:1px solid var(--line);border-radius:9px;padding:11px 15px;margin:9px 0;background:#fcfdfe;opacity:.42;transition:opacity .2s}
+  .step.on{opacity:1;background:#fff;border-color:#c9d6ea;box-shadow:0 1px 2px rgba(37,99,235,.08)}
+  .step .h{font-size:13px;font-weight:700;color:var(--accent);letter-spacing:.02em;margin-bottom:3px}
+  .step .m{font-family:var(--mono);font-size:14.5px;overflow-x:auto}
+  .step .e{font-size:13.5px;color:var(--muted);margin-top:3px}
+
+  .reveal{border:1px solid var(--line);border-radius:9px;padding:11px 15px;margin:8px 0;background:#fcfdfe}
+  .reveal summary{cursor:pointer;font-weight:600;font-size:14.5px}
+  .reveal[open]{background:#fff}
+  .ans{margin-top:8px;padding-top:8px;border-top:1px dashed var(--line);font-size:14.5px}
+
+  .puzzle{border:1px solid var(--line);border-radius:9px;padding:12px 15px;margin:9px 0;display:flex;gap:13px;align-items:flex-start;background:#fcfdfe}
+  .puzzle .q{font-family:var(--mono);font-size:15px;flex:1;min-width:0;overflow-x:auto;white-space:nowrap}
+  .puzzle .q small{font-family:var(--sans);color:var(--muted);display:block;white-space:normal}
+  .puzzle .btns{display:flex;gap:6px;flex-shrink:0}
+  .puzzle.correct{border-color:#9ed3b4;background:#f4fcf7}
+  .puzzle.wrong{border-color:#f1b5b8;background:#fef6f6}
+  .puzzle .exp{margin-top:9px;padding-top:9px;border-top:1px dashed var(--line);font-size:14.5px;display:none;white-space:normal;font-family:var(--sans)}
+  .puzzle.done .exp{display:block}
+  .puzzle .exp .verdict{font-weight:700}
+
+  .tick{stroke:#94a3b8;stroke-width:1.4}
+  .tick.dn{stroke:var(--exp)}
+  .tick.nm{stroke:var(--frac)}
+  .ticklabel{font-size:9.5px;fill:#64748b;font-family:var(--mono)}
+  .axisline{stroke:#c8cfd9;stroke-width:1.2}
+  .axislabel{font-size:11px;fill:#64748b}
+
+  .footer{max-width:1180px;margin:0 auto;padding:8px 22px 40px;color:var(--muted);font-size:13px}
+  .totop{position:fixed;right:22px;bottom:22px;z-index:40;box-shadow:var(--shadow);display:none}
+  @media(max-width:960px){
+    .layout{grid-template-columns:1fr;padding:16px}
+    nav.toc{position:static;max-height:none;display:flex;flex-wrap:wrap;gap:6px;background:#fff;border:1px solid var(--line);border-radius:12px;padding:10px}
+    nav.toc h4{width:100%;margin-bottom:2px}
+    nav.toc a{border-left:0;padding:5px 10px;font-size:13px}
+    nav.toc .sub{display:none}
+    section{padding:20px 17px}
+  }
+  @media print{nav.toc,.topbar,.totop{display:none}.layout{display:block}section{break-inside:avoid;box-shadow:none}}
+  /* ---------- 风格切换条 ---------- */
+  .stylebar{max-width:1180px;margin:0 auto;padding:14px 22px 0;display:flex;gap:8px;flex-wrap:wrap;align-items:center;font-size:12.5px;color:var(--muted)}
+  .stylebar>span{font-weight:600}
+  .stylebar a{text-decoration:none;padding:4px 11px;border:1px solid var(--line);border-radius:99px;color:var(--muted);background:var(--card);font-weight:600}
+  .stylebar a:hover{border-color:var(--accent);color:var(--accent)}
+  .stylebar a.cur{background:var(--accent);color:#fff;border-color:var(--accent)}
+  @media(max-width:960px){.stylebar{padding:12px 16px 0}}
+</style>
+</head>
+<body>
+
+<div class="topbar"><div class="topbar-in">
+  <div class="brand">浮点数 Floating Point<small>《计算机系统导论》第 3 讲 · 中文交互版</small></div>
+  <div class="progress"><span id="pgText">学习进度 0%</span><span class="bar"><i id="pgBar"></i></span></div>
+</div></div>
+
+<div class="stylebar">
+  <span>风格：</span>
+  <a href="#" class="cur" onclick="return false">清爽蓝（当前）</a>
+  <a href="variants/01-academic.html">学术讲义</a>
+  <a href="variants/02-terminal.html">深色终端</a>
+  <a href="variants/03-brutalist.html">新粗野</a>
+  <a href="variants/04-glass.html">柔和玻璃</a>
+  <a href="datalab-zh.html">Data Lab 实验</a>
+  <a href="variants/index.html">◧ 全部预览</a>
+</div>
+
+<div class="layout">
+  <nav class="toc">
+    <h4>目录</h4>
+    <a href="#s0"><span class="n">0</span>课程导览</a>
+    <a href="#s1"><span class="n">1</span>小数的二进制表示</a>
+    <a href="#s2"><span class="n">2</span>IEEE 754 浮点表示</a>
+    <a href="#s3"><span class="n">3</span>位解析器（核心工具）</a>
+    <a href="#s4"><span class="n">4</span>三类浮点数</a>
+    <a href="#s5"><span class="n">5</span>动态范围与数值分布</a>
+    <a href="#s6"><span class="n">6</span>舍入</a>
+    <a href="#s7"><span class="n">7</span>浮点乘除与加减</a>
+    <a href="#s8"><span class="n">8</span>数学性质</a>
+    <a href="#s9"><span class="n">9</span>C 语言中的浮点</a>
+    <a href="#s10"><span class="n">10</span>构造浮点数（补充）</a>
+    <a href="#s11"><span class="n">11</span>总结与测验</a>
+  </nav>
+
+  <main>
+
+  <!-- ================= 0 ================= -->
+  <section id="s0">
+    <h2>课程导览<span class="srcref">原第 1–2、7、9 页</span></h2>
+    <p class="lede">北京大学《计算机系统导论》第 3 讲「浮点数」。本页把原课件的英文内容整理为中文，并把关键结论做成可以动手操作的工具。</p>
+
+    <div class="grid g3">
+      <div class="card"><h5>本讲提纲</h5>
+        <ol style="margin:0;padding-left:20px;font-size:14.5px">
+          <li>背景：小数的二进制表示</li>
+          <li>IEEE 浮点标准：定义</li>
+          <li>示例与性质</li>
+          <li>舍入、加法、乘法</li>
+          <li>C 语言中的浮点</li>
+          <li>总结</li>
+        </ol>
+      </div>
+      <div class="card"><h5>一句话核心</h5>
+        <p style="margin:0;font-size:14.5px">浮点数把「符号 + 有效数字 + 2 的幂次」三部分拼进固定长度的位串：</p>
+        <div class="formula" style="margin:10px 0 0;padding:10px">v = (−1)<sup>s</sup> × M × 2<sup>E</sup></div>
+      </div>
+      <div class="card"><h5>为什么要认真学</h5>
+        <p style="margin:0;font-size:14.5px">浮点误差曾造成真实灾难。点开下面两张卡片看看。</p>
+      </div>
+    </div>
+
+    <div class="grid g2" style="margin-top:14px">
+      <details class="reveal"><summary>🚀 阿丽亚娜 5 号火箭首飞爆炸 —— 损失 5 亿美元</summary>
+        <div class="ans">
+          <ul style="margin:0">
+            <li>1996 年，把阿丽亚娜 4 号的遗留代码用在了速度更高的 5 号上。</li>
+            <li>代码把一个 <b>64 位浮点数</b>赋值给 <b>16 位整数</b>，转换时溢出。</li>
+            <li>火箭得到错误的水平速度值，姿态计算失稳，起飞约 37 秒后解体。</li>
+          </ul>
+        </div>
+      </details>
+      <details class="reveal"><summary>🎯 爱国者导弹拦截失败 —— 28 人死亡</summary>
+        <div class="ans">
+          <ul style="margin:0">
+            <li>系统用「1/10 秒」为单位计时，而 0.1 在二进制里无法精确表示。</li>
+            <li>整数计时被转成浮点后，累积舍入误差导致时间漂移：8 小时漂移约 20%。</li>
+            <li>1991-02-25，系统已连续运行 100 小时，距离估算偏差过大，未能拦截飞毛腿导弹。</li>
+          </ul>
+        </div>
+      </details>
+    </div>
+
+    <div class="box"><div class="t">本页使用说明</div>
+      标有 <span class="chip gray">可交互</span> 的区域都可以直接点击/输入。所有计算都在你的浏览器里用 JavaScript 完成，无需联网。
+    </div>
+  </section>
+
+  <!-- ================= 1 ================= -->
+  <section id="s1">
+    <h2>1. 小数的二进制表示<span class="srcref">原第 3–6 页</span></h2>
+    <p class="lede">先搞清楚「二进制小数点」右边那些位是什么意思，这是理解浮点数的地基。</p>
+
+    <h3>1.1 权重展开</h3>
+    <p>一个二进制数 <code>b<sub>i</sub> b<sub>i−1</sub> … b<sub>2</sub> b<sub>1</sub> b<sub>0</sub> . b<sub>−1</sub> b<sub>−2</sub> b<sub>−3</sub> … b<sub>−j</sub></code> 的每一位都带着 2 的幂次权重：</p>
+    <div class="formula">
+      权重：… 2<sup>i</sup> … 4 &nbsp; 2 &nbsp; 1 &nbsp;<b>.</b>&nbsp; 1/2 &nbsp; 1/4 &nbsp; 1/8 &nbsp; … 2<sup>−j</sup>
+    </div>
+    <p>也就是：<b>小数点左右两侧的位，分别表示 2 的正幂和 2 的负幂</b>。整个数是一个有理数：</p>
+    <div class="formula">值 = Σ b<sub>k</sub> × 2<sup>k</sup></div>
+    <p>例：<code>1011.101<sub>2</sub> = 8 + 0 + 2 + 1 + 1/2 + 0 + 1/8 = 11.625</code></p>
+
+    <h3>1.2 交互：二进制小数 ⇄ 十进制</h3>
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <label class="fld">二进制数 <input type="text" id="bfIn" value="1011.101" size="18" spellcheck="false"></label>
+        <button class="p" id="bfGo">转换 →</button>
+        <button class="sm" data-bf="1011.101">1011.101</button>
+        <button class="sm" data-bf="101.11">101.11</button>
+        <button class="sm" data-bf="0.0001100110011">1/10 的二进制</button>
+      </div>
+      <div id="bfOut"></div>
+    </div>
+
+    <h3>1.3 交互：十进制小数 → 二进制</h3>
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <label class="fld">十进制数 <input type="text" id="decIn" value="0.1" size="14" spellcheck="false"></label>
+        <button class="p" id="decGo">展开 →</button>
+        <button class="sm" data-dec="0.1">0.1</button>
+        <button class="sm" data-dec="0.2">0.2</button>
+        <button class="sm" data-dec="5.75">5.75</button>
+      </div>
+      <div id="decOut"></div>
+    </div>
+    <div class="box warn"><div class="t">关键结论</div>
+      只有形如 <code>x / 2<sup>k</sup></code> 的数才能被<b>精确</b>表示；其他有理数会得到无限循环的二进制小数。例如 <code>1/10 = 0.0̅0̅0̅1̅1̅</code>（循环节 0011），这也正是爱国者导弹出问题的根源。
+    </div>
+
+    <h3>1.4 例题与观察</h3>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>十进制</th><th>分数</th><th class="mono">二进制</th><th>展开</th></tr>
+      <tr><td>5 3/4</td><td class="mono">23/4</td><td class="mono">101.11</td><td class="mono">4 + 1 + 1/2 + 1/4</td></tr>
+      <tr><td>2 7/8</td><td class="mono">23/8</td><td class="mono">010.111</td><td class="mono">2 + 1/2 + 1/4 + 1/8</td></tr>
+      <tr><td>1 7/16</td><td class="mono">23/16</td><td class="mono">001.0111</td><td class="mono">1 + 1/4 + 1/8 + 1/16</td></tr>
+    </table></div>
+    <ul>
+      <li>整体<b>右移一位 = 除以 2</b>；<b>左移一位 = 乘以 2</b>（对无符号数而言）。</li>
+      <li>形如 <code>0.111111…<sub>2</sub></code> 的数总是「刚好小于 1.0」。</li>
+      <li><code>1/2 + 1/4 + 1/8 + … + 1/2<sup>i</sup> + … → 1.0</code>，记作 <code>1.0 − ε</code>。</li>
+    </ul>
+
+    <h3>1.5 定点表示的局限</h3>
+    <div class="grid g2">
+      <div class="card"><h5>局限一：只能精确表示 x/2<sup>k</sup></h5>
+        <div class="tbl-wrap"><table class="tbl" style="margin:0">
+          <tr><th>值</th><th class="mono">二进制表示</th></tr>
+          <tr><td class="mono">1/3</td><td class="mono">0.0101010101[01]…<sub>2</sub></td></tr>
+          <tr><td class="mono">1/5</td><td class="mono">0.001100110011[0011]…<sub>2</sub></td></tr>
+          <tr><td class="mono">1/10</td><td class="mono">0.0001100110011[0011]…<sub>2</sub></td></tr>
+        </table></div>
+      </div>
+      <div class="card"><h5>局限二：小数点位置固定</h5>
+        <p style="margin:0">在 w 位里只有<b>一种</b>小数点位置，于是可表示的范围受限：既表示不了极小的值，也表示不了极大的值。这就是必须引入「浮点」的原因。</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 2 ================= -->
+  <section id="s2">
+    <h2>2. IEEE 754 浮点表示<span class="srcref">原第 8、10–15 页</span></h2>
+    <p class="lede">IEEE 754 把「科学计数法」编码进定长的二进制位串。理解 exp 与 frac 两个字段是全部关键。</p>
+
+    <h3>2.1 从二进制科学计数法说起</h3>
+    <div class="formula big">1.1101101101101 × 2<sup>13</sup></div>
+    <p>一个二进制科学计数法数由两部分构成：<b>有效数字 significand</b>（<code>1.1101101101101</code>）和 <b>指数 exponent</b>（<code>13</code>）。规格化（normalized）之后，有效数字的整数部分<b>总是 1</b>。</p>
+
+    <h3>2.2 数值形式</h3>
+    <div class="formula big">v = (−1)<sup>s</sup> × M × 2<sup>E</sup></div>
+    <ul>
+      <li><b>符号 s</b>：决定正负。</li>
+      <li><b>有效数字 M</b>：通常落在 <code>[1.0, 2.0)</code> 区间的小数值。</li>
+      <li><b>指数 E</b>：以 2 的幂次对数值加权。</li>
+    </ul>
+    <p>例：<code>15213 = (−1)<sup>0</sup> × 1.1101101101101 × 2<sup>13</sup></code></p>
+
+    <h3>2.3 编码布局</h3>
+    <div class="formula">
+      <span style="color:var(--sign)">s</span> &nbsp;|&nbsp; <span style="color:var(--exp)">exp</span> &nbsp;|&nbsp; <span style="color:var(--frac)">frac</span>
+    </div>
+    <ul>
+      <li>最高位（MSB）是符号位 <span class="mono">s</span>。</li>
+      <li><span class="mono">exp</span> 字段<b>编码</b> E，但<b>不等于</b> E（存在偏移 bias）。</li>
+      <li><span class="mono">frac</span> 字段<b>编码</b> M，但<b>不等于</b> M（隐含前导 1）。</li>
+    </ul>
+
+    <h4>精度选项</h4>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>格式</th><th>总位数</th><th class="mono">s / exp / frac</th><th>十进制有效数字</th><th>大致范围</th></tr>
+      <tr><td>单精度 float</td><td>32</td><td class="mono">1 / 8 / 23</td><td>7 位</td><td class="mono">10<sup>±38</sup></td></tr>
+      <tr><td>双精度 double</td><td>64</td><td class="mono">1 / 11 / 52</td><td>16 位</td><td class="mono">10<sup>±308</sup></td></tr>
+      <tr><td>半精度 half</td><td>16</td><td class="mono">1 / 5 / 10</td><td>约 3 位</td><td class="mono">10<sup>±5</sup></td></tr>
+      <tr><td>四精度 quad</td><td>128</td><td class="mono">1 / 15 / 112</td><td>约 34 位</td><td class="mono">10<sup>±4932</sup></td></tr>
+    </table></div>
+
+    <div class="box"><div class="t">三种「种类」由 exp 字段决定</div>
+      <span class="chip gray">exp = 00…00</span> 非规格化（denormalized）&nbsp;&nbsp;
+      <span class="chip gray">exp ≠ 00…00 且 ≠ 11…11</span> 规格化（normalized）&nbsp;&nbsp;
+      <span class="chip gray">exp = 11…11</span> 特殊值（special）
+    </div>
+
+    <h3>2.4 「规格化」数值</h3>
+    <p><b>条件：</b><code>exp ≠ 000…0</code> 且 <code>exp ≠ 111…1</code>。</p>
+    <ul>
+      <li><b>指数编码为偏移值：</b><code>E = Exp − Bias</code>，其中 <code>Exp</code> 是 exp 字段的无符号值，<code>Bias = 2<sup>k−1</sup> − 1</code>（k 是指数字段位数）。
+        <ul>
+          <li>单精度：Bias = 127（Exp: 1…254，E: −126…127）</li>
+          <li>双精度：Bias = 1023（Exp: 1…2046，E: −1022…1023）</li>
+        </ul>
+      </li>
+      <li><b>有效数字带隐含前导 1：</b><code>M = 1.xxx…x<sub>2</sub></code>，其中 <code>xxx…x</code> 就是 frac 字段的位。
+        <ul>
+          <li><code>frac = 000…0</code> 时取最小 <code>M = 1.0</code></li>
+          <li><code>frac = 111…1</code> 时取最大 <code>M = 2.0 − ε</code></li>
+          <li>相当于<b>白赚一位精度</b>。</li>
+        </ul>
+      </li>
+    </ul>
+
+    <div class="box pad0" style="padding:16px 18px;margin-top:16px">
+      <div class="t" style="font-weight:650;margin-bottom:10px">交互：把 15213.0 编码成单精度（可逐步展开）</div>
+      <div class="ctrls">
+        <label class="fld">数值 <input type="text" id="encIn" value="15213" size="12" spellcheck="false"></label>
+        <button class="p" id="encGo">编码</button>
+        <button class="sm" data-enc="15213">15213.0</button>
+        <button class="sm" data-enc="-5">−5.0</button>
+        <button class="sm" data-enc="0.1">0.1</button>
+      </div>
+      <div id="encOut"></div>
+    </div>
+
+    <div class="box"><div class="t">编码示例（原第 15 页原始过程）</div>
+      <div class="mono" style="font-size:14px;line-height:1.9">
+        15213<sub>10</sub> = 11101101101101<sub>2</sub> = 1.1101101101101 × 2<sup>13</sup><br>
+        M = 1.<u>1101101101101</u><sub>2</sub> &nbsp;→&nbsp; frac = 11011011011010000000000<sub>2</sub><br>
+        E = 13，Bias = 127 &nbsp;→&nbsp; Exp = 140 = 10001100<sub>2</sub><br>
+        结果：<span style="color:var(--sign)">0</span> <span style="color:var(--exp)">10001100</span> <span style="color:var(--frac)">11011011011010000000000</span>
+      </div>
+    </div>
+
+    <h3>2.5 解码例题</h3>
+    <p>下面两个例题来自原第 18–22 页，是最典型的「考试题」形式：给定十六进制位串，反推出它表示的浮点数。</p>
+    <div class="grid g2">
+      <div class="card"><h5>例 1：<span class="mono">0xC0A00000</span></h5>
+        <div class="mono" style="font-size:14px">
+          二进制：1100 0000 1010 0000 0000 0000 0000 0000<br>
+          <span style="color:var(--sign)">1</span> <span style="color:var(--exp)">1000 0001</span> <span style="color:var(--frac)">010 0000 0000 0000 0000 0000</span><br>
+          s = 1 → 负数<br>
+          Exp = 129，E = 129 − 127 = 2<br>
+          M = 1.010…<sub>2</sub> = 1 + 1/4 = 1.25<br>
+          v = (−1)<sup>1</sup> × 1.25 × 2<sup>2</sup> = <b>−5</b>
+        </div>
+      </div>
+      <div class="card"><h5>例 2：<span class="mono">0x001C0000</span>（非规格化）</h5>
+        <div class="mono" style="font-size:14px">
+          二进制：0000 0000 0001 1100 0000 0000 0000 0000<br>
+          <span style="color:var(--sign)">0</span> <span style="color:var(--exp)">0000 0000</span> <span style="color:var(--frac)">001 1100 0000 0000 0000 0000</span><br>
+          exp = 0 → 非规格化，E = 1 − 127 = −126<br>
+          M = 0.00111<sub>2</sub> = 1/8 + 1/16 + 1/32 = 7/32 = 7 × 2<sup>−5</sup><br>
+          v = 7 × 2<sup>−5</sup> × 2<sup>−126</sup> = 7 × 2<sup>−131</sup><br>
+          v ≈ <b>2.571393892 × 10<sup>−39</sup></b>
+        </div>
+      </div>
+    </div>
+    <p style="font-size:14.5px;color:var(--muted)">想自己动手验证？用下面的位解析器输入十六进制即可。</p>
+  </section>
+
+  <!-- ================= 3 ================= -->
+  <section id="s3">
+    <h2>3. 位解析器 · 核心工具<span class="srcref">可交互</span></h2>
+    <p class="lede">这是本页最有用的工具：输入任意位串或十六进制值，实时看到 s / exp / frac 如何变成 v = (−1)<sup>s</sup> M 2<sup>E</sup>。也可以直接点击单个位来翻转它。</p>
+
+    <div class="box pad0" style="padding:18px">
+      <div class="ctrls">
+        <label class="fld">格式
+          <select id="fmtSel">
+            <option value="single">单精度 float（1/8/23，Bias 127）</option>
+            <option value="double">双精度 double（1/11/52，Bias 1023）</option>
+            <option value="tiny8">教学用 8 位（1/4/3，Bias 7）</option>
+            <option value="tiny6">教学用 6 位（1/3/2，Bias 3）</option>
+          </select>
+        </label>
+        <label class="fld">十六进制 <input type="text" id="hexIn" size="20" spellcheck="false" placeholder="如 C0A00000"></label>
+        <button class="p" id="hexGo">解析</button>
+        <button class="sm" id="rndBit">随机</button>
+      </div>
+      <div class="ctrls">
+        <span style="font-size:13.5px;color:var(--muted)">快捷键：</span>
+        <button class="sm" data-hex="C0A00000">0xC0A00000</button>
+        <button class="sm" data-hex="001C0000">0x001C0000</button>
+        <button class="sm" data-hex="466DB400">15213.0</button>
+        <button class="sm" data-hex="00000000">+0</button>
+        <button class="sm" data-hex="80000000">−0</button>
+        <button class="sm" data-hex="7F800000">+∞</button>
+        <button class="sm" data-hex="FF800000">−∞</button>
+        <button class="sm" data-hex="7FC00000">NaN</button>
+        <button class="sm" data-hex="00000001">最小非规格化</button>
+        <button class="sm" data-hex="7F7FFFFF">最大规格化</button>
+      </div>
+
+      <div id="hexErr" class="box bad" style="display:none;margin:10px 0"></div>
+
+      <div class="fw" id="bitRow"></div>
+
+      <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px 26px;margin-top:14px">
+        <dl class="readout" id="ro1"></dl>
+        <dl class="readout" id="ro2"></dl>
+      </div>
+
+      <div class="formula" id="hexFormula" style="text-align:left;font-size:15px"></div>
+      <div id="hexNote"></div>
+    </div>
+
+    <h3>3.1 解读规则速查</h3>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th class="mono">exp</th><th class="mono">frac</th><th>E 的取值</th><th>M 的取值</th><th>含义</th></tr>
+      <tr><td class="mono">00…00</td><td class="mono">00…00</td><td class="mono">1 − Bias</td><td class="mono">0.0</td><td>±0（注意有 +0 和 −0）</td></tr>
+      <tr><td class="mono">00…00</td><td class="mono">≠ 00…00</td><td class="mono">1 − Bias</td><td class="mono">0.xxx…x</td><td>非规格化：最接近 0 的数，等间距</td></tr>
+      <tr><td class="mono">01…10</td><td class="mono">任意</td><td class="mono">Exp − Bias</td><td class="mono">1.xxx…x</td><td>规格化：常规数值</td></tr>
+      <tr><td class="mono">11…11</td><td class="mono">00…00</td><td class="mono">—</td><td class="mono">—</td><td>±∞（溢出时产生）</td></tr>
+      <tr><td class="mono">11…11</td><td class="mono">≠ 00…00</td><td class="mono">—</td><td class="mono">—</td><td>NaN（无法确定数值时）</td></tr>
+    </table></div>
+    <p style="font-size:14.5px;color:var(--muted)">提示：把下面 3.1 表格里的每个场景，都在上面的位解析器里亲手点一遍，比看十遍都管用。</p>
+
+    <h3>3.2 手算速查表：十六进制 ↔ 二进制 ↔ 十进制</h3>
+    <p>原课件第 18–22 页的解码例题旁边配了一张 0–F 的对照表（课件插图），手算时逐位展开很方便。这里按同样的内容整理成一张横向速查表：</p>
+    <div class="tbl-wrap"><table class="tbl" style="text-align:center">
+      <tr>
+        <th colspan="3">低半字节 0–3</th><th colspan="3">4–7</th><th colspan="3">8–B</th><th colspan="3">C–F</th>
+      </tr>
+      <tr>
+        <th class="mono">Hex</th><th class="mono">Bin</th><th class="mono">Dec</th>
+        <th class="mono">Hex</th><th class="mono">Bin</th><th class="mono">Dec</th>
+        <th class="mono">Hex</th><th class="mono">Bin</th><th class="mono">Dec</th>
+        <th class="mono">Hex</th><th class="mono">Bin</th><th class="mono">Dec</th>
+      </tr>
+      <tr><td class="mono">0</td><td class="mono">0000</td><td class="mono">0</td><td class="mono">4</td><td class="mono">0100</td><td class="mono">4</td><td class="mono">8</td><td class="mono">1000</td><td class="mono">8</td><td class="mono">C</td><td class="mono">1100</td><td class="mono">12</td></tr>
+      <tr><td class="mono">1</td><td class="mono">0001</td><td class="mono">1</td><td class="mono">5</td><td class="mono">0101</td><td class="mono">5</td><td class="mono">9</td><td class="mono">1001</td><td class="mono">9</td><td class="mono">D</td><td class="mono">1101</td><td class="mono">13</td></tr>
+      <tr><td class="mono">2</td><td class="mono">0010</td><td class="mono">2</td><td class="mono">6</td><td class="mono">0110</td><td class="mono">6</td><td class="mono">A</td><td class="mono">1010</td><td class="mono">10</td><td class="mono">E</td><td class="mono">1110</td><td class="mono">14</td></tr>
+      <tr><td class="mono">3</td><td class="mono">0011</td><td class="mono">3</td><td class="mono">7</td><td class="mono">0111</td><td class="mono">7</td><td class="mono">B</td><td class="mono">1011</td><td class="mono">11</td><td class="mono">F</td><td class="mono">1111</td><td class="mono">15</td></tr>
+    </table></div>
+    <p style="font-size:14.5px;color:var(--muted)">用法：把十六进制每 1 位展开成 4 位二进制即可。例如 <code>0xC0A00000</code> → <code>1100 0000 1010 0000 …</code>，再按 s / exp / frac 切分。</p>
+  </section>
+
+  <!-- ================= 4 ================= -->
+  <section id="s4">
+    <h2>4. 三类浮点数<span class="srcref">原第 13、16–17 页</span></h2>
+    <p class="lede">非规格化值、规格化值、特殊值 —— 三种情况覆盖了 exp 字段的全部取值。</p>
+
+    <h3>4.1 非规格化值（Denormalized）</h3>
+    <p><b>条件：</b><code>exp = 000…0</code>。</p>
+    <ul>
+      <li><b>指数取值：</b><code>E = 1 − Bias</code>（注意不是 <code>0 − Bias</code>）。</li>
+      <li><b>有效数字隐含前导 0：</b><code>M = 0.xxx…x<sub>2</sub></code>，<code>xxx…x</code> 是 frac 字段的位。</li>
+    </ul>
+    <div class="grid g2">
+      <div class="card"><h5>情形一：frac = 000…0</h5>
+        <p style="margin:0">表示<b>零值</b>。注意存在两个不同的零：<code>+0</code> 与 <code>−0</code>。<br>
+        <span style="color:var(--muted);font-size:14px">为什么需要 −0？因为它保留了符号信息，让 <code>1.0/−0.0 = −∞</code> 这样的运算能表达「从负方向趋近 0」。</span></p>
+      </div>
+      <div class="card"><h5>情形二：frac ≠ 000…0</h5>
+        <p style="margin:0">表示<b>最接近 0.0 的数</b>，且在 0 附近是<b>等间距</b>的。这一设计保证了「下溢」是渐进发生的，而不是突然变成 0。</p>
+      </div>
+    </div>
+
+    <h3>4.2 特殊值（Special Values）</h3>
+    <p><b>条件：</b><code>exp = 111…1</code>。</p>
+    <div class="grid g2">
+      <div class="card"><h5>情形一：frac = 000…0 → ±∞</h5>
+        <ul style="margin:0">
+          <li>表示无穷，由运算<b>溢出</b>产生。</li>
+          <li>正负无穷都有。</li>
+          <li class="mono" style="font-size:13.5px">1.0/0.0 = −1.0/−0.0 = +∞<br>1.0/−0.0 = −∞</li>
+        </ul>
+      </div>
+      <div class="card"><h5>情形二：frac ≠ 000…0 → NaN</h5>
+        <ul style="margin:0">
+          <li>Not-a-Number，「不是一个数」。</li>
+          <li>当运算结果无法确定数值时使用。</li>
+          <li class="mono" style="font-size:13.5px">如 sqrt(−1)、∞ − ∞、∞ × 0</li>
+        </ul>
+      </div>
+    </div>
+
+    <h3>4.3 可视化：编码的分布</h3>
+    <p>把所有编码按数值排成一列，可以看到 IEEE 编码的整体结构（原第 23 页）：</p>
+    <div class="formula" style="font-size:15px;line-height:2.1;text-align:left">
+      <span class="mono">−∞</span> &nbsp;·&nbsp;
+      <span class="mono" style="color:var(--exp)">负规格化 −Normalized</span> &nbsp;·&nbsp;
+      <span class="mono" style="color:var(--warn)">负非规格化 −Denorm</span> &nbsp;·&nbsp;
+      <span class="mono" style="color:var(--warn)">−0</span>&nbsp;<span class="mono" style="color:var(--warn)">+0</span> &nbsp;·&nbsp;
+      <span class="mono" style="color:var(--warn)">正非规格化 +Denorm</span> &nbsp;·&nbsp;
+      <span class="mono" style="color:var(--exp)">正规格化 +Normalized</span> &nbsp;·&nbsp;
+      <span class="mono">NaN</span> &nbsp;·&nbsp; <span class="mono">+∞</span>
+    </div>
+    <p style="font-size:14.5px;color:var(--muted)">越靠近 0，编码越密集 —— 这就是非规格化值的作用。</p>
+  </section>
+
+  <!-- ================= 5 ================= -->
+  <section id="s5">
+    <h2>5. 动态范围与数值分布<span class="srcref">原第 25–29 页</span></h2>
+    <p class="lede">用一个 8 位的「迷你浮点」格式把所有编码列出来，规律一目了然。</p>
+
+    <h3>5.1 迷你 8 位浮点格式</h3>
+    <p><b>布局：</b><span class="mono"><span style="color:var(--sign)">s</span> | <span style="color:var(--exp)">4 位 exp</span> | <span style="color:var(--frac)">3 位 frac</span></span>，与 IEEE 结构完全一致，只是位数更少：符号位在最高位、指数偏置为 7、最后三位是 frac。因此它同样具备规格化、非规格化以及 0 / NaN / ∞ 的表示能力。</p>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：全部 256 种编码的动态范围表</span>
+        <div class="seg" id="tinySeg">
+          <button class="on" data-s="0">只看正数（s = 0）</button>
+          <button data-s="1">只看负数（s = 1）</button>
+        </div>
+        <label class="fld"><input type="checkbox" id="tinyAll"> 展开全部行</label>
+      </div>
+      <div class="tbl-wrap" style="max-height:420px;overflow:auto"><table class="tbl" id="tinyTbl"></table></div>
+      <p style="font-size:13.5px;color:var(--muted);margin:8px 0 0">公式：规格化 <code>E = Exp − 7</code>；非规格化 <code>E = 1 − 7 = −6</code>，且 M 不带前导 1。</p>
+    </div>
+
+    <h3>5.2 数值分布：越靠近 0 越密集</h3>
+    <p>换成 6 位格式（<span class="mono">1 / 3 / 2</span>，Bias = 2<sup>3−1</sup> − 1 = 3）后，把所有可表示的值画在数轴上，可以清楚看到<b>分布向 0 附近变密</b>。</p>
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：6 位格式的数值分布（鼠标悬停查看具体值）</span>
+        <div class="seg" id="distSeg">
+          <button class="on" data-r="full">全视图（−15 … 15）</button>
+          <button data-r="zoom">放大（−1 … 1）</button>
+        </div>
+      </div>
+      <div id="distOut"></div>
+      <div id="distInfo" class="mono" style="font-size:13.5px;color:var(--muted);min-height:20px;margin-top:6px">把鼠标移到刻度上试试。</div>
+    </div>
+
+    <h3>5.3 IEEE 编码的两个特殊性质</h3>
+    <div class="grid g2">
+      <div class="card"><h5>① 浮点零与整数零相同</h5>
+        <p style="margin:0">所有位都为 0 时既是浮点 <code>+0.0</code> 也是整数 <code>0</code>，这让内存清零天然得到浮点零。</p>
+      </div>
+      <div class="card"><h5>② 几乎可以用无符号整数比较</h5>
+        <ul style="margin:0">
+          <li>必须先比较符号位；</li>
+          <li>必须考虑 <code>−0 = 0</code>；</li>
+          <li>NaN 有麻烦：它会比任何其他值都「大」，比较结果应该是什么？</li>
+          <li>其余情况都没问题：非规格化 vs 规格化、规格化 vs 无穷，编码顺序与数值顺序一致。</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 6 ================= -->
+  <section id="s6">
+    <h2>6. 舍入<span class="srcref">原第 31–34 页</span></h2>
+    <p class="lede">浮点运算的本质：先精确计算，再把它塞进有限的位宽里 —— 塞不进去的部分就要舍入。</p>
+
+    <div class="formula big">
+      x +<sub>f</sub> y = Round(x + y) &nbsp;&nbsp;&nbsp; x ×<sub>f</sub> y = Round(x × y)
+    </div>
+    <p><b>基本思路：</b>先算出精确结果 → 让它适应目标精度。过程中可能因为指数过大而<b>溢出</b>，也可能需要<b>舍入</b>才能装进 frac 字段。</p>
+
+    <h3>6.1 四种舍入模式</h3>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>模式</th><th class="mono">$1.40</th><th class="mono">$1.60</th><th class="mono">$1.50</th><th class="mono">$2.50</th><th class="mono">−$1.50</th></tr>
+      <tr><td>向零舍入 Towards zero</td><td class="mono">$1</td><td class="mono">$1</td><td class="mono">$1</td><td class="mono">$2</td><td class="mono">−$1</td></tr>
+      <tr><td>向下舍入 Round down（−∞）</td><td class="mono">$1</td><td class="mono">$1</td><td class="mono">$1</td><td class="mono">$2</td><td class="mono">−$2</td></tr>
+      <tr><td>向上舍入 Round up（+∞）</td><td class="mono">$2</td><td class="mono">$2</td><td class="mono">$2</td><td class="mono">$3</td><td class="mono">−$1</td></tr>
+      <tr><td><b>就近舍入到偶数 Nearest Even</b>（默认）</td><td class="mono">$1</td><td class="mono">$2</td><td class="mono">$2</td><td class="mono">$2</td><td class="mono">−$2</td></tr>
+    </table></div>
+    <p style="font-size:14.5px;color:var(--muted)">* 就近舍入：优先取最近的值；如果正好在中间（half-way），则取<b>最低位为偶数</b>的那个。</p>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <label class="fld">数值 <input type="number" id="rndIn" value="1.5" step="0.05" size="10"></label>
+        <label class="fld">舍入到
+          <select id="rndUnit">
+            <option value="1">整数（1）</option>
+            <option value="0.1">十分位（0.1）</option>
+            <option value="0.01">百分位（0.01）</option>
+            <option value="0.25">最接近 1/4</option>
+          </select>
+        </label>
+      </div>
+      <div id="rndOut"></div>
+    </div>
+
+    <h3>6.2 为什么默认是「就近舍入到偶数」</h3>
+    <ul>
+      <li>不写汇编几乎无法切换到其他模式。</li>
+      <li>其他模式在统计上<b>有偏</b>：一组正数求和会系统性地被高估或低估。</li>
+      <li>「到偶数」让一半的情况向上、一半向下，长期偏差相互抵消。</li>
+    </ul>
+    <p>这套规则同样适用于十进制小数位：正好在半途时，让最低有效位变成偶数。</p>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>值（舍入到百分位）</th><th>结果</th><th>说明</th></tr>
+      <tr><td class="mono">7.8949999</td><td class="mono">7.89</td><td>不到一半，向下</td></tr>
+      <tr><td class="mono">7.8950001</td><td class="mono">7.90</td><td>超过一半，向上</td></tr>
+      <tr><td class="mono">7.8950000</td><td class="mono">7.90</td><td>正好一半 —— 使末位为偶，向上</td></tr>
+      <tr><td class="mono">7.8850000</td><td class="mono">7.88</td><td>正好一半 —— 使末位为偶，向下</td></tr>
+    </table></div>
+
+    <h3>6.3 二进制的舍入</h3>
+    <ul>
+      <li>最低有效位是 <b>0</b> 时称为「偶」。</li>
+      <li>舍入位置右侧的位为 <code>100…<sub>2</sub></code> 时，正好在「半途」。</li>
+    </ul>
+    <p>例：舍入到最接近的 1/4（小数点右侧保留 2 位）。</p>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>值</th><th class="mono">二进制</th><th class="mono">舍入后</th><th>动作</th><th>结果</th></tr>
+      <tr><td>2 3/32</td><td class="mono">10.00011</td><td class="mono">10.00</td><td>&lt; 1/2 —— 向下</td><td>2</td></tr>
+      <tr><td>2 3/16</td><td class="mono">10.00110</td><td class="mono">10.01</td><td>&gt; 1/2 —— 向上</td><td>2 1/4</td></tr>
+      <tr><td>2 7/8</td><td class="mono">10.11100</td><td class="mono">11.00</td><td>= 1/2 —— 向上（使末位为偶）</td><td>3</td></tr>
+      <tr><td>2 5/8</td><td class="mono">10.10100</td><td class="mono">10.10</td><td>= 1/2 —— 向下（使末位为偶）</td><td>2 1/2</td></tr>
+    </table></div>
+
+    <h3>6.4 交互：二进制的舍入判定</h3>
+    <p>输入一个二进制小数并选择要保留的小数位数，看看「就近舍入到偶数」是怎么决定的。</p>
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <label class="fld">二进制 <input type="text" id="binRndIn" value="10.10100" size="16" spellcheck="false"></label>
+        <label class="fld">保留小数位 <input type="number" id="binRndBits" value="2" min="0" max="10" size="3" style="width:64px"></label>
+        <button class="p" id="binRndGo">舍入</button>
+        <button class="sm" data-br="10.00011">10.00011</button>
+        <button class="sm" data-br="10.00110">10.00110</button>
+        <button class="sm" data-br="10.11100">10.11100</button>
+        <button class="sm" data-br="10.10100">10.10100</button>
+      </div>
+      <div id="binRndOut"></div>
+    </div>
+  </section>
+
+  <!-- ================= 7 ================= -->
+  <section id="s7">
+    <h2>7. 浮点乘法与加法<span class="srcref">原第 35–36 页</span></h2>
+    <p class="lede">两个运算的步骤几乎对称：算出精确结果 → 规格化 → 舍入。</p>
+
+    <h3>7.1 浮点乘法</h3>
+    <div class="formula">(−1)<sup>s1</sup> M1 2<sup>E1</sup> × (−1)<sup>s2</sup> M2 2<sup>E2</sup></div>
+    <p><b>精确结果：</b><code>(−1)<sup>s</sup> M 2<sup>E</sup></code>，其中</p>
+    <ul style="font-family:var(--mono)">
+      <li>符号：s = s1 ^ s2（异或）</li>
+      <li>有效数字：M = M1 × M2</li>
+      <li>指数：E = E1 + E2</li>
+    </ul>
+    <p><b>修正：</b>若 M ≥ 2，M 右移一位、E 加 1；若 E 超出范围则溢出；最后把 M 舍入到 frac 的精度。<b>实现上最繁重的部分就是两个有效数字的乘法。</b></p>
+    <div class="box"><div class="t">例题（4 位有效数字）</div>
+      <div class="mono" style="font-size:15px;line-height:2">
+        1.010 × 2<sup>2</sup> × 1.110 × 2<sup>3</sup> = 10.0011 × 2<sup>5</sup><br>
+        = 1.00011 × 2<sup>6</sup> &nbsp;→&nbsp; 舍入到 4 位 → <b>1.001 × 2<sup>6</sup></b>
+      </div>
+    </div>
+
+    <h3>7.2 浮点加法</h3>
+    <div class="formula">(−1)<sup>s1</sup> M1 2<sup>E1</sup> + (−1)<sup>s2</sup> M2 2<sup>E2</sup></div>
+    <p>假设 E1 &gt; E2，先把两个数的小数点<b>对齐</b>（把较小指数的那个数右移 E1 − E2 位），再做带符号的相加。</p>
+    <p><b>修正：</b>若 M ≥ 2，右移一位、E 加 1；若 M &lt; 1，则左移 k 位、E 减 k；若 E 超出范围则溢出；最后舍入 M。</p>
+    <div class="box"><div class="t">例题</div>
+      <div class="mono" style="font-size:15px;line-height:2">
+        1.010 × 2<sup>2</sup> + 1.110 × 2<sup>3</sup> = (0.1010 + 1.1100) × 2<sup>3</sup><br>
+        = 10.0110 × 2<sup>3</sup> = 1.00110 × 2<sup>4</sup> &nbsp;→&nbsp; 舍入 → <b>1.010 × 2<sup>4</sup></b>
+      </div>
+    </div>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="t" style="font-weight:650;margin-bottom:6px">交互：4 位有效数字的浮点加法器（逐步演示）</div>
+      <p style="font-size:14px;color:var(--muted);margin:0 0 10px">输入两个二进制有效数字（形如 <code>1.010</code>）和它们的指数，观察对齐、相加、规格化、舍入四个步骤。</p>
+      <div class="ctrls">
+        <label class="fld">M1 <input type="text" id="aM1" value="1.010" size="8" spellcheck="false"></label>
+        <label class="fld">× 2^ <input type="number" id="aE1" value="2" size="3" style="width:64px"></label>
+        <label class="fld">M2 <input type="text" id="aM2" value="1.110" size="8" spellcheck="false"></label>
+        <label class="fld">× 2^ <input type="number" id="aE2" value="3" size="3" style="width:64px"></label>
+        <button class="p" id="aGo">计算</button>
+      </div>
+      <div id="aOut"></div>
+    </div>
+  </section>
+
+  <!-- ================= 8 ================= -->
+  <section id="s8">
+    <h2>8. 浮点运算的数学性质<span class="srcref">原第 37–38 页</span></h2>
+    <p class="lede">浮点加法满足交换律，但不满足结合律；乘法满足交换律，但不满足结合律、也不满足分配律。这是编译器与数值程序员的噩梦。</p>
+
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>性质</th><th>浮点加法</th><th>浮点乘法</th><th>说明</th></tr>
+      <tr><td>封闭性</td><td><span class="chip ok">是</span></td><td><span class="chip ok">是</span></td><td>但可能产生 ∞ 或 NaN</td></tr>
+      <tr><td>交换律</td><td><span class="chip ok">是</span></td><td><span class="chip ok">是</span></td><td>a + b = b + a</td></tr>
+      <tr><td>结合律</td><td><span class="chip bad">否</span></td><td><span class="chip bad">否</span></td><td>溢出 + 舍入不精确</td></tr>
+      <tr><td>单位元</td><td><span class="chip ok">是</span>（0）</td><td><span class="chip ok">是</span>（1）</td><td>0 是加法单位元，1 是乘法单位元</td></tr>
+      <tr><td>逆元</td><td><span class="chip warn">几乎</span></td><td><span class="chip gray">无此性质</span></td><td>除 ∞ 与 NaN 外都成立</td></tr>
+      <tr><td>分配律</td><td colspan="2"><span class="chip bad">否</span></td><td>溢出 + 舍入不精确</td></tr>
+      <tr><td>单调性</td><td><span class="chip warn">几乎</span></td><td><span class="chip warn">几乎</span></td><td>a ≥ b ⇒ a + c ≥ b + c，除 ∞ 与 NaN 外成立</td></tr>
+    </table></div>
+
+    <h3>8.1 反例：亲手验证</h3>
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">点击用 JavaScript 的 double 实测这些反例</span>
+        <button class="sm" data-cx="(3.14+1e10)-1e10">(3.14+1e10)−1e10</button>
+        <button class="sm" data-cx="3.14+(1e10-1e10)">3.14+(1e10−1e10)</button>
+        <button class="sm" data-cx="(1e200*1e200)*1e-20">(1e200×1e200)×1e−20</button>
+        <button class="sm" data-cx="1e200*(1e200*1e-20)">1e200×(1e200×1e−20)</button>
+        <button class="sm" data-cx="1e200*(1e200-1e200)">1e200×(1e200−1e200)</button>
+        <button class="sm" data-cx="1e200*1e200-1e200*1e200">1e200×1e200 − 1e200×1e200</button>
+      </div>
+      <div class="tbl-wrap"><table class="tbl" id="cxTbl">
+        <tr><th>表达式</th><th>实际结果</th><th>违反的性质</th></tr>
+      </table></div>
+    </div>
+
+    <h4>单精度 float 与双精度 double 的差别</h4>
+    <p>课件里「(3.14+1e10)−1e10 = 0」这个经典例子其实是 <b>float</b> 的结果。float 在 1e10 附近的间距是 2<sup>10</sup> = 2048，3.14 被彻底抹平；而 double 的间距只有约 1.1 × 10<sup>−6</sup>，3.14 能部分保留下来。用 <code>Math.fround</code> 模拟单精度运算即可验证：</p>
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="tbl-wrap"><table class="tbl" id="f32Tbl"></table></div>
+      <p style="font-size:13.5px;color:var(--muted);margin:8px 0 0">结论：结合律在两种精度下都<b>不成立</b>，只是「错成什么样」取决于精度。</p>
+    </div>
+
+    <div class="grid g2">
+      <div class="card"><h5>加法不满足结合律</h5>
+        <div class="mono" style="font-size:14px;line-height:1.95">
+          单精度 float：<br>
+          &nbsp;&nbsp;(3.14 + 1e10) − 1e10 = <b>0</b><br>
+          &nbsp;&nbsp;3.14 + (1e10 − 1e10) = <b>3.14</b>
+        </div>
+        <p style="margin:8px 0 0;font-size:14px;color:var(--muted)">3.14 加到大数上时被完全舍掉（有效数字不够长），而大数先自减为 0 后，3.14 得以保留。注意这是 <b>float</b> 的结果：float 在 1e10 附近的间距是 2048，3.14 直接被抹平；换成 double 间距只有约 1.1 × 10<sup>−6</sup>，3.14 能部分保留，结果就不再是 0。</p>
+      </div>
+      <div class="card"><h5>乘法不满足结合律、分配律</h5>
+        <div class="mono" style="font-size:14px;line-height:1.95">
+          (1e200 × 1e200) × 1e−20 = <b>inf</b><br>
+          1e200 × (1e200 × 1e−20) = <b>1e200</b><br>
+          <br>
+          1e200 × (1e200 − 1e200) = <b>0.0</b><br>
+          1e200 × 1e200 − 1e200 × 1e200 = <b>NaN</b>
+        </div>
+        <p style="margin:8px 0 0;font-size:14px;color:var(--muted)">前者因为中间结果溢出成 ∞；后者因为 ∞ − ∞ 得到 NaN。</p>
+      </div>
+    </div>
+
+    <div class="box warn"><div class="t">给程序员的忠告</div>
+      不要默认 <code>(a+b)+c == a+(b+c)</code>，也不要指望编译器能自由重排你的浮点表达式 —— 它<b>不允许</b>这么做。
+    </div>
+    <div class="box warn"><div class="t">勘误：课件里的 1e20 应为 1e200</div>
+      原课件这一页写的是 <code>1e20</code>，但 double 能表示到约 <code>1.8 × 10<sup>308</sup></code>，<code>1e20 × 1e20 = 1e40</code> 根本不会溢出，也就得不到课件声称的 <code>inf</code> 和 <code>NaN</code>。把它换成 <code>1e200</code> 后，四个结果（inf、1e200、0.0、NaN）就全部成立 —— 可以点上面的按钮亲手验证。本页按 <b>1e200</b> 给出。
+    </div>
+  </section>
+
+  <!-- ================= 9 ================= -->
+  <section id="s9">
+    <h2>9. C 语言中的浮点<span class="srcref">原第 40–41 页</span></h2>
+    <p class="lede">C 只保证两个精度层次，转换规则则充满陷阱。</p>
+
+    <h3>9.1 两个精度层次</h3>
+    <div class="grid g2">
+      <div class="card"><h5><code>float</code></h5><p style="margin:0">单精度，32 位。</p></div>
+      <div class="card"><h5><code>double</code></h5><p style="margin:0">双精度，64 位。</p></div>
+    </div>
+
+    <h3>9.2 转换 / 强制类型转换</h3>
+    <p>在 <code>int</code>、<code>float</code>、<code>double</code> 之间转换会<b>改变位表示</b>。</p>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>转换</th><th>行为</th></tr>
+      <tr><td class="mono">double / float → int</td><td>截断小数部分（相当于向零舍入）。超出范围或为 NaN 时行为未定义，一般会得到 <code>TMin</code>。</td></tr>
+      <tr><td class="mono">int → double</td><td>精确转换，只要 <code>int</code> 的字长不超过 53 位。</td></tr>
+      <tr><td class="mono">int → float</td><td>会按照当前舍入模式进行舍入。</td></tr>
+    </table></div>
+
+    <h3>9.3 交互：浮点谜题（判断真假）</h3>
+    <p>对下面每个 C 表达式，判断它是否<b>对所有取值都成立</b>，或者找出反例。点「真」或「假」立即看到判定与解释。<span style="color:var(--muted)">（前提假设：d 与 f 都不是 NaN，与原课件一致）</span></p>
+    <p style="font-size:14.5px;color:var(--muted)">原课件第 41 页在每个表达式右侧印了 <span style="color:#c62828;font-weight:700">✗</span> 或 <span style="color:#2e7d32;font-weight:700">✓</span> 图标（共 4 个 ✗、6 个 ✓）。本页给出的答案与之逐一吻合。</p>
+    <div class="ctrls">
+      <span style="font-size:14px;color:var(--muted)">变量声明：<code>int x = …; float f = …; double d = …;</code></span>
+      <span id="pzScore" class="chip gray">已答 0 / 10 · 正确 0</span>
+      <button class="sm" id="pzReset">重做</button>
+    </div>
+    <div id="pzList"></div>
+  </section>
+
+  <!-- ================= 10 ================= -->
+  <section id="s10">
+    <h2>10. 构造一个浮点数（补充）<span class="srcref">原第 43–47 页</span></h2>
+    <p class="lede">把「编码」反过来走一遍：从十进制整数出发，规格化、舍入、后规格化，最终得到浮点位的完整流程。</p>
+
+    <h3>10.1 三个步骤</h3>
+    <ol>
+      <li><b>规格化</b>：调整成前导 1 的形式（<code>1.xxxxx</code>），左移时指数相应递减。</li>
+      <li><b>舍入</b>：舍入到 frac 能容纳的位数。</li>
+      <li><b>后规格化</b>：处理舍入造成的溢出（右移一位并把指数加 1）。</li>
+    </ol>
+    <p>案例：把 8 位无符号整数转换成 8 位迷你浮点格式 <span class="mono">1 / 4 / 3</span>。</p>
+
+    <h3>10.2 交互：完整流程演示</h3>
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <label class="fld">8 位无符号整数 <input type="number" id="mkIn" value="19" min="0" max="255" size="5" style="width:80px"></label>
+        <button class="p" id="mkGo">生成浮点位</button>
+        <button class="sm" data-mk="128">128</button>
+        <button class="sm" data-mk="13">13</button>
+        <button class="sm" data-mk="17">17</button>
+        <button class="sm" data-mk="19">19</button>
+        <button class="sm" data-mk="138">138</button>
+        <button class="sm" data-mk="63">63</button>
+        <button class="sm" data-mk="255">255（观察溢出）</button>
+      </div>
+      <div id="mkOut"></div>
+    </div>
+
+    <h3>10.3 舍入规则 1.BBB G R XXX</h3>
+    <p>当结果的形式是 <code>1.BBBGRXXX</code> 时（3 位保留 + 4 位丢弃）：<b>Guard bit</b> 是被丢弃部分的第一位，<b>Round bit</b> 是第二位，<b>Sticky bit</b> 是其余所有位的「或」。</p>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>进位条件</th><th>含义</th></tr>
+      <tr><td class="mono">Round = 1, Sticky = 1</td><td>&gt; 0.5，向上进位</td></tr>
+      <tr><td class="mono">Guard = 1, Round = 1, Sticky = 0</td><td>正好 0.5，按「舍入到偶数」决定</td></tr>
+      <tr><td class="mono">Guard = 0</td><td>&lt; 0.5，直接舍去</td></tr>
+    </table></div>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>值</th><th class="mono">完整分数</th><th class="mono">G R S</th><th>进位？</th><th class="mono">舍入后</th></tr>
+      <tr><td>128</td><td class="mono">1.000 0000</td><td class="mono">0 0 0</td><td>否（不到一半）</td><td class="mono">1.000</td></tr>
+      <tr><td>13</td><td class="mono">1.101 0000</td><td class="mono">0 0 0</td><td>否（不到一半）</td><td class="mono">1.101</td></tr>
+      <tr><td>17</td><td class="mono">1.000 1000</td><td class="mono">1 0 0</td><td>否（半途，末位已是偶）</td><td class="mono">1.000</td></tr>
+      <tr><td>19</td><td class="mono">1.001 1000</td><td class="mono">1 0 0</td><td>是（半途，末位为奇）</td><td class="mono">1.010</td></tr>
+      <tr><td>138</td><td class="mono">1.000 1010</td><td class="mono">1 0 1</td><td>是（&gt; 0.5）</td><td class="mono">1.001</td></tr>
+      <tr><td>63</td><td class="mono">1.111 1100</td><td class="mono">1 1 0</td><td>是（&gt; 0.5）</td><td class="mono">10.000</td></tr>
+    </table></div>
+    <div class="box warn"><div class="t">关于原课件的两处笔误</div>
+      <ul style="margin:4px 0 0">
+        <li>原课件这一列的值写作 <b>15</b>，但对应的位串是 <code>00001101</code>、分数 <code>1.101</code>、指数 <code>3</code>，三者都指向 <b>13</b>（1.101₂ × 2³ = 1.625 × 8 = 13）。原第 44 页同样把 17、19 写成了 33、35。本页统一按位串与分数给出的正确值 13 / 17 / 19 呈现。</li>
+        <li>原课件的 GRS 列看起来整体错位了一位（例如 13 那一行标成 <code>100</code>，但它的 <code>1.101|0000</code> 明显是 <code>000</code>）。本页给出与它自己的「进位/舍入后」两列一致的正确 GRS。</li>
+      </ul>
+    </div>
+
+    <h3>10.4 后规格化</h3>
+    <p>舍入可能造成溢出（例如 63 得到 <code>10.000</code>），处理办法是右移一位并把指数加 1。</p>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>值</th><th class="mono">舍入后</th><th class="mono">指数</th><th>调整</th><th class="mono">结果</th></tr>
+      <tr><td>128</td><td class="mono">1.000</td><td class="mono">7</td><td>—</td><td class="mono">128</td></tr>
+      <tr><td>13</td><td class="mono">1.101</td><td class="mono">3</td><td>—</td><td class="mono">13</td></tr>
+      <tr><td>17</td><td class="mono">1.000</td><td class="mono">4</td><td>—</td><td class="mono">16</td></tr>
+      <tr><td>19</td><td class="mono">1.010</td><td class="mono">4</td><td>—</td><td class="mono">20</td></tr>
+      <tr><td>138</td><td class="mono">1.001</td><td class="mono">7</td><td>—</td><td class="mono">144</td></tr>
+      <tr><td>63</td><td class="mono">10.000</td><td class="mono">5</td><td>右移一位，指数 5 → 6</td><td class="mono">64</td></tr>
+    </table></div>
+    <p style="font-size:14.5px;color:var(--muted)">注意 17、19、138、63 这几行的结果与原值不再相等 —— 这就是把 8 位整数塞进 4 位有效数字所必须付出的精度代价。</p>
+  </section>
+
+  <!-- ================= 11 ================= -->
+  <section id="s11">
+    <h2>11. 总结与测验<span class="srcref">原第 42、48 页</span></h2>
+
+    <h3>11.1 总结</h3>
+    <ul>
+      <li>IEEE 浮点具有清晰的数学性质。</li>
+      <li>它表示形如 <code>M × 2<sup>E</sup></code> 的数。</li>
+      <li>可以<b>脱离具体实现</b>去推理运算 —— 就好像先以无限精度计算，然后再舍入。</li>
+      <li>但它<b>不等于实数运算</b>：违反结合律与分配律，给编译器和严肃的数值程序带来麻烦。</li>
+    </ul>
+
+    <h3>11.2 特殊数值一览</h3>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>描述</th><th class="mono">exp</th><th class="mono">frac</th><th>数值</th><th>单精度</th><th>双精度</th></tr>
+      <tr><td>零</td><td class="mono">00…00</td><td class="mono">00…00</td><td class="mono">0.0</td><td class="mono">0.0</td><td class="mono">0.0</td></tr>
+      <tr><td>最小正非规格化数</td><td class="mono">00…00</td><td class="mono">00…01</td><td class="mono">2<sup>−{23,52}</sup> × 2<sup>−{126,1022}</sup></td><td class="mono">≈ 1.4 × 10<sup>−45</sup></td><td class="mono">≈ 4.9 × 10<sup>−324</sup></td></tr>
+      <tr><td>最大非规格化数</td><td class="mono">00…00</td><td class="mono">11…11</td><td class="mono">(1.0 − ε) × 2<sup>−{126,1022}</sup></td><td class="mono">≈ 1.18 × 10<sup>−38</sup></td><td class="mono">≈ 2.2 × 10<sup>−308</sup></td></tr>
+      <tr><td>最小正规格化数</td><td class="mono">00…01</td><td class="mono">00…00</td><td class="mono">1.0 × 2<sup>−{126,1022}</sup></td><td class="mono">≈ 1.18 × 10<sup>−38</sup></td><td class="mono">≈ 2.2 × 10<sup>−308</sup></td></tr>
+      <tr><td>一</td><td class="mono">01…11</td><td class="mono">00…00</td><td class="mono">1.0</td><td class="mono">1.0</td><td class="mono">1.0</td></tr>
+      <tr><td>最大规格化数</td><td class="mono">11…10</td><td class="mono">11…11</td><td class="mono">(2.0 − ε) × 2<sup>{127,1023}</sup></td><td class="mono">≈ 3.4 × 10<sup>38</sup></td><td class="mono">≈ 1.8 × 10<sup>308</sup></td></tr>
+    </table></div>
+    <p style="font-size:14.5px;color:var(--muted)">「最小正规格化数」刚好比「最大非规格化数」大一点点 —— 这是非规格化设计的精妙之处：数值从 0 到最大规格化数是连续过渡的。</p>
+
+    <h3>11.3 小测验</h3>
+    <p>做完这 6 道题，检查一下是否真的掌握了。<span id="qzScore" class="chip gray">得分 0 / 6</span></p>
+    <div id="qzList"></div>
+    <div class="ctrls"><button class="p" id="qzSubmit">提交答案</button><button class="sm" id="qzReset">重做</button></div>
+    <div id="qzResult"></div>
+  </section>
+
+
+  </main>
+</div>
+
+<div class="footer">
+  本页由 <code>ICS03-float-20260914.pdf</code> 翻译整理而成 · 所有数值计算与可视化均为页面内实时计算 · 可与原课件页码对照阅读。
+</div>
+<button class="totop" id="toTop">↑ 顶部</button>
+
+<script>
+"use strict";
+/* ============================================================
+   浮点数交互式课件 · 全部逻辑
+   ============================================================ */
+
+/* ---------- 基础工具 ---------- */
+const $  = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+/** 把数字格式化成紧凑形式：常规范围用定点，极端值用科学计数法 */
+function fmtNum(x, sig = 9) {
+  if (Number.isNaN(x)) return 'NaN';
+  if (!isFinite(x)) return x > 0 ? '+∞' : '-∞';
+  if (x === 0) return Object.is(x, -0) ? '-0' : '0';
+  const a = Math.abs(x);
+  if (a >= 1e-4 && a < 1e16) {
+    let s = x.toPrecision(sig);
+    if (s.includes('.')) s = s.replace(/0+$/, '').replace(/\.$/, '');
+    return s;
+  }
+  let [m, e] = x.toExponential(sig - 1).split('e');
+  if (m.includes('.')) m = m.replace(/0+$/, '').replace(/\.$/, '');
+  return m + ' × 10^' + e.replace('+', '');
+}
+
+/** 二进制小数串（形如 "1.010"）→ 精确分数 {num, den, fbits} */
+function binFracExact(str) {
+  const [ip, fp = ''] = String(str).split('.');
+  const all = (ip || '0') + fp;
+  return { num: BigInt('0b' + (all === '' ? '0' : all)), den: 1n << BigInt(fp.length), fbits: fp.length };
+}
+
+/** 精确分数的数值（可能溢出为 0 / Infinity，但常规范围都精确） */
+function binFracValue(str) {
+  const [ip, fp = ''] = String(str).split('.');
+  let v = 0;
+  for (let i = 0; i < ip.length; i++) v = v * 2 + (+ip[i] || 0);
+  let w = 0.5;
+  for (let i = 0; i < fp.length; i++) { if (fp[i] === '1') v += w; w /= 2; }
+  return v;
+}
+
+/* ---------- 浮点格式定义与解码引擎 ---------- */
+const FMTS = {
+  single: { key: 'single', label: '单精度 float', s: 1, e: 8,  f: 23 },
+  double: { key: 'double', label: '双精度 double', s: 1, e: 11, f: 52 },
+  tiny8:  { key: 'tiny8',  label: '8 位迷你',     s: 1, e: 4,  f: 3  },
+  tiny6:  { key: 'tiny6',  label: '6 位迷你',     s: 1, e: 3,  f: 2  },
+};
+const biasOf   = fmt => (1 << (fmt.e - 1)) - 1;
+const maxExpOf = fmt => (1 << fmt.e) - 1;
+const totalBits = fmt => fmt.s + fmt.e + fmt.f;
+
+/**
+ * 解码一个位串。
+ * @param {string} bits 由 '0'/'1' 组成的字符串，长度为 totalBits(fmt)
+ */
+function decode(bits, fmt) {
+  const s = +bits[0];
+  const expBits = bits.slice(1, 1 + fmt.e);
+  const fracBits = bits.slice(1 + fmt.e);
+  const expVal = parseInt(expBits, 2);
+  const bias = biasOf(fmt);
+  const maxExp = maxExpOf(fmt);
+
+  let kind, E = null, mantStr = '', note = '';
+  if (expVal === 0) {
+    if (fracBits.includes('1')) {
+      kind = 'denorm';
+      E = 1 - bias;
+      mantStr = '0.' + fracBits;
+      note = 'exp = 0 且 frac ≠ 0 → 非规格化：隐含前导 0，E 取 1 − Bias';
+    } else {
+      kind = 'zero';
+      E = 1 - bias;
+      mantStr = '0.' + fracBits;
+      note = 'exp = 0 且 frac = 0 → ' + (s ? '−0' : '+0') + '：注意存在两个不同的零';
+    }
+  } else if (expVal === maxExp) {
+    if (fracBits.includes('1')) {
+      kind = 'nan'; note = 'exp = 11…1 且 frac ≠ 0 → NaN（无法确定数值）';
+    } else {
+      kind = 'inf'; note = 'exp = 11…1 且 frac = 0 → ' + (s ? '−∞' : '+∞') + '（运算溢出产生）';
+    }
+  } else {
+    kind = 'normal';
+    E = expVal - bias;
+    mantStr = '1.' + fracBits;
+    note = 'exp 既不是 00…0 也不是 11…1 → 规格化：隐含前导 1，E = Exp − Bias';
+  }
+
+  const ex = binFracExact(mantStr);
+  const M = binFracValue(mantStr);
+  let value = null;
+  if (kind === 'inf') value = s ? -Infinity : Infinity;
+  else if (kind === 'nan') value = NaN;
+  else value = (s ? -1 : 1) * M * Math.pow(2, E);
+
+  // 精确形式：v = ±num × 2^(E − fbits)
+  const k = (kind === 'normal' || kind === 'denorm' || kind === 'zero') ? E - ex.fbits : null;
+
+  return { bits, s, expBits, fracBits, expVal, bias, maxExp, kind, E, M, mantStr, ex, k,
+           value, note, fracInt: BigInt('0b' + (fracBits || '0')) };
+}
+
+const KIND_LABEL = {
+  zero:   ['零', 'chip gray'],
+  denorm: ['非规格化', 'chip warn'],
+  normal: ['规格化', 'chip ok'],
+  inf:    ['无穷大', 'chip bad'],
+  nan:    ['NaN', 'chip bad'],
+};
+
+/** 把解码结果整理成人类可读的「精确形式」 */
+function exactForm(d) {
+  if (d.kind === 'inf' || d.kind === 'nan') return '—';
+  if (d.kind === 'zero') return (d.s ? '−' : '') + '0';
+  const sign = d.s ? '−' : '';
+  const num = d.ex.num.toString();
+  return sign + num + ' × 2^(' + d.k + ')';
+}
+
+/** 位串 ⇄ 十六进制 */
+function bitsToHex(bits) {
+  const pad = (4 - bits.length % 4) % 4;
+  const b = bits + '0'.repeat(pad);
+  let h = '';
+  for (let i = 0; i < b.length; i += 4) h += parseInt(b.slice(i, i + 4), 2).toString(16).toUpperCase();
+  return h;
+}
+function hexToBits(hex, n) {
+  const clean = hex.replace(/^0[xX]/, '').replace(/[\s_]/g, '');
+  if (!/^[0-9a-fA-F]+$/.test(clean)) return { err: '十六进制里出现了非法字符，只允许 0-9 与 A-F。' };
+  if (clean.length * 4 !== n) {
+    return { err: `长度不对：该格式共 ${n} 位，需要 ${n / 4} 个十六进制字符，你输入了 ${clean.length} 个。` };
+  }
+  let bits = '';
+  for (const c of clean) bits += parseInt(c, 16).toString(2).padStart(4, '0');
+  return { bits };
+}
+
+/* ============================================================
+   3. 位解析器
+   ============================================================ */
+const bitState = { bits: '11000000101000000000000000000000', fmt: FMTS.single };
+
+function renderBits() {
+  const fmt = bitState.fmt, bits = bitState.bits;
+  const sm = totalBits(fmt) > 32 ? ' sm' : '';
+  const groups = [
+    { cls: 'gs', name: 's', desc: '符号', from: 0, to: 1 },
+    { cls: 'ge', name: 'exp', desc: `指数 Bias ${biasOf(fmt)}`, from: 1, to: 1 + fmt.e },
+    { cls: 'gf', name: 'frac', desc: '有效数字小数部分', from: 1 + fmt.e, to: bits.length },
+  ];
+  let html = '';
+  for (const g of groups) {
+    let cells = '';
+    for (let i = g.from; i < g.to; i++) {
+      const cls = g.name === 's' ? 's' : g.name === 'exp' ? 'e' : 'f';
+      cells += `<div class="b ${cls}" data-i="${i}" title="第 ${i} 位（从 0 计）">${bits[i]}</div>`;
+    }
+    html += `<div class="fgrp ${g.cls}">
+      <div class="fcap">${g.name} · ${g.desc} · <b>${g.to - g.from} 位</b></div>
+      <div class="bits${sm}">${cells}</div></div>`;
+  }
+  $('#bitRow').innerHTML = html;
+}
+
+function renderDecode() {
+  const d = decode(bitState.bits, bitState.fmt);
+  const [kl, kc] = KIND_LABEL[d.kind];
+  const fmt = bitState.fmt;
+  const hex = bitsToHex(d.bits);
+
+  const groupBits = b => b.replace(/(.{4})/g, '$1 ').trim();
+
+  $('#ro1').innerHTML = `
+    <dt>十六进制</dt><dd>0x${hex}（${totalBits(fmt)} 位）</dd>
+    <dt>位串</dt><dd>${groupBits(d.bits)}</dd>
+    <dt>s</dt><dd>${d.s} → ${d.s ? '负数' : '正数'}</dd>
+    <dt>exp</dt><dd>${d.expBits} = ${d.expVal}${d.kind === 'inf' || d.kind === 'nan' ? '（全 1，特殊值）' : ''}</dd>
+    <dt>frac</dt><dd>${d.fracBits}</dd>`;
+
+  let middle = '';
+  if (d.kind === 'normal') middle = `<dt>Bias</dt><dd>2^${fmt.e - 1} − 1 = ${d.bias}</dd>
+    <dt>E</dt><dd>${d.expVal} − ${d.bias} = <b>${d.E}</b></dd>`;
+  else if (d.kind === 'denorm' || d.kind === 'zero') middle = `<dt>Bias</dt><dd>2^${fmt.e - 1} − 1 = ${d.bias}</dd>
+    <dt>E</dt><dd>1 − ${d.bias} = <b>${d.E}</b>（非规格化用 1−Bias）</dd>`;
+  else middle = `<dt>Bias</dt><dd>${d.bias}</dd><dt>E</dt><dd>不适用</dd>`;
+
+  $('#ro2').innerHTML = `${middle}
+    <dt>M</dt><dd>${d.mantStr.replace(/(.{4})/g, '$1 ').trim()}</dd>
+    <dt>M（十进制）</dt><dd>${d.kind === 'inf' || d.kind === 'nan' ? '—' : fmtNum(d.M)}</dd>
+    <dt>类型</dt><dd><span class="${kc}">${kl}</span></dd>
+    <dt>精确形式</dt><dd>${exactForm(d)}</dd>`;
+
+  let f = '';
+  if (d.kind === 'inf' || d.kind === 'nan') {
+    f = `<b>v = ${d.kind === 'inf' ? (d.s ? '−∞' : '+∞') : 'NaN'}</b>`;
+  } else {
+    f = `<b>v = (−1)<sup>${d.s}</sup> × ${fmtNum(d.M)} × 2<sup>${d.E}</sup> = ${fmtNum(d.value)}</b>`;
+  }
+  $('#hexFormula').innerHTML = f + `<div style="font-size:13.5px;color:var(--muted);margin-top:6px">${esc(d.note)}</div>`;
+  $('#hexNote').innerHTML = '';
+}
+
+function setBits(bits, keepFmt) {
+  bitState.bits = bits;
+  renderBits();
+  renderDecode();
+}
+
+function parseIntoTool(hex, fmtKey) {
+  if (fmtKey) { bitState.fmt = FMTS[fmtKey]; $('#fmtSel').value = fmtKey; }
+  const n = totalBits(bitState.fmt);
+  const r = hexToBits(hex, n);
+  if (r.err) { $('#hexErr').style.display = 'block'; $('#hexErr').textContent = r.err; return; }
+  $('#hexErr').style.display = 'none';
+  $('#hexIn').value = hex.replace(/^0[xX]/, '').toUpperCase();
+  setBits(r.bits);
+}
+
+function initParser() {
+  renderBits();
+  renderDecode();
+
+  $('#bitRow').addEventListener('click', e => {
+    const b = e.target.closest('.b');
+    if (!b) return;
+    const i = +b.dataset.i;
+    const arr = bitState.bits.split('');
+    arr[i] = arr[i] === '0' ? '1' : '0';
+    bitState.bits = arr.join('');
+    renderBits();
+    renderDecode();
+    $('#hexIn').value = bitsToHex(bitState.bits);
+  });
+
+  $('#fmtSel').addEventListener('change', e => {
+    bitState.fmt = FMTS[e.target.value];
+    const n = totalBits(bitState.fmt);
+    // 保留低位，前面补 0
+    bitState.bits = bitState.bits.padStart(n, '0').slice(-n);
+    setBits(bitState.bits);
+    $('#hexIn').value = bitsToHex(bitState.bits);
+  });
+
+  $('#hexGo').addEventListener('click', () => parseIntoTool($('#hexIn').value));
+  $('#hexIn').addEventListener('keydown', e => { if (e.key === 'Enter') parseIntoTool($('#hexIn').value); });
+
+  $$('[data-hex]').forEach(b => b.addEventListener('click', () => {
+    const hex = b.dataset.hex;
+    const n = totalBits(bitState.fmt);
+    let h = hex.replace(/^0[xX]/, '');
+    if (h.length * 4 !== n) {
+      if (h.length * 4 < n) h = h.padStart(n / 4, '0');
+      else h = h.slice(-n / 4);
+    }
+    parseIntoTool(h);
+  }));
+
+  $('#rndBit').addEventListener('click', () => {
+    const n = totalBits(bitState.fmt);
+    let b = '';
+    for (let i = 0; i < n; i++) b += Math.random() < 0.5 ? '0' : '1';
+    setBits(b);
+    $('#hexIn').value = bitsToHex(b);
+  });
+}
+
+/* ============================================================
+   1.2 / 1.3 二进制小数 ⇄ 十进制
+   ============================================================ */
+function renderBinFrac(str) {
+  const raw = String(str).trim();
+  if (!/^[01]*\.?[01]*$/.test(raw) || raw === '' || raw === '.') {
+    $('#bfOut').innerHTML = '<div class="box bad" style="margin:8px 0">请输入只含 0、1 和小数点的二进制数，例如 <code>1011.101</code>。</div>';
+    return;
+  }
+  const [ip, fp = ''] = raw.split('.');
+  let total = 0, rows = '', pow = ip.length - 1;
+  for (let i = 0; i < ip.length; i++) {
+    const bit = +ip[i];
+    const w = Math.pow(2, pow);
+    if (bit) total += w;
+    rows += `<tr style="${bit ? '' : 'opacity:.4'}"><td class="mono">b<sub>${pow}</sub></td><td class="mono">${bit}</td>
+      <td class="mono">2<sup>${pow}</sup> = ${w}</td><td class="mono">${bit ? w : 0}</td></tr>`;
+    pow--;
+  }
+  for (let i = 0; i < fp.length; i++) {
+    const bit = +fp[i];
+    const e = -(i + 1);
+    const w = Math.pow(2, e);
+    if (bit) total += w;
+    const wTxt = (() => { const x = Math.pow(2, -e); return e >= -10 ? `1/${x}` : `2^${e}`; })();
+    rows += `<tr style="${bit ? '' : 'opacity:.4'}"><td class="mono">b<sub>${e}</sub></td><td class="mono">${bit}</td>
+      <td class="mono">2<sup>${e}</sup> = ${wTxt}</td><td class="mono">${bit ? w : 0}</td></tr>`;
+  }
+  // 精确分数（用 BigInt 约分，避免大数丢精度）
+  const ex = binFracExact(raw);
+  const bgcd = (a, b) => { while (b) { const t = a % b; a = b; b = t; } return a; };
+  const gg = ex.num === 0n ? 1n : bgcd(ex.num, ex.den);
+  let fracTxt = `${ex.num} / ${ex.den}`;
+  if (gg > 1n) fracTxt += ` = ${ex.num / gg} / ${ex.den / gg}`;
+  const decVal = Number(ex.num) / Number(ex.den);
+
+  $('#bfOut').innerHTML = `
+    <div class="formula" style="margin:12px 0;text-align:left">
+      <b>${esc(raw)}<sub>2</sub> = ${fmtNum(total)}</b>
+      <span style="color:var(--muted);font-size:14px">（精确值 ${fracTxt} = ${fmtNum(decVal)}）</span>
+    </div>
+    <div class="tbl-wrap" style="max-height:280px;overflow:auto">
+      <table class="tbl"><tr><th>位</th><th>取值</th><th>权重</th><th>贡献</th></tr>${rows}</table>
+    </div>`;
+}
+
+function renderDecToBin(str) {
+  const raw = String(str).trim();
+  if (!/^\d*\.?\d*$/.test(raw) || raw === '' || raw === '.') {
+    $('#decOut').innerHTML = '<div class="box bad" style="margin:8px 0">请输入十进制数，例如 <code>0.1</code> 或 <code>5.75</code>。</div>';
+    return;
+  }
+  let [ipS, fpS = ''] = raw.split('.');
+  ipS = ipS || '0';
+
+  // 用精确有理数运算：value = num / den
+  const den = 10n ** BigInt(fpS.length);
+  const num = BigInt(ipS) * den + BigInt(fpS === '' ? '0' : fpS);
+  const intBits = (num / den).toString(2);
+
+  // 小数部分：不断乘 2 取整，余数用 BigInt 保存，因此能精确检出循环节
+  const steps = [];
+  let r = num % den, outBits = '', seen = new Map(), cycleStart = -1;
+  const MAX = 64;
+  for (let i = 0; i < MAX && r !== 0n; i++) {
+    const key = r.toString();
+    if (seen.has(key)) { cycleStart = seen.get(key); break; }
+    seen.set(key, i);
+    const before = r;
+    r *= 2n;
+    const bit = r >= den ? 1 : 0;
+    if (bit) r -= den;
+    outBits += bit;
+    const dec = x => { const s = (Number(x) / Number(den)); return s === 0 ? '0' : s.toFixed(Math.min(12, Math.max(1, fpS.length + 2))).replace(/0+$/, '').replace(/\.$/, ''); };
+    steps.push({ n: i + 1, before: dec(before), prod: dec(before * 2n), bit, after: dec(r) });
+  }
+  const exact = r === 0n;
+  const truncated = !exact && cycleStart < 0;
+
+  let binStr = intBits + (outBits ? '.' + outBits : '');
+  let cycleHtml = '';
+  if (!exact && cycleStart >= 0) {
+    const pre = outBits.slice(0, cycleStart), cyc = outBits.slice(cycleStart);
+    cycleHtml = `<div class="box warn" style="margin:10px 0"><div class="t">出现循环节 —— 无法精确表示</div>
+      二进制展开是无限循环的：<span class="mono">${intBits}.${pre}<u>${cyc}</u>…</span>，
+      循环节为 <b class="mono">${cyc}</b>（长度 ${cyc.length}）。
+      这正是 ${esc(raw)} 不能被二进制浮点精确表示的原因：它不形如 <code>x / 2<sup>k</sup></code>。</div>`;
+  } else if (exact) {
+    cycleHtml = `<div class="box ok" style="margin:10px 0"><div class="t">可以精确表示</div>
+      小数部分在 <b>${outBits.length}</b> 位后结束，说明该数形如 <code>x / 2<sup>k</sup></code>（此处 k = ${outBits.length}），可被二进制精确表示。</div>`;
+  } else if (truncated) {
+    cycleHtml = `<div class="box" style="margin:10px 0">已达显示上限 ${MAX} 位，仍未除尽；该数很可能也无法精确表示。</div>`;
+  }
+
+  const stepRows = steps.slice(0, 14).map(s =>
+    `<tr><td>${s.n}</td><td class="mono">${s.before} × 2 = ${s.prod}</td>
+     <td class="mono"><b>${s.bit}</b></td><td class="mono">${s.after}</td></tr>`).join('');
+
+  $('#decOut').innerHTML = `
+    <div class="formula" style="margin:12px 0;text-align:left">
+      <b>${esc(raw)}<sub>10</sub> = ${esc(binStr)}<sub>2</sub></b>${exact ? '' : ' …'}
+    </div>
+    <div class="tbl-wrap" style="max-height:260px;overflow:auto">
+      <table class="tbl"><tr><th>第 n 位</th><th>余数 × 2</th><th>取出整数位</th><th>剩余小数</th></tr>${stepRows}</table>
+    </div>
+    ${cycleHtml}`;
+}
+
+/* ============================================================
+   2.4 编码演示
+   ============================================================ */
+function renderEncode(valStr) {
+  const v = Number(valStr);
+  if (!isFinite(v) || Number.isNaN(v)) {
+    $('#encOut').innerHTML = '<div class="box bad" style="margin:8px 0">请输入一个有限数值。</div>';
+    return;
+  }
+  const neg = v < 0 || Object.is(v, -0);
+  const a = Math.abs(v);
+
+  // 分解为 M × 2^E，M ∈ [1,2)
+  let E = 0, M = a;
+  if (a !== 0) {
+    E = Math.floor(Math.log2(a));
+    M = a / Math.pow(2, E);
+    // 修正浮点误差
+    while (M >= 2) { M /= 2; E++; }
+    while (M < 1 && M > 0) { M *= 2; E--; }
+  }
+  const bias = 127;
+  const expVal = E + bias;
+
+  // frac = M 的小数部分量化到 23 位
+  const fracNum = Math.floor((M - 1) * Math.pow(2, 23) + 1e-9);
+  const fracBits = fracNum.toString(2).padStart(23, '0');
+  const biased = expVal.toString(2).padStart(8, '0');
+  const signBit = neg ? '1' : '0';
+  const bits = signBit + biased + fracBits;
+  const hex = bitsToHex(bits);
+  const back = decode(bits, FMTS.single);
+  const lossy = Math.abs(back.value - v) > 0;
+
+  const E_txt = E;
+  const mBin = (1).toString(2) + '.' + (M - 1).toString(2).slice(2);
+
+  $('#encOut').innerHTML = `
+    <div class="steps">
+      <div class="step on"><div class="h">步骤 1 · 化为二进制科学计数法</div>
+        <div class="m">${fmtNum(v)}<sub>10</sub> = ${mBin}<sub>2</sub> × 2<sup>${E_txt}</sup></div>
+        <div class="e">把数值规格化为前导 1 的形式：M = ${fmtNum(M)}，E = ${E_txt}</div></div>
+      <div class="step on"><div class="h">步骤 2 · 计算 exp 字段</div>
+        <div class="m">Exp = E + Bias = ${E_txt} + ${bias} = ${expVal} = ${biased}<sub>2</sub></div>
+        <div class="e">单精度 Bias = 2<sup>8−1</sup> − 1 = 127</div></div>
+      <div class="step on"><div class="h">步骤 3 · 写出 frac 字段</div>
+        <div class="m">M − 1 = ${fmtNum(M - 1)} → frac = ${fracBits}</div>
+        <div class="e">M 的整数部分 1 被隐含，不需要存；只存小数点后的 23 位</div></div>
+      <div class="step on"><div class="h">步骤 4 · 拼接结果</div>
+        <div class="m"><span style="color:var(--sign)">${signBit}</span> <span style="color:var(--exp)">${biased}</span> <span style="color:var(--frac)">${fracBits}</span></div>
+        <div class="m">= 0x${hex}</div>
+        <div class="e">回读验证：${fmtNum(back.value)}${lossy ? '（原始值有舍入误差，这就是 float 的精度极限）' : '（精确还原）'}</div></div>
+    </div>`;
+}
+
+/* ============================================================
+   5.1 迷你 8 位浮点动态范围表
+   ============================================================ */
+const tinySign = { v: 0 };
+function renderTinyTable() {
+  const fmt = FMTS.tiny8, bias = biasOf(fmt);
+  const all = $('#tinyAll').checked;
+  const rows = [];
+  const mk = (e, f) => {
+    const bits = tinySign.v + e.toString(2).padStart(4, '0') + f.toString(2).padStart(3, '0');
+    return decode(bits, fmt);
+  };
+  const rowHtml = (d, extra = '') => {
+    const [kl, kc] = KIND_LABEL[d.kind];
+    let val;
+    if (d.kind === 'inf') val = d.s ? '−∞' : '+∞';
+    else if (d.kind === 'nan') val = 'NaN';
+    else val = (d.s ? '−' : '') + fmtNum(Math.abs(d.value === 0 ? 0 : d.value));
+    const fracPart = d.kind === 'zero' || d.kind === 'denorm' ? `(${d.s ? '−' : ''}0+${fmtNum(d.M)})` : `(${d.s ? '−' : ''}1+${fmtNum(d.M - 1)})`;
+    return `<tr><td class="mono">${d.s}</td><td class="mono">${d.expBits}</td><td class="mono">${d.fracBits}</td>
+      <td class="mono">${d.kind === 'inf' || d.kind === 'nan' ? 'n/a' : d.E}</td>
+      <td class="mono">${val}</td><td>${extra || `<span class="${kc}">${kl}</span>`}</td></tr>`;
+  };
+  const head = `<tr><th>s</th><th class="mono">exp</th><th class="mono">frac</th><th class="mono">E</th><th class="mono">数值</th><th>说明</th></tr>`;
+
+  for (let f = 0; f < 8; f++) {
+    let extra = '';
+    if (f === 0) extra = '<span class="chip gray">零</span>';
+    if (f === 1) extra = '最接近 0 的非零值';
+    if (f === 7) extra = '<span class="chip warn">最大非规格化数</span>';
+    rows.push(rowHtml(mk(0, f), extra));
+  }
+  for (let e = 1; e <= 14; e++) {
+    for (let f = 0; f < 8; f++) {
+      if (!all && ![0, 1, 7].includes(f)) continue;
+      let extra = '';
+      if (e === 1 && f === 0) extra = '<span class="chip ok">最小规格化数</span>';
+      if (e === 7 && f === 0) extra = '值 = 1.0';
+      if (e === 14 && f === 7) extra = '<span class="chip ok">最大规格化数</span>';
+      rows.push(rowHtml(mk(e, f), extra));
+    }
+  }
+  rows.push(rowHtml(mk(15, 0), '<span class="chip bad">无穷大</span>'));
+  if (all) rows.push(rowHtml(mk(15, 1), '<span class="chip bad">NaN</span>'));
+
+  $('#tinyTbl').innerHTML = head + rows.join('');
+}
+
+/* ============================================================
+   5.2 6 位格式的数值分布图
+   ============================================================ */
+const distRange = { v: 'full' };
+function renderDist() {
+  const fmt = FMTS.tiny6;
+  const vals = [];
+  for (let s = 0; s < 2; s++) for (let e = 0; e < (1 << fmt.e); e++) for (let f = 0; f < (1 << fmt.f); f++) {
+    const bits = s + e.toString(2).padStart(fmt.e, '0') + f.toString(2).padStart(fmt.f, '0');
+    const d = decode(bits, fmt);
+    if (d.kind === 'inf' || d.kind === 'nan') continue;
+    vals.push({ d, x: d.value });
+  }
+  const zoom = distRange.v === 'zoom';
+  const lo = zoom ? -1.05 : -15.5, hi = zoom ? 1.05 : 15.5;
+  const W = 720, H = zoom ? 150 : 130, pad = 26;
+  const sx = v => pad + (v - lo) / (hi - lo) * (W - 2 * pad);
+
+  let svg = `<svg viewBox="0 0 ${W} ${H}" width="100%" style="max-width:${W}px;height:auto;display:block">`;
+  svg += `<line class="axisline" x1="${pad}" y1="${H - 42}" x2="${W - pad}" y2="${H - 42}"/>`;
+  // 轴标签
+  const ticks = zoom ? [-1, -0.5, 0, 0.5, 1] : [-15, -10, -5, 0, 5, 10, 15];
+  for (const t of ticks) {
+    const x = sx(t);
+    svg += `<line class="axisline" x1="${x}" y1="${H - 42}" x2="${x}" y2="${H - 37}"/>`;
+    svg += `<text class="axislabel" x="${x}" y="${H - 24}" text-anchor="middle">${t}</text>`;
+  }
+  // 刻度：越靠 0 越密
+  for (const { d, x } of vals) {
+    const px = sx(x);
+    const cls = d.kind === 'denorm' ? 'tick dn' : 'tick nm';
+    svg += `<line class="${cls}" x1="${px.toFixed(1)}" y1="${H - 42}" x2="${px.toFixed(1)}" y2="${H - 62}" data-v="${x}" data-b="${d.bits}"/>`;
+  }
+  svg += `<text class="axislabel" x="${pad}" y="${H - 78}" fill="var(--warn)">▎非规格化</text>`;
+  svg += `<text class="axislabel" x="${pad + 86}" y="${H - 78}" fill="var(--frac)">▎规格化</text>`;
+  svg += `<text class="axislabel" x="${pad}" y="${H - 90}">6 位格式（1 + 3 + 2，Bias 3）的全部可表示数值：共 ${vals.length} 个（含正负）</text>`;
+  svg += '</svg>';
+  $('#distOut').innerHTML = svg;
+
+  $$('#distOut .tick').forEach(t => {
+    t.style.cursor = 'pointer';
+    t.addEventListener('mouseenter', () => {
+      const d = decode(t.dataset.b, fmt);
+      $('#distInfo').innerHTML = `位串 <b>${d.bits}</b> &nbsp;→&nbsp; E = ${d.E}，M = ${d.mantStr} &nbsp;→&nbsp; v = <b>${fmtNum(d.value)}</b> &nbsp;<span class="${KIND_LABEL[d.kind][1]}">${KIND_LABEL[d.kind][0]}</span>`;
+    });
+  });
+}
+
+/* ============================================================
+   6.1 舍入模式演示（十进制）
+   ============================================================ */
+const RND_UNITS = { '1': { scale: 1, dec: 0 }, '0.1': { scale: 10, dec: 1 }, '0.01': { scale: 100, dec: 2 }, '0.25': { scale: 4, dec: 2 } };
+
+function roundTo(x, scale, mode) {
+  const n = x * scale;
+  const f = Math.floor(n), d = n - f, EPS = 1e-9;
+  let r;
+  if (Math.abs(d) < EPS) r = f;
+  else if (Math.abs(d - 1) < EPS) r = f + 1;
+  else if (mode === 'zero') r = Math.trunc(n);
+  else if (mode === 'down') r = Math.floor(n);
+  else if (mode === 'up') r = Math.ceil(n);
+  else { // nearest-even
+    if (d > 0.5 + EPS) r = f + 1;
+    else if (d < 0.5 - EPS) r = f;
+    else r = (f % 2 === 0) ? f : f + 1;
+  }
+  return { r: r / scale, n, d };
+}
+
+function renderRound() {
+  const x = Number($('#rndIn').value);
+  const unit = $('#rndUnit').value;
+  const { scale, dec } = RND_UNITS[unit];
+  if (!isFinite(x)) { $('#rndOut').innerHTML = '<div class="box bad" style="margin:8px 0">请输入一个数字。</div>'; return; }
+  const show = v => (Math.abs(v) < 1e-12 ? 0 : v).toFixed(dec);
+  const modes = [['zero', '向零舍入'], ['down', '向下舍入（−∞）'], ['up', '向上舍入（+∞）'], ['even', '就近舍入到偶数（默认）']];
+  let rows = '';
+  for (const [m, name] of modes) {
+    const { r, n, d } = roundTo(x, scale, m);
+    const isHalf = Math.abs(d - 0.5) < 1e-9;
+    rows += `<tr style="${m === 'even' ? 'background:#f4fcf7' : ''}">
+      <td>${name}${m === 'even' ? ' <span class="chip ok">默认</span>' : ''}</td>
+      <td class="mono">${show(r)}</td>
+      <td style="font-size:13.5px;color:var(--muted)">${isHalf ? '正好在半途' + (m === 'even' ? ' → 取末位为偶者' : '') : (d > 0.5 ? '超过一半 → 进位' : (d < 0.5 ? '不到一半 → 舍去' : '已是整数'))}</td></tr>`;
+  }
+  const q = x * scale;
+  $('#rndOut').innerHTML = `
+    <div class="formula" style="margin:12px 0;text-align:left">
+      ${fmtNum(x)} 舍入到 ${unit === '1' ? '整数' : unit === '0.25' ? '最接近的 1/4' : '小数第 ' + dec + ' 位'}
+      &nbsp;→&nbsp; 缩放后 = ${fmtNum(q)}，小数部分 = <b>${fmtNum(q - Math.floor(q))}</b>
+    </div>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>舍入模式</th><th>结果</th><th>依据</th></tr>${rows}</table></div>`;
+}
+
+/* ============================================================
+   6.4 二进制舍入（就近舍入到偶数）
+   ============================================================ */
+function renderBinRound(str, k) {
+  const raw = String(str).trim();
+  if (!/^[01]+\.[01]+$/.test(raw)) {
+    $('#binRndOut').innerHTML = '<div class="box bad" style="margin:8px 0">请输入形如 <code>10.10100</code> 的二进制小数（必须含小数点）。</div>';
+    return;
+  }
+  let [ip, fp] = raw.split('.');
+  k = Math.max(0, Math.min(10, k | 0));
+  if (k >= fp.length) {
+    $('#binRndOut').innerHTML = `<div class="box ok" style="margin:8px 0">小数部分只有 ${fp.length} 位，保留 ${k} 位无需舍入：<b class="mono">${raw}</b></div>`;
+    return;
+  }
+  const kept = fp.slice(0, k), rest = fp.slice(k);
+  const G = rest[0], R = rest[1] || '0', S = rest.slice(2).includes('1') ? '1' : '0';
+  let inc = false, reason = '';
+  if (G === '0') { inc = false; reason = 'Guard = 0，不到半途 → 直接舍去'; }
+  else if (R === '1' || S === '1') { inc = true; reason = `Guard = 1 且（Round 或 Sticky 为 1）→ 超过半途 → 进位`; }
+  else {
+    const lastKept = k > 0 ? kept[k - 1] : (ip[ip.length - 1] || '0');
+    if (lastKept === '1') { inc = true; reason = '正好半途，末位是 1（奇）→ 进位使其变偶'; }
+    else { inc = false; reason = '正好半途，末位已是 0（偶）→ 保持不动'; }
+  }
+  // 进位
+  let bitsAll = ip + kept;
+  if (inc) {
+    const arr = bitsAll.split('');
+    let i = arr.length - 1;
+    while (i >= 0) { if (arr[i] === '0') { arr[i] = '1'; break; } arr[i] = '0'; i--; }
+    if (i < 0) arr.unshift('1');
+    bitsAll = arr.join('');
+  }
+  const resIp = bitsAll.slice(0, bitsAll.length - k) || '0';
+  const resFp = bitsAll.slice(bitsAll.length - k);
+  const result = k > 0 ? `${resIp}.${resFp}` : resIp;
+  const val = binFracValue(result);
+
+  $('#binRndOut').innerHTML = `
+    <div class="formula" style="margin:12px 0;text-align:left">
+      保留 <b>${k}</b> 位小数：<span class="mono">${ip}.<b style="color:var(--frac)">${kept}</b><span style="color:var(--sign)">${rest}</span></span>
+    </div>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>保留位</th><th>Guard（第 1 个被移除位）</th><th>Round（第 2 个）</th><th>Sticky（其余位的或）</th><th>进位？</th></tr>
+      <tr><td class="mono">${kept || '（无）'}</td><td class="mono">${G}</td><td class="mono">${R}</td><td class="mono">${S}</td>
+      <td>${inc ? '<span class="chip warn">是</span>' : '<span class="chip gray">否</span>'}</td></tr>
+    </table></div>
+    <div class="box" style="margin:10px 0"><div class="t">判定依据</div>${reason}</div>
+    <div class="formula" style="margin:10px 0;text-align:left">
+      结果：<b class="mono">${result}<sub>2</sub></b> = ${fmtNum(val)}
+    </div>`;
+}
+
+/* ============================================================
+   7.3 浮点加法器（4 位有效数字，精确 BigInt 计算）
+   ============================================================ */
+function bitsWithPoint(intBits, fbits) {
+  const s = intBits.toString().padStart(fbits + 1, '0');
+  return s.slice(0, s.length - fbits) + '.' + s.slice(s.length - fbits);
+}
+
+function fpAdd(m1, e1, m2, e2) {
+  const parseM = str => {
+    const [ip, fp = ''] = String(str).split('.');
+    return { int: BigInt('0b' + (ip || '0') + fp), fbits: fp.length, ip };
+  };
+  const A = parseM(m1), B = parseM(m2);
+  const Emax = Math.max(e1, e2);
+  const shiftA = Emax - e1, shiftB = Emax - e2;
+  // 对齐：指数小的右移（等价于提高分母精度）
+  const FA = A.fbits + shiftA, FB = B.fbits + shiftB;
+  const F = Math.max(FA, FB);
+  const aInt = A.int << BigInt(F - FA);
+  const bInt = B.int << BigInt(F - FB);
+  const sum = aInt + bInt;
+
+  // 规格化：找最高位
+  let lead = sum.toString(2).length - 1;      // 相对 F 的位权位置
+  let E = Emax + lead - F;
+  // 尾数：把 sum 表示成 1.xxxx（保留完整精度）
+  const full = sum.toString(2);               // lead+1 位
+  const fracFull = full.slice(1);             // 前导 1 之后的全部位
+  // 舍入到 3 位小数
+  const G = fracFull[3] || '0', R = fracFull[4] || '0', S = fracFull.slice(5).includes('1') ? '1' : '0';
+  let inc = false, reason = '';
+  if (G === '0') { inc = false; reason = 'Guard = 0 → 不到半途，舍去'; }
+  else if (R === '1' || S === '1') { inc = true; reason = 'Guard = 1 且其余位非全 0 → 超过半途，进位'; }
+  else {
+    if ((fracFull[2] || '0') === '1') { inc = true; reason = '正好半途，末位为奇 → 进位使其变偶'; }
+    else { inc = false; reason = '正好半途，末位已为偶 → 保持'; }
+  }
+  let kept = fracFull.slice(0, 3).padEnd(3, '0');
+  if (inc) {
+    let arr = (full[0] + kept).split('');
+    let i = arr.length - 1;
+    while (i >= 0) { if (arr[i] === '0') { arr[i] = '1'; break; } arr[i] = '0'; i--; }
+    if (i < 0) { arr.unshift('1'); E += 1; arr = arr.slice(0, 4); }
+    kept = arr.join('').slice(1);
+  }
+  const result = '1.' + kept;
+  return { A, B, Emax, shiftA, shiftB, F, aInt, bInt, sum, full, fracFull, G, R, S, inc, reason, kept, result, E,
+           value: binFracValue(result) * Math.pow(2, E) };
+}
+
+function renderAdd() {
+  const m1 = $('#aM1').value.trim(), m2 = $('#aM2').value.trim();
+  const e1 = parseInt($('#aE1').value, 10), e2 = parseInt($('#aE2').value, 10);
+  if (!/^1\.[01]+$/.test(m1) || !/^1\.[01]+$/.test(m2) || !isFinite(e1) || !isFinite(e2)) {
+    $('#aOut').innerHTML = '<div class="box bad" style="margin:8px 0">有效数字请用 <code>1.xxx</code> 形式（规格化、正数），指数填整数。</div>';
+    return;
+  }
+  const r = fpAdd(m1, e1, m2, e2);
+  const thin = s => s.replace(/(.{4})/g, '$1 ').trim();
+  const step = (n, h, m, e) => `<div class="step on"><div class="h">步骤 ${n} · ${h}</div>
+      <div class="m">${m}</div><div class="e">${e}</div></div>`;
+  $('#aOut').innerHTML = `<div class="steps">
+    ${step(1, '对齐小数点', `${m1} × 2<sup>${e1}</sup> &nbsp;+&nbsp; ${m2} × 2<sup>${e2}</sup><br>
+      取较大指数 2<sup>${r.Emax}</sup>：较小指数的一方右移 ${e1 >= e2 ? r.shiftB : r.shiftA} 位<br>
+      → ${bitsWithPoint(r.aInt, r.F)} + ${bitsWithPoint(r.bInt, r.F)}（个位对齐）`,
+      `对齐后两个数的分母相同，可以直接相加`)}
+    ${step(2, '相加', `<span class="mono">${bitsWithPoint(r.aInt, r.F)} + ${bitsWithPoint(r.bInt, r.F)} = ${bitsWithPoint(r.sum, r.F)}</span>`,
+      '这一步是精确的，还没有引入误差')}
+    ${step(3, '规格化', `<span class="mono">${bitsWithPoint(r.sum, r.F)} = 1.${r.fracFull} × 2<sup>${r.Emax + r.full.length - 1 - r.F}</sup></span>`,
+      '把结果整理成前导 1 的形式，同时修正指数')}
+    ${step(4, '舍入到 3 位小数', `G = ${r.G}，R = ${r.R}，S = ${r.S} &nbsp;→&nbsp; ${r.inc ? '<b>进位</b>' : '<b>舍去</b>'}<br>
+      ${r.reason}<br>
+      <b>结果：${r.result} × 2<sup>${r.E}</sup> = ${fmtNum(r.value)}</b>`,
+      '舍入是浮点运算中误差的来源')}
+  </div>`;
+}
+
+/* ============================================================
+   8.1 C 表达式实测
+   ============================================================ */
+const CX_CASES = [
+  ['(3.14+1e10)-1e10', '加法不满足结合律'],
+  ['3.14+(1e10-1e10)', '加法不满足结合律'],
+  ['(1e200*1e200)*1e-20', '乘法不满足结合律（中间结果溢出）'],
+  ['1e200*(1e200*1e-20)', '乘法不满足结合律'],
+  ['1e200*(1e200-1e200)', '乘法不满足分配律'],
+  ['1e200*1e200-1e200*1e200', '乘法不满足分配律（∞ − ∞ = NaN）'],
+];
+function renderCx() {
+  let rows = '';
+  for (const [expr, why] of CX_CASES) {
+    let v;
+    try { v = Function('"use strict";return (' + expr + ')')(); } catch (e) { v = 'err'; }
+    rows += `<tr><td class="mono">${esc(expr)}</td><td class="mono"><b>${typeof v === 'number' ? fmtNum(v) : esc(String(v))}</b></td><td style="font-size:13.5px">${why}</td></tr>`;
+  }
+  $('#cxTbl').innerHTML = `<tr><th>表达式</th><th>实际结果</th><th>违反的性质</th></tr>` + rows;
+}
+
+/** 单精度（float）与双精度（double）对照：每一步都做 float 舍入 */
+function renderF32() {
+  const f = x => Math.fround(x);
+  const F1E10 = f(1e10), F1E200 = f(1e200), F1E_200 = f(1e-200), F314 = f(3.14);
+  const cases = [
+    ['(3.14 + 1e10) − 1e10',
+      f(f(F314 + F1E10) - F1E10),
+      (3.14 + 1e10) - 1e10,
+      '两个大数先结合，3.14 被 float 完全吃掉'],
+    ['3.14 + (1e10 − 1e10)',
+      f(F314 + f(F1E10 - F1E10)),
+      3.14 + (1e10 - 1e10),
+      '大数先自减为 0，3.14 得以保留'],
+    ['(1e200 × 1e200) × 1e−200',
+      f(f(F1E200 * F1E200) * F1E_200),
+      (1e200 * 1e200) * 1e-200,
+      'float 里 1e−200 下溢为 0，于是 ∞ × 0 = NaN；double 里 1e−200 仍是有效数，但 1e400 溢出为 +∞'],
+    ['1e200 × (1e200 × 1e−200)',
+      f(F1E200 * f(F1E200 * F1E_200)),
+      1e200 * (1e200 * 1e-200),
+      '两种精度下 1e200 × 1e−200 都先算成 1（float 里先下溢为 0 再乘得 NaN），可见结合顺序改变了结果'],
+  ];
+  const fmt = x => Number.isNaN(x) ? 'NaN' : (!isFinite(x) ? (x > 0 ? '+∞' : '−∞') : fmtNum(x));
+  $('#f32Tbl').innerHTML = `<tr><th>表达式</th><th>单精度 float</th><th>双精度 double</th><th>说明</th></tr>` +
+    cases.map(([e, fv, dv, note]) =>
+      `<tr><td class="mono">${esc(e)}</td><td class="mono"><b>${fmt(fv)}</b></td><td class="mono"><b>${fmt(dv)}</b></td>
+       <td style="font-size:13.5px">${note}</td></tr>`).join('');
+}
+
+/* ============================================================
+   9.3 浮点谜题
+   ============================================================ */
+const PUZZLES = [
+  { e: 'x == (int)(float) x', a: false,
+    w: 'float 只有 24 位有效数字。反例：x = 16777217（即 2²⁴+1），(float)x 被舍入为 16777216，转回 int 后不再等于 x。' },
+  { e: 'x == (int)(double) x', a: true,
+    w: 'double 有 53 位有效数字，32 位 int 的任何取值都能被精确表示，来回转换无损。' },
+  { e: 'f == (float)(double) f', a: true,
+    w: 'double 的精度和范围都严格覆盖 float，所以 float → double → float 是无损的。' },
+  { e: 'd == (double)(float) d', a: false,
+    w: '反例：d = 1e40，超出 float 范围，转为 float 得到 +∞，再转回 double 仍是 +∞。即使不溢出，float 只有 24 位有效数字，会丢掉低位。' },
+  { e: 'f == -(-f)', a: true,
+    w: '取负只翻转符号位，再取负即还原；对 ±0、∞、NaN 也成立。' },
+  { e: '2/3 == 2/3.0', a: false,
+    w: '左边是整数除法，2/3 = 0；右边是浮点除法 ≈ 0.666…，所以 0 ≠ 0.666…。这是 C 语言里最经典的陷阱。' },
+  { e: 'd < 0.0  ⇒  ((d*2) < 0.0)', a: true,
+    w: '乘以 2 相当于指数加 1，不改变符号；即使溢出，得到的也是 −∞，仍小于 0（前提是 d 不是 NaN）。' },
+  { e: 'd > f  ⇒  -f > -d', a: true,
+    w: '取负会翻转符号位并反转大小关系，对浮点数同样成立（前提是二者都不是 NaN）。' },
+  { e: 'd * d >= 0.0', a: true,
+    w: '平方结果非负；溢出时得到 +∞，仍然 ≥ 0。唯一例外是 d 为 NaN，而题目已假设不是 NaN。' },
+  { e: '(d+f) - d == f', a: false,
+    w: '反例：d = 1e10，f = 3.14。(1e10 + 3.14) 在 double 中舍入后仍等于 1e10，再减去 1e10 得到 0，而 0 ≠ 3.14。这正是「大数吃掉小数」。' },
+];
+const pzState = { answered: 0, correct: 0 };
+function renderPuzzles() {
+  pzState.answered = 0; pzState.correct = 0;
+  updatePzScore();
+  $('#pzList').innerHTML = PUZZLES.map((p, i) => `
+    <div class="puzzle" data-i="${i}">
+      <div class="q">${esc(p.e)}<small>判断：是否对任意取值都成立？</small></div>
+      <div class="btns">
+        <button class="sm" data-ans="1">真</button>
+        <button class="sm" data-ans="0">假</button>
+      </div>
+      <div class="exp"></div>
+    </div>`).join('');
+}
+function updatePzScore() {
+  $('#pzScore').textContent = `已答 ${pzState.answered} / ${PUZZLES.length} · 正确 ${pzState.correct}`;
+  $('#pzScore').className = 'chip ' + (pzState.answered === PUZZLES.length && pzState.correct === PUZZLES.length ? 'ok' : 'gray');
+}
+function initPuzzles() {
+  renderPuzzles();
+  $('#pzList').addEventListener('click', ev => {
+    const btn = ev.target.closest('button[data-ans]');
+    if (!btn) return;
+    const card = btn.closest('.puzzle');
+    const i = +card.dataset.i, p = PUZZLES[i];
+    const guess = btn.dataset.ans === '1';
+    const ok = guess === p.a;
+    if (!card.classList.contains('done')) {
+      pzState.answered++; if (ok) pzState.correct++;
+    }
+    card.classList.add('done', ok ? 'correct' : 'wrong');
+    card.classList.toggle('wrong', !ok);
+    card.querySelector('.exp').innerHTML =
+      `<span class="verdict" style="color:${ok ? 'var(--frac)' : 'var(--sign)'}">${ok ? '✓ 判断正确' : '✗ 判断有误'}</span>
+       —— 正确答案：<b>${p.a ? '真（对所有取值成立）' : '假（存在反例）'}</b><br>${esc(p.w)}`;
+    updatePzScore();
+  });
+  $('#pzReset').addEventListener('click', renderPuzzles);
+}
+
+/* ============================================================
+   10.2 构造浮点数
+   ============================================================ */
+function renderMake(n) {
+  const v = Math.max(0, Math.min(255, n | 0));
+  const bin = v.toString(2).padStart(8, '0');
+  if (v === 0) {
+    $('#mkOut').innerHTML = '<div class="box ok" style="margin:8px 0">0 就是全零位串：<b class="mono">0 0000 000</b></div>';
+    return;
+  }
+  // 规格化：写成 1.xxxx × 2^E（找最高位的 1，它的位权就是 E）
+  const firstOne = bin.indexOf('1');
+  const E = 7 - firstOne;
+  let fracFull = bin.slice(firstOne + 1).padEnd(7, '0');
+  const G = fracFull[3] || '0', R = fracFull[4] || '0', S = fracFull.slice(5).includes('1') ? '1' : '0';
+  let inc = false, reason = '';
+  const kept3 = fracFull.slice(0, 3);
+  if (G === '0') { inc = false; reason = 'Guard = 0 → 舍去'; }
+  else if (R === '1' || S === '1') { inc = true; reason = 'Guard = 1 且非全 0 → 超过半途，进位'; }
+  else { if (kept3[2] === '1') { inc = true; reason = '正好半途且末位为奇 → 进位'; } else { inc = false; reason = '正好半途且末位为偶 → 保持'; } }
+  let kept = kept3;
+  let overflow = false;
+  if (inc) {
+    let t = (1 + kept).split('');   // "1" + 3 位
+    let i = t.length - 1;
+    while (i >= 0) { if (t[i] === '0') { t[i] = '1'; break; } t[i] = '0'; i--; }
+    if (i < 0) { overflow = true; t = ['1', '0', '0', '0']; }
+    kept = t.join('').slice(1);
+  }
+  let Efinal = E;
+  let rounded = '1.' + kept;
+  if (overflow) { rounded = '1.000'; Efinal = E + 1; }
+
+  const bias = 7;
+  const Exp = Efinal + bias;
+  const expBits = Exp.toString(2).padStart(4, '0');
+  const fracBits = kept;
+  const bits = '0' + expBits + fracBits;
+  const d = decode(bits, FMTS.tiny8);
+  const back = d.value;
+
+  const step = (n2, h, m, e) => `<div class="step on"><div class="h">步骤 ${n2} · ${h}</div><div class="m">${m}</div><div class="e">${e}</div></div>`;
+  $('#mkOut').innerHTML = `<div class="steps">
+    ${step(1, '规格化', `${v}<sub>10</sub> = ${bin}<sub>2</sub> = 1.${fracFull}<sub>2</sub> × 2<sup>${E}</sup>`,
+      `把小数点移到最高位 1 之后；左移时指数相应递减，此时指数为 ${E}`)}
+    ${step(2, '舍入到 3 位小数（1.BBB G R XXX）', `保留 BBB = ${kept3}，G = ${G}，R = ${R}，S = ${S}<br>${reason}<br>→ ${rounded}`,
+      'frac 字段只有 3 位，多出来的位必须舍入')}
+    ${step(3, '后规格化', overflow ? `舍入后成为 ${rounded}，发生溢出：右移一位，指数 ${E} → ${E + 1}` : `没有溢出，指数仍为 ${E}`,
+      '舍入可能把 1.111 推成 10.000，这时需要右移并给指数加 1')}
+    ${step(4, '拼接编码', `<span style="color:var(--sign)">0</span> <span style="color:var(--exp)">${expBits}</span> <span style="color:var(--frac)">${fracBits}</span>
+      &nbsp;（Exp = ${Efinal} + Bias ${bias} = ${Exp}）<br>回读数值 = <b>${isFinite(back) ? fmtNum(back) : '溢出为 +∞'}</b>${isFinite(back) && Math.abs(back - v) > 1e-9 ? ` ，与原值 ${v} 的误差 ${fmtNum(Math.abs(back - v))}` : isFinite(back) ? ' ，与原值一致' : ` ，因为 ${v} 超过了本格式能表示的最大值 240`}`,
+      's = 0 表示正数')}
+  </div>`;
+}
+
+/* ============================================================
+   11.3 小测验
+   ============================================================ */
+const QUIZ = [
+  { q: '单精度浮点数（1 / 8 / 23）的指数偏置 Bias 是多少？',
+    o: ['63', '127', '255', '1023'], a: 1,
+    w: 'Bias = 2^(k−1) − 1 = 2^7 − 1 = 127。' },
+  { q: '当 exp 字段全为 0 且 frac 不为 0 时，有效数字 M 的形式是？',
+    o: ['M = 1.xxx…x', 'M = 0.xxx…x', 'M = 1.0', '不适用'], a: 1,
+    w: '非规格化数的隐含前导位是 0，并且指数取 E = 1 − Bias。' },
+  { q: '十进制 0.1 能否用二进制浮点数精确表示？',
+    o: ['能，只要位数足够', '不能，二进制展开会无限循环', '能，用 double 就可以', '取决于编译器'], a: 1,
+    w: '0.1 的二进制展开是 0.0001100110011[0011]…，循环节 0011，永远无法精确表示。这是爱国者导弹事故的根源。' },
+  { q: '关于浮点加法，下列说法正确的是？',
+    o: ['满足结合律', '满足交换律但不满足结合律', '既满足交换律也满足结合律', '都不满足'], a: 1,
+    w: '(3.14+1e10)−1e10 = 0，而 3.14+(1e10−1e10) = 3.14，所以结合律不成立。' },
+  { q: 'IEEE 754 默认的舍入模式是？',
+    o: ['向零舍入', '向上舍入', '就近舍入到偶数', '向下舍入'], a: 2,
+    w: '就近舍入到偶数在统计上无偏，其他模式会让一组数的求和高估或低估。' },
+  { q: '单精度位串 0x7F800000 表示什么？',
+    o: ['最大规格化数', 'NaN', '+∞', '1.0'], a: 2,
+    w: 'exp 全为 1、frac 全为 0 且符号位为 0 → +∞。0x7F7FFFFF 才是最大规格化数。' },
+];
+function renderQuiz() {
+  $('#qzList').innerHTML = QUIZ.map((item, i) => `
+    <div class="card" style="margin:10px 0" data-q="${i}">
+      <h5>${i + 1}. ${esc(item.q)}</h5>
+      <div class="opts">${item.o.map((o, j) => `
+        <label style="display:block;margin:5px 0;font-size:14.5px;cursor:pointer">
+          <input type="radio" name="q${i}" value="${j}"> ${esc(o)}
+        </label>`).join('')}</div>
+      <div class="qexp" style="display:none;margin-top:8px;padding-top:8px;border-top:1px dashed var(--line);font-size:14px"></div>
+    </div>`).join('');
+  $('#qzResult').innerHTML = '';
+  $('#qzScore').textContent = '得分 0 / ' + QUIZ.length;
+  $('#qzScore').className = 'chip gray';
+}
+function initQuiz() {
+  renderQuiz();
+  $('#qzSubmit').addEventListener('click', () => {
+    let score = 0, unanswered = 0;
+    QUIZ.forEach((item, i) => {
+      const card = $(`[data-q="${i}"]`);
+      const sel = card.querySelector(`input[name="q${i}"]:checked`);
+      const exp = card.querySelector('.qexp');
+      exp.style.display = 'block';
+      if (!sel) {
+        unanswered++;
+        exp.innerHTML = `<span style="color:var(--warn)">未作答</span> —— 正确答案：<b>${esc(item.o[item.a])}</b><br>${esc(item.w)}`;
+        card.style.borderColor = '#f0d6a8';
+        return;
+      }
+      const ok = +sel.value === item.a;
+      if (ok) score++;
+      card.style.borderColor = ok ? '#9ed3b4' : '#f1b5b8';
+      card.style.background = ok ? '#f7fdfa' : '#fffafa';
+      exp.innerHTML = `<span style="color:${ok ? 'var(--frac)' : 'var(--sign)'};font-weight:700">${ok ? '✓ 正确' : '✗ 错误'}</span>
+        —— 正确答案：<b>${esc(item.o[item.a])}</b><br>${esc(item.w)}`;
+    });
+    $('#qzScore').textContent = `得分 ${score} / ${QUIZ.length}`;
+    $('#qzScore').className = 'chip ' + (score === QUIZ.length ? 'ok' : score >= QUIZ.length / 2 ? 'warn' : 'bad');
+    $('#qzResult').innerHTML = `<div class="box ${score === QUIZ.length ? 'ok' : score >= QUIZ.length / 2 ? 'warn' : 'bad'}" style="margin-top:14px">
+      <div class="t">${score === QUIZ.length ? '全对！' : score >= QUIZ.length / 2 ? '还不错' : '建议回看前面的章节'}</div>
+      你答对了 <b>${score}</b> / ${QUIZ.length} 题${unanswered ? `，另有 ${unanswered} 题未作答` : ''}。
+      ${score === QUIZ.length ? '看来 IEEE 754 已经难不倒你了。' : '上面每道题都附了解释，往下翻看看哪里没想清楚。'}</div>`;
+  });
+  $('#qzReset').addEventListener('click', renderQuiz);
+}
+
+/* ============================================================
+   导航、进度、初始化
+   ============================================================ */
+function initNav() {
+  const secs = $$('main section');
+  const links = $$('nav.toc a');
+  const io = new IntersectionObserver(entries => {
+    entries.forEach(en => {
+      if (en.isIntersecting) {
+        links.forEach(a => a.classList.toggle('active', a.getAttribute('href') === '#' + en.target.id));
+      }
+    });
+  }, { rootMargin: '-72px 0px -70% 0px', threshold: 0 });
+  secs.forEach(s => io.observe(s));
+
+  const onScroll = () => {
+    const h = document.documentElement;
+    const max = h.scrollHeight - h.clientHeight;
+    const p = max > 0 ? Math.min(100, Math.round(h.scrollTop / max * 100)) : 0;
+    $('#pgBar').style.width = p + '%';
+    $('#pgText').textContent = '学习进度 ' + p + '%';
+    $('#toTop').style.display = h.scrollTop > 600 ? 'block' : 'none';
+  };
+  window.addEventListener('scroll', onScroll, { passive: true });
+  onScroll();
+  $('#toTop').addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
+}
+
+function initAll() {
+  initParser();
+  initNav();
+  initPuzzles();
+  initQuiz();
+
+  // 1.2 / 1.3
+  renderBinFrac($('#bfIn').value);
+  renderDecToBin($('#decIn').value);
+  $('#bfGo').addEventListener('click', () => renderBinFrac($('#bfIn').value));
+  $('#bfIn').addEventListener('keydown', e => { if (e.key === 'Enter') renderBinFrac($('#bfIn').value); });
+  $$('[data-bf]').forEach(b => b.addEventListener('click', () => { $('#bfIn').value = b.dataset.bf; renderBinFrac(b.dataset.bf); }));
+  $('#decGo').addEventListener('click', () => renderDecToBin($('#decIn').value));
+  $('#decIn').addEventListener('keydown', e => { if (e.key === 'Enter') renderDecToBin($('#decIn').value); });
+  $$('[data-dec]').forEach(b => b.addEventListener('click', () => { $('#decIn').value = b.dataset.dec; renderDecToBin(b.dataset.dec); }));
+
+  // 2.4 编码
+  renderEncode($('#encIn').value);
+  $('#encGo').addEventListener('click', () => renderEncode($('#encIn').value));
+  $('#encIn').addEventListener('keydown', e => { if (e.key === 'Enter') renderEncode($('#encIn').value); });
+  $$('[data-enc]').forEach(b => b.addEventListener('click', () => { $('#encIn').value = b.dataset.enc; renderEncode(b.dataset.enc); }));
+
+  // 5.1
+  renderTinyTable();
+  $('#tinyAll').addEventListener('change', renderTinyTable);
+  $('#tinySeg').addEventListener('click', e => {
+    const b = e.target.closest('button'); if (!b) return;
+    $$('#tinySeg button').forEach(x => x.classList.toggle('on', x === b));
+    tinySign.v = +b.dataset.s;
+    renderTinyTable();
+  });
+
+  // 5.2
+  renderDist();
+  $('#distSeg').addEventListener('click', e => {
+    const b = e.target.closest('button'); if (!b) return;
+    $$('#distSeg button').forEach(x => x.classList.toggle('on', x === b));
+    distRange.v = b.dataset.r;
+    renderDist();
+  });
+
+  // 6.1 / 6.4
+  renderRound();
+  ['#rndIn', '#rndUnit'].forEach(s => {
+    const el = $(s);
+    el.addEventListener('input', renderRound);
+    el.addEventListener('change', renderRound);
+  });
+  renderBinRound($('#binRndIn').value, +$('#binRndBits').value);
+  $('#binRndGo').addEventListener('click', () => renderBinRound($('#binRndIn').value, +$('#binRndBits').value));
+  $('#binRndIn').addEventListener('keydown', e => { if (e.key === 'Enter') renderBinRound($('#binRndIn').value, +$('#binRndBits').value); });
+  $('#binRndBits').addEventListener('input', () => renderBinRound($('#binRndIn').value, +$('#binRndBits').value));
+  $$('[data-br]').forEach(b => b.addEventListener('click', () => { $('#binRndIn').value = b.dataset.br; renderBinRound(b.dataset.br, +$('#binRndBits').value); }));
+
+  // 7.3
+  renderAdd();
+  $('#aGo').addEventListener('click', renderAdd);
+
+  // 8.1
+  renderCx();
+  renderF32();
+  $$('[data-cx]').forEach(b => b.addEventListener('click', () => {
+    const expr = b.dataset.cx;
+    let v; try { v = Function('"use strict";return (' + expr + ')')(); } catch (e) { v = 'err'; }
+    const why = (CX_CASES.find(c => c[0] === expr) || [, ''])[1];
+    const t = $('#cxTbl').querySelector('tbody') || $('#cxTbl');
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td class="mono">${esc(expr)}</td><td class="mono"><b>${typeof v === 'number' ? fmtNum(v) : v}</b></td><td style="font-size:13.5px">${why}</td>`;
+    t.appendChild(tr);
+    tr.scrollIntoView({ block: 'nearest' });
+  }));
+
+  // 10.2
+  renderMake(+$('#mkIn').value);
+  $('#mkGo').addEventListener('click', () => renderMake(+$('#mkIn').value));
+  $('#mkIn').addEventListener('input', () => renderMake(+$('#mkIn').value));
+  $$('[data-mk]').forEach(b => b.addEventListener('click', () => { $('#mkIn').value = b.dataset.mk; renderMake(+b.dataset.mk); }));
+}
+
+document.addEventListener('DOMContentLoaded', initAll);
+</script>
+
+</body>
+</html>

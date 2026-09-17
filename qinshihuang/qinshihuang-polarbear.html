@@ -1,0 +1,1053 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="theme-day anim-play snow-mid anno-on outline-off" data-snow="mid">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>秦始皇骑北极熊 · The First Emperor Riding a Polar Bear</title>
+<meta name="description" content="纯手写 SVG 场景：秦制玄黑朱红鎏金的秦始皇，骑一头极地白熊，踏雪于长城之外的玄冰原野。">
+<style>
+  :root{
+    --gold:#C9A227; --gold-2:#F4E3AE; --cinnabar:#B3271E; --ink:#0F1115;
+    --sky-a:#0A121C; --sky-b:#18314A; --sky-c:#2E5875;
+    --panel:rgba(255,255,255,.055); --line:rgba(201,162,39,.34);
+    --txt:#EFE7D6; --txt-dim:#A99F8C;
+    --serif:"Songti SC","Noto Serif SC","Source Han Serif SC","STSong","SimSun",Georgia,serif;
+    --sans:"PingFang SC","Hiragino Sans GB","Microsoft YaHei",system-ui,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    min-height:100vh; color:var(--txt); font-family:var(--sans);
+    background:
+      radial-gradient(1200px 700px at 50% -10%, #1B2A3C 0%, transparent 60%),
+      linear-gradient(180deg,#070A0F 0%, #0C1117 55%, #070A0F 100%);
+    display:flex; justify-content:center; padding:28px 18px 56px;
+  }
+  .page{width:min(1180px,100%)}
+  /* ---------- 标题 ---------- */
+  header.title{text-align:center; margin-bottom:20px}
+  header.title h1{
+    font-family:var(--serif); font-weight:700; letter-spacing:.16em;
+    font-size:clamp(21px,3.4vw,36px); margin:0 0 8px;
+    color:var(--gold-2);
+    text-shadow:0 0 24px rgba(201,162,39,.35), 0 2px 0 rgba(0,0,0,.6);
+  }
+  header.title .en{
+    font-family:var(--serif); letter-spacing:.28em; font-size:clamp(9px,1.1vw,12px);
+    color:var(--txt-dim); text-transform:uppercase;
+  }
+  header.title .rule{
+    width:180px; height:1px; margin:14px auto 0;
+    background:linear-gradient(90deg,transparent,var(--line),transparent);
+  }
+  /* ---------- 画框 ---------- */
+  .frame{
+    position:relative; border:1px solid var(--line); border-radius:4px; overflow:hidden;
+    background:#060A0F;
+    box-shadow:0 0 0 1px rgba(0,0,0,.6) inset, 0 24px 70px -28px rgba(0,0,0,.95), 0 0 90px -40px rgba(201,162,39,.4);
+  }
+  .frame::before,.frame::after{
+    content:""; position:absolute; width:22px; height:22px; z-index:5; pointer-events:none;
+    border:1px solid var(--gold); opacity:.5;
+  }
+  .frame::before{top:8px; left:8px; border-right:0; border-bottom:0}
+  .frame::after{bottom:8px; right:8px; border-left:0; border-top:0}
+  svg#scene{display:block; width:100%; height:auto}
+  .vignette{
+    position:absolute; inset:0; pointer-events:none; z-index:4;
+    background:radial-gradient(120% 90% at 50% 40%, transparent 52%, rgba(2,4,8,.62) 100%);
+  }
+  /* ---------- 控制台 ---------- */
+  .console{
+    margin-top:16px; border:1px solid var(--line); border-radius:4px;
+    background:linear-gradient(180deg, rgba(255,255,255,.045), rgba(255,255,255,.012));
+    padding:14px 16px; display:flex; flex-wrap:wrap; gap:10px 14px; align-items:center;
+  }
+  .console .grp{display:flex; align-items:center; gap:8px; flex-wrap:wrap}
+  .console .lbl{
+    font-family:var(--serif); font-size:12px; letter-spacing:.2em; color:var(--txt-dim);
+  }
+  .console .sep{width:1px; height:22px; background:var(--line)}
+  button.btn{
+    font-family:var(--serif); font-size:12.5px; letter-spacing:.1em;
+    color:var(--txt); background:rgba(12,17,23,.85);
+    border:1px solid var(--line); border-radius:2px;
+    padding:7px 12px; cursor:pointer; transition:.18s ease;
+  }
+  button.btn:hover{border-color:var(--gold); color:var(--gold-2); background:rgba(201,162,39,.1)}
+  button.btn[aria-pressed="true"]{
+    background:linear-gradient(180deg, rgba(201,162,39,.3), rgba(201,162,39,.12));
+    border-color:var(--gold); color:var(--gold-2);
+    box-shadow:0 0 16px -4px rgba(201,162,39,.6);
+  }
+  /* ---------- 图注说明 ---------- */
+  .cols{display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-top:16px}
+  @media (max-width:820px){ .cols{grid-template-columns:1fr} }
+  .panel{
+    border:1px solid var(--line); border-radius:4px; padding:14px 16px;
+    background:var(--panel);
+  }
+  .panel h2{
+    font-family:var(--serif); font-size:14px; letter-spacing:.2em; margin:0 0 12px;
+    color:var(--gold); font-weight:600;
+    display:flex; justify-content:space-between; align-items:baseline; gap:10px;
+  }
+  .panel h2 small{font-size:9.5px; letter-spacing:.18em; color:var(--txt-dim); text-transform:uppercase}
+  ol.notes{margin:0; padding-left:20px}
+  ol.notes li{margin:0 0 9px; font-size:13px; line-height:1.65; color:#DCD3C1}
+  ol.notes b{color:var(--gold-2); font-family:var(--serif); letter-spacing:.06em}
+  ol.notes i{color:var(--gold); font-style:normal; margin-left:6px; font-size:11px; opacity:.85}
+  ol.notes li span{display:block; font-size:11.5px; color:var(--txt-dim); line-height:1.6}
+  ul.rules{margin:0; padding-left:20px}
+  ul.rules li{margin:0 0 8px; font-size:12.5px; line-height:1.6; color:#D6CDBB}
+  ul.rules code{
+    font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:11.5px;
+    color:var(--gold-2); background:rgba(201,162,39,.11); border-radius:2px; padding:1px 4px;
+  }
+  footer{margin-top:20px; text-align:center; color:var(--txt-dim); font-size:11px; letter-spacing:.12em}
+  footer b{color:var(--gold); font-weight:500}
+
+  /* ================= SVG 内部样式 ================= */
+  #scene text{font-family:var(--serif); fill:#EFE7D6}
+  #scene .anno-line{stroke:var(--gold); stroke-width:1.1; stroke-dasharray:5 4; fill:none; opacity:.85}
+  #scene .anno-dot{fill:none; stroke:var(--gold); stroke-width:1.4}
+  #scene .anno-dot-core{fill:var(--gold)}
+  #scene .anno-box{fill:rgba(8,11,16,.72); stroke:rgba(201,162,39,.5); stroke-width:.8}
+  #scene .anno-t{font-size:14px; fill:#F4E3AE; letter-spacing:.06em}
+  #scene .anno-e{font-size:9px; fill:#A99F8C; letter-spacing:.14em}
+  #scene .sig{font-size:11px; fill:rgba(201,162,39,.75); letter-spacing:.22em}
+
+  /* 昼夜：天空 / 极光 / 星月 / 场景色温 */
+  .sky-day-op,.sky-night-op{transition:opacity 1.1s ease}
+  html.theme-night .sky-day-op{opacity:0}
+  html.theme-day .sky-night-op{opacity:0 !important}
+  html.theme-day #aurora{opacity:0 !important; visibility:hidden}
+  #aurora{opacity:.85; transition:opacity 1.1s ease}
+  html.theme-night #moon{opacity:1}
+  #moon{opacity:0; transition:opacity 1.1s ease}
+  html.theme-day #moon{opacity:0 !important; visibility:hidden}
+  html.theme-night #stars{opacity:1}
+  #stars{opacity:0; transition:opacity 1.1s ease}
+  html.theme-day #stars{opacity:0 !important; visibility:hidden}
+  html.theme-day #windStreaks{opacity:.34}
+  html.theme-night #windStreaks{opacity:.5}
+  html.theme-day #scene{filter:none}
+  html.theme-night #scene{filter:saturate(.82) brightness(.9)}
+
+  /* 雪量 */
+  #snowA,#snowB,#snowC{transition:opacity .7s ease}
+  html.snow-off #snowA.env{opacity:0}
+  html.snow-off .flakes{opacity:0}
+  html.snow-mid #snowB.env{opacity:0}
+  html.snow-mid .flakes .f2{opacity:0}
+  html.snow-max #snowA.env,html.snow-max #snowB.env{opacity:1}
+
+  /* 骨骼线 */
+  #outline{opacity:0; transition:opacity .45s ease}
+  html.outline-on #outline{opacity:1}
+  html.outline-on .anno-line{opacity:1}
+
+  /* 标注 */
+  #anno{transition:opacity .35s ease}
+  html.anno-off #anno{opacity:0; pointer-events:none}
+  html.anno-off .anno-target{filter:none}
+
+  /* 高亮脉冲：点击控制器时对对应元素闪一次 */
+  .hl-pulse{animation:hlFlash 1.15s ease-out 1}
+  @keyframes hlFlash{
+    0%{filter:none}
+    22%{filter:drop-shadow(0 0 9px rgba(244,227,174,.95)) drop-shadow(0 0 22px rgba(201,162,39,.6))}
+    100%{filter:none}
+  }
+
+  /* 暂停 */
+  html.anim-pause #scene *{animation-play-state:paused}
+
+  /* ---- 动画 ---- */
+  @keyframes furSway{
+    0%,100%{transform:translate(0,0) rotate(0deg)}
+    50%{transform:translate(-1.6px,1.1px) rotate(-.5deg)}
+  }
+  #furGroup{animation:furSway 4.6s ease-in-out infinite; transform-origin:520px 250px}
+  @keyframes breathe{
+    0%,100%{transform:translate(0,0) scale(1)}
+    50%{transform:translate(0,-2.4px) scale(1.006)}
+  }
+  #bearBody{animation:breathe 4s ease-in-out infinite; transform-origin:490px 340px}
+  #rider{animation:breathe 4s ease-in-out infinite .35s; transform-origin:590px 300px}
+  @keyframes capeFlow{
+    0%,100%{transform:skewX(0deg) translateX(0)}
+    40%{transform:skewX(-4.5deg) translateX(-3px)}
+    70%{transform:skewX(2.6deg) translateX(1.5px)}
+  }
+  #capeGroup{animation:capeFlow 3.4s ease-in-out infinite; transform-origin:505px 152px}
+  #capeBack{animation:capeFlow 4.1s ease-in-out infinite reverse; transform-origin:494px 150px}
+  @keyframes smokeRise{
+  0%{transform:translateY(0) scale(1); opacity:.42}
+  100%{transform:translateY(-30px) scale(1.7); opacity:0}
+  }
+  #breath circle{animation:smokeRise 5s ease-out infinite}
+  #breath circle:nth-child(2){animation-delay:1.7s}
+  #breath circle:nth-child(3){animation-delay:3.3s}
+  #breath circle:nth-child(4){animation:smokeRise 5s ease-out infinite 2.5s}
+  @keyframes flakeFall{
+  0%{transform:translate(6px,-40px); opacity:0}
+  8%{opacity:.92}
+  92%{opacity:.9}
+  100%{transform:translate(-44px,680px); opacity:0}
+  }
+  .flakes .f{animation:flakeFall linear infinite}
+  .flakes .f2{animation-duration:6.4s}
+  @keyframes windDrift{
+  0%{transform:translateX(0)}
+  50%{transform:translateX(-26px)}
+  100%{transform:translateX(0)}
+  }
+  #windStreaks{animation:windDrift 4.4s ease-in-out infinite}
+  @keyframes ribbonShift{
+  0%,100%{transform:translateX(0) scaleY(1); opacity:.5}
+  50%{transform:translateX(34px) scaleY(1.22); opacity:.82}
+  }
+  #aurora .rb{animation:ribbonShift 9s ease-in-out infinite}
+  #aurora .rb:nth-child(2){animation-duration:11.5s; animation-delay:-3s}
+  #aurora .rb:nth-child(3){animation-duration:8.2s; animation-delay:-5.5s}
+  @keyframes emberUp{
+  0%{transform:translate(0,0); opacity:.9}
+  100%{transform:translate(-14px,-52px); opacity:0}
+  }
+  .ember{animation:emberUp 3.6s ease-out infinite}
+  .ember:nth-child(2){animation-delay:1.1s}
+  .ember:nth-child(3){animation-delay:2.3s}
+  @keyframes pulseGlow{
+  0%,100%{opacity:.45}
+  50%{opacity:.85}
+  }
+  #swordHalo{animation:pulseGlow 2.8s ease-in-out infinite}
+  @media (prefers-reduced-motion:reduce){
+    #scene *{animation:none !important}
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <header class="title">
+    <h1>秦 始 皇 骑 北 极 熊</h1>
+    <div class="en">The First Emperor Riding a Polar Bear &#183; Hand-drawn SVG</div>
+    <div class="rule"></div>
+  </header>
+
+  <!-- ============================ 画面 ============================ -->
+  <div class="frame">
+  <svg id="scene" viewBox="0 0 1000 600" role="img" aria-labelledby="sceneTitle sceneDesc">
+    <title id="sceneTitle">秦始皇骑北极熊</title>
+    <desc id="sceneDesc">工笔重彩风格：秦始皇着玄黑朱红冕服、戴十二旒冕、执太阿长剑，骑一头白色北极熊奔驰于长城之外的雪原。</desc>
+
+    <defs>
+      <!-- 天 -->
+      <linearGradient id="gSkyDay" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#A8C6DC"/><stop offset=".30" stop-color="#CADDE9"/>
+        <stop offset=".58" stop-color="#E6EDF3"/><stop offset=".80" stop-color="#F2E2C6"/>
+        <stop offset="1" stop-color="#DCCBAE"/>
+      </linearGradient>
+      <linearGradient id="gSkyNight" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#050A16"/><stop offset=".35" stop-color="#0B1E33"/>
+        <stop offset=".7" stop-color="#123049"/><stop offset="1" stop-color="#2A4C67"/>
+      </linearGradient>
+      <!-- 地 -->
+      <linearGradient id="gSnow" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#EFF6FC"/><stop offset=".55" stop-color="#DCE8F4"/>
+        <stop offset="1" stop-color="#C4D6E8"/>
+      </linearGradient>
+      <linearGradient id="gSnowShade" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#A9C1DA" stop-opacity=".62"/>
+        <stop offset="1" stop-color="#A9C1DA" stop-opacity="0"/>
+      </linearGradient>
+      <linearGradient id="gRidge" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#7C93AE"/><stop offset="1" stop-color="#AFC4D8"/>
+      </linearGradient>
+      <!-- 熊体明暗 -->
+      <radialGradient id="gFurTop" cx=".42" cy=".24" r=".82">
+        <stop offset="0" stop-color="#FFFFFF"/>
+        <stop offset=".55" stop-color="#F3F8FC"/>
+        <stop offset="1" stop-color="#D5E3F0"/>
+      </radialGradient>
+      <linearGradient id="gFurBelly" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#FFFFFF" stop-opacity=".95"/>
+        <stop offset="1" stop-color="#B9CDE0" stop-opacity=".95"/>
+      </linearGradient>
+      <linearGradient id="gFurLeg" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0" stop-color="#FBFDFF"/><stop offset="1" stop-color="#C8DAE9"/>
+      </linearGradient>
+      <!-- 器物 -->
+      <linearGradient id="gGold" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0" stop-color="#F7E7B4"/><stop offset=".45" stop-color="#D9B54A"/>
+        <stop offset="1" stop-color="#93701C"/>
+      </linearGradient>
+      <linearGradient id="gSteel" x1="0" y1="0" x2="1" y2="0">
+        <stop offset="0" stop-color="#FFFFFF"/><stop offset=".42" stop-color="#EBF3FB"/>
+        <stop offset=".75" stop-color="#B9C8D8"/><stop offset="1" stop-color="#8FA2B6"/>
+      </linearGradient>
+      <linearGradient id="gRobe" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#2A2E38"/><stop offset=".5" stop-color="#191C24"/>
+        <stop offset="1" stop-color="#0C0E13"/>
+      </linearGradient>
+      <radialGradient id="gGlow" cx=".5" cy=".5" r=".5">
+        <stop offset="0" stop-color="#FFF3D0" stop-opacity=".9"/>
+        <stop offset="1" stop-color="#FFF3D0" stop-opacity="0"/>
+      </radialGradient>
+      <radialGradient id="gMoon" cx=".5" cy=".5" r=".5">
+        <stop offset="0" stop-color="#FFFFFF"/><stop offset=".72" stop-color="#E7F1FA"/>
+        <stop offset="1" stop-color="#C9DAEB"/>
+      </radialGradient>
+      <linearGradient id="gAurora" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#8CFFCF" stop-opacity="0"/>
+        <stop offset=".35" stop-color="#5BE7A8" stop-opacity=".7"/>
+        <stop offset=".7" stop-color="#4AC6D8" stop-opacity=".5"/>
+        <stop offset="1" stop-color="#4A8FD8" stop-opacity="0"/>
+      </linearGradient>
+      <filter id="fBlur6" x="-30%" y="-30%" width="160%" height="160%">
+        <feGaussianBlur stdDeviation="6"/>
+      </filter>
+      <filter id="fBlur14" x="-40%" y="-40%" width="180%" height="180%">
+        <feGaussianBlur stdDeviation="14"/>
+      </filter>
+      <filter id="fSoftShadow" x="-25%" y="-25%" width="150%" height="150%">
+        <feDropShadow dx="0" dy="6" stdDeviation="7" flood-color="#2A3D52" flood-opacity=".34"/>
+      </filter>
+      <pattern id="pCrack" width="22" height="22" patternUnits="userSpaceOnUse">
+        <path d="M0 21 L6 17 L11 21 L16 15 L22 19" fill="none" stroke="#8FA6BE" stroke-opacity=".30" stroke-width=".8"/>
+        <path d="M3 0 L7 4 L4 9" fill="none" stroke="#8FA6BE" stroke-opacity=".22" stroke-width=".7"/>
+      </pattern>
+      <pattern id="pCloudRune" width="34" height="30" patternUnits="userSpaceOnUse">
+        <g fill="none" stroke="#C9A227" stroke-opacity=".55" stroke-width="1">
+          <path d="M4 20c0-5 5-8 9-6 1-4 7-4 8 0 4-1 7 2 7 6"/>
+          <path d="M7 24c3 2 5-2 8 0s4-2 8 0"/>
+        </g>
+      </pattern>
+      <marker id="mArrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+        <path d="M0 0 L10 5 L0 10 z" fill="#C9A227"/>
+      </marker>
+      <clipPath id="clipBear"><path d="M318 341c0-15 9-25 21-30 14-6 21-12 26-23 5-11 19-20 37-24l56-8c10-2 17-7 22-14l12-17c3-5 9-8 15-8 8 0 14 5 16 13l8 31c4 17 13 25 25 31 16 8 24 17 28 30 4 12 2 25-5 34-8 11-24 18-40 16-11-1-21-8-31-19-3-4-8-6-13-7l-23-4c-9-2-17-9-22-19-3-6-9-10-16-10-9 0-16-4-21-11-3-5-9-8-15-8h-58z"/></clipPath>
+    </defs>
+
+    <!-- ================= 天空 ================= -->
+    <g id="sky">
+      <rect class="sky-day-op" x="0" y="0" width="1000" height="600" fill="url(#gSkyDay)"/>
+      <rect class="sky-night-op" x="0" y="0" width="1000" height="600" fill="url(#gSkyNight)"/>
+      <!-- 日 -->
+      <g class="sky-day-op">
+        <circle cx="188" cy="128" r="62" fill="url(#gGlow)" opacity=".85"/>
+        <circle cx="188" cy="128" r="26" fill="#FFE9B8" opacity=".95"/>
+      </g>
+      <!-- 星 -->
+      <g id="stars" class="sky-night-op">
+        <g fill="#F2F7FF">
+          <circle cx="72" cy="58" r="1.5" opacity=".9"/><circle cx="140" cy="112" r="1" opacity=".6"/>
+          <circle cx="212" cy="46" r="1.8" opacity=".85"/><circle cx="268" cy="142" r="1" opacity=".5"/>
+          <circle cx="330" cy="72" r="1.4" opacity=".8"/><circle cx="404" cy="34" r="1" opacity=".55"/>
+          <circle cx="452" cy="128" r="1.7" opacity=".9"/><circle cx="520" cy="52" r="1.1" opacity=".6"/>
+          <circle cx="604" cy="96" r="1.3" opacity=".75"/><circle cx="668" cy="40" r="1" opacity=".5"/>
+          <circle cx="726" cy="118" r="1.6" opacity=".85"/><circle cx="806" cy="62" r="1.1" opacity=".6"/>
+          <circle cx="860" cy="132" r="1.4" opacity=".7"/><circle cx="920" cy="48" r="1.9" opacity=".9"/>
+          <circle cx="960" cy="108" r="1" opacity=".5"/><circle cx="112" cy="176" r="1.2" opacity=".6"/>
+          <circle cx="380" cy="168" r="1" opacity=".5"/><circle cx="556" cy="182" r="1.3" opacity=".65"/>
+          <circle cx="700" cy="188" r="1" opacity=".5"/><circle cx="884" cy="198" r="1.2" opacity=".6"/>
+        </g>
+      </g>
+      <!-- 极光 -->
+      <g id="aurora" filter="url(#fBlur14)">
+        <path class="rb" d="M-40 150 C 180 60, 420 190, 660 92 C 800 34, 940 96, 1050 58 L1050 168 C 900 200, 760 128, 620 176 C 400 250, 160 148, -40 232 Z" fill="url(#gAurora)"/>
+        <path class="rb" d="M-40 226 C 200 150, 460 262, 720 168 C 850 122, 960 178, 1050 146 L1050 236 C 920 262, 800 208, 660 254 C 420 330, 180 240, -40 302 Z" fill="url(#gAurora)" opacity=".7"/>
+        <path class="rb" d="M-40 92 C 160 40, 380 120, 600 52 C 760 6, 900 68, 1050 30 L1050 96 C 900 122, 770 74, 620 112 C 400 168, 160 96, -40 148 Z" fill="url(#gAurora)" opacity=".45"/>
+      </g>
+      <!-- 月 -->
+      <g id="moon">
+        <circle cx="836" cy="126" r="66" fill="url(#gGlow)"/>
+        <circle cx="836" cy="126" r="30" fill="url(#gMoon)"/>
+        <circle cx="826" cy="118" r="4.4" fill="#D3E1EE" opacity=".7"/>
+        <circle cx="845" cy="134" r="3.2" fill="#D3E1EE" opacity=".55"/>
+        <circle cx="838" cy="112" r="2.2" fill="#D3E1EE" opacity=".5"/>
+      </g>
+    </g>
+
+    <!-- ================= 远山 · 长城 ================= -->
+    <g id="far">
+      <path d="M0 372 L76 300 L128 336 L196 268 L268 336 L330 292 L404 356 L470 312 L560 372 Z" fill="url(#gRidge)" opacity=".55"/>
+      <path d="M560 372 L640 306 L700 344 L770 286 L840 340 L910 300 L1000 366 L1000 372 Z" fill="url(#gRidge)" opacity=".45"/>
+      <!-- 长城墙体 -->
+      <g stroke="#5E7590" stroke-width="1" fill="#B9CADB" opacity=".92">
+        <path d="M28 326 L150 252 L272 316 L392 246 L516 312 L636 250 L758 314 L880 252 L1000 314 L1000 344 L880 284 L758 346 L636 282 L516 344 L392 278 L272 348 L150 284 L28 356 Z"/>
+      </g>
+      <!-- 垛口 -->
+      <g fill="#A8BCCF">
+        <path d="M40 322 l14 8 v14 h-14 z"/><path d="M96 292 l14 8 v14 h-14 z"/>
+        <path d="M162 256 l14 8 v14 h-14 z"/><path d="M226 290 l14 8 v14 h-14 z"/>
+        <path d="M292 320 l14 8 v14 h-14 z"/><path d="M354 288 l14 8 v14 h-14 z"/>
+        <path d="M420 250 l14 8 v14 h-14 z"/><path d="M484 286 l14 8 v14 h-14 z"/>
+        <path d="M548 318 l14 8 v14 h-14 z"/><path d="M608 288 l14 8 v14 h-14 z"/>
+        <path d="M672 254 l14 8 v14 h-14 z"/><path d="M734 288 l14 8 v14 h-14 z"/>
+        <path d="M800 318 l14 8 v14 h-14 z"/><path d="M866 288 l14 8 v14 h-14 z"/>
+        <path d="M930 254 l14 8 v14 h-14 z"/><path d="M978 286 l14 8 v14 h-14 z"/>
+      </g>
+      <!-- 烽火台 -->
+      <g>
+        <path d="M250 258 l26 14 v34 l-26 14 l-26 -14 v-34 z" fill="#C3D2E1" stroke="#6C8299" stroke-width="1"/>
+        <path d="M250 244 l26 14 l-26 14 l-26 -14 z" fill="#D6E2EE" stroke="#6C8299" stroke-width="1"/>
+        <path d="M664 240 l24 13 v32 l-24 13 l-24 -13 v-32 z" fill="#C3D2E1" stroke="#6C8299" stroke-width="1"/>
+        <path d="M664 227 l24 13 l-24 13 l-24 -13 z" fill="#D6E2EE" stroke="#6C8299" stroke-width="1"/>
+        <!-- 烽烟 -->
+        <g id="ember" class="ember" opacity=".55">
+          <circle cx="250" cy="222" r="5" fill="#FFD9A0" opacity=".7"/>
+          <circle cx="250" cy="206" r="8" fill="#E8C79A" opacity=".4"/>
+        </g>
+        <g class="ember" opacity=".5" style="animation-delay:.9s">
+          <circle cx="664" cy="206" r="4" fill="#FFD9A0" opacity=".7"/>
+          <circle cx="664" cy="190" r="7" fill="#E8C79A" opacity=".4"/>
+        </g>
+      </g>
+    </g>
+
+    <!-- ================= 雪原 ================= -->
+    <g id="ground">
+      <rect x="0" y="352" width="1000" height="248" fill="url(#gSnow)"/>
+      <path d="M0 396 C 120 372, 240 410, 360 392 C 480 374, 600 406, 720 386 C 840 366, 930 400, 1000 380 L1000 420 L0 420 Z" fill="#FFFFFF" opacity=".65"/>
+      <path d="M0 470 C 140 442, 300 486, 460 462 C 620 438, 780 478, 1000 448 L1000 520 L0 520 Z" fill="#FFFFFF" opacity=".55"/>
+      <rect x="0" y="470" width="1000" height="130" fill="url(#pCrack)" opacity=".5"/>
+      <!-- 雪坡阴影 -->
+      <path d="M0 420 C 160 396, 320 432, 480 410 C 640 388, 820 424, 1000 402 L1000 428 C 820 448, 640 414, 480 434 C 320 456, 160 420, 0 446 Z" fill="url(#gSnowShade)"/>
+      <!-- 熊的投影 -->
+      <ellipse cx="520" cy="534" rx="272" ry="29" fill="#7E97B2" opacity=".34" filter="url(#fBlur6)"/>
+    </g>
+
+    <!-- 环境飘雪（远景） -->
+    <g id="snowA" class="env flakes-outer">
+      <g fill="#FFFFFF" opacity=".65">
+        <circle cx="120" cy="200" r="1.6"/><circle cx="248" cy="150" r="1.2"/><circle cx="372" cy="240" r="1.8"/>
+        <circle cx="500" cy="176" r="1.3"/><circle cx="628" cy="228" r="1.6"/><circle cx="744" cy="164" r="1.2"/>
+        <circle cx="868" cy="220" r="1.7"/><circle cx="948" cy="170" r="1.3"/><circle cx="180" cy="330" r="1.5"/>
+        <circle cx="430" cy="322" r="1.2"/><circle cx="700" cy="332" r="1.4"/><circle cx="930" cy="316" r="1.2"/>
+      </g>
+    </g>
+    <g id="snowB" class="env flakes-outer">
+      <g fill="#FFFFFF" opacity=".5">
+        <circle cx="70" cy="256" r="2.1"/><circle cx="300" cy="196" r="2.4"/><circle cx="540" cy="252" r="2.2"/>
+        <circle cx="790" cy="204" r="2.5"/><circle cx="900" cy="272" r="2.1"/><circle cx="420" cy="288" r="2.3"/>
+      </g>
+    </g>
+    <g id="snowC" class="env flakes-outer">
+      <g fill="#FFFFFF" opacity=".4">
+        <circle cx="60" cy="120" r="2.8"/><circle cx="360" cy="96" r="2.4"/><circle cx="640" cy="140" r="2.6"/>
+        <circle cx="860" cy="90" r="2.9"/><circle cx="240" cy="60" r="2.3"/><circle cx="740" cy="60" r="2.5"/>
+      </g>
+    </g>
+
+    <!-- ================= 北极熊 ================= -->
+    <g id="polarBear" filter="url(#fSoftShadow)">
+
+      <!-- 远侧（左侧）双腿：垫在最底层 -->
+      <g id="legsFar" fill="url(#gFurLeg)" stroke="#9FB6CD" stroke-width="1.1">
+        <!-- 前腿（远） -->
+        <path d="M355 408 C 342 452, 326 496, 312 528 C 306 542, 320 550, 340 546 C 354 543, 362 534, 360 522 C 356 490, 366 448, 378 414 Z"/>
+        <path d="M312 528 C 302 540, 318 552, 340 547" fill="none" stroke="#7E97B2" stroke-width="1.4"/>
+        <!-- 后腿（远） -->
+        <path d="M352 430 C 366 470, 384 508, 402 536 C 410 550, 428 550, 440 540 C 448 533, 448 522, 440 514 C 420 492, 400 456, 388 420 Z"/>
+        <path d="M402 536 C 398 550, 424 552, 440 541" fill="none" stroke="#7E97B2" stroke-width="1.4"/>
+      </g>
+
+      <!-- 熊体 -->
+      <g id="bearBody" fill="url(#gFurTop)" stroke="#A7BDD2" stroke-width="1.2">
+        <path d="M318 341c0-15 9-25 21-30 14-6 21-12 26-23 5-11 19-20 37-24l56-8c10-2 17-7 22-14l12-17c3-5 9-8 15-8 8 0 14 5 16 13l8 31c4 17 13 25 25 31 16 8 24 17 28 30 4 12 2 25-5 34-8 11-24 18-40 16-11-1-21-8-31-19-3-4-8-6-13-7l-23-4c-9-2-17-9-22-19-3-6-9-10-16-10-9 0-16-4-21-11-3-5-9-8-15-8h-58z"/>
+      </g>
+      <!-- 腹部 / 颈部腹侧暗面 -->
+      <g clip-path="url(#clipBear)">
+        <path d="M330 372 C 430 396, 560 402, 700 386 L 700 420 C 560 442, 430 430, 320 414 Z" fill="url(#gFurBelly)" opacity=".85"/>
+        <path d="M300 352 C 340 356, 352 372, 344 390 C 336 376, 318 366, 300 366 Z" fill="#C6D8E8" opacity=".8"/>
+      </g>
+
+      <!-- 熊尾 -->
+      <path d="M322 336 c-14-3-22 5-20 14 2 9 14 12 24 7 6-3 6-16-4-21z" fill="#FFFFFF" stroke="#A7BDD2" stroke-width="1.1"/>
+
+      <!-- 近侧（右侧）双腿 -->
+      <g id="legsNear" fill="url(#gFurLeg)" stroke="#8FA8C0" stroke-width="1.2">
+        <!-- 前腿（近）：伸向画面右侧 -->
+        <path d="M596 428 C 636 470, 674 502, 700 524 C 712 534, 727 527, 727 514 C 727 504, 716 494, 700 482 C 664 456, 632 424, 616 400 Z"/>
+        <path d="M700 524 C 690 538, 720 542, 727 514" fill="none" stroke="#7E97B2" stroke-width="1.5"/>
+        <!-- 后腿（近）：蹬地远伸 -->
+        <path d="M424 404 C 380 436, 340 466, 304 490 C 292 497, 292 512, 304 518 C 316 524, 328 518, 338 508 C 378 474, 424 442, 464 418 Z"/>
+        <path d="M304 490 C 292 502, 314 514, 338 508" fill="none" stroke="#7E97B2" stroke-width="1.5"/>
+      </g>
+
+      <!-- 爪、冰爪雪花 -->
+      <g id="claws" fill="#4C647C" opacity=".85">
+        <path d="M716 528 l14 6 l-10 4 z"/><path d="M722 538 l12 5 l-11 4 z"/>
+        <path d="M328 512 l-14 6 l11 4 z"/><path d="M334 520 l-13 6 l11 4 z"/>
+        <path d="M406 540 l10 8 l-12 2 z"/><path d="M422 542 l10 7 l-12 3 z"/>
+      </g>
+      <g id="powder" fill="#FFFFFF" opacity=".9">
+        <circle cx="296" cy="520" r="9"/><circle cx="278" cy="530" r="6"/><circle cx="258" cy="538" r="4"/>
+        <circle cx="310" cy="540" r="7"/><circle cx="336" cy="548" r="5"/>
+        <circle cx="238" cy="544" r="3"/><circle cx="220" cy="536" r="2.4"/><circle cx="204" cy="528" r="1.8"/>
+        <circle cx="252" cy="516" r="2.6"/><circle cx="284" cy="506" r="2"/>
+      </g>
+
+      <!-- 熊头 -->
+      <g id="bearHead">
+        <!-- 耳 -->
+        <path d="M596 298 c-10-14-4-28 10-30 8-1 15 6 15 17 0 9-6 15-13 15z" fill="#F6FAFE" stroke="#9FB6CD" stroke-width="1.2"/>
+        <path d="M604 290 c-5-8-2-16 6-17 5-1 9 4 9 11z" fill="#E3B9A8" opacity=".55"/>
+        <!-- 头骨 -->
+        <path d="M698 350c-16 0-30-4-38-12-6-6-16-9-26-9-9 0-16 3-21 8-4 4-3 9 3 10 7 1 14 4 18 9-6 6-7 13-2 18 8 8 24 12 42 11 10-1 18-5 24-12 4-5 3-10-2-13 6-3 9-7 9-11 0 1-4 1-7 1z" fill="#FFFFFF" stroke="#A7BDD2" stroke-width="1.2"/>
+        <!-- 吻部 -->
+        <path d="M613 366c-10 0-18 5-21 12-3 8 4 15 16 16 10 1 20-3 25-10 4-6 1-13-7-16-4-1-8-2-13-2z" fill="#FDFEFF" stroke="#A7BDD2" stroke-width="1.1"/>
+        <!-- 鼻 -->
+        <path d="M598 376c-5 0-9 3-9 7 0 4 4 7 9 7 5 0 9-3 9-7 0-4-4-7-9-7z" fill="#242A31"/>
+        <circle cx="595" cy="379" r="1.6" fill="#59626C"/>
+        <path d="M598 390 c0 4 -3 6 -7 7" fill="none" stroke="#6C7A88" stroke-width="1.2"/>
+        <!-- 嘴 -->
+        <path d="M590 396 c6 4 14 4 21 0" fill="none" stroke="#8A9AA8" stroke-width="1.3" stroke-linecap="round"/>
+        <!-- 眼 -->
+        <g>
+          <ellipse cx="662" cy="334" rx="5.4" ry="4.6" fill="#1E242B"/>
+          <circle cx="660.4" cy="332.2" r="1.6" fill="#FFFFFF" opacity=".9"/>
+          <path d="M650 322 c6-5 16-5 22 0" fill="none" stroke="#8FA6BE" stroke-width="1.3" stroke-linecap="round"/>
+          <ellipse cx="646" cy="348" rx="7" ry="3.4" fill="#C9D9EA" opacity=".7"/>
+        </g>
+        <!-- 头上落雪 -->
+        <g fill="#FFFFFF" opacity=".95">
+          <circle cx="640" cy="316" r="2.4"/><circle cx="656" cy="310" r="1.8"/><circle cx="622" cy="322" r="1.6"/>
+          <circle cx="672" cy="318" r="1.4"/>
+        </g>
+      </g>
+
+      <!-- 毛发纹理 -->
+      <g id="furGroup">
+        <g class="fur" fill="none" stroke="#C3D6E8" stroke-width="1.2" stroke-linecap="round" opacity=".78">
+          <!-- 背部毛簇 -->
+          <path d="M356 316 c14-8 30-12 46-12"/><path d="M392 300 c14-7 30-11 46-11"/>
+          <path d="M434 288 c12-6 26-9 40-9"/><path d="M478 276 c12-5 24-7 36-7"/>
+          <!-- 颈部 -->
+          <path d="M556 288 c10-4 20-5 30-4"/><path d="M566 304 c10-4 20-5 30-4"/>
+          <path d="M548 272 c10-4 20-4 30-2"/>
+          <!-- 肩部 -->
+          <path d="M520 300 c10 8 18 18 22 30"/><path d="M536 316 c8 8 14 18 18 28"/>
+          <!-- 身体下缘 -->
+          <path d="M400 396 c14 6 30 9 46 10"/><path d="M450 408 c14 5 30 7 46 7"/>
+          <path d="M500 416 c14 4 28 5 42 4"/><path d="M548 418 c12 3 24 3 36 1"/>
+          <!-- 臀 -->
+          <path d="M336 344 c14-4 28-4 40 2"/><path d="M330 362 c12-2 24-1 34 4"/>
+        </g>
+        <!-- 逆光高光 -->
+        <g fill="none" stroke="#FFFFFF" stroke-width="2.2" stroke-linecap="round" opacity=".85">
+          <path d="M370 310 c14-8 30-12 44-13"/><path d="M410 295 c14-7 28-10 42-11"/>
+          <path d="M456 282 c12-5 24-8 36-8"/>
+        </g>
+        <!-- 腿毛 -->
+        <g fill="none" stroke="#C3D6E8" stroke-width="1.1" stroke-linecap="round" opacity=".7">
+          <path d="M640 448 c6 10 10 20 12 30"/><path d="M660 464 c6 10 10 18 12 28"/>
+          <path d="M356 446 c-4 10-8 20-14 28"/><path d="M336 462 c-4 10-8 18-14 26"/>
+          <path d="M622 402 c8 6 14 14 18 24"/><path d="M452 412 c-8 6-16 14-24 24"/>
+        </g>
+        <!-- 背上落雪 -->
+        <g fill="#FFFFFF" opacity=".92">
+          <ellipse cx="430" cy="292" rx="7" ry="2.4"/><ellipse cx="470" cy="280" rx="5" ry="2"/>
+          <ellipse cx="392" cy="304" rx="6" ry="2.2"/><ellipse cx="512" cy="276" rx="5.4" ry="2"/>
+          <ellipse cx="556" cy="286" rx="4.4" ry="1.8"/><ellipse cx="352" cy="322" rx="5" ry="2"/>
+        </g>
+      </g>
+
+      <!-- 呼出的白气 -->
+      <g id="breath" opacity=".55">
+        <circle cx="586" cy="378" r="5" fill="#FFFFFF" opacity=".42"/>
+        <circle cx="583" cy="376" r="4" fill="#FFFFFF" opacity=".4"/>
+        <circle cx="588" cy="380" r="5.5" fill="#FFFFFF" opacity=".36"/>
+        <circle cx="602" cy="372" r="7" fill="#FFFFFF" opacity=".22" filter="url(#fBlur6)"/>
+      </g>
+
+      <!-- 缰绳（朱红） -->
+      <g id="rein">
+        <path d="M612 372 C 596 356, 570 340, 546 320" fill="none" stroke="#B3271E" stroke-width="3.4" stroke-linecap="round" opacity=".95"/>
+        <path d="M612 372 C 596 356, 570 340, 546 320" fill="none" stroke="#E4625A" stroke-width="1" stroke-linecap="round" opacity=".7"/>
+        <circle cx="546" cy="320" r="3.4" fill="#C9A227"/>
+      </g>
+    </g>
+
+    <!-- ================= 秦始皇 ================= -->
+
+    <!-- 披风（最里层，背后翻卷） -->
+    <g id="capeBack" fill="#7E1A14" opacity=".95">
+      <path d="M512 158 C 470 150, 424 158, 388 186 C 358 210, 340 246, 332 282 C 348 250, 372 220, 402 200 C 438 176, 478 166, 512 172 Z"/>
+    </g>
+
+    <g id="rider">
+      <!-- 马鞍 / 熊背上的坐垫 -->
+      <g id="saddle">
+        <path d="M498 264 C 540 246, 606 242, 652 252 C 664 254, 666 268, 656 276 C 610 292, 542 296, 502 288 C 488 285, 486 270, 498 264 Z"
+              fill="#8E2A22" stroke="#5E1A14" stroke-width="1.2"/>
+        <path d="M500 270 C 544 254, 606 250, 650 258" fill="none" stroke="#C9A227" stroke-width="1.6" opacity=".85"/>
+        <path d="M512 282 l10 22 M536 286 l6 22 M572 288 l2 22 M610 284 l-2 22 M640 276 l-6 22"
+              fill="none" stroke="#C9A227" stroke-width="1.4" opacity=".7"/>
+        <path d="M652 252 c14 6 20 18 16 30" fill="none" stroke="#5E1A14" stroke-width="1.4"/>
+        <!-- 鞍下流苏 -->
+        <g stroke="#C9A227" stroke-width="1.2" opacity=".8">
+          <path d="M508 292 v14"/><path d="M520 296 v14"/><path d="M534 298 v14"/><path d="M550 300 v13"/>
+          <path d="M600 300 v13"/><path d="M618 298 v13"/><path d="M634 294 v13"/>
+        </g>
+      </g>
+
+      <!-- 远侧披风（外扬） -->
+      <g id="capeGroup" fill="#A8221A" stroke="#5E1A14" stroke-width="1.2">
+        <path d="M506 150 C 452 148, 392 170, 348 214 C 312 250, 292 296, 284 336 C 296 322, 306 320, 316 326 C 322 288, 344 250, 376 220 C 414 184, 462 164, 512 164 Z"/>
+        <path d="M508 160 C 462 164, 424 186, 396 216 C 366 248, 346 288, 336 326 C 350 300, 372 274, 396 254 C 428 228, 468 208, 512 200 Z" fill="#C22B1F" opacity=".85" stroke="none"/>
+        <path d="M500 172 C 468 186, 440 210, 420 238" fill="none" stroke="#E4A03C" stroke-width="1.6" opacity=".7"/>
+        <path d="M512 186 C 484 202, 458 226, 440 252" fill="none" stroke="#E4A03C" stroke-width="1.2" opacity=".5"/>
+      </g>
+
+      <!-- 远侧手臂（执缰） -->
+      <g id="armFar" fill="url(#gRobe)" stroke="#000" stroke-opacity=".4" stroke-width="1">
+        <path d="M566 186 C 548 200, 536 220, 532 240 C 530 252, 540 258, 552 254 C 562 250, 570 236, 576 218 Z"/>
+        <path d="M532 240 c-8 8-6 20 4 22 8 2 14-6 12-16z" fill="#EBD3A6"/>
+      </g>
+
+      <!-- 双腿（骑姿） -->
+      <g id="legs">
+        <!-- 远腿 -->
+        <path d="M574 250 C 580 276, 588 300, 598 320 C 604 332, 620 332, 626 320 C 630 310, 624 296, 614 282 C 604 266, 596 254, 592 242 Z"
+              fill="#1A1D24" stroke="#000" stroke-opacity=".5" stroke-width="1"/>
+        <!-- 近腿 -->
+        <path d="M602 254 C 610 282, 620 308, 630 330 C 636 344, 654 344, 660 330 C 664 318, 656 302, 646 288 C 634 270, 626 256, 622 244 Z"
+              fill="#22262E" stroke="#000" stroke-opacity=".5" stroke-width="1"/>
+        <!-- 朱红襕边 -->
+        <path d="M626 318 C 634 330, 646 334, 658 330" fill="none" stroke="#B3271E" stroke-width="3.4" stroke-linecap="round"/>
+        <path d="M598 310 C 606 322, 616 326, 626 322" fill="none" stroke="#8E1E17" stroke-width="3" stroke-linecap="round" opacity=".9"/>
+        <!-- 靴 -->
+        <path d="M660 330 c8 8 22 8 28 2 4-4 2-9-4-11-6-2-14-3-20-1-6 2-8 6-4 10z" fill="#12151A" stroke="#C9A227" stroke-width="1.1"/>
+        <path d="M630 342 c10 8 24 8 30 2 4-4 2-9-4-11-6-2-14-3-20-1-6 2-8 6-4 10z" fill="#0E1116" stroke="#C9A227" stroke-width="1.1" transform="translate(0,-4)"/>
+        <!-- 金踝饰 -->
+        <circle cx="628" cy="326" r="3.6" fill="url(#gGold)"/>
+        <circle cx="600" cy="316" r="3" fill="url(#gGold)" opacity=".8"/>
+      </g>
+
+      <!-- 躯干 · 玄黑冕服 -->
+      <g id="torso" fill="url(#gRobe)" stroke="#000" stroke-opacity=".55" stroke-width="1.2">
+        <path d="M588 168 C 570 172, 556 186, 552 206 C 548 228, 552 250, 560 268 L 556 296 C 588 308, 632 306, 662 292 L 656 258 C 664 240, 668 216, 662 196 C 656 178, 640 168, 620 166 Z"/>
+      </g>
+      <!-- 交领朱红里衣 -->
+      <g>
+        <path d="M596 172 C 604 192, 616 208, 630 218 C 622 226, 610 228, 600 226 C 592 210, 590 190, 596 172 Z" fill="#B3271E"/>
+        <path d="M596 172 C 604 192, 616 208, 630 218" fill="none" stroke="#F0D48A" stroke-width="1.6" opacity=".9"/>
+        <path d="M556 200 L 654 190" fill="none" stroke="#B3271E" stroke-width="0" />
+      </g>
+      <!-- 衣缘（朱红+金线） -->
+      <g fill="none">
+        <path d="M552 206 C 548 228, 552 250, 560 268 L 556 296" stroke="#B3271E" stroke-width="4"/>
+        <path d="M552 206 C 548 228, 552 250, 560 268 L 556 296" stroke="#F0D48A" stroke-width="1.2" opacity=".9"/>
+        <path d="M662 196 C 668 216, 664 240, 656 258 L 662 292" stroke="#B3271E" stroke-width="4"/>
+        <path d="M662 196 C 668 216, 664 240, 656 258 L 662 292" stroke="#F0D48A" stroke-width="1.2" opacity=".9"/>
+        <path d="M556 296 C 588 308, 632 306, 662 292" stroke="#B3271E" stroke-width="3.4"/>
+      </g>
+      <!-- 玄衣上的云气金纹 -->
+      <g fill="none" stroke="#C9A227" stroke-width="1.3" opacity=".72">
+        <path d="M578 232 c6-8 16-8 20 0 c6-6 16-4 18 4 c-6 8-16 8-20 2 c-6 6-16 4-18-6z"/>
+        <path d="M618 250 c6-8 16-8 20 0 c6-6 16-4 18 4 c-6 8-16 8-20 2 c-6 6-16 4-18-6z"/>
+        <path d="M590 272 c6-7 14-7 18 0 c5-5 14-4 16 3"/>
+      </g>
+      <!-- 腰带 + 玉具剑饰 -->
+      <g id="belt">
+        <path d="M556 262 C 588 274, 632 272, 662 258 L 664 274 C 632 290, 588 292, 554 280 Z" fill="#8E2A22" stroke="#5E1A14" stroke-width="1"/>
+        <path d="M556 266 C 588 278, 632 276, 662 262" fill="none" stroke="#C9A227" stroke-width="2"/>
+        <rect x="600" y="266" width="20" height="15" rx="2" fill="url(#gGold)" stroke="#7A5C14" stroke-width="1"/>
+        <rect x="605" y="270" width="10" height="7" rx="1" fill="#4E8C6A"/>
+        <circle cx="610" cy="273.5" r="2" fill="#9BD8B4" opacity=".8"/>
+        <!-- 组绶垂饰 -->
+        <path d="M612 282 v22" stroke="#C9A227" stroke-width="1.6"/>
+        <circle cx="612" cy="307" r="4" fill="url(#gGold)"/>
+        <path d="M612 311 v12" stroke="#B3271E" stroke-width="2"/>
+      </g>
+
+      <!-- 近侧手臂 · 执剑 -->
+      <g id="armNear">
+        <path d="M636 190 C 654 204, 668 222, 676 240 C 682 254, 670 264, 656 258 C 644 252, 636 232, 630 212 Z"
+              fill="url(#gRobe)" stroke="#000" stroke-opacity=".5" stroke-width="1.2"/>
+        <!-- 大袖 -->
+        <path d="M648 214 C 668 224, 682 244, 684 268 C 686 286, 668 294, 656 280 C 644 264, 640 238, 642 220 Z"
+              fill="#1C2028" stroke="#000" stroke-opacity=".5" stroke-width="1.1"/>
+        <path d="M684 268 C 686 286, 668 294, 656 280" fill="none" stroke="#B3271E" stroke-width="3.2"/>
+        <path d="M684 268 C 686 286, 668 294, 656 280" fill="none" stroke="#F0D48A" stroke-width="1" opacity=".9"/>
+        <path d="M652 226 c10 12 16 26 18 40" fill="none" stroke="#C9A227" stroke-width="1.1" opacity=".65"/>
+        <!-- 手 -->
+        <path d="M676 236 c8 6 14 14 12 22-2 8-12 10-18 4-6-6-8-16-4-22 3-4 6-6 10-4z" fill="#EBD3A6" stroke="#A8823F" stroke-width="1"/>
+      </g>
+
+      <!-- 太阿剑 -->
+      <g id="sword">
+        <g id="swordHalo" opacity=".5">
+          <path d="M690 232 L 762 88 L 776 96 L 706 240 Z" fill="#FFF3D0" filter="url(#fBlur6)"/>
+        </g>
+        <!-- 剑身 -->
+        <path d="M690 236 L 758 96 L 766 88 L 772 94 L 704 242 Z" fill="url(#gSteel)" stroke="#8FA2B6" stroke-width="1"/>
+        <path d="M697 230 L 761 92" stroke="#FFFFFF" stroke-width="1.6" opacity=".9"/>
+        <path d="M698 238 L 760 100" stroke="#FFFFFF" stroke-width=".9" opacity=".6"/>
+        <!-- 血槽 -->
+        <path d="M693 236 L 760 96" stroke="#A9BACA" stroke-width="1.1" opacity=".9"/>
+        <!-- 格 -->
+        <path d="M680 246 c10-8 22-6 28 4 6 10 2 20-8 22-10 2-20-6-22-16-1-4 0-8 2-10z" fill="url(#gGold)" stroke="#7A5C14" stroke-width="1.2"/>
+        <path d="M682 252 c8-5 18-3 22 5" fill="none" stroke="#FFF0C0" stroke-width="1.4" opacity=".9"/>
+        <!-- 剑柄 -->
+        <path d="M682 250 L 662 288" stroke="#3A2C14" stroke-width="9" stroke-linecap="round"/>
+        <g stroke="#C9A227" stroke-width="1.4" opacity=".95">
+          <path d="M678 258 l-6 10"/><path d="M672 268 l-6 10"/><path d="M666 278 l-6 10"/>
+        </g>
+        <!-- 剑首 -->
+        <circle cx="660" cy="292" r="6" fill="url(#gGold)" stroke="#7A5C14" stroke-width="1.2"/>
+        <circle cx="660" cy="292" r="2.2" fill="#B3271E"/>
+      </g>
+
+      <!-- 头部 -->
+      <g id="head">
+        <!-- 冕冠 -->
+        <g id="crown">
+          <!-- 冠武 -->
+          <path d="M568 124 C 570 112, 584 104, 600 104 C 616 104, 628 112, 630 124 C 630 132, 622 136, 600 136 C 578 136, 568 132, 568 124 Z" fill="#16181F" stroke="#C9A227" stroke-width="1.4"/>
+          <!-- 延板 -->
+          <path d="M556 112 L 648 94 L 650 106 L 558 124 Z" fill="#111318" stroke="#C9A227" stroke-width="1.6"/>
+          <path d="M560 118 L 646 100" fill="none" stroke="#C9A227" stroke-width="1" opacity=".8"/>
+          <!-- 前旒 -->
+          <g stroke="#C9A227" stroke-width=".8">
+            <path d="M560 124 v42"/><path d="M568 122 v42"/><path d="M576 120 v42"/><path d="M584 118 v42"/><path d="M592 116 v42"/>
+          </g>
+          <g fill="#F4E3AE" stroke="#8A6A18" stroke-width=".5">
+            <circle cx="560" cy="130" r="2.4"/><circle cx="560" cy="140" r="2.4"/><circle cx="560" cy="150" r="2.4"/><circle cx="560" cy="160" r="2.4"/>
+            <circle cx="568" cy="128" r="2.4"/><circle cx="568" cy="138" r="2.4"/><circle cx="568" cy="148" r="2.4"/><circle cx="568" cy="158" r="2.4"/>
+            <circle cx="576" cy="126" r="2.4"/><circle cx="576" cy="136" r="2.4"/><circle cx="576" cy="146" r="2.4"/><circle cx="576" cy="156" r="2.4"/>
+            <circle cx="584" cy="124" r="2.4"/><circle cx="584" cy="134" r="2.4"/><circle cx="584" cy="144" r="2.4"/><circle cx="584" cy="154" r="2.4"/>
+            <circle cx="592" cy="122" r="2.4"/><circle cx="592" cy="132" r="2.4"/><circle cx="592" cy="142" r="2.4"/><circle cx="592" cy="152" r="2.4"/>
+          </g>
+          <!-- 后旒 -->
+          <g stroke="#C9A227" stroke-width=".8">
+            <path d="M624 116 v40"/><path d="M632 114 v40"/><path d="M640 106 v40"/>
+          </g>
+          <g fill="#F4E3AE" stroke="#8A6A18" stroke-width=".5" opacity=".9">
+            <circle cx="624" cy="122" r="2.2"/><circle cx="624" cy="132" r="2.2"/><circle cx="624" cy="142" r="2.2"/><circle cx="624" cy="152" r="2.2"/>
+            <circle cx="632" cy="120" r="2.2"/><circle cx="632" cy="130" r="2.2"/><circle cx="632" cy="140" r="2.2"/><circle cx="632" cy="150" r="2.2"/>
+            <circle cx="640" cy="112" r="2.2"/><circle cx="640" cy="122" r="2.2"/><circle cx="640" cy="132" r="2.2"/>
+          </g>
+          <!-- 缨（朱红系带） -->
+          <path d="M566 128 C 556 140, 552 156, 556 170" fill="none" stroke="#B3271E" stroke-width="3" stroke-linecap="round"/>
+          <path d="M632 120 C 644 132, 650 148, 646 162" fill="none" stroke="#B3271E" stroke-width="3" stroke-linecap="round"/>
+        </g>
+
+        <!-- 颈 -->
+        <path d="M586 136 L 618 136 L 620 168 C 606 174, 596 174, 584 168 Z" fill="#EBD3A6" stroke="#C0994F" stroke-width="1"/>
+        <path d="M586 140 C 600 148, 606 148, 618 140" fill="none" stroke="#C0994F" stroke-width="1" opacity=".7"/>
+
+        <!-- 头面 -->
+        <path d="M568 138 C 570 122, 584 112, 600 112 C 616 112, 628 122, 630 138 C 632 158, 620 176, 600 178 C 580 176, 566 158, 568 138 Z"
+              fill="#F1D9AC" stroke="#B98F45" stroke-width="1.1"/>
+        <!-- 耳 -->
+        <path d="M566 142 c-7 0-10 6-8 13 2 6 8 10 13 8" fill="#F1D9AC" stroke="#B98F45" stroke-width="1"/>
+        <path d="M632 140 c7 0 10 6 8 13-2 6-8 10-13 8" fill="#F1D9AC" stroke="#B98F45" stroke-width="1"/>
+        <!-- 眉 -->
+        <path d="M578 136 c6-5 14-5 20-2" fill="none" stroke="#1A1512" stroke-width="3" stroke-linecap="round"/>
+        <path d="M614 134 c6-3 14-2 18 2" fill="none" stroke="#1A1512" stroke-width="3" stroke-linecap="round"/>
+        <!-- 眼 -->
+        <path d="M580 148 c5-4 12-4 16 0 c-5 4-12 4-16 0z" fill="#FFFFFF" stroke="#3A2A18" stroke-width="1"/>
+        <path d="M616 146 c5-4 12-4 16 0 c-5 4-12 4-16 0z" fill="#FFFFFF" stroke="#3A2A18" stroke-width="1"/>
+        <circle cx="588" cy="148" r="2.6" fill="#1A1310"/><circle cx="624" cy="146" r="2.6" fill="#1A1310"/>
+        <circle cx="587" cy="147" r=".9" fill="#FFFFFF" opacity=".9"/><circle cx="623" cy="145" r=".9" fill="#FFFFFF" opacity=".9"/>
+        <!-- 鼻 -->
+        <path d="M598 152 c3 6 6 9 6 12 0 3-4 4-6 2" fill="none" stroke="#B98F45" stroke-width="1.2" stroke-linecap="round"/>
+        <path d="M596 168 c4 1 9 1 12-1" fill="none" stroke="#9A6F2E" stroke-width="1.2" stroke-linecap="round"/>
+        <!-- 髭须 -->
+        <path d="M582 166 c8 4 14 3 18-2" fill="none" stroke="#1A1512" stroke-width="2" stroke-linecap="round"/>
+        <path d="M618 164 c8 3 14 2 18-2" fill="none" stroke="#1A1512" stroke-width="2" stroke-linecap="round"/>
+        <!-- 长须 -->
+        <path d="M584 178 C 580 196, 588 212, 600 218 C 612 212, 620 196, 616 178 C 606 184, 594 184, 584 178 Z" fill="#1A1512" opacity=".92"/>
+        <path d="M590 182 C 588 196, 594 208, 600 212" fill="none" stroke="#4A4038" stroke-width="1.2" opacity=".7"/>
+        <!-- 面部高光/阴影 -->
+        <path d="M572 140 c2-12 12-20 28-20" fill="none" stroke="#FDF0D4" stroke-width="2.4" opacity=".7"/>
+        <path d="M580 172 c6 6 14 8 22 6" fill="none" stroke="#C0994F" stroke-width="1" opacity=".6"/>
+      </g>
+
+      <!-- 身后的帝威光晕 -->
+      <circle cx="600" cy="150" r="74" fill="url(#gGlow)" opacity=".22"/>
+    </g>
+
+    <!-- ================= 环境飘雪（前景，在人物之前） ================= -->
+    <g id="snowFront" class="flakes">
+      <g class="f" style="animation-duration:7.6s;      animation-delay:-.4s"><circle cx="90"  cy="60"  r="3.2" fill="#FFF" /></g>
+      <g class="f" style="animation-duration:9.4s;      animation-delay:-1.6s"><circle cx="210" cy="40"  r="2.4" fill="#FFF" /></g>
+      <g class="f" style="animation-duration:6.8s;      animation-delay:-3.1s"><circle cx="330" cy="80"  r="3.8" fill="#FFF" /></g>
+      <g class="f" style="animation-duration:10.2s;     animation-delay:-2.2s"><circle cx="452" cy="30"  r="2.8" fill="#FFF" /></g>
+      <g class="f" style="animation-duration:8.1s;      animation-delay:-5.5s"><circle cx="566" cy="70"  r="3.4" fill="#FFF" /></g>
+      <g class="f" style="animation-duration:11.3s;     animation-delay:-1.1s"><circle cx="688" cy="44"  r="2.2" fill="#FFF" /></g>
+      <g class="f" style="animation-duration:7.1s;      animation-delay:-4.3s"><circle cx="792" cy="86"  r="3.6" fill="#FFF" /></g>
+      <g class="f" style="animation-duration:9.8s;      animation-delay:-.8s"><circle cx="908" cy="52"  r="2.6" fill="#FFF" /></g>
+      <g class="f f2" style="animation-duration:6.4s;   animation-delay:-2.7s"><circle cx="150" cy="10"  r="2" fill="#FFF" /></g>
+      <g class="f f2" style="animation-duration:8.7s;   animation-delay:-6s"><circle cx="404" cy="4"   r="2.2" fill="#FFF" /></g>
+      <g class="f f2" style="animation-duration:7.3s;   animation-delay:-3.9s"><circle cx="624" cy="22"  r="2.4" fill="#FFF" /></g>
+      <g class="f f2" style="animation-duration:9.1s;   animation-delay:-5.2s"><circle cx="864" cy="16"  r="2" fill="#FFF" /></g>
+      <g class="f f2" style="animation-duration:8.3s;   animation-delay:-1.9s"><circle cx="270" cy="96"  r="2.6" fill="#FFF" /></g>
+      <g class="f f2" style="animation-duration:10.6s;  animation-delay:-4.7s"><circle cx="736" cy="120" r="2.8" fill="#FFF" /></g>
+      <g class="f" style="animation-duration:9s;        animation-delay:-7.4s"><circle cx="500" cy="108" r="3" fill="#FFF" /></g>
+    </g>
+
+    <!-- 风雪线 -->
+    <g id="windStreaks" fill="none" stroke="#FFFFFF" stroke-linecap="round" opacity=".5">
+      <path d="M120 300 C 200 288, 300 296, 380 284" stroke-width="1.6"/>
+      <path d="M420 340 C 500 330, 600 336, 680 324" stroke-width="1.2" opacity=".7"/>
+      <path d="M60 250 C 130 242, 200 246, 262 238" stroke-width="1.1" opacity=".55"/>
+      <path d="M700 210 C 780 200, 860 206, 940 196" stroke-width="1.4" opacity=".6"/>
+    </g>
+
+    <!-- ================= 骨骼 / 结构辅助线 ================= -->
+    <g id="outline">
+      <g stroke="#C9A227" stroke-width=".9" fill="none" opacity=".9">
+        <!-- 熊的脊柱与肢体轴线 -->
+        <path d="M330 340 C 400 300, 470 280, 540 272 C 590 266, 630 278, 666 300"/>
+        <path d="M360 420 C 340 460, 320 500, 306 526"/>
+        <path d="M400 430 C 420 470, 440 505, 452 540"/>
+        <path d="M620 420 C 656 456, 686 492, 706 520"/>
+        <path d="M604 300 C 616 316, 626 332, 630 348"/>
+        <!-- 熊头结构 -->
+        <circle cx="600" cy="356" r="30" stroke-dasharray="3 3"/>
+        <path d="M630 340 L 662 334"/>
+        <!-- 骑者轴线 -->
+        <path d="M600 112 L 600 300"/>
+        <path d="M600 190 L 560 250"/>
+        <path d="M600 190 L 664 246"/>
+        <path d="M604 250 L 644 330"/>
+        <path d="M600 190 L 660 214 L 700 250"/>
+        <circle cx="600" cy="146" r="34" stroke-dasharray="3 3"/>
+        <circle cx="520" cy="262" r="8" stroke-dasharray="2 2"/>
+        <circle cx="612" cy="286" r="6" stroke-dasharray="2 2"/>
+      </g>
+      <g fill="#C9A227" opacity=".9">
+        <circle cx="600" cy="146" r="2.2"/><circle cx="600" cy="190" r="2.2"/><circle cx="600" cy="262" r="2.2"/>
+        <circle cx="604" cy="250" r="2.2"/><circle cx="660" cy="214" r="2.2"/><circle cx="630" cy="348" r="2.2"/>
+      </g>
+      <g font-size="9" fill="#F4E3AE" letter-spacing=".1em">
+        <text x="612" y="108">head</text>
+        <text x="606" y="188">spine</text>
+        <text x="540" y="192">humerus</text>
+        <text x="546" y="338">femur</text>
+        <text x="672" y="222">radius</text>
+        <text x="676" y="308">bear axis</text>
+      </g>
+    </g>
+
+    <!-- ================= 标注 ================= -->
+    <g id="anno">
+      <!-- 冕冠 -->
+      <path class="anno-line" d="M650 100 C 700 92, 726 70, 752 60" marker-end="url(#mArrow)"/>
+      <rect class="anno-box" x="758" y="36" width="150" height="44" rx="3"/>
+      <text class="anno-t" x="768" y="58">十二旒冕冠</text>
+      <text class="anno-e" x="768" y="72">MIAN CROWN, 12 BEADS</text>
+      <circle class="anno-dot" cx="646" cy="102" r="4.6"/><circle class="anno-dot-core" cx="646" cy="102" r="1.6"/>
+
+      <!-- 太阿剑 -->
+      <path class="anno-line" d="M772 96 C 812 78, 838 66, 862 56" marker-end="url(#mArrow)"/>
+      <rect class="anno-box" x="866" y="34" width="128" height="44" rx="3"/>
+      <text class="anno-t" x="876" y="56">太阿长剑</text>
+      <text class="anno-e" x="876" y="70">TAI'E SWORD</text>
+      <circle class="anno-dot" cx="766" cy="94" r="4.6"/><circle class="anno-dot-core" cx="766" cy="94" r="1.6"/>
+
+      <!-- 冕服 -->
+      <path class="anno-line" d="M552 224 C 512 232, 484 250, 462 274" marker-end="url(#mArrow)"/>
+      <rect class="anno-box" x="286" y="266" width="168" height="44" rx="3"/>
+      <text class="anno-t" x="296" y="288">玄衣纁裳 · 云纹</text>
+      <text class="anno-e" x="296" y="302">BLACK ROBE, GOLD RUNES</text>
+      <circle class="anno-dot" cx="556" cy="222" r="4.6"/><circle class="anno-dot-core" cx="556" cy="222" r="1.6"/>
+
+      <!-- 缰绳 -->
+      <path class="anno-line" d="M548 318 C 500 330, 460 348, 428 366" marker-end="url(#mArrow)"/>
+      <rect class="anno-box" x="286" y="352" width="136" height="44" rx="3"/>
+      <text class="anno-t" x="296" y="374">朱红缰绳</text>
+      <text class="anno-e" x="296" y="388">CINNABAR REIN</text>
+      <circle class="anno-dot" cx="546" cy="320" r="4.6"/><circle class="anno-dot-core" cx="546" cy="320" r="1.6"/>
+
+      <!-- 北极熊 -->
+      <path class="anno-line" d="M430 320 C 400 366, 372 404, 344 436" marker-end="url(#mArrow)"/>
+      <rect class="anno-box" x="196" y="428" width="150" height="44" rx="3"/>
+      <text class="anno-t" x="206" y="450">北极熊 · 雪原座骑</text>
+      <text class="anno-e" x="206" y="464">POLAR BEAR, SNOW STEED</text>
+      <circle class="anno-dot" cx="432" cy="318" r="4.6"/><circle class="anno-dot-core" cx="432" cy="318" r="1.6"/>
+
+      <!-- 长城 -->
+      <path class="anno-line" d="M664 250 C 720 224, 760 206, 792 192" marker-end="url(#mArrow)"/>
+      <rect class="anno-box" x="798" y="168" width="150" height="44" rx="3"/>
+      <text class="anno-t" x="808" y="190">长城烽燧</text>
+      <text class="anno-e" x="808" y="204">GREAT WALL BEACON</text>
+      <circle class="anno-dot" cx="662" cy="250" r="4.6"/><circle class="anno-dot-core" cx="662" cy="250" r="1.6"/>
+    </g>
+
+    <!-- 落款 -->
+    <text class="sig" x="36" y="572">玄冰原 · 帝巡 · 己丑冬月摹</text>
+    <g transform="translate(196,556)">
+      <rect x="0" y="0" width="26" height="26" rx="2" fill="#B3271E" opacity=".9"/>
+      <text x="13" y="17" font-size="12" fill="#F4E3AE" text-anchor="middle">秦</text>
+    </g>
+  </svg>
+  <div class="vignette"></div>
+  </div>
+
+  <!-- ============================ 控制台 ============================ -->
+  <div class="console" role="group" aria-label="画面控制台">
+    <div class="grp">
+      <span class="lbl">昼夜</span>
+      <button class="btn" id="btnDay"   aria-pressed="true">白日</button>
+      <button class="btn" id="btnNight" aria-pressed="false">玄夜 · 极光</button>
+    </div>
+    <div class="sep"></div>
+    <div class="grp">
+      <span class="lbl">雪量</span>
+      <button class="btn" data-snow="off">微雪</button>
+      <button class="btn" data-snow="mid" aria-pressed="true">中雪</button>
+      <button class="btn" data-snow="max">暴雪</button>
+    </div>
+    <div class="sep"></div>
+    <div class="grp">
+      <span class="lbl">辅助</span>
+      <button class="btn" id="btnOutline" aria-pressed="false">骨骼线</button>
+      <button class="btn" id="btnAnno"    aria-pressed="true">图注</button>
+      <button class="btn" id="btnAnim"    aria-pressed="false">暂停动画</button>
+    </div>
+  </div>
+
+  <!-- ============================ 图注与约束 ============================ -->
+  <div class="cols">
+    <section class="panel" aria-labelledby="hNotes">
+      <h2 id="hNotes">图 注 <small>Annotations</small></h2>
+      <ol class="notes">
+        <li><b>十二旒冕冠</b><i>Mian Crown</i>
+          <span>冕板前低后高、倾斜约 15°；前后各垂五串玉珠，珠距等分，取「蔽明」之礼。</span></li>
+        <li><b>太阿长剑</b><i>Tai'e Sword</i>
+          <span>剑身过顶右上方，中线与熊体轴线约成 41°；剑锋极窄以强调秦剑的锐长。</span></li>
+        <li><b>玄衣纁裳 · 云纹</b><i>Black Robe</i>
+          <span>秦制尚黑，衣玄而缘朱；衣身以鎏金云气纹平铺，腰带嵌绿松石玉具。</span></li>
+        <li><b>朱红缰绳</b><i>Cinnabar Rein</i>
+          <span>自熊吻至鞍前，取一条贝塞尔曲线；金环一枚，呼应鎏金法器。</span></li>
+        <li><b>北极熊 · 雪原座骑</b><i>Polar Bear</i>
+          <span>奔姿四足离地，前伸后蹬；背脊留一线极亮高光，配合逆光雪原塑造体积。</span></li>
+        <li><b>长城烽燧</b><i>Great Wall Beacon</i>
+          <span>两层城垣依山脊起伏，垛口等距；台顶飘雪烟，暗示戍边苦寒。</span></li>
+      </ol>
+    </section>
+
+    <section class="panel" aria-labelledby="hRules">
+      <h2 id="hRules">提 示 词 约 束 <small>Prompt Constraints</small></h2>
+      <ul class="rules">
+        <li><code>主体</code> 秦始皇骑行于北极熊背上，四足奔跃姿，人熊比例约为 1 : 2.6。</li>
+        <li><code>朝代考据</code> 秦制尚黑：主色 <code>#0F1115</code>，点缀朱红 <code>#B3271E</code> 与鎏金 <code>#C9A227</code>，禁用清代龙袍明黄。</li>
+        <li><code>头冠</code> 必须为冕冠（平直冕板 + 前后旒），不得出现清代暖帽或明代翼善冠。</li>
+        <li><code>坐骑</code> 必须为北极熊（白色毛发、黑鼻、小圆耳、宽掌），不得画成棕熊或熊猫。</li>
+        <li><code>场景</code> 极地雪原 + 长城烽燧 + 可切换极光之夜，禁止热带植被。</li>
+        <li><code>技法</code> 工笔重彩：平涂打底 + 分层罩染 + 金线勾勒，轮廓线内细外粗。</li>
+        <li><code>实现</code> 单文件、纯手写 SVG，零外部图片与零依赖；所有动画为 CSS 关键帧。</li>
+        <li><code>可访问</code> <code>role="img"</code> + <code>title</code> / <code>desc</code> 语义描述完备。</li>
+      </ul>
+    </section>
+  </div>
+
+  <footer>纯手写 SVG · 无外部依赖 · <b>玄黑 · 朱红 · 鎏金</b> · Hand-coded single-file SVG illustration</footer>
+</div>
+
+<script>
+(function(){
+  "use strict";
+  var root = document.documentElement;
+  var scene = document.getElementById('scene');
+  var reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  /* ---------- 昼夜 ---------- */
+  function setTheme(night){
+    root.classList.toggle('theme-night', night);
+    root.classList.toggle('theme-day', !night);
+    byId('btnDay').setAttribute('aria-pressed', String(!night));
+    byId('btnNight').setAttribute('aria-pressed', String(night));
+    flash(night ? 'moon' : 'sky');
+  }
+
+  /* ---------- 雪量 ---------- */
+  function setSnow(level){
+    root.classList.remove('snow-off','snow-mid','snow-max');
+    root.classList.add('snow-' + level);
+    root.setAttribute('data-snow', level);
+    document.querySelectorAll('[data-snow]').forEach(function(b){
+      b.setAttribute('aria-pressed', String(b.getAttribute('data-snow') === level));
+    });
+  }
+
+  /* ---------- 骨骼线 / 图注 ---------- */
+  function toggleOutline(){
+    var on = !root.classList.contains('outline-on');
+    root.classList.toggle('outline-on', on);
+    byId('btnOutline').setAttribute('aria-pressed', String(on));
+    if(on) flash('outline');
+  }
+  function toggleAnno(){
+    var on = !root.classList.contains('anno-on');
+    root.classList.toggle('anno-on', on);
+    byId('btnAnno').setAttribute('aria-pressed', String(on));
+  }
+
+  /* ---------- 动画暂停 ---------- */
+  function setPlaying(playing){
+    root.classList.toggle('anim-pause', !playing);
+    byId('btnAnim').setAttribute('aria-pressed', String(!playing));
+    byId('btnAnim').textContent = playing ? '暂停动画' : '继续动画';
+    root.querySelectorAll('svg *').forEach(function(el){
+      el.getAnimations().forEach(function(a){
+        try{ playing ? a.play() : a.pause(); }catch(e){}
+      });
+    });
+  }
+
+  /* ---------- 工具 ---------- */
+  function byId(id){ return document.getElementById(id); }
+  function flash(id, times){
+    var el = byId(id);
+    if(!el) return;
+    var n = times || 1, i = 0;
+    function run(){
+      el.classList.remove('hl-pulse');
+      void el.getBoundingClientRect();
+      el.classList.add('hl-pulse');
+      i++;
+      if(i < n) setTimeout(run, 1200);
+    }
+    run();
+    setTimeout(function(){ el.classList.remove('hl-pulse'); }, 1250 * n);
+  }
+
+  /* ---------- 绑定 ---------- */
+  byId('btnDay').addEventListener('click', function(){ setTheme(false); flash('polarBear', 1); });
+  byId('btnNight').addEventListener('click', function(){ setTheme(true); flash('polarBear', 1); });
+  document.querySelectorAll('[data-snow]').forEach(function(b){
+    b.addEventListener('click', function(){ setSnow(b.getAttribute('data-snow')); });
+  });
+  byId('btnOutline').addEventListener('click', toggleOutline);
+  byId('btnAnno').addEventListener('click', toggleAnno);
+  byId('btnAnim').addEventListener('click', function(){
+    setPlaying(root.classList.contains('anim-pause'));
+  });
+
+  /* 键盘快捷键：N 昼夜 · O 骨骼线 · A 图注 · Space 暂停 */
+  document.addEventListener('keydown', function(e){
+    if(e.target && /INPUT|TEXTAREA/.test(e.target.tagName)) return;
+    var k = e.key.toLowerCase();
+    if(k === 'n') setTheme(!root.classList.contains('theme-night'));
+    else if(k === 'o') toggleOutline();
+    else if(k === 'a') toggleAnno();
+    else if(e.code === 'Space'){ e.preventDefault(); setPlaying(root.classList.contains('anim-pause')); }
+  });
+
+  /* 初始状态 */
+  setTheme(false);
+  setSnow('mid');
+  if(reduced) setPlaying(false);
+  setTimeout(function(){ flash('polarBear'); }, 420);
+})();
+</script>
+</body>
+</html>

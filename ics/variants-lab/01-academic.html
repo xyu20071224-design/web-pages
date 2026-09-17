@@ -1,0 +1,1425 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-style="academic" data-deck="datalab">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Data Lab 实验 · 交互式工作台（学术讲义版）</title>
+<style>
+/* ==========================================================================
+   base.css —— 结构基础样式（所有风格共用）
+   只使用 CSS 变量，不含任何具体配色；由各主题覆盖变量与少量结构规则。
+   ========================================================================== */
+
+:root{
+  /* 颜色（每个主题必须覆盖） */
+  --bg:#f6f7f9; --card:#fff; --ink:#15181d; --muted:#697586; --line:#e4e7ec;
+  --accent:#2563eb; --accent-ink:#fff; --accent-soft:#eaf1ff;
+  --sign:#e5484d; --exp:#0b7fd4; --frac:#18915a; --warn:#b45309;
+  --sign-bg:#fdecec; --sign-fg:#a3262b; --sign-bd:#f6cdcf;
+  --exp-bg:#e8f2fd;  --exp-fg:#0a5f9e;  --exp-bd:#c7ddf5;
+  --frac-bg:#e9f7ef; --frac-fg:#116b43; --frac-bd:#c8e8d5;
+  --ok-bg:#f2fbf6; --ok-bd:#9ed3b4; --bad-bg:#fff5f5; --bad-bd:#f1b5b8;
+  --warn-bg:#fffbeb; --gray-bg:#eef1f5; --gray-fg:#5b6472;
+  --paper-soft:#fcfdfe; --code-bg:#f1f3f7; --code-bd:#e6e9ef;
+  --tbl-head:#f7f9fc; --tbl-hover:#fafbfd;
+  --sel-bg:#eef1f5;
+
+  /* 字体 */
+  --font-sans:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",system-ui,sans-serif;
+  --font-mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+  --font-display:var(--font-sans);
+  --tracking-title:normal;
+
+  /* 形状 */
+  --radius:12px; --radius-sm:8px; --radius-pill:99px;
+  --border-w:1px; --shadow:0 1px 2px rgba(16,24,40,.06),0 1px 3px rgba(16,24,40,.1);
+  --shadow-card:none;
+  --card-border:var(--border-w) solid var(--line);
+
+  /* 布局 */
+  --page-max:1180px; --nav-w:236px; --gap:26px; --sec-pad:26px 28px;
+  --nav-sticky-top:64px; --anchor-offset:70px;
+  --font-size:16px; --line-height:1.75;
+}
+
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font-sans);
+  font-size:var(--font-size);line-height:var(--line-height);-webkit-font-smoothing:antialiased}
+img{max-width:100%}
+
+/* ---------- 顶栏 ---------- */
+.topbar{position:sticky;top:0;z-index:50;background:var(--card);border-bottom:1px solid var(--line)}
+.topbar-in{max-width:var(--page-max);margin:0 auto;padding:10px 22px;display:flex;align-items:center;gap:14px}
+.brand{font-weight:700;letter-spacing:var(--tracking-title);font-family:var(--font-display)}
+.brand small{font-weight:500;color:var(--muted);margin-left:8px;font-size:12.5px}
+.progress{margin-left:auto;display:flex;align-items:center;gap:10px;font-size:12.5px;color:var(--muted)}
+.progress .bar{width:150px;height:6px;border-radius:var(--radius-pill);background:var(--line);overflow:hidden}
+.progress .bar>i{display:block;height:100%;width:0;background:var(--accent);transition:width .25s}
+
+/* ---------- 主体布局 ---------- */
+.layout{max-width:var(--page-max);margin:0 auto;padding:22px;display:grid;
+  grid-template-columns:var(--nav-w) minmax(0,1fr);gap:var(--gap)}
+main{min-width:0}
+
+/* ---------- 目录 ---------- */
+nav.toc{position:sticky;top:var(--nav-sticky-top);align-self:start;max-height:calc(100vh - 84px);overflow:auto;padding-right:4px}
+nav.toc h4{margin:0 0 8px;font-size:12px;letter-spacing:.12em;color:var(--muted);text-transform:uppercase;font-weight:600}
+nav.toc a{display:block;padding:7px 11px;border-radius:var(--radius-sm);color:var(--ink);opacity:.78;
+  text-decoration:none;font-size:14.5px;border-left:2.5px solid transparent}
+nav.toc a:hover{background:var(--sel-bg);opacity:1}
+nav.toc a.active{background:var(--accent-soft);color:var(--accent);border-left-color:var(--accent);font-weight:600;opacity:1}
+nav.toc a .n{display:inline-block;min-width:20px;color:var(--muted);font-size:12.5px;font-variant-numeric:tabular-nums}
+nav.toc a.active .n{color:var(--accent)}
+nav.toc .sub{padding-left:26px;font-size:13.5px;opacity:.7}
+
+/* ---------- 章节 ---------- */
+section{background:var(--card);border:var(--card-border);border-radius:var(--radius);
+  padding:var(--sec-pad);margin-bottom:22px;box-shadow:var(--shadow);scroll-margin-top:var(--anchor-offset)}
+section>h2{margin:0 0 6px;font-size:25px;letter-spacing:-.01em;font-family:var(--font-display)}
+section>.lede{color:var(--muted);margin:0 0 20px;font-size:14.5px}
+h3{font-size:18.5px;margin:26px 0 10px;padding-left:11px;border-left:3.5px solid var(--accent);font-family:var(--font-display)}
+h4{font-size:16px;margin:18px 0 8px;font-family:var(--font-display)}
+h5{font-size:15px;font-family:var(--font-display)}
+p{margin:10px 0}
+ul,ol{margin:10px 0;padding-left:22px}
+li{margin:5px 0}
+code{font-family:var(--font-mono);font-size:.89em;background:var(--code-bg);border:1px solid var(--code-bd);border-radius:5px;padding:1px 5px}
+.mono{font-family:var(--font-mono)}
+a{color:var(--accent)}
+hr{border:0;border-top:1px dashed var(--line);margin:24px 0}
+.srcref{font-size:11.5px;color:var(--muted);font-weight:500;font-family:var(--font-sans);margin-left:8px;vertical-align:middle;white-space:nowrap;opacity:.75}
+.en{color:var(--muted);font-size:.92em}
+
+/* ---------- 栅格与卡片 ---------- */
+.grid{display:grid;gap:14px}
+.g2{grid-template-columns:repeat(2,minmax(0,1fr))}
+.g3{grid-template-columns:repeat(3,minmax(0,1fr))}
+@media(max-width:820px){.g2,.g3{grid-template-columns:1fr}}
+.card{border:var(--card-border);border-radius:var(--radius-sm);padding:15px 17px;background:var(--paper-soft);box-shadow:var(--shadow-card)}
+.card h5{margin:0 0 7px}
+.card.pad0{padding:0;overflow:hidden}
+
+/* ---------- 提示框 ---------- */
+.box{border:1px solid var(--line);border-left:4px solid var(--accent);background:var(--accent-soft);
+  border-radius:var(--radius-sm);padding:12px 16px;margin:14px 0}
+.box.warn{border-left-color:var(--warn);background:var(--warn-bg)}
+.box.bad{border-left-color:var(--sign);background:var(--bad-bg)}
+.box.ok{border-left-color:var(--frac);background:var(--ok-bg)}
+.box .t{font-weight:650;font-size:14.5px;margin-bottom:2px}
+
+/* ---------- 公式 ---------- */
+.formula{font-family:var(--font-mono);background:var(--paper-soft);border:1px solid var(--line);
+  border-radius:var(--radius-sm);padding:14px 17px;margin:14px 0;font-size:16.5px;text-align:center;overflow-x:auto}
+.formula.big{font-size:20px}
+
+/* ---------- 表格 ---------- */
+table.tbl{width:100%;border-collapse:collapse;font-size:14.5px;margin:14px 0}
+table.tbl th,table.tbl td{border:1px solid var(--line);padding:8px 11px;text-align:left;vertical-align:top}
+table.tbl th{background:var(--tbl-head);font-weight:650;font-size:13.5px;white-space:nowrap}
+table.tbl td.mono,table.tbl th.mono{font-family:var(--font-mono);font-size:13.5px}
+table.tbl tr:hover td{background:var(--tbl-hover)}
+.tbl-wrap{overflow-x:auto}
+
+/* ---------- 位串控件 ---------- */
+.fw{display:flex;flex-wrap:wrap;gap:8px 18px;align-items:flex-start;margin:4px 0 2px}
+.fgrp{min-width:0}
+.fcap{font-size:12px;color:var(--muted);margin-bottom:4px;font-weight:600}
+.fcap b{font-family:var(--font-mono);font-size:12.5px}
+.bits{display:flex;flex-wrap:wrap;gap:2px;font-family:var(--font-mono);margin:4px 0}
+.bits .b{width:25px;height:33px;display:flex;align-items:center;justify-content:center;
+  border-radius:6px;font-size:15px;cursor:pointer;user-select:none;border:1px solid transparent;
+  transition:transform .06s,background .12s;font-weight:600}
+.bits .b:hover{transform:translateY(-2px)}
+.bits .b.s{background:var(--sign-bg);color:var(--sign-fg);border-color:var(--sign-bd)}
+.bits .b.e{background:var(--exp-bg);color:var(--exp-fg);border-color:var(--exp-bd)}
+.bits .b.f{background:var(--frac-bg);color:var(--frac-fg);border-color:var(--frac-bd)}
+.bits .b.sel{outline:2px solid var(--ink);outline-offset:1px}
+.bits.sm .b{width:19px;height:26px;font-size:12px;border-radius:4px}
+.fgrp .bits{flex-wrap:wrap;max-width:100%;gap:2px}
+.fgrp.ge .bits{max-width:300px}
+
+/* ---------- 读数表 ---------- */
+.readout{display:grid;grid-template-columns:auto 1fr;gap:4px 16px;font-size:14.5px;margin:12px 0}
+.readout dt{color:var(--muted);font-weight:600;font-family:var(--font-mono);font-size:13.5px;padding-top:2px}
+.readout dd{margin:0;font-family:var(--font-mono)}
+
+/* ---------- 小标签 ---------- */
+.chip{display:inline-block;font-size:12.5px;padding:2px 9px;border-radius:var(--radius-pill);
+  background:var(--accent-soft);color:var(--accent);font-weight:600}
+.chip.ok{background:var(--frac-bg);color:var(--frac-fg)}
+.chip.bad{background:var(--sign-bg);color:var(--sign-fg)}
+.chip.warn{background:var(--warn-bg);color:var(--warn)}
+.chip.gray{background:var(--gray-bg);color:var(--gray-fg)}
+.kbd{font-family:var(--font-mono);font-size:13px;background:var(--code-bg);border:1px solid var(--code-bd);
+  border-bottom-width:2px;border-radius:6px;padding:1px 7px}
+
+/* ---------- 控件 ---------- */
+.ctrls{display:flex;flex-wrap:wrap;gap:9px;align-items:center;margin:12px 0}
+label.fld{display:inline-flex;align-items:center;gap:7px;font-size:14px;color:var(--ink);max-width:100%;flex-wrap:wrap;min-width:0}
+label.fld select,label.fld input{min-width:0;max-width:100%}
+input[type=text],input[type=number],select{font-family:var(--font-mono);font-size:14px;padding:6px 10px;
+  border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--card);color:var(--ink)}
+input[type=text]:focus,input[type=number]:focus,select:focus{outline:2px solid var(--accent-soft);border-color:var(--accent)}
+button{font-family:var(--font-sans);font-size:14px;font-weight:600;padding:7px 15px;border-radius:var(--radius-sm);
+  border:1px solid var(--line);background:var(--card);color:var(--ink);cursor:pointer}
+button:hover{background:var(--sel-bg)}
+button.p{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+button.sm{padding:4px 10px;font-size:13px}
+button.pill{border-radius:var(--radius-pill)}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:var(--radius-sm);overflow:hidden}
+.seg button{border:0;border-radius:0;border-right:1px solid var(--line);padding:6px 13px}
+.seg button:last-child{border-right:0}
+.seg button.on{background:var(--accent);color:var(--accent-ink)}
+
+/* ---------- 分步演示 ---------- */
+.step{border:1px solid var(--line);border-radius:var(--radius-sm);padding:11px 15px;margin:9px 0;
+  background:var(--paper-soft);opacity:.42;transition:opacity .2s}
+.step.on{opacity:1;background:var(--card)}
+.step .h{font-size:13px;font-weight:700;color:var(--accent);letter-spacing:.02em;margin-bottom:3px}
+.step .m{font-family:var(--font-mono);font-size:14.5px;overflow-x:auto}
+.step .e{font-size:13.5px;color:var(--muted);margin-top:3px}
+
+/* ---------- 折叠与答案 ---------- */
+.reveal{border:1px solid var(--line);border-radius:var(--radius-sm);padding:11px 15px;margin:8px 0;background:var(--paper-soft)}
+.reveal summary{cursor:pointer;font-weight:600;font-size:14.5px}
+.reveal[open]{background:var(--card)}
+.ans{margin-top:8px;padding-top:8px;border-top:1px dashed var(--line);font-size:14.5px}
+
+/* ---------- 判断题 ---------- */
+.puzzle{border:1px solid var(--line);border-radius:var(--radius-sm);padding:12px 15px;margin:9px 0;
+  display:flex;gap:13px;align-items:flex-start;background:var(--paper-soft)}
+.puzzle .q{font-family:var(--font-mono);font-size:15px;flex:1;min-width:0;overflow-x:auto;white-space:nowrap}
+.puzzle .q small{font-family:var(--font-sans);color:var(--muted);display:block;white-space:normal}
+.puzzle .btns{display:flex;gap:6px;flex-shrink:0}
+.puzzle.correct{border-color:var(--ok-bd);background:var(--ok-bg)}
+.puzzle.wrong{border-color:var(--bad-bd);background:var(--bad-bg)}
+.puzzle .exp{margin-top:9px;padding-top:9px;border-top:1px dashed var(--line);font-size:14.5px;
+  display:none;white-space:normal;font-family:var(--font-sans)}
+.puzzle.done .exp{display:block}
+.puzzle .exp .verdict{font-weight:700}
+
+/* ---------- 分布图 ---------- */
+.tick{stroke:#94a3b8;stroke-width:1.4}
+.tick.dn{stroke:var(--exp)}
+.tick.nm{stroke:var(--frac)}
+.ticklabel{font-size:9.5px;fill:var(--muted);font-family:var(--font-mono)}
+.axisline{stroke:var(--line);stroke-width:1.2}
+.axislabel{font-size:11px;fill:var(--muted)}
+
+/* ---------- 页脚 / 回到顶部 ---------- */
+.footer{max-width:var(--page-max);margin:0 auto;padding:8px 22px 40px;color:var(--muted);font-size:13px}
+.totop{position:fixed;right:22px;bottom:22px;z-index:40;box-shadow:var(--shadow);display:none}
+
+/* ---------- 响应式 ---------- */
+@media(max-width:960px){
+  .layout{grid-template-columns:1fr;padding:16px}
+  nav.toc{position:static;max-height:none;display:flex;flex-wrap:wrap;gap:6px;
+    background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:10px}
+  nav.toc h4{width:100%;margin-bottom:2px}
+  nav.toc a{border-left:0;padding:5px 10px;font-size:13px}
+  nav.toc .sub{display:none}
+  section{padding:20px 17px}
+}
+@media print{
+  nav.toc,.topbar,.totop{display:none}
+  .layout{display:block}
+  section{break-inside:avoid;box-shadow:none}
+}
+
+/* ==========================================================================
+   风格 A · 学术讲义（Academic / 印刷体）
+   纸感底色 · 衬线标题 · 书眉式细线 · 三线表 · 目录位于右侧栏
+   ========================================================================== */
+
+:root{
+  --bg:#fbfaf6; --card:#fffefb; --ink:#1b1a17; --muted:#6d6a60; --line:#e2ded2;
+  --accent:#8a2f2c; --accent-ink:#fff; --accent-soft:#f7eeea;
+  --sign:#a3282a; --exp:#1f4e79; --frac:#2c6b45; --warn:#8a5a12;
+  --sign-bg:#f9eeee; --sign-fg:#8f2426; --sign-bd:#e8cfcd;
+  --exp-bg:#eef3f9;  --exp-fg:#1f4e79;  --exp-bd:#cddcec;
+  --frac-bg:#eef5f0; --frac-fg:#2c6b45; --frac-bd:#cfe2d6;
+  --ok-bg:#f2f7f3; --ok-bd:#b6cfbc; --bad-bg:#fbf1f1; --bad-bd:#e2bcbc;
+  --warn-bg:#fbf6ea; --gray-bg:#f0eee7; --gray-fg:#6d6a60;
+  --paper-soft:#fdfcf9; --code-bg:#f4f2ec; --code-bd:#e2ded2;
+  --tbl-head:#faf8f3; --tbl-hover:#fdfbf7;
+  --sel-bg:#f2efe7;
+
+  --font-sans:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",system-ui,sans-serif;
+  --font-mono:ui-monospace,"SF Mono",Menlo,Consolas,"Liberation Mono",monospace;
+  --font-display:"Songti SC","Source Han Serif SC","Noto Serif SC",Georgia,"Times New Roman",var(--font-sans);
+  --tracking-title:.01em;
+
+  --radius:3px; --radius-sm:2px; --radius-pill:3px;
+  --border-w:1px;
+  --shadow:none; --shadow-card:none;
+  --card-border:1px solid var(--line);
+
+  --page-max:1140px; --nav-w:196px; --gap:32px;
+  --sec-pad:30px 34px; --nav-sticky-top:28px; --anchor-offset:24px;
+  --font-size:16px; --line-height:1.8;
+}
+
+/* ---------- 书眉：细线 + 小字，不用色块 ---------- */
+.topbar{background:var(--bg);border-bottom:1px solid var(--line)}
+.topbar-in{padding:14px 22px 10px}
+.brand{font-family:var(--font-display);font-weight:600;font-size:17px;letter-spacing:.02em}
+.brand small{font-family:var(--font-sans);font-size:12px;letter-spacing:.04em;text-transform:uppercase}
+.progress{font-family:var(--font-display);font-style:italic}
+.progress .bar{height:3px;border-radius:0;background:var(--line)}
+.progress .bar>i{background:var(--accent)}
+
+/* ---------- 目录移到右侧，做成「纲要」 ---------- */
+.layout{grid-template-columns:minmax(0,1fr) var(--nav-w);padding:26px 22px}
+nav.toc{order:2}
+main{order:1}
+nav.toc h4{font-family:var(--font-display);letter-spacing:.18em;font-size:10.5px;
+  border-bottom:1px solid var(--line);padding-bottom:6px}
+nav.toc a{border-left:0;border-right:2.5px solid transparent;text-align:right;padding:5px 11px 5px 4px;
+  font-size:13.5px;font-family:var(--font-display)}
+nav.toc a.active{background:transparent;border-right-color:var(--accent);color:var(--accent)}
+nav.toc a:hover{background:transparent;color:var(--accent)}
+nav.toc a .n{font-family:var(--font-mono);font-size:11.5px;min-width:18px;margin-right:8px}
+
+/* ---------- 章节：双线标题 + 无边框白纸 ---------- */
+section{padding:var(--sec-pad);margin-bottom:30px;border:0;border-top:3px double var(--ink);
+  border-radius:0;background:transparent}
+section>h2{font-size:26px;font-weight:600;margin-bottom:4px}
+section>h2::before{content:"§";color:var(--accent);font-size:.72em;vertical-align:.12em;margin-right:.35em;font-family:var(--font-mono)}
+section>.lede{font-family:var(--font-display);font-style:italic;font-size:15px;color:var(--muted);
+  border-bottom:1px solid var(--line);padding-bottom:14px}
+h3{font-size:19px;font-weight:600;border-left:0;padding-left:0;margin-top:30px;
+  border-bottom:1px solid var(--line);padding-bottom:5px}
+h4,h5{font-weight:600}
+
+/* 正文首行不缩进，但引用块做缩排 */
+.card{border:0;border-left:2px solid var(--line);border-radius:0;background:transparent;padding:2px 0 2px 16px}
+
+/* ---------- 盒模型：批注式 ---------- */
+.box{border:0;border-left:3px solid var(--accent);background:transparent;border-radius:0;
+  padding:2px 0 2px 16px;margin:16px 0}
+.box.warn{border-left-color:var(--warn)}
+.box.bad{border-left-color:var(--sign)}
+.box.ok{border-left-color:var(--frac)}
+.box .t{font-family:var(--font-display);font-size:14px;letter-spacing:.02em}
+
+/* ---------- 公式：居中衬线体 ---------- */
+.formula{border:0;border-top:1px solid var(--line);border-bottom:1px solid var(--line);border-radius:0;
+  background:transparent;font-family:var(--font-display);font-size:18px;padding:16px 12px}
+.formula.big{font-size:22px}
+
+/* ---------- 三线表（booktabs） ---------- */
+table.tbl{border-collapse:collapse;font-size:14px}
+table.tbl th,table.tbl td{border:0;border-bottom:1px solid var(--line);padding:7px 12px}
+table.tbl th{background:transparent;border-top:1.5px solid var(--ink);border-bottom:1px solid var(--ink);
+  font-family:var(--font-display);font-weight:600;font-size:13px;letter-spacing:.02em}
+table.tbl tr:last-child td{border-bottom:1.5px solid var(--ink)}
+table.tbl tr:hover td{background:transparent}
+table.tbl td.mono,table.tbl th.mono{font-size:13px}
+
+/* ---------- 位串：空心方框，像活字 ---------- */
+.bits .b{width:24px;height:30px;border-radius:0;border:1px solid var(--line);background:var(--card);
+  font-family:var(--font-mono);font-weight:500}
+.bits .b.s{background:var(--card);color:var(--sign);border-color:var(--sign-bd);border-bottom:2px solid var(--sign)}
+.bits .b.e{background:var(--card);color:var(--exp);border-color:var(--exp-bd);border-bottom:2px solid var(--exp)}
+.bits .b.f{background:var(--card);color:var(--frac);border-color:var(--frac-bd);border-bottom:2px solid var(--frac)}
+.bits .b:hover{transform:none;background:var(--sel-bg)}
+.bits .b.sel{outline:2px solid var(--ink);outline-offset:0}
+
+/* ---------- 交互控件：细描边，方角 ---------- */
+input[type=text],input[type=number],select{border-radius:0;background:var(--card);border-color:var(--line);font-size:13.5px}
+button{border-radius:0;font-weight:500;background:transparent;border-color:var(--line)}
+button.p{background:var(--accent);border-color:var(--accent)}
+button.sm{font-size:12.5px;padding:4px 9px}
+.chip{border-radius:0;background:transparent;border:1px solid var(--line);color:var(--muted);font-weight:500}
+.chip.ok{border-color:var(--ok-bd);color:var(--frac-fg)}
+.chip.bad{border-color:var(--bad-bd);color:var(--sign-fg)}
+.chip.warn{border-color:#e3cfa4;color:var(--warn)}
+.chip.gray{background:transparent;border-color:var(--line);color:var(--muted)}
+.seg{border-radius:0}
+.seg button.on{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+
+/* ---------- 分步演示：编号批注 ---------- */
+.steps{counter-reset:ast}
+.step{border:0;border-left:2px solid var(--line);border-radius:0;background:transparent;
+  padding:8px 0 8px 16px;margin:10px 0;position:relative}
+.step.on{border-left-color:var(--accent);background:transparent}
+.step .h{font-family:var(--font-display);color:var(--muted);font-weight:600;letter-spacing:.04em;font-size:12.5px}
+.step .m{font-size:14px}
+
+/* ---------- 判断题：脚注感 ---------- */
+.puzzle{border:0;border-bottom:1px solid var(--line);border-radius:0;background:transparent;padding:12px 0}
+.puzzle.correct,.puzzle.wrong{background:transparent;border-bottom-color:var(--line)}
+.puzzle.correct{border-left:3px solid var(--frac)}
+.puzzle.wrong{border-left:3px solid var(--sign)}
+.puzzle.correct,.puzzle.wrong{padding-left:14px}
+.puzzle .exp{font-family:var(--font-sans);font-size:14px}
+.reveal{border:0;border-left:2px solid var(--line);border-radius:0;background:transparent;padding:6px 0 6px 16px}
+.reveal[open]{background:transparent}
+
+/* 回到顶部：素净 */
+.totop{border-radius:0;font-family:var(--font-display)}
+
+@media(max-width:960px){
+  .layout{grid-template-columns:1fr;padding:16px}
+  nav.toc{order:0;border-radius:0;border-left:0;border-right:0;background:transparent;padding:8px 0}
+  nav.toc a{text-align:left;border-right:0;padding:5px 8px}
+  section{padding:22px 4px}
+}
+
+
+/* ---------- 风格切换条（构建时注入，各主题通用） ---------- */
+.stylebar{max-width:var(--page-max);margin:0 auto;padding:14px 22px 0;display:flex;gap:8px;
+  flex-wrap:wrap;align-items:center;font-size:12.5px;color:var(--muted)}
+.stylebar>span{font-weight:600}
+.stylebar a{text-decoration:none;padding:4px 11px;border:1px solid var(--line);border-radius:var(--radius-pill);
+  color:var(--muted);background:var(--card);font-weight:600}
+.stylebar a:hover{border-color:var(--accent);color:var(--accent)}
+.stylebar a.cur{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+@media(max-width:960px){.stylebar{padding:12px 16px 0}}
+
+</style>
+</head>
+<body>
+
+<header class="topbar"><div class="topbar-in">
+  <div class="brand">Data Lab: Manipulating Bits<small>PKU-ICS 实验手册 · 学术讲义版</small></div>
+  <div class="progress"><span id="pgText">学习进度 0%</span><span class="bar"><i id="pgBar"></i></span></div>
+</div></header>
+
+<div class="stylebar">
+  <span>风格：</span>
+  <a href="../datalab-zh.html">清爽蓝（原版）</a>
+  <a href="02-terminal.html">深色终端</a>
+  <a href="03-brutalist.html">新粗野</a>
+  <a href="04-glass.html">柔和玻璃</a>
+  <a href="index.html">◧ 全部预览</a>
+  <span style="opacity:.5">|</span>
+  <a href="variants/index.html">↗ 第 3 讲 · 浮点数</a>
+  <a href="variants-bits/index.html">↗ 第 2 讲 · 位、字节与整数</a>
+</div>
+
+<div class="layout">
+
+<nav class="toc">
+  <h4>目录</h4>
+  <a href="#s0"><span class="n">0</span>实验导览</a>
+  <a href="#s1"><span class="n">1</span>环境与取件</a>
+  <a href="#s2"><span class="n">2</span>编码规则</a>
+  <a href="#s3"><span class="n">3</span>位运算谜题（6）</a>
+  <a href="#s4"><span class="n">4</span>补码算术谜题（6）</a>
+  <a href="#s5"><span class="n">5</span>浮点谜题（4）</a>
+  <a href="#s6"><span class="n">6</span>工具链</a>
+  <a href="#s7"><span class="n">7</span>自测与提交</a>
+</nav>
+
+<main>
+<!-- ================= 0 ================= -->
+  <section id="s0">
+    <h2>实验导览<span class="srcref">原第 1 页</span></h2>
+    <p class="lede">Data Lab：用位运算解题。目的是让你熟悉位模式的表示方式 —— 整数、补码、浮点 —— 通过解 16 道编程「谜题」。</p>
+
+    <div class="grid g3">
+      <div class="card"><h5>做什么</h5>
+        <p style="margin:0;font-size:14.5px">在 <code>bits.c</code> 里实现 16 个函数：6 道位运算、6 道补码算术、4 道浮点运算。很多谜题相当「人为」，但解它们的过程会让你真正开始用「位」思考。</p>
+      </div>
+      <div class="card"><h5>怎么交</h5>
+        <p style="margin:0;font-size:14.5px">个人独立完成。全部通过 Autolab 电子提交，<b>只提交 <code>bits.c</code> 一个文件</b>。</p>
+      </div>
+      <div class="card"><h5>怎么跑</h5>
+        <p style="margin:0;font-size:14.5px">在分配给你的 xLab 课程容器（Linux 节点）里做，地址 <code>xlab.pku.edu.cn</code>。</p>
+      </div>
+    </div>
+
+    <h3>0.1 评分构成</h3>
+    <p>每个实验满分 100 分。Data Lab 的原始分按 80 分制计算，最后线性换算到 100 分：</p>
+    <div class="grid g2">
+      <div class="card"><h5>48 分 · 正确性</h5>
+        <p style="margin:0;font-size:14.5px">16 道谜题的难度评级在 1–4 之间，加权求和正好 48 分。<b>整数题由 BDD 检查器穷举验证</b>，浮点题由 <code>btest</code> 检查。</p>
+      </div>
+      <div class="card"><h5>32 分 · 性能</h5>
+        <p style="margin:0;font-size:14.5px">按每个函数使用的<b>运算符个数</b>评分。每个「正确且满足运算符上限」的函数得 2 分，16 × 2 = 32 分。</p>
+      </div>
+    </div>
+    <div class="formula">最终分 = ⌈ 原始分 / 80 × 100 ⌉</div>
+    <div class="box"><div class="t">关于「性能」的说明</div>
+      老师关心的是你<b>能得出正确答案</b>，但同时也希望养成「尽量短小简洁」的习惯。有些谜题可以暴力求解，但希望你更聪明一点 —— 所以每个函数都有运算符上限。这个上限<b>非常宽松</b>，只为拦住那些离谱的低效解法。
+    </div>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：分数换算 + 提交次数惩罚</span>
+        <label class="fld">正确性得分 <input type="number" id="scCorr" value="48" min="0" max="48" style="width:74px"> / 48</label>
+        <label class="fld">性能得分 <input type="number" id="scPerf" value="32" min="0" max="32" style="width:74px"> / 32</label>
+        <label class="fld">已提交次数 <input type="number" id="scSub" value="1" min="0" max="40" style="width:74px"></label>
+      </div>
+      <div id="scOut"></div>
+    </div>
+  </section>
+
+  <!-- ================= 1 ================= -->
+  <section id="s1">
+    <h2>1. 环境与取件<span class="srcref">原第 1–2、7 页</span></h2>
+
+    <h3>1.1 登录 Autolab</h3>
+    <p>所有 ICS 实验都通过 <b>Autolab</b> 服务分发与评分（由 CMU 师生开发）。下载材料前需要先更新账号信息：</p>
+    <ol>
+      <li>浏览器打开 <code>https://autolab.pku-ics.com</code>；</li>
+      <li>完成身份验证。首次验证后，Autolab 会要求你设置一个 <b>nickname</b> —— 这是你在公开排行榜上显示的名字，起个有意思的，随时可改；</li>
+      <li>点「Save Changes」，再点「Home」进入主页面。</li>
+    </ol>
+    <div class="box warn">必须是已选课的学生才能获得 Autolab 账号。选课较晚的话，可能还不在 Autolab 的有效学生名单里。</div>
+
+    <h3>1.2 取回并解压 handout</h3>
+    <p>实验材料打包在 <code>datalab-handout.tar</code> 里。先把它复制到你要工作的 Linux 目录，然后：</p>
+    <div class="mono" style="font-size:13.5px;background:var(--code-bg);border:1px solid var(--code-bd);border-radius:8px;padding:11px 14px">
+      linux&gt; tar xvf datalab-handout.tar
+    </div>
+    <p>这会解出一个 <code>datalab-handout</code> 目录。其中<b>唯一需要修改并提交的文件是 <code>bits.c</code></b>。</p>
+    <div class="box bad"><div class="t">警告：不要用 Windows 的 WinZip 打开 .tar</div>
+      很多浏览器会自动用 WinZip 关联 <code>.tar</code>。请先把文件保存到 Linux 目录，再用 Linux 的 <code>tar</code> 解压。
+      本课程<b>任何时候都不要用 Linux 以外的平台修改你的文件</b>，否则可能造成数据丢失 —— 包括你辛苦写的作业。
+    </div>
+
+    <h3>1.3 在哪里写代码</h3>
+    <p>实验在 xLab 课程容器里完成。登录 <code>xlab.pku.edu.cn</code> 后，节点页面会列出可用的连接方式：浏览器终端、网页版 VS Code、VS Code Remote、或 SSH（具体主机、端口、用户名都在页面上）。连不上就问助教。</p>
+  </section>
+
+  <!-- ================= 2 ================= -->
+  <section id="s2">
+    <h2>2. 编码规则<span class="srcref">原第 2 页</span></h2>
+    <p class="lede">这是整个实验最容易丢分的地方：<b>代码写对了但违反规则，一样得 0 分</b>（只有当题目既符合全部编码规则、又通过正确性检查时才给分）。</p>
+
+    <h3>2.1 整数谜题（位运算 6 题 + 补码算术 6 题）</h3>
+    <ul>
+      <li>只能使用<b>直线代码</b>（straight-line code）：<b>不允许循环、不允许条件语句</b>。</li>
+      <li>只能使用下面 <b>8 个运算符</b>：</li>
+    </ul>
+    <div class="formula big mono">! &nbsp; ~ &nbsp; &amp; &nbsp; ^ &nbsp; | &nbsp; + &nbsp; &lt;&lt; &nbsp; &gt;&gt;</div>
+    <ul>
+      <li><b>禁止使用超过 8 位的常量</b>（即常量取值必须在 <code>0x00</code>–<code>0xFF</code> 之间）。</li>
+      <li>部分函数会<b>进一步限制</b>可用运算符（例如 <code>bitXor</code> 只允许用 <code>~</code> 和 <code>&amp;</code>）。</li>
+      <li>每道题还有<b>最大运算符个数</b>限制，见下面各题的卡片。</li>
+    </ul>
+
+    <h3>2.2 浮点谜题（4 题）</h3>
+    <p>这一部分规则放宽：</p>
+    <ul>
+      <li><b>允许</b>使用标准控制结构（条件、循环），允许使用 <code>int</code> 和 <code>unsigned</code> 类型，<b>允许任意</b>整数常量。</li>
+      <li><b>禁止</b>使用 <code>union</code>、<code>struct</code>、数组。</li>
+      <li><b>最关键的一条：禁止使用任何浮点数据类型、浮点运算或浮点常量。</b></li>
+    </ul>
+    <p>浮点操作数会以 <code>unsigned</code> 类型传给你的函数，返回值也必须是 <code>unsigned</code>。也就是说，你要<b>在位级别上实现这些浮点运算</b> —— 这正是这道题的意义。</p>
+
+    <h3>2.3 交互：规则检查器</h3>
+    <p>把你想写的表达式粘进来，先看看它是否合规、用了几个运算符（相当于在浏览器里跑一遍 <code>dlc</code>）。</p>
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <label class="fld">表达式 <input type="text" id="ruleIn" value="~x & y | x & ~y" size="34" spellcheck="false" style="min-width:260px"></label>
+        <label class="fld">变量
+          <select id="ruleVars"><option value="xy">x, y</option><option value="x">仅 x</option><option value="xn">x, n</option></select>
+        </label>
+        <label class="fld">运算符上限 <input type="number" id="ruleMax" value="8" min="1" max="40" style="width:64px"></label>
+        <button class="p" id="ruleGo">检查</button>
+      </div>
+      <div id="ruleOut"></div>
+    </div>
+
+    <h3>2.4 dlc 的两个额外要求</h3>
+    <div class="box warn"><div class="t">① 不要在 bits.c 里包含 &lt;stdio.h&gt;</div>
+      它会让 <code>dlc</code> 困惑并报出一些莫名其妙的错误。你仍然可以在 <code>bits.c</code> 里用 <code>printf</code> 调试（不包含头文件也能用），此时 <code>gcc</code> 会给出一个警告，忽略即可。
+    </div>
+    <div class="box warn"><div class="t">② 声明必须写在块的开头</div>
+      <code>dlc</code> 对声明位置的要求比 C++/Java 甚至 <code>gcc</code> 都严格：在任何一个块（<code>{ }</code>）里，
+      <b>所有声明必须出现在第一条非声明语句之前</b>。下面这段会被 <code>dlc</code> 报错：
+      <div class="mono" style="font-size:13px;line-height:1.7;margin-top:8px">
+        int foo(int x)<br>
+        {<br>
+        &nbsp;&nbsp;int a = x;<br>
+        &nbsp;&nbsp;a *= 3;&nbsp;&nbsp;<span style="color:var(--sign)">/* 这条不是声明 */</span><br>
+        &nbsp;&nbsp;int b = a;&nbsp;&nbsp;<span style="color:var(--sign)">/* 错误：声明不允许出现在这里 */</span><br>
+        }
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 3 ================= -->
+  <section id="s3">
+    <h2>3. 位运算谜题（6 题）<span class="srcref">原第 3 页 Table 1</span></h2>
+    <p class="lede">每题都可以在页面里直接写表达式并跑测试。测试器会同时做三件事：<b>规则检查</b>（运算符白名单 / 常量位数 / 直线代码）、<b>运算符计数</b>、以及<b>与参考实现对比跑几万到十几万个输入</b>。</p>
+
+    <div class="box"><div class="t">怎么用这些评测器</div>
+      在「你的实现」里写表达式（只写表达式，不要写 <code>return</code> 和分号），点「测试」。测试覆盖边角值、全部 16 位取值、以及大量随机 32 位值；失败时会给出<b>反例</b>。如果你在 <code>bits.c</code> 里的写法与本页的变量名不同也没关系 —— 把变量对应过来即可。
+      <br><br>
+      <b>关于答案：</b>这里只给「思路提示」，不提供可直接粘贴的完整解答 —— 那是你的作业。评测器的作用是帮你<b>验证自己</b>的想法。
+    </div>
+
+    <div id="pz1List"></div>
+  </section>
+
+  <!-- ================= 4 ================= -->
+  <section id="s4">
+    <h2>4. 补码算术谜题（6 题）<span class="srcref">原第 3 页 Table 2</span></h2>
+    <p class="lede">这一部分让你真正理解整数在计算机里是怎么表示的：范围不对称、取负会溢出、除法向零取整等。</p>
+    <div id="pz2List"></div>
+  </section>
+
+  <!-- ================= 5 ================= -->
+  <section id="s5">
+    <h2>5. 浮点谜题（4 题）<span class="srcref">原第 3–4 页 Table 3</span></h2>
+    <p class="lede">在这一部分，参数和返回值都是 <code>unsigned</code>，但它们的<b>位模式代表浮点数</b>。你必须完全用整数运算把浮点操作「做」出来。</p>
+    <div id="pz3List"></div>
+    <div class="box"><div class="t">两个约定（务必对照你的 bits.c 确认）</div>
+      <ul style="margin:4px 0 0">
+        <li><code>float_f2i</code>：当参数是 NaN 或超出 <code>int</code> 范围时，按本实验惯例应返回 <code>0x80000000</code>。</li>
+        <li><code>float_negpwr2</code>：手册只写了「Compute 2.0^(-x) at the bit level」，<b>具体契约以 bits.c 注释为准</b>。本页先按「x 是 0 ≤ n ≤ 127 的整数，返回 2^(-n) 的浮点位模式」实现，并把参考实现做成<b>可编辑</b>的 —— 你可以把它改成 bits.c 里的定义再测。</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ================= 6 ================= -->
+  <section id="s6">
+    <h2>6. 工具链<span class="srcref">原第 3–7 页</span></h2>
+    <p class="lede">handout 目录里带了四个工具：<code>btest</code>、<code>dlc</code>、BDD 检查器、<code>driver.pl</code>，外加两个可视化小工具 <code>fshow</code> 与 <code>ishow</code>。</p>
+
+    <h3>6.1 btest：按值测试功能正确性</h3>
+    <p>它用大量不同参数反复调用 <code>bits.c</code> 里的函数。注意：<b>每次修改 <code>bits.c</code> 都必须重新构建 <code>btest</code></b>。</p>
+    <div class="mono" style="font-size:13.5px;line-height:1.9;background:var(--code-bg);border:1px solid var(--code-bd);border-radius:8px;padding:12px 15px">
+      linux&gt; make &amp;&amp; ./btest &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:var(--muted)"># 一步完成</span><br>
+      linux&gt; ./btest -f bitXor &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:var(--muted)"># 只测一个函数</span><br>
+      linux&gt; ./btest -f bitXor -1 7 -2 0xf &nbsp;<span style="color:var(--muted)"># 只调用一次，x=7，y=15</span>
+    </div>
+    <p>建议<b>一次只对付一个函数</b>。<code>-f</code> 指定函数，<code>-1</code>/<code>-2</code>/<code>-3</code> 指定具体参数 —— 想插 <code>printf</code> 调试时就用这种单次调用，否则输出会太多。</p>
+
+    <h3>6.2 dlc：检查编码规则</h3>
+    <p>这是 MIT CILK 组改过的 ANSI C 编译器，用来检查每题是否符合编码规则。<b>没有问题就静默通过</b>；有非法运算符、运算符超限、或整数题里出现非直线代码才会报错。</p>
+    <div class="mono" style="font-size:13.5px;line-height:1.9;background:var(--code-bg);border:1px solid var(--code-bd);border-radius:8px;padding:12px 15px">
+      linux&gt; ./dlc bits.c &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:var(--muted)"># 静默 = 通过</span><br>
+      linux&gt; ./dlc -e bits.c &nbsp;&nbsp;&nbsp;<span style="color:var(--muted)"># 打印每个函数用掉的运算符个数</span><br>
+      linux&gt; ./dlc -help
+    </div>
+
+    <h3>6.3 BDD 检查器：穷举验证（整数题）</h3>
+    <p><code>btest</code> 只是抽样测试；对大多数函数来说，参数组合数远超能抽样的范围。为此实验提供了形式化验证程序 <code>cbit</code>，它用 <b>二元决策图（BDD）</b>穷举所有参数组合。</p>
+    <div class="mono" style="font-size:13.5px;line-height:1.9;background:var(--code-bg);border:1px solid var(--code-bd);border-radius:8px;padding:12px 15px">
+      linux&gt; ./bddcheck/check.pl -f fun &nbsp;<span style="color:var(--muted)"># 检查一个函数</span><br>
+      linux&gt; ./bddcheck/check.pl &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:var(--muted)"># 检查全部</span><br>
+      linux&gt; ./bddcheck/check.pl -g &nbsp;&nbsp;&nbsp;&nbsp;<span style="color:var(--muted)"># 检查全部并给出紧凑的表格汇总</span>
+    </div>
+    <div class="box warn"><div class="t">BDD 检查器的两个挑剔之处</div>
+      <ul style="margin:4px 0 0">
+        <li><b>不能处理调用其它函数的函数</b>（包括 <code>printf</code>）。带 <code>printf</code> 调试的版本只能用 <code>btest</code> 测；提交前务必删掉这些调试语句。</li>
+        <li><b>对格式很挑</b>：函数必须以 <code>int fun (...)</code> 或 <code>unsigned fun (...)</code> 这样的一行开头，并以<b>最左列的一个右花括号</b>结束 —— 而且最左列只能有这一个右花括号。</li>
+      </ul>
+    </div>
+
+    <h3>6.4 driver.pl：算总分</h3>
+    <p>它调用 <code>dlc</code> 和 BDD 检查器，算出你的正确性分与性能分。Autolab 自动评分用的就是这个程序。</p>
+    <div class="mono" style="font-size:13.5px;background:var(--code-bg);border:1px solid var(--code-bd);border-radius:8px;padding:11px 14px">
+      linux&gt; ./driver.pl
+    </div>
+
+    <h3>6.5 fshow / ishow：看懂位模式</h3>
+    <p><code>fshow</code> 把任意 32 位模式按浮点解释，<code>ishow</code> 按整数解释。手册里的三个例子：</p>
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：fshow / ishow 模拟器</span>
+        <label class="fld">输入 <input type="text" id="fshowIn" value="2080374784" size="16" spellcheck="false"></label>
+        <div class="seg" id="fshowMode">
+          <button class="on" data-m="f">fshow（按浮点看）</button>
+          <button data-m="i">ishow（按整数看）</button>
+        </div>
+        <button class="p" id="fshowGo">解读</button>
+      </div>
+      <div class="ctrls">
+        <span style="font-size:13.5px;color:var(--muted)">手册例子：</span>
+        <button class="sm" data-fshow="2080374784">2080374784</button>
+        <button class="sm" data-fshow="0x15213">0x15213</button>
+        <button class="sm" data-fshow="15.213">15.213</button>
+        <button class="sm" data-fshow="0x7F800000">+∞</button>
+        <button class="sm" data-fshow="0x00000001">最小非规格化</button>
+      </div>
+      <div id="fshowOut"></div>
+    </div>
+  </section>
+
+  <!-- ================= 7 ================= -->
+  <section id="s7">
+    <h2>7. 自测流程与提交<span class="srcref">原第 6–8 页</span></h2>
+
+    <h3>7.1 推荐的自测顺序</h3>
+    <p><b>一次只测一个函数</b>，按下面五步走：</p>
+    <div class="steps">
+      <div class="step on"><div class="h">Step 1 · 单点调试</div>
+        <div class="m">./btest -f bitXor -1 23 -2 0xabcd</div>
+        <div class="e">用 <code>-f</code> 配合 <code>-1</code>/<code>-2</code> 只调用一次。可以放心用 <code>printf</code> 打印中间变量，但调试完记得删掉。</div></div>
+      <div class="step on"><div class="h">Step 2 · 大量取值</div>
+        <div class="m">./btest -f bitXor</div>
+        <div class="e">与大批输入对比。若报错，<code>btest</code> 会打印出失败的具体参数 —— 带着这些参数回到 Step 1 调试。</div></div>
+      <div class="step on"><div class="h">Step 3 · 规则检查</div>
+        <div class="m">./dlc bits.c</div>
+        <div class="e">静默即通过。加 <code>-e</code> 可以看到每个函数的运算符个数。</div></div>
+      <div class="step on"><div class="h">Step 4 · 穷举验证</div>
+        <div class="m">./bddcheck/check.pl -f bitXor</div>
+        <div class="e">整数题在通过 <code>btest</code> 后，用 BDD 检查器做最终的（穷举）正确性验证。注意：<b>浮点题由 btest 评分，不走 BDD</b>。</div></div>
+      <div class="step on"><div class="h">Step 5 · 算总分</div>
+        <div class="m">./driver.pl</div>
+        <div class="e">对每个函数重复 1–4 步；随时可以跑 driver 看当前累计的正确性分与性能分。</div></div>
+    </div>
+    <div class="box"><div class="t">一个小习惯</div>
+      每次 <code>make</code> 之前先 <code>make clean</code>。
+    </div>
+
+    <h3>7.2 提交规则</h3>
+    <ul>
+      <li>每个实验的提交次数<b>上限 16 次</b>；超过后每次提交扣本实验 <b>5%</b> 的分数。</li>
+      <li>扣分上限为 <b>80%</b>（即最多 16 次额外提交）。</li>
+      <li>如果提交了 <b>32 次</b>，之后的提交将<b>不再受理</b>。</li>
+      <li>用 Autolab 的「Handin your work」上传 <code>bits.c</code>。服务器会跑 driver 程序生成成绩报告，并发布到排行榜。</li>
+      <li>每次提交都会被归档，随时可用「View handin history」查看。</li>
+    </ul>
+    <div class="box warn"><div class="t">提交注意事项</div>
+      <ul style="margin:4px 0 0">
+        <li>任何时候，<b>你最近上传的文件就是你的正式提交</b>。可以随时提交。</li>
+        <li>每次提交后，用「View your handin history and scores」确认自动评分正常完成（页面需手动刷新）。</li>
+        <li><b>提交前必须删掉 <code>bits.c</code> 里所有多余的打印语句。</b></li>
+      </ul>
+    </div>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：提交次数 → 扣分与最终分</span>
+        <label class="fld">已提交次数 <input type="number" id="penIn" value="17" min="0" max="40" style="width:74px"></label>
+        <button class="p" id="penGo">计算</button>
+      </div>
+      <div id="penOut"></div>
+    </div>
+
+    <h3>7.3 祝你好运</h3>
+    <p>有技术问题、或者卡住了，尽管去「麻烦」助教 :)<br>玩位玩得开心，祝你好运！</p>
+  </section>
+</main>
+
+</div>
+
+<div class="footer">
+  本页由原课件 PDF 翻译整理而成 · 数值计算与可视化均为页面内实时计算 · 可对照原课件页码阅读。
+</div>
+<button class="totop" id="toTop">↑ 顶部</button>
+
+<script>
+"use strict";
+/* ============================================================
+   Data Lab 评测工作台 —— 全部逻辑
+   在浏览器内实现 dlc（规则检查 / 运算符计数）+ btest/BDD（正确性验证）
+   ============================================================ */
+
+const $  = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+/* ---------- 32 位工具 ---------- */
+const TMIN = -2147483648, TMAX = 2147483647;
+const u32 = v => v >>> 0;
+const i32 = v => v | 0;
+const MOD = 4294967296n;
+function mod32(b) {
+  let x = b % MOD;
+  if (x < 0n) x += MOD;
+  return Number(x >= 2147483648n ? x - MOD : x);
+}
+/** 可复现的伪随机数（mulberry32） */
+function rng(seed) {
+  let a = seed >>> 0;
+  return () => {
+    a = (a + 0x6D2B79F5) >>> 0;
+    let t = a;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+/* ---------- 浮点位模式 ---------- */
+function decodeF(u) {
+  u = u >>> 0;
+  const s = (u >>> 31) ? -1 : 1;
+  const e = (u >>> 23) & 0xFF;
+  const f = u & 0x7FFFFF;
+  if (e === 0xFF) return f ? NaN : s * Infinity;
+  if (e === 0) return s * f * Math.pow(2, -149);
+  return s * (1 + f / 0x800000) * Math.pow(2, e - 127);
+}
+function encodeF(v) {
+  const a = new Float32Array(1); a[0] = v;
+  return new Uint32Array(a.buffer)[0] >>> 0;
+}
+
+/* ============================================================
+   表达式词法分析 + dlc 式规则检查
+   ============================================================ */
+const ALL8 = ['!', '~', '&', '^', '|', '+', '<<', '>>'];
+const TWO_CHAR = ['<<', '>>', '<=', '>=', '==', '!=', '&&', '||'];
+const FORBIDDEN = {
+  '*': '乘法 *', '/': '除法 /', '%': '取模 %', '-': '减法 / 取负 -',
+  '?': '三目运算符 ?:', ':': '三目运算符 ?:', '=': '赋值 =',
+  '&&': '逻辑与 &&', '||': '逻辑或 ||', '==': '相等比较 ==', '!=': '不等比较 !=',
+  '<': '小于比较 <', '>': '大于比较 >', '<=': '小于等于 <=', '>=': '大于等于 >=',
+  '[': '数组下标 []', ']': '数组下标 []', '{': '语句块 / 复合字面量', '}': '语句块',
+  ';': '分号（不是表达式）', ',': '逗号运算符', '(': null, ')': null,
+};
+
+function tokenize(src) {
+  const toks = []; let i = 0;
+  while (i < src.length) {
+    const c = src[i];
+    if (/\s/.test(c)) { i++; continue; }
+    const pair = src.substr(i, 2);
+    if (TWO_CHAR.includes(pair)) { toks.push(pair); i += 2; continue; }
+    if (/[0-9]/.test(c) || (c === '0' && /[xXbB]/.test(src[i + 1] || ''))) {
+      const m = /^(0[xX][0-9a-fA-F]+|0[bB][01]+|\d+)/.exec(src.slice(i));
+      if (m) { toks.push(m[0]); i += m[0].length; continue; }
+    }
+    if (/[A-Za-z_]/.test(c)) {
+      const m = /^[A-Za-z_]\w*/.exec(src.slice(i));
+      toks.push(m[0]); i += m[0].length; continue;
+    }
+    toks.push(c); i++;
+  }
+  return toks;
+}
+
+/**
+ * 整数谜题的规则检查（模拟 dlc）
+ * @returns {issues:[], ops:number, consts:[]}
+ */
+function checkIntegerRules(src, allowed, argNames) {
+  const issues = [], consts = [];
+  let ops = 0;
+  const toks = tokenize(src);
+  const allow = allowed || ALL8;
+  for (const t of toks) {
+    if (ALL8.includes(t)) {
+      if (!allow.includes(t)) issues.push(`使用了本题不允许的运算符 <code>${esc(t)}</code>（本题只允许 ${allow.map(a => `<code>${esc(a)}</code>`).join(' 与 ')}）`);
+      else ops++;
+      continue;
+    }
+    if (/^(0[xX][0-9a-fA-F]+|0[bB][01]+|\d+)$/.test(t)) {
+      const v = parseInt(t.replace(/^0[xX]/, '').replace(/^0[bB]/, ''), /^0[xX]/.test(t) ? 16 : /^0[bB]/.test(t) ? 2 : 10);
+      consts.push(v);
+      if (v > 0xFF) issues.push(`常量 <code>${esc(t)}</code> 超过 8 位（> 0xFF），违反编码规则`);
+      continue;
+    }
+    if (/^[A-Za-z_]\w*$/.test(t)) {
+      if (!argNames.includes(t)) issues.push(`出现了未知标识符 <code>${esc(t)}</code>（可用变量：${argNames.map(a => `<code>${esc(a)}</code>`).join('、')}）`);
+      continue;
+    }
+    // 单字符运算符 / 其它
+    if (FORBIDDEN[t] !== undefined && FORBIDDEN[t] !== null) issues.push(`使用了被禁止的记号 <code>${esc(t)}</code> —— ${FORBIDDEN[t]}（整数题只能使用 8 个运算符与括号）`);
+    else if (!'()'.includes(t)) issues.push(`出现了无法识别的记号 <code>${esc(t)}</code>`);
+  }
+  return { issues: [...new Set(issues)], ops, consts };
+}
+
+/** 浮点谜题：放宽运算符，但仍禁止浮点相关的东西与数组 */
+function checkFloatRules(src) {
+  const issues = [];
+  let ops = 0;
+  for (const t of tokenize(src)) if (ALL8.includes(t) || ['-', '*', '/', '%', '?', ':'].includes(t)) ops++;
+  if (/\d\s*\.\s*\d|\.\d/.test(src)) issues.push('出现了浮点常量（带小数点的数字），违反编码规则');
+  if (/\d+\.?\d*[eE][+-]?\d/.test(src)) issues.push('出现了科学计数法浮点常量，违反编码规则');
+  if (/\b(float|double)\b/.test(src)) issues.push('出现了浮点类型名，违反编码规则');
+  if (/[\[\]{}]/.test(src.replace(/^\s*\{|\}\s*$/g, ''))) issues.push('出现了数组 / 结构体 / union 相关语法（禁止使用）');
+  if (/\bMath\b|=>/.test(src)) issues.push('不允许调用库函数或使用箭头函数 —— 请只用整数运算和控制结构');
+  return { issues: [...new Set(issues)], ops };
+}
+
+/* ============================================================
+   测试集
+   ============================================================ */
+const EDGE32 = [
+  0, 1, -1, 2, -2, 3, 4, 7, 8, 15, 16, 31, 32, 63, 64, 127, 128, 255, 256, 511, 512,
+  1023, 1024, 2047, 4095, 65535, 65536, TMAX, TMIN,
+  0x55555555, 0xAAAAAAAA | 0, 0x33333333, 0xCCCCCCCC | 0, 0x0F0F0F0F, 0xF0F0F0F0 | 0,
+  0x00FF00FF, 0xFF00FF00 | 0, 0x0000FFFF, 0xFFFF0000 | 0, 0x80000001 | 0, 0x40000000,
+];
+const FLOAT_PATTERNS = [
+  0x00000000, 0x80000000 | 0, 0x3F800000, 0xBF800000 | 0, 0x40000000, 0xC0000000 | 0,
+  0x3F000000, 0xBF000000 | 0, 0x7F800000, 0xFF800000 | 0, 0x7FC00000, 0xFFC00000 | 0,
+  0x7F7FFFFF, 0x00800000, 0x00000001, 0x00000002, 0x007FFFFF, 0x00000003,
+  0x4B000000, 0x4B7FFFFF, 0x4EFFFFFF, 0x4F000000, 0xCF000000 | 0, 0x4F800000,
+  0x3F800001, 0x33800000, 0x00400000, 0x3E800000, 0x5F000000, 0xDF000000 | 0,
+  0x497FFFFF, 0x4A000000, 0xC97FFFFF | 0, 0x4E800000, 0xCE800000 | 0,
+];
+
+function buildTests(kind, seed = 20260915) {
+  const r = rng(seed);
+  const rand32 = () => i32((r() * 4294967296) >>> 0);
+  const out = [];
+  if (kind === 'single') {
+    for (let v = 0; v < 65536; v++) out.push([v]);
+    for (const v of EDGE32) out.push([v]);
+    for (const v of EDGE32) out.push([i32(v << 16)]);
+    for (let i = 0; i < 60000; i++) out.push([rand32()]);
+  } else if (kind === 'pair') {
+    for (const a of EDGE32) for (const b of EDGE32) out.push([a, b]);
+    for (let a = 0; a < 256; a++) for (let b = 0; b < 256; b++) out.push([a, b]);
+    for (let i = 0; i < 60000; i++) out.push([rand32(), rand32()]);
+  } else if (kind === 'xn') {
+    for (const a of EDGE32) for (let n = 0; n < 32; n++) out.push([a, n]);
+    for (let a = 0; a < 256; a++) for (let n = 0; n < 32; n++) out.push([a, n]);
+    for (let i = 0; i < 30000; i++) out.push([rand32(), Math.floor(r() * 32)]);
+  } else if (kind === 'xnarrow') {          // getByte：n 只取 0..3
+    for (const a of EDGE32) for (let n = 0; n < 4; n++) out.push([a, n]);
+    for (let a = 0; a < 4096; a++) for (let n = 0; n < 4; n++) out.push([a, n]);
+    for (let i = 0; i < 20000; i++) out.push([rand32(), Math.floor(r() * 4)]);
+  } else if (kind === 'fp') {
+    for (const v of FLOAT_PATTERNS) out.push([v]);
+    for (let e = 0; e < 256; e++) for (const f of [0, 1, 0x400000, 0x7FFFFF, 0x123456]) out.push([i32((e << 23) | f)]);
+    for (let i = 0; i < 40000; i++) out.push([rand32()]);
+    for (let i = 0; i < 20000; i++) out.push([i32((Math.floor(r() * 8) << 23) | Math.floor(r() * 0x800000))]);  // 偏向小指数
+  } else if (kind === 'fpp') {
+    for (const a of FLOAT_PATTERNS) for (const b of FLOAT_PATTERNS) out.push([a, b]);
+    for (let i = 0; i < 40000; i++) out.push([rand32(), rand32()]);
+  }
+  return out;
+}
+
+/* ============================================================
+   16 道谜题定义
+   ============================================================ */
+const PUZZLES = [
+  /* ---------- Table 1：位运算 ---------- */
+  {
+    id: 'bitXor', tbl: 1, rating: 1, maxOps: 8, args: ['x', 'y'], mode: 'expr', tests: 'pair',
+    zh: '只用 <code>~</code> 和 <code>&amp;</code> 实现 <code>x ^ y</code>。',
+    allowed: ['~', '&'],
+    ref: (x, y) => x ^ y, refSrc: 'x ^ y',
+    hints: ['先换个角度问：什么情况下两位<b>相同</b>？（都 1 或都 0）',
+            '「都 1」是 <code>x &amp; y</code>；「都 0」是 <code>~x &amp; ~y</code>。两者相或就是「相同」。',
+            '把「相同」取反就得到「不同」，也就是异或。再用一次德摩根律把最外层的 <code>|</code> 换成 <code>&amp;</code> 就能满足题目限制。'],
+  },
+  {
+    id: 'leastBitPos', tbl: 1, rating: 2, maxOps: 6, args: ['x'], mode: 'expr', tests: 'single',
+    zh: '返回一个掩码，只把 <code>x</code> 中<b>最低位的那个 1</b> 保留下来。',
+    ref: x => x & -x, refSrc: 'x & -x',
+    hints: ['想想 <code>x</code> 与 <code>-x</code>（也就是 <code>~x + 1</code>）的位模式关系。',
+            '<code>-x</code> 会把最低位的 1 保留在同一个位置，而它右边的 0 变成 0、左边全部取反。',
+            '所以 <code>x &amp; -x</code> 恰好只剩最低位那个 1。用允许的运算符把 <code>-x</code> 写出来即可。'],
+  },
+  {
+    id: 'getByte', tbl: 1, rating: 2, maxOps: 6, args: ['x', 'n'], mode: 'expr', tests: 'xnarrow',
+    zh: '取出字 <code>x</code> 中第 <code>n</code> 个字节（<code>n = 0</code> 表示最低字节）。结果落在低 8 位。',
+    ref: (x, n) => (x >> (n << 3)) & 0xFF, refSrc: '(x >> (n << 3)) & 0xFF',
+    hints: ['第 n 个字节需要右移 <code>8 × n</code> 位。',
+            '因为不能用乘法，所以用移位把 n 放大 8 倍：<code>n &lt;&lt; 3</code>。',
+            '右移之后用掩码只留下低 8 位。（注意 n 最大是 3）'],
+  },
+  {
+    id: 'logicalShift', tbl: 1, rating: 3, maxOps: 16, args: ['x', 'n'], mode: 'expr', tests: 'xn',
+    zh: '把 <code>x</code> <b>逻辑右移</b> <code>n</code> 位（<code>0 ≤ n ≤ 31</code>）：左端补 0，而不是复制符号位。',
+    ref: (x, n) => i32(x >>> n), refSrc: '(x >>> n) | 0',
+    hints: ['C 的 <code>&gt;&gt;</code> 对有符号数是<b>算术</b>右移（左端补符号位），这题要的是补 0。',
+            '办法：先算术右移，再把左边多补出来的那些 1 用掩码清掉。',
+            '掩码可以这样构造：<code>~(1 &lt;&lt; 31 &gt;&gt; n &lt;&lt; 1)</code>。注意 n = 0 时不能写成 <code>x &gt;&gt; 32</code>（未定义行为）。'],
+  },
+  {
+    id: 'grayToBinary', tbl: 1, rating: 3, maxOps: 20, args: ['x'], mode: 'expr', tests: 'single',
+    zh: '把 31 位的<b>格雷码</b> <code>x</code> 转成普通二进制。格雷码的特点是相邻两个数只差一位。',
+    ref: x => { let y = x, s; for (s = 1; s < 32; s <<= 1) y ^= (y >>> s); return i32(y & 0x7FFFFFFF); },
+    refSrc: '(() => { let y = x; for (let s = 1; s < 32; s <<= 1) y ^= y >>> s; return y | 0; })()',
+    domain: v => v[0] >= 0,
+    hints: ['二进制第 i 位等于格雷码第 i 位及其<b>所有更高位</b>的异或和。',
+            '不要一位一位来 —— 用「倍增」：先 <code>y ^= y &gt;&gt; 1</code>，再 <code>y ^= y &gt;&gt; 2</code>，再 <code>y ^= y &gt;&gt; 4</code> …… 每次覆盖的范围翻倍。',
+            '16 位之后合起来就是全部 31 位。注意每一步都要用<b>逻辑</b>右移（或先保证高位是 0）。'],
+  },
+  {
+    id: 'bitCount', tbl: 1, rating: 4, maxOps: 40, args: ['x'], mode: 'expr', tests: 'single',
+    zh: '数出 <code>x</code> 里 1 的个数（汉明重量）。',
+    ref: x => { let c = 0, u = x >>> 0; for (let i = 0; i < 32; i++) c += (u >>> i) & 1; return c; },
+    refSrc: '(() => { let c = 0, u = x >>> 0; for (let i = 0; i < 32; i++) c += (u >>> i) & 1; return c; })()',
+    hints: ['不许用循环，那就要「并行地」数：把相邻位的 1 相加到 2 位一组里。',
+            '经典技巧：<code>x = (x &amp; 0x55…) + ((x &gt;&gt; 1) &amp; 0x55…)</code> 把每 2 位的 1 个数装进 2 位；再 <code>x = (x &amp; 0x33…) + ((x &gt;&gt; 2) &amp; 0x33…)</code> 装进 4 位，依此类推。',
+            '但常量不能超过 0xFF，所以掩码得自己「造」出来（比如用 <code>~0</code> 和移位拼）。最后注意要 <code>&amp; 0x3F</code> 之类的收尾，第 4 步之后还要再合并一次。'],
+  },
+
+  /* ---------- Table 2：补码算术 ---------- */
+  {
+    id: 'isEqual', tbl: 2, rating: 2, maxOps: 5, args: ['x', 'y'], mode: 'expr', tests: 'pair',
+    zh: '若 <code>x == y</code> 返回 1，否则返回 0。',
+    ref: (x, y) => (x === y ? 1 : 0), refSrc: 'x === y ? 1 : 0',
+    hints: ['不能用 <code>==</code>，那就判断「有没有任何一位不同」。',
+            '<code>x ^ y</code> 的每一位表示该位是否不同：全 0 就意味着相等。',
+            '把「全 0」变成 1：<code>!x</code> 正好做这件事（非 0 得 0，0 得 1）。'],
+  },
+  {
+    id: 'divpwr2', tbl: 2, rating: 2, maxOps: 15, args: ['x', 'n'], mode: 'expr', tests: 'xn',
+    zh: '计算 <code>x / 2<sup>n</sup></code>，<b>向零取整</b>（<code>0 ≤ n ≤ 30</code>）。',
+    ref: (x, n) => mod32(BigInt(x) / (1n << BigInt(n))), refSrc: 'Number(BigInt(x) / (1n << BigInt(n)))',
+    hints: ['对非负数，直接算术右移就是向下取整，也就是向零取整。',
+            '问题出在负数：算术右移是向 −∞ 取整。例如 −1 &gt;&gt; 1 = −1，但 −1/2 应该是 0。',
+            '补救办法：负数先加上 <code>2<sup>n</sup> − 1</code>（偏置）再右移。用「符号位决定的偏置」一行搞定：先算 <code>(x &gt;&gt; 31) &amp; bias</code>。'],
+  },
+  {
+    id: 'sign', tbl: 2, rating: 2, maxOps: 10, args: ['x'], mode: 'expr', tests: 'single',
+    zh: '<code>x</code> 为正返回 1，为零返回 0，为负返回 −1。',
+    ref: x => (x > 0 ? 1 : x < 0 ? -1 : 0), refSrc: 'x > 0 ? 1 : x < 0 ? -1 : 0',
+    hints: ['负数返回 −1，而 −1 的位模式是全 1 —— 正好是 <code>x &gt;&gt; 31</code>（算术右移 31 位）。',
+            '对非负数，这个结果是 0；但正数应该返回 1，所以还要补上「x 非零则为 1」。',
+            '把 <code>x</code> 规范化成 0/1：<code>!!x</code> 或 <code>(x | ~x)</code> 系列技巧都行。两者相或即可（负数时后一项为 0，正数时前一项为 0）。'],
+  },
+  {
+    id: 'addOK', tbl: 2, rating: 3, maxOps: 20, args: ['x', 'y'], mode: 'expr', tests: 'pair',
+    zh: '若 <code>x + y</code> 不溢出则返回 1，否则返回 0。',
+    ref: (x, y) => { const s = BigInt(x) + BigInt(y); return (s >= -2147483648n && s <= 2147483647n) ? 1 : 0; },
+    refSrc: '(() => { const t = BigInt(x) + BigInt(y); return (t >= -2147483648n && t <= 2147483647n) ? 1 : 0; })()',
+    hints: ['溢出只可能发生在<b>同号相加</b>的时候：两个正数相加得负（正溢出），两个负数相加得正（负溢出）。',
+            '<b>正数溢出</b>的判据：<code>x &gt; 0 &amp;&amp; y &gt; 0 &amp;&amp; x+y &lt;= 0</code>。用位运算表达「x &gt; 0」就是 <code>~x &amp; ~y</code> 的最高位……',
+            '等价地：<code>(x ^ s) &amp; (y ^ s)</code> 的最高位为 1 就说明发生了溢出（s 是和的位模式）。再用 <code>&gt;&gt; 31</code> 和 <code>!</code> 收尾。'],
+  },
+  {
+    id: 'absVal', tbl: 2, rating: 4, maxOps: 10, args: ['x'], mode: 'expr', tests: 'single',
+    zh: '计算 <code>|x|</code>。题目假设 <code>−T<sub>max</sub> ≤ x ≤ T<sub>max</sub></code>，即 <code>x ≠ TMin</code>。',
+    ref: x => (x < 0 ? -x : x), refSrc: 'x < 0 ? -x : x',
+    domain: v => v[0] !== -2147483648,
+    hints: ['对非负数原样返回；对负数要取负。不能用 <code>-</code>，但取负等价于 <code>~x + 1</code>。',
+            '关键是<b>不能写条件语句</b>，所以要构造一个「只对负数生效」的掩码：<code>x &gt;&gt; 31</code> 对负数得 −1（全 1）、对非负数得 0。',
+            '有了掩码 mask：<code>(x ^ mask) + (mask &amp; 1)</code> —— 非负数时什么都不做，负数时先取反再加一。'],
+  },
+  {
+    id: 'satSub', tbl: 2, rating: 4, maxOps: 30, args: ['x', 'y'], mode: 'expr', tests: 'pair',
+    zh: '计算 <code>x − y</code>，若溢出则<b>饱和</b>到 <code>TMin</code> 或 <code>TMax</code>。',
+    ref: (x, y) => { const s = BigInt(x) - BigInt(y); return s > 2147483647n ? TMAX : s < -2147483648n ? TMIN : Number(s); },
+    refSrc: '(() => { const t = BigInt(x) - BigInt(y); return t > 2147483647n ? 2147483647 : t < -2147483648n ? -2147483648 : Number(t); })()',
+    hints: ['先判断是否溢出：<code>x − y</code> 相当于 <code>x + (−y)</code>，而 <code>−y</code> 可能本身溢出（y = TMin 时）。',
+            '拆开看：<b>正溢出</b>（结果大于 TMax）发生在 x 为正、y 为负时；<b>负溢出</b>发生在 x 为负、y 为正时。',
+            '溢出时用掩码选择常数边界（TMax = <code>~(1 &lt;&lt; 31)</code>，TMin = <code>1 &lt;&lt; 31</code>），没溢出就返回差值。可以用 <code>!</code> 把条件变成 0/1 再取负变成全 1 掩码。'],
+  },
+
+  /* ---------- Table 3：浮点 ---------- */
+  {
+    id: 'float_twice', tbl: 3, rating: 4, maxOps: 30, args: ['x'], mode: 'body', tests: 'fp',
+    zh: '返回浮点数 <code>2 × f</code> 的位模式，其中 <code>f</code> 是参数 <code>x</code> 所表示的浮点数。要求<b>在位级实现</b>。',
+    ref: x => {
+      const u = x >>> 0, exp = (u >>> 23) & 0xFF;
+      if (exp === 0xFF) return i32(u);                                 // inf / NaN 原样返回
+      if (exp === 0) return i32((u & 0x80000000) | (u << 1));          // 非规格化 / 零：尾数左移一位
+      if (exp === 254) return i32((u & 0x80000000) | 0x7F800000);      // 指数 254 一律溢出为 ±∞
+      return i32(u + 0x00800000);                                      // 规格化：指数 +1
+    },
+    refSrc: 'const a = new Float32Array(1), ia = new Uint32Array(a.buffer);\nia[0] = x >>> 0;\nif (Number.isNaN(a[0])) return x | 0;   // NaN 原样返回（与 tests.c 一致）\na[0] = a[0] * 2;\nreturn ia[0] | 0;',
+    hints: ['浮点乘以 2，对<b>规格化</b>数来说就是把指数加 1（位模式加上 <code>0x00800000</code>）。',
+            '要小心三种特殊情况：<b>无穷和 NaN</b> 乘 2 还是它自己；<b>零</b>乘 2 还是零；<b>非规格化</b>数乘 2 是把尾数左移一位（这样恰好会自动「升级」成规格化数）。',
+            '<b>溢出边界要单独处理</b>：指数为 254（E = 127）时，无论尾数是多少，乘以 2 都超过 <code>FLT_MAX</code>，正确结果是 <b>±∞</b> —— 而不是「指数加一变成 NaN 位模式」。所以不能只写 <code>u + 0x00800000</code>，要先判断指数是否为 254。'],
+  },
+  {
+    id: 'float_f2i', tbl: 3, rating: 4, maxOps: 30, args: ['x'], mode: 'body', tests: 'fp',
+    zh: '把浮点数 <code>f</code>（参数 <code>x</code> 的位模式）转成整数，<b>向零截断</b>。若 <code>f</code> 是 NaN 或超出 <code>int</code> 范围，返回 <code>0x80000000</code>。',
+    ref: x => {
+      const u = x >>> 0, sign = u >>> 31, exp = (u >>> 23) & 0xFF, frac = u & 0x7FFFFF;
+      if (exp === 0xFF) return TMIN;
+      const E = exp - 127;
+      if (E < 0) return 0;
+      if (E > 30) return TMIN;
+      const m = frac | 0x800000;
+      const val = i32(E >= 23 ? (m << (E - 23)) : (m >>> (23 - E)));
+      return sign ? i32(-val) : val;
+    },
+    refSrc: 'const a = new Float32Array(1), ia = new Uint32Array(a.buffer);\nia[0] = x >>> 0;\nconst v = a[0];\nif (Number.isNaN(v)) return -2147483648;\nif (v >= 2147483648 || v < -2147483648) return -2147483648;\nreturn Math.trunc(v) | 0;',
+    hints: ['先拆出三个字段：符号位、8 位指数、23 位尾数。',
+            '规格化数的隐含 1 别忘了补上：<code>m = frac | 0x800000</code>，这样 m 是 24 位有效数字的整数形式。',
+            '真正要做的移位量是 <code>E − 23</code>：E &gt; 23 时左移，E &lt; 23 时右移（右移自然实现向零截断）。E &lt; 0 说明 |f| &lt; 1，结果为 0。'],
+  },
+  {
+    id: 'float_negpwr2', tbl: 3, rating: 4, maxOps: 20, args: ['x'], mode: 'body', tests: 'single',
+    zh: '在位级计算 <code>2.0<sup>−x</sup></code>。<span style="color:var(--warn)">本页采用「x 是 0 ≤ n ≤ 127 的整数」这一解读，请以你的 <code>bits.c</code> 注释为准，并可自行修改下面的参考实现。</span>',
+    ref: x => {
+      const n = x >>> 0;
+      if (n <= 126) return i32((127 - n) << 23);        // 规格化：指数直接写进去
+      if (n <= 149) return i32(1 << (149 - n));         // 下溢到非规格化
+      return 0;                                          // 更小则彻底下溢为 0
+    },
+    refSrc: 'const n = x >>> 0;\nif (n <= 126) return ((127 - n) << 23) | 0;\nif (n <= 149) return (1 << (149 - n)) | 0;\nreturn 0;',
+    domain: v => v[0] >= 0 && v[0] <= 160,
+    hints: ['<code>2<sup>−n</sup></code> 是 2 的整数次幂，所以它的浮点表示里<b>尾数部分全是 0</b>，只有指数字段有值。',
+            '<code>2<sup>k</sup></code> 的指数编码是 <code>k + 127</code>。所以 <code>2<sup>−n</sup></code> 就是把 <code>127 − n</code> 写进指数位：<code>(127 − n) &lt;&lt; 23</code>。',
+            '两种边界：<code>n = 127</code> 时指数为 0，落到<b>非规格化</b>区（尾数最高位为 1）；<code>n</code> 再大就一路下溢，超过 149 后结果为 0。'],
+  },
+  {
+    id: 'float_greater', tbl: 3, rating: 4, maxOps: 45, args: ['x', 'y'], mode: 'body', tests: 'fpp',
+    zh: '若浮点数 <code>f1 &gt; f2</code>（分别是参数 <code>x</code>、<code>y</code> 的位模式）返回 1，否则返回 0。要正确处理 NaN 与 ±0。',
+    ref: (x, y) => (decodeF(x) > decodeF(y) ? 1 : 0),
+    refSrc: 'const a = new Float32Array(1), b = new Float32Array(1);\nconst ia = new Uint32Array(a.buffer), ib = new Uint32Array(b.buffer);\nia[0] = x >>> 0; ib[0] = y >>> 0;\nreturn (a[0] > b[0]) ? 1 : 0;',
+    hints: ['浮点位模式<b>不能</b>直接当整数比大小：负数的最高位是 1，按整数比会显得「很大」。',
+            '分情况：先看符号。一个负数一个非负数时，结论立刻确定（注意 −0 与 +0 相等，不算「大于」）。',
+            '同号时再比指数和尾数；负号时大小关系<b>反转</b>（绝对值大的反而小）。最后别忘了 NaN：任何与 NaN 的比较都返回 0。'],
+  },
+];
+
+/* ============================================================
+   谜题卡片渲染 + 测试执行
+   ============================================================ */
+const pzState = {};   // id → { src, refSrc }
+
+function puzzleCard(p) {
+  const argsTxt = p.args.join(', ');
+  const allowedTxt = p.allowed ? p.allowed.map(a => `<code>${a}</code>`).join(' / ') : '全部 8 个运算符';
+  const inputHtml = p.mode === 'expr'
+    ? `<label class="fld" style="flex:1">你的实现（表达式）<input type="text" class="pzSrc" data-pid="${p.id}" spellcheck="false" placeholder="例如只用 ${argsTxt} 组成的表达式" style="flex:1;min-width:220px"></label>`
+    : `<div style="flex:1;min-width:260px">
+         <div style="font-size:13px;color:var(--muted);margin-bottom:4px">你的实现（函数体，用 ${argsTxt}，需要 <code>return</code>；可用 if/while）</div>
+         <textarea class="pzSrc" data-pid="${p.id}" rows="4" spellcheck="false"
+           style="width:100%;font-family:var(--font-mono);font-size:13px;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--ink)"></textarea>
+       </div>`;
+  const refEditor = `<details class="reveal" style="margin:8px 0 0"><summary>参考实现（可编辑 —— 与你的 bits.c 对齐后再测）</summary>
+      <div class="ans">
+        <div style="font-size:13px;color:var(--muted);margin-bottom:5px">用作「正确答案」的对照实现 —— 相当于课程 handout 里的 <code>tests.c</code>：它<b>定义正确行为</b>，但自身并不满足编码规则（用了浮点运算、或整数题里禁止的运算符），<b>不能直接抄进 bits.c</b>。如果你 bits.c 里的契约不同（尤其是 float_negpwr2），改这里即可。</div>
+        <textarea class="pzRef" data-pid="${p.id}" rows="${p.mode === 'expr' ? 2 : 6}" spellcheck="false"
+          style="width:100%;font-family:var(--font-mono);font-size:13px;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--code-bg);color:var(--ink)">${esc(p.refSrc)}</textarea>
+      </div>
+    </details>`;
+  return `
+  <div class="card" data-pid="${p.id}" style="margin:14px 0">
+    <h5 style="margin-bottom:6px">
+      <span class="mono" style="font-size:15px">${esc(p.id)}(${esc(argsTxt)})</span>
+      <span class="chip" style="margin-left:6px">难度 ${p.rating}</span>
+      <span class="chip gray" style="margin-left:4px">Max ops ${p.maxOps}</span>
+      <span class="chip gray" style="margin-left:4px">可用 ${allowedTxt}</span>
+    </h5>
+    <p style="margin:6px 0;font-size:14.5px">${p.zh}</p>
+    <details class="reveal" style="margin:8px 0"><summary>思路提示（不给完整答案）</summary>
+      <div class="ans"><ol style="margin:0;padding-left:20px">${p.hints.map(h => `<li>${h}</li>`).join('')}</ol></div>
+    </details>
+    <div class="ctrls" style="align-items:flex-start;margin:10px 0 0">
+      ${inputHtml}
+      <button class="p pzRun" data-pid="${p.id}" style="margin-top:${p.mode === 'expr' ? '20px' : '22px'}">测试</button>
+    </div>
+    ${refEditor}
+    <div class="pzOut" data-pid="${p.id}" style="margin-top:10px"></div>
+  </div>`;
+}
+
+function renderPuzzleLists() {
+  $('#pz1List').innerHTML = PUZZLES.filter(p => p.tbl === 1).map(puzzleCard).join('');
+  $('#pz2List').innerHTML = PUZZLES.filter(p => p.tbl === 2).map(puzzleCard).join('');
+  $('#pz3List').innerHTML = PUZZLES.filter(p => p.tbl === 3).map(puzzleCard).join('');
+}
+
+/** 把源码编译成可调用的函数 */
+function compilePuzzle(p, src) {
+  if (p.mode === 'expr') {
+    const fn = new Function(...p.args, `"use strict"; return (${src}) | 0;`);
+    return vals => fn(...vals);
+  }
+  const fn = new Function(...p.args, `"use strict";\n${src}\n`);
+  return vals => i32(fn(...vals));
+}
+function compileRef(p, src) {
+  if (p.mode === 'expr') {
+    const fn = new Function(...p.args, `"use strict"; return (${src}) | 0;`);
+    return vals => fn(...vals);
+  }
+  const fn = new Function(...p.args, `"use strict";\n${src}\n`);
+  return vals => i32(fn(...vals));
+}
+
+function runPuzzle(p) {
+  const out = $(`.pzOut[data-pid="${p.id}"]`);
+  const src = ($(`.pzSrc[data-pid="${p.id}"]`)?.value || '').trim();
+  const refSrc = ($(`.pzRef[data-pid="${p.id}"]`)?.value || '').trim();
+  if (!src) { out.innerHTML = `<div class="box warn" style="margin:8px 0">先在「你的实现」里写点东西再测试。</div>`; return; }
+
+  // 1) 规则检查
+  const rules = p.mode === 'expr' ? checkIntegerRules(src, p.allowed, p.args) : checkFloatRules(src);
+  const okOps = rules.ops <= p.maxOps;
+  const ruleHtml = `
+    <div class="tbl-wrap"><table class="tbl" style="margin:0">
+      <tr><th>检查项</th><th>结果</th></tr>
+      <tr><td>运算符个数</td><td class="mono">${rules.ops} / ${p.maxOps} ${okOps ? '<span class="chip ok">在限制内</span>' : '<span class="chip bad">超限</span>'}</td></tr>
+      <tr><td>编码规则</td><td>${rules.issues.length ? '<span class="chip bad">不合规</span>' : '<span class="chip ok">通过</span>'}</td></tr>
+    </table></div>
+    ${rules.issues.length ? `<div class="box bad" style="margin:10px 0 0"><div class="t">规则问题（${rules.issues.length} 条）</div>
+      <ul style="margin:4px 0 0">${rules.issues.map(i => `<li>${i}</li>`).join('')}</ul></div>` : ''}`;
+
+  // 2) 编译
+  let mine, ref;
+  try { mine = compilePuzzle(p, src); }
+  catch (e) { out.innerHTML = ruleHtml + `<div class="box bad" style="margin:10px 0 0"><div class="t">无法编译你的实现</div>
+    <div class="mono" style="font-size:13px;margin-top:4px">${esc(e.message)}</div>
+    ${p.mode === 'expr' ? '<p style="margin:6px 0 0;font-size:13.5px">这里只能写<b>表达式</b>（不要写 return、不要写分号）。</p>' : '<p style="margin:6px 0 0;font-size:13.5px">这里写<b>函数体</b>：可以有 if/while，但必须 <code>return</code> 一个 32 位整数。</p>'}</div>`;
+    return; }
+  try { ref = compileRef(p, refSrc); }
+  catch (e) { out.innerHTML = ruleHtml + `<div class="box bad" style="margin:10px 0 0"><div class="t">参考实现无法编译（请检查你在参考实现框里的改动）</div>
+    <div class="mono" style="font-size:13px;margin-top:4px">${esc(e.message)}</div></div>`; return; }
+
+  // 3) 跑测试
+  const tests = buildTests(p.tests).filter(v => !p.domain || p.domain(v));
+  let pass = 0, fail = 0, firstFail = null, errMsg = null;
+  const t0 = performance.now();
+  for (const vals of tests) {
+    let got, want;
+    try { got = mine(vals); } catch (e) { errMsg = `运行时报错：${e.message}（输入 ${vals.join(', ')}）`; break; }
+    try { want = ref(vals); } catch (e) { errMsg = `参考实现报错：${e.message}`; break; }
+    if (u32(got) === u32(want)) pass++; else { fail++; if (!firstFail) firstFail = { vals, got: u32(got), want: u32(want) }; }
+  }
+  const ms = Math.round(performance.now() - t0);
+  const total = pass + fail;
+  const verdict = errMsg ? 'bad' : (fail === 0 ? 'ok' : 'bad');
+  out.innerHTML = ruleHtml + `
+    <div class="box ${verdict}" style="margin:10px 0 0">
+      <div class="t">${errMsg ? '运行时错误'
+        : fail === 0 ? `全部通过 —— ${pass.toLocaleString()} 个测试用例`
+        : `未通过 —— ${fail.toLocaleString()} / ${total.toLocaleString()} 个用例不一致`}</div>
+      ${firstFail ? `<div style="margin-top:6px;font-size:14px">
+        第一个反例：<span class="mono">${p.args.map((a, i) => `${a} = ${p.tests.startsWith('fp') ? '0x' + u32(firstFail.vals[i]).toString(16).toUpperCase().padStart(8, '0') : firstFail.vals[i]}`).join(', ')}</span><br>
+        你的结果 <span class="mono">${firstFail.got}</span>（0x${u32(firstFail.got).toString(16).toUpperCase()}），
+        期望 <span class="mono">${firstFail.want}</span>（0x${u32(firstFail.want).toString(16).toUpperCase()}）
+        ${p.tests.startsWith('fp') ? `<br><span style="color:var(--muted)">期望值对应的浮点数：${fmtF(u32(firstFail.want))}</span>` : ''}
+      </div>` : ''}
+      ${errMsg ? `<div class="mono" style="font-size:13px;margin-top:6px">${esc(errMsg)}</div>` : ''}
+      <div style="font-size:12.5px;color:var(--muted);margin-top:6px">共跑了 ${total.toLocaleString()} 个用例，耗时 ${ms} ms。（真实验收还要过 dlc 与 BDD 穷举。）</div>
+    </div>`;
+}
+
+function fmtF(u) {
+  const v = decodeF(u);
+  if (Number.isNaN(v)) return 'NaN';
+  if (!isFinite(v)) return v > 0 ? '+∞' : '−∞';
+  return String(v);
+}
+
+/* ============================================================
+   6.5 fshow / ishow 模拟器
+   ============================================================ */
+const fsState = { mode: 'f', last: null };
+function num10(x, sig = 10) {
+  if (x === 0) return '0';
+  const a = Math.abs(x);
+  let s;
+  if (a >= 1e-4 && a < 1e16) s = Number(x.toPrecision(sig)).toString();
+  else {
+    const [m, e] = x.toExponential(sig - 1).split('e');
+    s = Number(m).toString() + 'e' + (e[0] === '-' ? '-' : '+') + e.slice(1).replace(/^0+(?=\d)/, '');
+  }
+  return s;
+}
+function parseFshowInput(raw) {
+  const s = String(raw).trim();
+  if (/^[+-]?0[xX][0-9a-fA-F]{1,8}$/.test(s)) return { bits: parseInt(s.replace(/^[+-]?0[xX]/, ''), 16) >>> 0, from: 'hex' };
+  if (/^[+-]?\d+$/.test(s)) {
+    const v = Number(s);
+    if (v >= 0 && v <= 4294967295 && Math.abs(v) > 0) return { bits: v >>> 0, from: 'dec' };
+    return { bits: v >>> 0, from: 'dec' };
+  }
+  if (/^[+-]?(\d+\.\d*|\.\d+|\d+)([eE][+-]?\d+)?$/.test(s)) return { bits: encodeF(Number(s)), from: 'float' };
+  return { err: '看不懂这个输入。可以给十进制整数、0x 十六进制、或一个浮点字面量（如 15.213）。' };
+}
+function renderFshow(raw, mode) {
+  const p = parseFshowInput(raw);
+  if (p.err) { $('#fshowOut').innerHTML = `<div class="box bad" style="margin:8px 0">${p.err}</div>`; return; }
+  const u = p.bits >>> 0;
+  const sign = u >>> 31, exp = (u >>> 23) & 0xFF, frac = u & 0x7FFFFF;
+  const hex = '0x' + u.toString(16).padStart(8, '0');
+  const val = decodeF(u);
+  fsState.last = { u, mode };
+
+  if (mode === 'i') {
+    const signed = i32(u), unsigned = u;
+    $('#fshowOut').innerHTML = `
+      <div class="mono" style="font-size:14px;line-height:1.95;background:var(--code-bg);border:1px solid var(--code-bd);border-radius:8px;padding:13px 16px">
+        Value = <b>${signed}</b> &nbsp;(signed) &nbsp;/&nbsp; <b>${unsigned.toLocaleString()}</b> &nbsp;(unsigned)<br>
+        Hex = <b>${hex}</b> &nbsp;&nbsp;Binary = ${group4(u.toString(2).padStart(32, '0'))}<br>
+        sign = ${sign} &nbsp; exponent 字段 = 0x${exp.toString(16).padStart(2, '0')} &nbsp; fraction 字段 = 0x${frac.toString(16).padStart(6, '0')}
+      </div>
+      <p style="font-size:13.5px;color:var(--muted);margin:8px 0 0">
+        <code>ishow</code> 把位模式按<b>整数</b>解释。同一串位在 fshow 里是浮点数，在这里是整数 —— 这正是本实验要你建立的手感。
+      </p>`;
+    return;
+  }
+
+  let kind, detail;
+  if (exp === 0xFF) {
+    kind = frac ? 'NaN' : 'Infinity';
+    detail = frac ? `NaN（fraction ≠ 0，共 ${frac ? '有' : '无'}非零位）` : `${sign ? '−' : '+'}∞（运算溢出时产生）`;
+  } else if (exp === 0) {
+    kind = 'Denormalized';
+    const m = frac * Math.pow(2, -149);
+    detail = `${sign ? '−' : '+'}${m.toPrecision(11)} X 2^(-126)`;
+  } else {
+    kind = 'Normalized';
+    const m = 1 + frac / 0x800000;
+    detail = `${sign ? '−' : '+'}${m.toPrecision(11)} X 2^(${exp - 127})`;
+  }
+  $('#fshowOut').innerHTML = `
+    <div class="mono" style="font-size:14px;line-height:2;background:var(--code-bg);border:1px solid var(--code-bd);border-radius:8px;padding:13px 16px;overflow-x:auto">
+      Floating point value ${Number.isNaN(val) ? 'NaN' : (isFinite(val) ? num10(val) : (val > 0 ? 'inf' : '-inf'))}<br>
+      Bit Representation ${hex}, sign = ${sign}, exponent = 0x${exp.toString(16).padStart(2, '0')}, fraction = 0x${frac.toString(16).padStart(6, '0')}<br>
+      ${kind}. ${detail}
+    </div>
+    <div class="tbl-wrap"><table class="tbl" style="margin-top:10px">
+      <tr><th>字段</th><th class="mono">值</th><th>说明</th></tr>
+      <tr><td>sign</td><td class="mono">${sign}</td><td>${sign ? '负数（−0 也带符号位）' : '正数'}</td></tr>
+      <tr><td>exponent</td><td class="mono">0x${exp.toString(16).padStart(2, '0')} = ${exp}</td>
+          <td>${exp === 0 ? '全 0 → 非规格化 / 零' : exp === 0xFF ? '全 1 → ∞ 或 NaN' : `真指数 E = ${exp} − 127 = ${exp - 127}`}</td></tr>
+      <tr><td>fraction</td><td class="mono">0x${frac.toString(16).padStart(6, '0')}</td>
+          <td>${exp === 0 ? '隐含前导 0：M = 0.xxx…' : '隐含前导 1：M = 1.xxx…'}</td></tr>
+    </table></div>
+    ${p.from === 'float' ? `<p style="font-size:13.5px;color:var(--muted);margin:8px 0 0">
+      你输入的是浮点字面量，先被转成了最近的 float 位模式（${num10(decodeF(u))}），再按上面解读 —— 与 <code>fshow 15.213</code> 的行为一致。</p>` : ''}`;
+}
+const group4 = b => b.replace(/(.{4})/g, '$1 ').trim();
+
+/* ============================================================
+   2.3 规则检查器
+   ============================================================ */
+function renderRuleCheck() {
+  const src = $('#ruleIn').value.trim();
+  const varsSel = $('#ruleVars').value;
+  const maxOps = +$('#ruleMax').value || 8;
+  const argNames = varsSel === 'xy' ? ['x', 'y'] : varsSel === 'xn' ? ['x', 'n'] : ['x'];
+  if (!src) { $('#ruleOut').innerHTML = '<div class="box warn" style="margin:8px 0">请输入一个表达式。</div>'; return; }
+  const r = checkIntegerRules(src, null, argNames);
+  const over = r.ops > maxOps;
+  $('#ruleOut').innerHTML = `
+    <div class="tbl-wrap"><table class="tbl" style="margin:0">
+      <tr><th>检查项</th><th>结果</th></tr>
+      <tr><td>运算符个数（dlc -e 会打印这个数）</td>
+          <td class="mono">${r.ops} ${over ? `<span class="chip bad">超过上限 ${maxOps}</span>` : `<span class="chip ok">≤ ${maxOps}</span>`}</td></tr>
+      <tr><td>常量最大位数</td>
+          <td>${r.consts.length ? (Math.max(...r.consts) > 0xFF ? '<span class="chip bad">有超过 8 位的常量</span>' : '<span class="chip ok">全部 ≤ 0xFF</span>') : '没有常量'}</td></tr>
+      <tr><td>编码规则</td><td>${r.issues.length ? '<span class="chip bad">不合规</span>' : '<span class="chip ok">通过</span>'}</td></tr>
+    </table></div>
+    ${r.issues.length ? `<div class="box bad" style="margin:10px 0 0"><div class="t">问题</div>
+      <ul style="margin:4px 0 0">${r.issues.map(i => `<li>${i}</li>`).join('')}</ul></div>`
+      : `<div class="box ok" style="margin:10px 0 0"><div class="t">这就是 dlc 静默通过的样子</div>
+        真实环境里 <code>./dlc bits.c</code> 没有任何输出就表示合规；加 <code>-e</code> 才会打印运算符计数。</div>`}`;
+}
+
+/* ============================================================
+   0.1 分数换算 + 提交惩罚
+   ============================================================ */
+function renderScore() {
+  const corr = Math.max(0, Math.min(48, +$('#scCorr').value || 0));
+  const perf = Math.max(0, Math.min(32, +$('#scPerf').value || 0));
+  const subs = Math.max(0, +$('#scSub').value || 0);
+  const raw = corr + perf;
+  const base = Math.ceil(raw / 80 * 100);
+  const extra = Math.max(0, subs - 16);
+  const pen = Math.min(80, extra * 5);
+  const final = Math.ceil(base * (100 - pen) / 100);
+  const rejected = subs >= 32;
+  $('#scOut').innerHTML = `
+    <div class="tbl-wrap"><table class="tbl" style="margin:0">
+      <tr><th>步骤</th><th class="mono">计算</th><th class="mono">结果</th></tr>
+      <tr><td>原始分</td><td class="mono">${corr} + ${perf}</td><td class="mono">${raw} / 80</td></tr>
+      <tr><td>换算到百分制</td><td class="mono">⌈ ${raw} / 80 × 100 ⌉</td><td class="mono">${base}</td></tr>
+      <tr><td>提交次数惩罚</td><td class="mono">${extra > 0 ? `${extra} 次超额 × 5%` : '未超过 16 次'}</td><td class="mono">${pen}%</td></tr>
+      <tr><td><b>最终分</b></td><td class="mono">⌈ ${base} × (100 − ${pen}) / 100 ⌉</td><td class="mono"><b>${rejected ? '不受理' : final}</b></td></tr>
+    </table></div>
+    ${rejected ? `<div class="box bad" style="margin:10px 0 0"><div class="t">已提交 ${subs} 次</div>
+      达到 32 次后<b>不再受理</b>任何提交，这次实验的实际得分为 0。请珍惜提交次数，先在本地把 <code>driver.pl</code> 跑通再交。</div>`
+      : pen > 0 ? `<div class="box warn" style="margin:10px 0 0"><div class="t">已扣 ${pen}%</div>
+        超过 16 次后每次扣 5%，最多扣 80%（即 16 次额外提交）。当前提交 ${subs} 次，还剩 ${32 - subs} 次机会。</div>`
+      : `<div class="box ok" style="margin:10px 0 0"><div class="t">尚未触发惩罚</div>
+        已提交 ${subs} 次，还可以提交 ${16 - subs} 次而不扣分。</div>`}`;
+}
+function renderPenalty() {
+  const subs = Math.max(0, +$('#penIn').value || 0);
+  const extra = Math.max(0, subs - 16);
+  const pen = Math.min(80, extra * 5);
+  const rows = [];
+  for (const s of [0, 16, 17, 20, 24, 28, 31, 32, 33]) {
+    const e = Math.max(0, s - 16), p = Math.min(80, e * 5);
+    rows.push(`<tr${s === subs ? ' class="hl"' : ''}><td class="mono">${s}</td>
+      <td class="mono">${p === 0 ? '—' : '−' + p + '%'}</td>
+      <td>${s >= 32 ? '<span class="chip bad">不再受理</span>' : s === subs ? '<span class="chip">你的位置</span>' : ''}</td></tr>`);
+  }
+  $('#penOut').innerHTML = `
+    <div class="tbl-wrap"><table class="tbl" style="margin:0">
+      <tr><th>提交次数</th><th>扣分</th><th></th></tr>${rows.join('')}
+    </table></div>
+    ${subs >= 32 ? `<div class="box bad" style="margin:10px 0 0"><div class="t">第 ${subs} 次提交不会受理</div>
+      规则：超过 16 次后每次扣 5%，扣满 80% 为止；提交满 32 次后不再受理。</div>`
+      : extra > 0 ? `<div class="box warn" style="margin:10px 0 0"><div class="t">当前：${subs} 次 → 扣 ${pen}%</div>
+        你还剩 <b>${32 - subs}</b> 次能被受理的提交机会。</div>`
+      : `<div class="box ok" style="margin:10px 0 0"><div class="t">当前：${subs} 次 → 不扣分</div>
+        抓紧在本地用 <code>driver.pl</code> 自测，把提交次数省下来。</div>`}`;
+}
+
+/* ============================================================
+   导航、进度、初始化
+   ============================================================ */
+function initNav() {
+  const secs = $$('main section');
+  const links = $$('nav.toc a');
+  const io = new IntersectionObserver(entries => {
+    entries.forEach(en => {
+      if (en.isIntersecting) links.forEach(a => a.classList.toggle('active', a.getAttribute('href') === '#' + en.target.id));
+    });
+  }, { rootMargin: '-72px 0px -70% 0px', threshold: 0 });
+  secs.forEach(s => io.observe(s));
+  const onScroll = () => {
+    const h = document.documentElement;
+    const max = h.scrollHeight - h.clientHeight;
+    const p = max > 0 ? Math.min(100, Math.round(h.scrollTop / max * 100)) : 0;
+    $('#pgBar').style.width = p + '%';
+    $('#pgText').textContent = '学习进度 ' + p + '%';
+    $('#toTop').style.display = h.scrollTop > 600 ? 'block' : 'none';
+  };
+  window.addEventListener('scroll', onScroll, { passive: true });
+  onScroll();
+  $('#toTop').addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
+}
+
+function initAll() {
+  initNav();
+
+  // 谜题卡片
+  renderPuzzleLists();
+  document.addEventListener('click', e => {
+    const btn = e.target.closest('.pzRun');
+    if (!btn) return;
+    const p = PUZZLES.find(x => x.id === btn.dataset.pid);
+    if (p) runPuzzle(p);
+  });
+  // 支持在输入框里按 Enter 直接测试
+  document.addEventListener('keydown', e => {
+    if (e.key !== 'Enter') return;
+    const el = e.target.closest?.('.pzSrc');
+    if (!el) return;
+    const p = PUZZLES.find(x => x.id === el.dataset.pid);
+    if (p) { e.preventDefault(); runPuzzle(p); }
+  });
+
+  // 规则检查器
+  renderRuleCheck();
+  $('#ruleGo').addEventListener('click', renderRuleCheck);
+  ['#ruleIn', '#ruleMax'].forEach(s => $(s).addEventListener('input', renderRuleCheck));
+  $('#ruleVars').addEventListener('change', renderRuleCheck);
+
+  // fshow / ishow
+  renderFshow($('#fshowIn').value, fsState.mode);
+  $('#fshowGo').addEventListener('click', () => renderFshow($('#fshowIn').value, fsState.mode));
+  $('#fshowIn').addEventListener('keydown', e => { if (e.key === 'Enter') renderFshow($('#fshowIn').value, fsState.mode); });
+  $('#fshowMode').addEventListener('click', e => {
+    const b = e.target.closest('button'); if (!b) return;
+    $$('#fshowMode button').forEach(x => x.classList.toggle('on', x === b));
+    fsState.mode = b.dataset.m;
+    renderFshow($('#fshowIn').value, fsState.mode);
+  });
+  $$('[data-fshow]').forEach(b => b.addEventListener('click', () => {
+    $('#fshowIn').value = b.dataset.fshow;
+    renderFshow(b.dataset.fshow, fsState.mode);
+  }));
+
+  // 分数 / 惩罚
+  renderScore(); renderPenalty();
+  ['#scCorr', '#scPerf', '#scSub'].forEach(s => $(s).addEventListener('input', renderScore));
+  $('#penGo').addEventListener('click', renderPenalty);
+  $('#penIn').addEventListener('input', renderPenalty);
+}
+
+document.addEventListener('DOMContentLoaded', initAll);
+</script>
+</body>
+</html>

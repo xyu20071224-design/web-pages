@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>网页作品集</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%232f6feb'/><path d='M9 22V10h3v9h6v3z' fill='%23fff'/></svg>">
+<style>
+  :root {
+    --bg: #f7f7f8;
+    --card: #ffffff;
+    --ink: #1c1c1e;
+    --muted: #6b6b70;
+    --line: #e4e4e7;
+    --accent: #2f6feb;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #16161a;
+      --card: #1f1f24;
+      --ink: #ececf1;
+      --muted: #9a9aa2;
+      --line: #2e2e35;
+      --accent: #6b9bff;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    padding: 3.5rem 1.25rem 5rem;
+    background: var(--bg);
+    color: var(--ink);
+    font: 16px/1.7 -apple-system, BlinkMacSystemFont, "PingFang SC",
+          "Hiragino Sans GB", "Microsoft YaHei", "Segoe UI", sans-serif;
+  }
+  .wrap { max-width: 860px; margin: 0 auto; }
+  header { margin-bottom: 2.5rem; }
+  h1 {
+    font-size: 1.9rem;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    margin: 0 0 0.5rem;
+  }
+  header p { color: var(--muted); margin: 0; }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 1rem;
+  }
+  .card {
+    display: block;
+    padding: 1.4rem 1.5rem;
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    text-decoration: none;
+    color: inherit;
+    transition: transform .15s ease, border-color .15s ease;
+  }
+  .card:hover { transform: translateY(-2px); border-color: var(--accent); }
+  .card h2 {
+    font-size: 1.05rem;
+    font-weight: 600;
+    margin: 0 0 0.4rem;
+  }
+  .card p { margin: 0; color: var(--muted); font-size: 0.9rem; }
+  .card .tag {
+    display: inline-block;
+    margin-top: 0.9rem;
+    font-size: 0.78rem;
+    color: var(--accent);
+    letter-spacing: 0.02em;
+  }
+  footer {
+    margin-top: 3rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--line);
+    color: var(--muted);
+    font-size: 0.85rem;
+  }
+  footer a { color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>网页作品集</h1>
+    <p>几个自己做的交互式页面，大多是单文件 HTML，直接点开就能用。</p>
+  </header>
+
+  <div class="grid">
+    <a class="card" href="./ics/datalab-zh.html">
+      <h2>Data Lab 实验台</h2>
+      <p>《计算机系统基础》Data Lab 的交互式工作台，可以边做边看位运算结果。</p>
+      <span class="tag">进入 →</span>
+    </a>
+
+    <a class="card" href="./ics/bits-bytes-ints-zh.html">
+      <h2>位、字节与整数</h2>
+      <p>补码、位运算、整数表示的交互式课件。</p>
+      <span class="tag">进入 →</span>
+    </a>
+
+    <a class="card" href="./ics/floating-point-zh.html">
+      <h2>浮点数</h2>
+      <p>IEEE 754 浮点格式的交互式课件，可逐位拆解。</p>
+      <span class="tag">进入 →</span>
+    </a>
+
+    <a class="card" href="./laiyipan/index.html">
+      <h2>来一盘吗？</h2>
+      <p>一个用 Phaser 写的小游戏，含音效与多张对战地图。</p>
+      <span class="tag">开始游戏 →</span>
+    </a>
+
+    <a class="card" href="./qinshihuang/qinshihuang-polarbear.html">
+      <h2>秦始皇骑北极熊</h2>
+      <p>「始皇北巡」主题的单页作品。</p>
+      <span class="tag">进入 →</span>
+    </a>
+  </div>
+
+  <footer>
+    <p>课件备选样式：<a href="./ics/variants-lab/index.html">Data Lab 的四种视觉风格</a></p>
+  </footer>
+</div>
+</body>
+</html>

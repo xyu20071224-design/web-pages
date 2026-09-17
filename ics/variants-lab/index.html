@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>选择风格 · Data Lab 实验 · 交互式工作台</title>
+<style>
+  :root{--bg:#0f1115; --card:#171a21; --ink:#e8ecf3; --muted:#98a2b3; --line:#262b35; --accent:#5b8cff;}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",system-ui,sans-serif;line-height:1.7}
+  .wrap{max-width:1240px;margin:0 auto;padding:38px 24px 60px}
+  h1{font-size:30px;margin:0 0 8px;letter-spacing:-.02em}
+  .lede{color:var(--muted);margin:0 0 12px;font-size:15px}
+  .lede b{color:var(--ink)}
+  .cross{margin:0 0 28px;font-size:13.5px}
+  .cross a{color:#9db9ff;text-decoration:none;border:1px solid var(--line);border-radius:999px;padding:4px 12px;margin-right:8px}
+  .cross a:hover{border-color:var(--accent)}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:22px}
+  .item{background:var(--card);border:1px solid var(--line);border-radius:14px;overflow:hidden;display:flex;flex-direction:column}
+  .shot{position:relative;height:300px;overflow:hidden;background:#0b0d11;border-bottom:1px solid var(--line)}
+  .shot iframe{position:absolute;top:0;left:0;width:1440px;height:2400px;border:0;
+    transform:scale(.28);transform-origin:0 0;pointer-events:none}
+  .shot .fade{position:absolute;inset:auto 0 0 0;height:70px;background:linear-gradient(transparent,rgba(11,13,17,.92))}
+  .meta{padding:16px 18px 18px;display:flex;flex-direction:column;gap:9px;flex:1}
+  .meta h2{margin:0;font-size:18px}
+  .meta .tag{display:inline-block;font-size:11.5px;font-weight:700;padding:2px 9px;border-radius:99px;
+    background:rgba(91,140,255,.16);color:#9db9ff;margin-left:8px;vertical-align:2px}
+  .meta .cap{margin:0;font-size:12.5px;color:#7d879b;font-family:ui-monospace,Menlo,monospace}
+  .meta ul{margin:0;padding-left:19px;color:var(--muted);font-size:13.5px}
+  .meta li{margin:3px 0}
+  .meta .actions{margin-top:auto;display:flex;gap:9px}
+  a.btn{flex:1;text-align:center;text-decoration:none;font-size:13.5px;font-weight:650;padding:8px 12px;
+    border-radius:9px;border:1px solid var(--line);color:var(--ink)}
+  a.btn:hover{border-color:var(--accent);color:#9db9ff}
+  a.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+  a.btn.primary:hover{background:#6f9bff;color:#fff}
+  .note{margin-top:34px;padding:16px 18px;border:1px solid var(--line);border-radius:12px;
+    background:var(--card);color:var(--muted);font-size:13.5px}
+  .note b{color:var(--ink)}
+  code{font-family:ui-monospace,Menlo,monospace;font-size:12.5px;background:#0b0d11;border:1px solid var(--line);
+    border-radius:5px;padding:1px 5px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>挑一个你喜欢的风格</h1>
+  <p class="lede">Data Lab 实验 · 交互式工作台 —— 4 套风格，<b>内容与交互完全一致</b>（同一份正文与同一份脚本），只是换了一层皮。
+     点「打开这一版」全屏浏览，或在下面直接看缩略预览。</p>
+  <p class="cross">其他课件：<a href="variants/index.html">↗ 第 3 讲 · 浮点数</a><a href="variants-bits/index.html">↗ 第 2 讲 · 位、字节与整数</a></p>
+  <div class="grid">
+    <div class="item">
+      <div class="shot">
+        <iframe src="../datalab-zh.html" loading="lazy" title="清爽蓝（原版） 预览"></iframe>
+        <div class="fade"></div>
+      </div>
+      <div class="meta">
+        <h2>清爽蓝（原版）<span class="tag">默认</span></h2>
+        <p class="cap">16 道位运算 / 补码 / 浮点谜题 · 可在页内直接写表达式并测试</p>
+        <ul>
+          <li>左侧固定目录 + 顶部进度条</li>
+          <li>蓝色主色、白色卡片，与两讲课件同款</li>
+          <li>16 个评测器一屏可读，适合长时间调试</li>
+        </ul>
+        <div class="actions">
+          <a class="btn primary" href="../datalab-zh.html">打开这一版</a>
+          <a class="btn" href="../datalab-zh.html" target="_blank" rel="noopener">独立标签页</a>
+        </div>
+      </div>
+    </div>
+    <div class="item">
+      <div class="shot">
+        <iframe src="01-academic.html" loading="lazy" title="学术讲义 预览"></iframe>
+        <div class="fade"></div>
+      </div>
+      <div class="meta">
+        <h2>学术讲义<span class="tag">纸感</span></h2>
+        <p class="cap">16 道位运算 / 补码 / 浮点谜题 · 可在页内直接写表达式并测试</p>
+        <ul>
+          <li>暖白纸底 + 衬线标题，接近实验手册的纸面观感</li>
+          <li>目录移到右侧做「纲要」，适合打印出来对着写代码</li>
+        </ul>
+        <div class="actions">
+          <a class="btn primary" href="01-academic.html">打开这一版</a>
+          <a class="btn" href="01-academic.html" target="_blank" rel="noopener">独立标签页</a>
+        </div>
+      </div>
+    </div>
+    <div class="item">
+      <div class="shot">
+        <iframe src="02-terminal.html" loading="lazy" title="深色终端 预览"></iframe>
+        <div class="fade"></div>
+      </div>
+      <div class="meta">
+        <h2>深色终端<span class="tag">夜读</span></h2>
+        <p class="cap">16 道位运算 / 补码 / 浮点谜题 · 可在页内直接写表达式并测试</p>
+        <ul>
+          <li>深灰底 + 青色霓虹，写位运算表达式时最像 IDE</li>
+          <li>等宽字体贯穿全页，评测输出像终端回显</li>
+          <li>暗光环境护眼</li>
+        </ul>
+        <div class="actions">
+          <a class="btn primary" href="02-terminal.html">打开这一版</a>
+          <a class="btn" href="02-terminal.html" target="_blank" rel="noopener">独立标签页</a>
+        </div>
+      </div>
+    </div>
+    <div class="item">
+      <div class="shot">
+        <iframe src="03-brutalist.html" loading="lazy" title="新粗野 预览"></iframe>
+        <div class="fade"></div>
+      </div>
+      <div class="meta">
+        <h2>新粗野<span class="tag">醒目</span></h2>
+        <p class="cap">16 道位运算 / 补码 / 浮点谜题 · 可在页内直接写表达式并测试</p>
+        <ul>
+          <li>厚黑描边 + 硬投影，评测结果的对/错一眼可辨</li>
+          <li>顶部大字报横幅，目录是横排药丸按钮</li>
+          <li>适合投屏演示</li>
+        </ul>
+        <div class="actions">
+          <a class="btn primary" href="03-brutalist.html">打开这一版</a>
+          <a class="btn" href="03-brutalist.html" target="_blank" rel="noopener">独立标签页</a>
+        </div>
+      </div>
+    </div>
+    <div class="item">
+      <div class="shot">
+        <iframe src="04-glass.html" loading="lazy" title="柔和玻璃 预览"></iframe>
+        <div class="fade"></div>
+      </div>
+      <div class="meta">
+        <h2>柔和玻璃<span class="tag">轻盈</span></h2>
+        <p class="cap">16 道位运算 / 补码 / 浮点谜题 · 可在页内直接写表达式并测试</p>
+        <ul>
+          <li>渐变背景 + 毛玻璃卡片，视觉最柔和</li>
+          <li>顶部悬浮药丸导航，紫色渐层强调</li>
+        </ul>
+        <div class="actions">
+          <a class="btn primary" href="04-glass.html">打开这一版</a>
+          <a class="btn" href="04-glass.html" target="_blank" rel="noopener">独立标签页</a>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="note">
+    <b>说明</b>：每一页都是<b>单文件、零依赖</b>，可以直接双击打开或发给别人；缩略图是真实页面按 28% 缩放渲染的 iframe，不是截图。
+    原版（清爽蓝）保留在 <code>../datalab-zh.html</code>。<br>
+    如果缩略图在本机没有显示（个别浏览器会限制 <code>file://</code> 页面内嵌同目录文件），直接点「打开这一版」即可正常浏览。
+  </div>
+</div>
+</body>
+</html>

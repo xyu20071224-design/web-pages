@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ICS 课程课件</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%232f6feb'/><path d='M9 22V10h3v9h6v3z' fill='%23fff'/></svg>">
+<style>
+  :root {
+    --bg: #f7f7f8;
+    --card: #ffffff;
+    --ink: #1c1c1e;
+    --muted: #6b6b70;
+    --line: #e4e4e7;
+    --accent: #2f6feb;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #16161a;
+      --card: #1f1f24;
+      --ink: #ececf1;
+      --muted: #9a9aa2;
+      --line: #2e2e35;
+      --accent: #6b9bff;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    padding: 3.5rem 1.25rem 5rem;
+    background: var(--bg);
+    color: var(--ink);
+    font: 16px/1.7 -apple-system, BlinkMacSystemFont, "PingFang SC",
+          "Hiragino Sans GB", "Microsoft YaHei", "Segoe UI", sans-serif;
+  }
+  .wrap { max-width: 860px; margin: 0 auto; }
+  header { margin-bottom: 1rem; }
+  h1 {
+    font-size: 1.9rem;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    margin: 0 0 0.5rem;
+  }
+  header p { color: var(--muted); margin: 0; }
+  h2.section {
+    font-size: 1rem;
+    font-weight: 600;
+    margin: 3rem 0 1rem;
+    padding-bottom: 0.6rem;
+    border-bottom: 1px solid var(--line);
+  }
+  .section-note { color: var(--muted); font-size: 0.9rem; margin: 0 0 1rem; }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 1rem;
+  }
+  .card {
+    display: block;
+    padding: 1.4rem 1.5rem;
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    text-decoration: none;
+    color: inherit;
+    transition: transform .15s ease, border-color .15s ease;
+  }
+  .card:hover { transform: translateY(-2px); border-color: var(--accent); }
+  .card h3 {
+    font-size: 1.05rem;
+    font-weight: 600;
+    margin: 0 0 0.4rem;
+  }
+  .card p { margin: 0; color: var(--muted); font-size: 0.9rem; }
+  .card .tag {
+    display: inline-block;
+    margin-top: 0.9rem;
+    font-size: 0.78rem;
+    color: var(--accent);
+    letter-spacing: 0.02em;
+  }
+  .lecture {
+    display: inline-block;
+    margin-bottom: 0.55rem;
+    padding: 1px 8px;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--accent) 12%, transparent);
+    color: var(--accent);
+    font-size: 0.74rem;
+    letter-spacing: 0.03em;
+  }
+  footer {
+    margin-top: 3rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--line);
+    color: var(--muted);
+    font-size: 0.85rem;
+  }
+  footer a { color: var(--accent); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>ICS 课程课件</h1>
+    <p>《计算机系统导论》中文交互版 · 四讲课件加一个实验台，都是单文件 HTML，点开即用。</p>
+  </header>
+
+  <h2 class="section">课件</h2>
+  <div class="grid">
+    <a class="card" href="./ics01-zh.html">
+      <span class="lecture">第 1 讲</span>
+      <h3>课程概述</h3>
+      <p>Course Overview · 50 页课件的中文交互版，含五个现实问题。</p>
+      <span class="tag">进入 →</span>
+    </a>
+
+    <a class="card" href="./bits-bytes-ints-zh.html">
+      <span class="lecture">第 2 讲</span>
+      <h3>位、字节与整数</h3>
+      <p>bits / bytes / two's complement · 68 页课件的中文交互版。</p>
+      <span class="tag">进入 →</span>
+    </a>
+
+    <a class="card" href="./floating-point-zh.html">
+      <span class="lecture">第 3 讲</span>
+      <h3>浮点数</h3>
+      <p>float / IEEE 754 · 48 页课件的中文交互版，可逐位拆解。</p>
+      <span class="tag">进入 →</span>
+    </a>
+
+    <a class="card" href="./ics04-zh.html">
+      <span class="lecture">第 4 讲</span>
+      <h3>机器级编程 I：基础</h3>
+      <p>x86-64 机器级编程基础 · 47 页课件的中文交互版。</p>
+      <span class="tag">进入 →</span>
+    </a>
+  </div>
+
+  <h2 class="section">实验</h2>
+  <div class="grid">
+    <a class="card" href="./datalab-zh.html">
+      <span class="lecture">Data Lab</span>
+      <h3>Data Lab 实验台</h3>
+      <p>16 道位运算 / 补码 / 浮点谜题，可在页内直接写表达式并测试。</p>
+      <span class="tag">进入 →</span>
+    </a>
+  </div>
+
+  <h2 class="section">视觉风格</h2>
+  <p class="section-note">每份课件都另有学术讲义、终端霓虹、粗野主义、毛玻璃四种风格可选。</p>
+  <div class="grid">
+    <a class="card" href="./variants-ics01/index.html">
+      <h3>第 1 讲 · 课程概述</h3>
+      <p>四种视觉风格预览</p>
+      <span class="tag">选择风格 →</span>
+    </a>
+
+    <a class="card" href="./variants-bits/index.html">
+      <h3>第 2 讲 · 位、字节与整数</h3>
+      <p>四种视觉风格预览</p>
+      <span class="tag">选择风格 →</span>
+    </a>
+
+    <a class="card" href="./variants/index.html">
+      <h3>第 3 讲 · 浮点数</h3>
+      <p>四种视觉风格预览</p>
+      <span class="tag">选择风格 →</span>
+    </a>
+
+    <a class="card" href="./variants-ics04/index.html">
+      <h3>第 4 讲 · 机器级编程 I：基础</h3>
+      <p>四种视觉风格预览</p>
+      <span class="tag">选择风格 →</span>
+    </a>
+
+    <a class="card" href="./variants-lab/index.html">
+      <h3>Data Lab 实验台</h3>
+      <p>四种视觉风格预览</p>
+      <span class="tag">选择风格 →</span>
+    </a>
+  </div>
+
+  <footer>
+    <p><a href="../">← 返回作品集首页</a></p>
+  </footer>
+</div>
+</body>
+</html>

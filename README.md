@@ -10,6 +10,7 @@
 | `ics/variants-lab/` | Data Lab 页面的四种备选视觉风格 |
 | `laiyipan/` | Phaser 小游戏「来一盘吗？」，含音效与地图素材 |
 | `qinshihuang/` | 「始皇北巡」单页作品 |
+| `gitlearn/` | Git 学习模拟器：纯前端 git 模拟器 + 9 章零基础闯关课程（单文件） |
 | `index.html` | 落地页，汇总以上入口 |
 
 ## 本地预览

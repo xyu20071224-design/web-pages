@@ -1,0 +1,2556 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-deck="ics05">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>机器级编程 II：控制 · 交互式课件（中文）</title>
+<style>
+/* ==========================================================================
+   base.css —— 结构基础样式（所有风格共用）
+   只使用 CSS 变量，不含任何具体配色；由各主题覆盖变量与少量结构规则。
+   ========================================================================== */
+
+:root{
+  /* 颜色（每个主题必须覆盖） */
+  --bg:#f6f7f9; --card:#fff; --ink:#15181d; --muted:#697586; --line:#e4e7ec;
+  --accent:#2563eb; --accent-ink:#fff; --accent-soft:#eaf1ff;
+  --sign:#e5484d; --exp:#0b7fd4; --frac:#18915a; --warn:#b45309;
+  --sign-bg:#fdecec; --sign-fg:#a3262b; --sign-bd:#f6cdcf;
+  --exp-bg:#e8f2fd;  --exp-fg:#0a5f9e;  --exp-bd:#c7ddf5;
+  --frac-bg:#e9f7ef; --frac-fg:#116b43; --frac-bd:#c8e8d5;
+  --ok-bg:#f2fbf6; --ok-bd:#9ed3b4; --bad-bg:#fff5f5; --bad-bd:#f1b5b8;
+  --warn-bg:#fffbeb; --gray-bg:#eef1f5; --gray-fg:#5b6472;
+  --paper-soft:#fcfdfe; --code-bg:#f1f3f7; --code-bd:#e6e9ef;
+  --tbl-head:#f7f9fc; --tbl-hover:#fafbfd;
+  --sel-bg:#eef1f5;
+
+  /* 字体 */
+  --font-sans:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",system-ui,sans-serif;
+  --font-mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+  --font-display:var(--font-sans);
+  --tracking-title:normal;
+
+  /* 形状 */
+  --radius:12px; --radius-sm:8px; --radius-pill:99px;
+  --border-w:1px; --shadow:0 1px 2px rgba(16,24,40,.06),0 1px 3px rgba(16,24,40,.1);
+  --shadow-card:none;
+  --card-border:var(--border-w) solid var(--line);
+
+  /* 布局 */
+  --page-max:1180px; --nav-w:236px; --gap:26px; --sec-pad:26px 28px;
+  --nav-sticky-top:64px; --anchor-offset:70px;
+  --font-size:16px; --line-height:1.75;
+}
+
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font-sans);
+  font-size:var(--font-size);line-height:var(--line-height);-webkit-font-smoothing:antialiased}
+img{max-width:100%}
+
+/* ---------- 顶栏 ---------- */
+.topbar{position:sticky;top:0;z-index:50;background:var(--card);border-bottom:1px solid var(--line)}
+.topbar-in{max-width:var(--page-max);margin:0 auto;padding:10px 22px;display:flex;align-items:center;gap:14px}
+.brand{font-weight:700;letter-spacing:var(--tracking-title);font-family:var(--font-display)}
+.brand small{font-weight:500;color:var(--muted);margin-left:8px;font-size:12.5px}
+.progress{margin-left:auto;display:flex;align-items:center;gap:10px;font-size:12.5px;color:var(--muted)}
+.progress .bar{width:150px;height:6px;border-radius:var(--radius-pill);background:var(--line);overflow:hidden}
+.progress .bar>i{display:block;height:100%;width:0;background:var(--accent);transition:width .25s}
+
+/* ---------- 主体布局 ---------- */
+.layout{max-width:var(--page-max);margin:0 auto;padding:22px;display:grid;
+  grid-template-columns:var(--nav-w) minmax(0,1fr);gap:var(--gap)}
+main{min-width:0}
+
+/* ---------- 目录 ---------- */
+nav.toc{position:sticky;top:var(--nav-sticky-top);align-self:start;max-height:calc(100vh - 84px);overflow:auto;padding-right:4px}
+nav.toc h4{margin:0 0 8px;font-size:12px;letter-spacing:.12em;color:var(--muted);text-transform:uppercase;font-weight:600}
+nav.toc a{display:block;padding:7px 11px;border-radius:var(--radius-sm);color:var(--ink);opacity:.78;
+  text-decoration:none;font-size:14.5px;border-left:2.5px solid transparent}
+nav.toc a:hover{background:var(--sel-bg);opacity:1}
+nav.toc a.active{background:var(--accent-soft);color:var(--accent);border-left-color:var(--accent);font-weight:600;opacity:1}
+nav.toc a .n{display:inline-block;min-width:20px;color:var(--muted);font-size:12.5px;font-variant-numeric:tabular-nums}
+nav.toc a.active .n{color:var(--accent)}
+nav.toc .sub{padding-left:26px;font-size:13.5px;opacity:.7}
+
+/* ---------- 章节 ---------- */
+section{background:var(--card);border:var(--card-border);border-radius:var(--radius);
+  padding:var(--sec-pad);margin-bottom:22px;box-shadow:var(--shadow);scroll-margin-top:var(--anchor-offset)}
+section>h2{margin:0 0 6px;font-size:25px;letter-spacing:-.01em;font-family:var(--font-display)}
+section>.lede{color:var(--muted);margin:0 0 20px;font-size:14.5px}
+h3{font-size:18.5px;margin:26px 0 10px;padding-left:11px;border-left:3.5px solid var(--accent);font-family:var(--font-display)}
+h4{font-size:16px;margin:18px 0 8px;font-family:var(--font-display)}
+h5{font-size:15px;font-family:var(--font-display)}
+p{margin:10px 0}
+ul,ol{margin:10px 0;padding-left:22px}
+li{margin:5px 0}
+code{font-family:var(--font-mono);font-size:.89em;background:var(--code-bg);border:1px solid var(--code-bd);border-radius:5px;padding:1px 5px}
+.mono{font-family:var(--font-mono)}
+a{color:var(--accent)}
+hr{border:0;border-top:1px dashed var(--line);margin:24px 0}
+.srcref{font-size:11.5px;color:var(--muted);font-weight:500;font-family:var(--font-sans);margin-left:8px;vertical-align:middle;white-space:nowrap;opacity:.75}
+.en{color:var(--muted);font-size:.92em}
+
+/* ---------- 栅格与卡片 ---------- */
+.grid{display:grid;gap:14px}
+.g2{grid-template-columns:repeat(2,minmax(0,1fr))}
+.g3{grid-template-columns:repeat(3,minmax(0,1fr))}
+@media(max-width:820px){.g2,.g3{grid-template-columns:1fr}}
+.card{border:var(--card-border);border-radius:var(--radius-sm);padding:15px 17px;background:var(--paper-soft);box-shadow:var(--shadow-card)}
+.card h5{margin:0 0 7px}
+.card.pad0{padding:0;overflow:hidden}
+
+/* ---------- 提示框 ---------- */
+.box{border:1px solid var(--line);border-left:4px solid var(--accent);background:var(--accent-soft);
+  border-radius:var(--radius-sm);padding:12px 16px;margin:14px 0}
+.box.warn{border-left-color:var(--warn);background:var(--warn-bg)}
+.box.bad{border-left-color:var(--sign);background:var(--bad-bg)}
+.box.ok{border-left-color:var(--frac);background:var(--ok-bg)}
+.box .t{font-weight:650;font-size:14.5px;margin-bottom:2px}
+
+/* ---------- 公式 ---------- */
+.formula{font-family:var(--font-mono);background:var(--paper-soft);border:1px solid var(--line);
+  border-radius:var(--radius-sm);padding:14px 17px;margin:14px 0;font-size:16.5px;text-align:center;overflow-x:auto}
+.formula.big{font-size:20px}
+
+/* ---------- 表格 ---------- */
+table.tbl{width:100%;border-collapse:collapse;font-size:14.5px;margin:14px 0}
+table.tbl th,table.tbl td{border:1px solid var(--line);padding:8px 11px;text-align:left;vertical-align:top}
+table.tbl th{background:var(--tbl-head);font-weight:650;font-size:13.5px;white-space:nowrap}
+table.tbl td.mono,table.tbl th.mono{font-family:var(--font-mono);font-size:13.5px}
+table.tbl tr:hover td{background:var(--tbl-hover)}
+.tbl-wrap{overflow-x:auto}
+
+/* ---------- 位串控件 ---------- */
+.fw{display:flex;flex-wrap:wrap;gap:8px 18px;align-items:flex-start;margin:4px 0 2px}
+.fgrp{min-width:0}
+.fcap{font-size:12px;color:var(--muted);margin-bottom:4px;font-weight:600}
+.fcap b{font-family:var(--font-mono);font-size:12.5px}
+.bits{display:flex;flex-wrap:wrap;gap:2px;font-family:var(--font-mono);margin:4px 0}
+.bits .b{width:25px;height:33px;display:flex;align-items:center;justify-content:center;
+  border-radius:6px;font-size:15px;cursor:pointer;user-select:none;border:1px solid transparent;
+  transition:transform .06s,background .12s;font-weight:600}
+.bits .b:hover{transform:translateY(-2px)}
+.bits .b.s{background:var(--sign-bg);color:var(--sign-fg);border-color:var(--sign-bd)}
+.bits .b.e{background:var(--exp-bg);color:var(--exp-fg);border-color:var(--exp-bd)}
+.bits .b.f{background:var(--frac-bg);color:var(--frac-fg);border-color:var(--frac-bd)}
+.bits .b.sel{outline:2px solid var(--ink);outline-offset:1px}
+.bits.sm .b{width:19px;height:26px;font-size:12px;border-radius:4px}
+.fgrp .bits{flex-wrap:wrap;max-width:100%;gap:2px}
+.fgrp.ge .bits{max-width:300px}
+
+/* ---------- 读数表 ---------- */
+.readout{display:grid;grid-template-columns:auto 1fr;gap:4px 16px;font-size:14.5px;margin:12px 0}
+.readout dt{color:var(--muted);font-weight:600;font-family:var(--font-mono);font-size:13.5px;padding-top:2px}
+.readout dd{margin:0;font-family:var(--font-mono)}
+
+/* ---------- 小标签 ---------- */
+.chip{display:inline-block;font-size:12.5px;padding:2px 9px;border-radius:var(--radius-pill);
+  background:var(--accent-soft);color:var(--accent);font-weight:600}
+.chip.ok{background:var(--frac-bg);color:var(--frac-fg)}
+.chip.bad{background:var(--sign-bg);color:var(--sign-fg)}
+.chip.warn{background:var(--warn-bg);color:var(--warn)}
+.chip.gray{background:var(--gray-bg);color:var(--gray-fg)}
+.kbd{font-family:var(--font-mono);font-size:13px;background:var(--code-bg);border:1px solid var(--code-bd);
+  border-bottom-width:2px;border-radius:6px;padding:1px 7px}
+
+/* ---------- 控件 ---------- */
+.ctrls{display:flex;flex-wrap:wrap;gap:9px;align-items:center;margin:12px 0}
+label.fld{display:inline-flex;align-items:center;gap:7px;font-size:14px;color:var(--ink);max-width:100%;flex-wrap:wrap;min-width:0}
+label.fld select,label.fld input{min-width:0;max-width:100%}
+input[type=text],input[type=number],select{font-family:var(--font-mono);font-size:14px;padding:6px 10px;
+  border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--card);color:var(--ink)}
+input[type=text]:focus,input[type=number]:focus,select:focus{outline:2px solid var(--accent-soft);border-color:var(--accent)}
+button{font-family:var(--font-sans);font-size:14px;font-weight:600;padding:7px 15px;border-radius:var(--radius-sm);
+  border:1px solid var(--line);background:var(--card);color:var(--ink);cursor:pointer}
+button:hover{background:var(--sel-bg)}
+button.p{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+button.sm{padding:4px 10px;font-size:13px}
+button.pill{border-radius:var(--radius-pill)}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:var(--radius-sm);overflow:hidden}
+.seg button{border:0;border-radius:0;border-right:1px solid var(--line);padding:6px 13px}
+.seg button:last-child{border-right:0}
+.seg button.on{background:var(--accent);color:var(--accent-ink)}
+
+/* ---------- 分步演示 ---------- */
+.step{border:1px solid var(--line);border-radius:var(--radius-sm);padding:11px 15px;margin:9px 0;
+  background:var(--paper-soft);opacity:.42;transition:opacity .2s}
+.step.on{opacity:1;background:var(--card)}
+.step .h{font-size:13px;font-weight:700;color:var(--accent);letter-spacing:.02em;margin-bottom:3px}
+.step .m{font-family:var(--font-mono);font-size:14.5px;overflow-x:auto}
+.step .e{font-size:13.5px;color:var(--muted);margin-top:3px}
+
+/* ---------- 折叠与答案 ---------- */
+.reveal{border:1px solid var(--line);border-radius:var(--radius-sm);padding:11px 15px;margin:8px 0;background:var(--paper-soft)}
+.reveal summary{cursor:pointer;font-weight:600;font-size:14.5px}
+.reveal[open]{background:var(--card)}
+.ans{margin-top:8px;padding-top:8px;border-top:1px dashed var(--line);font-size:14.5px}
+
+/* ---------- 判断题 ---------- */
+.puzzle{border:1px solid var(--line);border-radius:var(--radius-sm);padding:12px 15px;margin:9px 0;
+  display:flex;gap:13px;align-items:flex-start;background:var(--paper-soft)}
+.puzzle .q{font-family:var(--font-mono);font-size:15px;flex:1;min-width:0;overflow-x:auto;white-space:nowrap}
+.puzzle .q small{font-family:var(--font-sans);color:var(--muted);display:block;white-space:normal}
+.puzzle .btns{display:flex;gap:6px;flex-shrink:0}
+.puzzle.correct{border-color:var(--ok-bd);background:var(--ok-bg)}
+.puzzle.wrong{border-color:var(--bad-bd);background:var(--bad-bg)}
+.puzzle .exp{margin-top:9px;padding-top:9px;border-top:1px dashed var(--line);font-size:14.5px;
+  display:none;white-space:normal;font-family:var(--font-sans)}
+.puzzle.done .exp{display:block}
+.puzzle .exp .verdict{font-weight:700}
+
+/* ---------- 分布图 ---------- */
+.tick{stroke:#94a3b8;stroke-width:1.4}
+.tick.dn{stroke:var(--exp)}
+.tick.nm{stroke:var(--frac)}
+.ticklabel{font-size:9.5px;fill:var(--muted);font-family:var(--font-mono)}
+.axisline{stroke:var(--line);stroke-width:1.2}
+.axislabel{font-size:11px;fill:var(--muted)}
+
+/* ---------- 页脚 / 回到顶部 ---------- */
+.footer{max-width:var(--page-max);margin:0 auto;padding:8px 22px 40px;color:var(--muted);font-size:13px}
+.totop{position:fixed;right:22px;bottom:22px;z-index:40;box-shadow:var(--shadow);display:none}
+
+/* ---------- 响应式 ---------- */
+@media(max-width:960px){
+  .layout{grid-template-columns:1fr;padding:16px}
+  nav.toc{position:static;max-height:none;display:flex;flex-wrap:wrap;gap:6px;
+    background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:10px}
+  nav.toc h4{width:100%;margin-bottom:2px}
+  nav.toc a{border-left:0;padding:5px 10px;font-size:13px}
+  nav.toc .sub{display:none}
+  section{padding:20px 17px}
+}
+@media print{
+  nav.toc,.topbar,.totop{display:none}
+  .layout{display:block}
+  section{break-inside:avoid;box-shadow:none}
+}
+
+/* ---------- 风格切换条（各主题通用） ---------- */
+.stylebar{max-width:var(--page-max);margin:0 auto;padding:14px 22px 0;display:flex;gap:8px;
+  flex-wrap:wrap;align-items:center;font-size:12.5px;color:var(--muted)}
+.stylebar>span{font-weight:600}
+.stylebar a{text-decoration:none;padding:4px 11px;border:1px solid var(--line);border-radius:var(--radius-pill);
+  color:var(--muted);background:var(--card);font-weight:600}
+.stylebar a:hover{border-color:var(--accent);color:var(--accent)}
+.stylebar a.cur{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+@media(max-width:960px){.stylebar{padding:12px 16px 0}}
+
+</style>
+</head>
+<body>
+
+<div class="topbar"><div class="topbar-in">
+  <div class="brand">机器级编程 II：控制 Machine-Level Programming II<small>《计算机系统导论》第 5 讲 · 中文交互版</small></div>
+  <div class="progress"><span id="pgText">学习进度 0%</span><span class="bar"><i id="pgBar"></i></span></div>
+</div></div>
+<div class="stylebar">
+  <span>课件：</span>
+  <a href="ics01-zh.html">第 1 讲 · 课程概述</a>
+  <a href="bits-bytes-ints-zh.html">第 2 讲 · 位、字节与整数</a>
+  <a href="floating-point-zh.html">第 3 讲 · 浮点数</a>
+  <a href="ics04-zh.html">第 4 讲 · 机器级编程基础</a>
+  <a href="ics05-zh.html" class="cur" onclick="return false">第 5 讲 · 机器级编程 II：控制（当前）</a>
+  <a href="datalab-zh.html">Data Lab 实验</a>
+  <a href="variants-ics05/index.html">◧ 全部预览</a>
+</div>
+<div class="layout">
+  <nav class="toc">
+    <h4>目录</h4>
+    <a href="#s0"><span class="n">0</span>课程导览</a>
+    <a href="#s1"><span class="n">1</span>回顾：操作数、LEA 与后缀</a>
+    <a href="#s2"><span class="n">2</span>条件码：隐式设置</a>
+    <a href="#s3"><span class="n">3</span>条件码：显式设置 cmp/test</a>
+    <a href="#s4"><span class="n">4</span>读取条件码：setX</a>
+    <a href="#s5"><span class="n">5</span>条件跳转与 if-else</a>
+    <a href="#s6"><span class="n">6</span>条件传送 cmov</a>
+    <a href="#s7"><span class="n">7</span>循环</a>
+    <a href="#s8"><span class="n">8</span>switch 与跳转表</a>
+    <a href="#s9"><span class="n">9</span>总结与测验</a>
+  </nav>
+
+  <main>
+<!-- ================= 0 ================= -->
+  <section id="s0">
+    <h2>课程导览<span class="srcref">原第 1、9、26、36、48、59–60 页</span></h2>
+    <p class="lede">北京大学《计算机系统导论》第 5 讲：机器级编程 II —— 控制。上一讲看清了「数据怎么搬、怎么算」，这一讲看清<b>「程序怎么决定下一步走哪」</b>。</p>
+
+    <div class="grid g3">
+      <div class="card"><h5>本讲提纲</h5>
+        <ol style="margin:0;padding-left:20px;font-size:14.5px">
+          <li>条件码（condition codes）</li>
+          <li>条件分支与条件传送</li>
+          <li>循环：do-while / while / for</li>
+          <li>switch 与跳转表</li>
+        </ol>
+      </div>
+      <div class="card"><h5>一句话核心</h5>
+        <p style="margin:0;font-size:14.5px">CPU 里<b>没有 if、没有 while</b>。C 语言的全部控制结构，在机器层只归结为三种手段：<b>条件跳转</b>、<b>条件传送</b>、<b>间接跳转（跳转表）</b>。</p>
+      </div>
+      <div class="card"><h5>和上一讲的衔接</h5>
+        <p style="margin:0;font-size:14.5px">第 4 讲讲的是「<code>mov</code> 和算术」，那些指令会<b>顺手改掉一组隐藏的状态位</b>。这一讲就是拿这些位做判断 —— 控制流的全部秘密都在这里。</p>
+      </div>
+    </div>
+
+    <h3>0.1 四个主题与原页码</h3>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>主题</th><th>原课件页码</th><th>要回答的问题</th></tr>
+      <tr><td><b>条件码</b></td><td class="mono">13–22</td><td>CPU 怎么记住「上一次运算的结果是负的 / 溢出过 / 是零」</td></tr>
+      <tr><td><b>条件分支</b></td><td class="mono">27–30</td><td><code>if-else</code> 怎么变成 <code>cmp</code> + <code>jle</code></td></tr>
+      <tr><td><b>条件传送</b></td><td class="mono">31–33</td><td>为什么编译器宁愿「两边都算」也不跳转</td></tr>
+      <tr><td><b>循环</b></td><td class="mono">37–47</td><td><code>while</code> / <code>for</code> 为什么在汇编里都长得像 <code>do-while</code></td></tr>
+      <tr><td><b>switch</b></td><td class="mono">49–58</td><td>跳转表（jump table）怎么把 O(n) 次比较变成一次查表</td></tr>
+    </table></div>
+
+    <h3>0.2 汇编里只有「跳」和「不跳」</h3>
+    <p>先建立一个直觉：C 里再复杂的控制结构，翻译成汇编后都是同一个形状 —— <b>算一下、看状态位、决定跳不跳</b>。课件第 10–12 页用一个最小的 <code>if-else</code> 说明这件事，并且直言：</p>
+    <div class="box"><div class="t">「It's all done with GOTO!」—— 全靠 goto 实现</div>
+      汇编层面<b>没有结构化控制流</b>，只有「有条件的 goto」。<code>if</code>、<code>while</code>、<code>for</code>、<code>switch</code> 之所以存在，是因为人需要它们 —— 编译器负责把它们拆成 goto，CPU 只认 goto。
+    </div>
+
+    <div class="box"><div class="t">本页使用说明</div>
+      标有 <span class="chip gray">可交互</span> 的地方都能点击或输入，所有计算都在浏览器里实时完成。其中<a href="#s2">第 2 节的标志位模拟器</a>和<a href="#s8">第 8 节的跳转表生成器</a>最值得反复玩：它们把课件里十几页的静态表格变成了可以自己出题的工具。
+    </div>
+  </section>
+
+  <!-- ================= 1 ================= -->
+  <section id="s1">
+    <h2>1. 回顾：操作数、LEA 与指令后缀<span class="srcref">原第 2–8 页</span></h2>
+    <p class="lede">这一讲开头用 7 页复习第 4 讲的内容。其中寻址模式和 <code>lea</code> 是本节的落点 —— 后面讲控制流时会不断用到它们。</p>
+
+    <h3>1.1 程序员可见状态：ISA 的视角<span class="srcref">原第 2 页</span></h3>
+    <p>课件把处理器暴露给程序员的接口画成一张图：左边是 CPU，右边是内存。CPU 里有三样东西 —— <b>寄存器文件</b>（register file，存高度频繁使用的程序数据）、<b>程序计数器 PC</b>（在 x86-64 里叫 <code>%rip</code>，存下一条指令的地址）、以及<b>条件码</b>（condition codes，存最近一次运算的状态信息）。内存则是<b>按字节寻址的数组</b>，同时装着代码和用户数据。</p>
+    <div class="box">这一讲的主角是右下角那个不起眼的小方块：<b>条件码</b>。课件明确写出它的用途 —— <b>「Used for conditional branching」</b>，专门服务于条件分支。
+    </div>
+
+    <h3>1.2 两操作数指令表<span class="srcref">原第 4 页</span></h3>
+    <p>上一讲的核心表格，这里原样列出，因为这一讲的每条控制流都建立在它们之上：</p>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>格式</th><th>计算</th><th>备注</th></tr>
+      <tr><td class="mono">movq Src, Dest</td><td class="mono">Dest = Src</td><td>Src 可以是立即数 <code>$const</code></td></tr>
+      <tr><td class="mono">leaq Src, Dest</td><td class="mono">Dest = &amp;Src</td><td>把 Src 算成<b>地址</b>，不访问内存</td></tr>
+      <tr><td class="mono">addq Src, Dest</td><td class="mono">Dest = Dest + Src</td><td></td></tr>
+      <tr><td class="mono">subq Src, Dest</td><td class="mono">Dest = Dest − Src</td><td></td></tr>
+      <tr><td class="mono">imulq Src, Dest</td><td class="mono">Dest = Dest × Src</td><td>有符号乘法</td></tr>
+      <tr><td class="mono">salq Src, Dest</td><td class="mono">Dest = Dest &lt;&lt; Src</td><td>也叫 <code>shlq</code></td></tr>
+      <tr><td class="mono">sarq Src, Dest</td><td class="mono">Dest = Dest &gt;&gt; Src</td><td><b>算术</b>右移（补符号位）</td></tr>
+      <tr><td class="mono">shrq Src, Dest</td><td class="mono">Dest = Dest &gt;&gt; Src</td><td><b>逻辑</b>右移（补 0）</td></tr>
+      <tr><td class="mono">xorq Src, Dest</td><td class="mono">Dest = Dest ^ Src</td><td>异或</td></tr>
+      <tr><td class="mono">andq Src, Dest</td><td class="mono">Dest = Dest &amp; Src</td><td>与</td></tr>
+      <tr><td class="mono">orq Src, Dest</td><td class="mono">Dest = Dest | Src</td><td>或</td></tr>
+    </table></div>
+    <p style="font-size:14.5px;color:var(--muted)">注意最后这些「备注」栏背后的一句话：<b>除了 <code>leaq</code>，其余每一条都会改条件码</b>。这在第 2 节会变成一条硬规则。</p>
+
+    <h3>1.3 寻址模式：最一般形式<span class="srcref">原第 5 页</span></h3>
+    <div class="formula big">D(R<sub>b</sub>, R<sub>i</sub>, S) &nbsp;→&nbsp; Mem[Reg[R<sub>b</sub>] + S × Reg[R<sub>i</sub>] + D]</div>
+    <ul>
+      <li><b>D</b>：常数「位移」（displacement），1、2 或 4 字节</li>
+      <li><b>R<sub>b</sub></b>：基址寄存器（base register），16 个整数寄存器里任意一个</li>
+      <li><b>R<sub>i</sub></b>：变址寄存器（index register），<b>任意一个，除了 <code>%rsp</code></b></li>
+      <li><b>S</b>：比例因子（scale），只能是 1、2、4、8</li>
+    </ul>
+    <p>省略参数的几种特例：</p>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>写法</th><th>含义</th></tr>
+      <tr><td class="mono">(R<sub>b</sub>, R<sub>i</sub>)</td><td class="mono">Mem[Reg[R<sub>b</sub>] + Reg[R<sub>i</sub>]]</td></tr>
+      <tr><td class="mono">D(R<sub>b</sub>, R<sub>i</sub>)</td><td class="mono">Mem[Reg[R<sub>b</sub>] + Reg[R<sub>i</sub>] + D]</td></tr>
+      <tr><td class="mono">(R<sub>b</sub>, R<sub>i</sub>, S)</td><td class="mono">Mem[Reg[R<sub>b</sub>] + S × Reg[R<sub>i</sub>]]</td></tr>
+    </table></div>
+
+    <h3>1.4 内存操作数 vs. LEA<span class="srcref">原第 6–7 页</span></h3>
+    <p>同一种寻址写法，出现在不同指令里含义完全不同。课件用两组对照来说明：</p>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>汇编</th><th>C 等价</th><th>访问内存吗</th></tr>
+      <tr><td class="mono">mov 6(%rbx,%rdi,8), %ax</td><td class="mono">ax = *(rbx + rdi*8 + 6)</td><td><b>是</b>（读）</td></tr>
+      <tr><td class="mono">add 6(%rbx,%rdi,8), %ax</td><td class="mono">ax += *(rbx + rdi*8 + 6)</td><td><b>是</b>（读）</td></tr>
+      <tr><td class="mono">xor %ax, 6(%rbx,%rdi,8)</td><td class="mono">*(rbx + rdi*8 + 6) ^= ax</td><td><b>是</b>（读 + 写）</td></tr>
+      <tr><td class="mono">lea 6(%rbx,%rdi,8), %rax</td><td class="mono">rax = rbx + rdi*8 + 6</td><td><b>否</b> —— 只算地址</td></tr>
+    </table></div>
+    <p><code>lea</code> 是唯一的例外：<b>它只做地址算术，不碰内存</b>。课件给了它的两种用法 ——</p>
+    <ul>
+      <li><b>CPU 设计者的本意</b>：算一个指向对象的指针。例如把数组里的某一个元素（而不是整个数组）传给另一个函数：<code>lea (%rbx,%rdi,8), %rax</code> ⇒ <code>rax = &amp;rbx[rdi]</code></li>
+      <li><b>编译器作者的爱用姿势</b>：拿它做普通算术。它一条指令就能算复杂表达式，是 x86 里<b>仅有的三种三操作数指令之一</b>，而且<b>不碰条件码</b>：<code>lea (%rbx,%rbx,2), %rax</code> ⇒ <code>rax = rbx*3</code></li>
+    </ul>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：LEA 与内存操作数计算器</span>
+        <label class="fld">位移 D <input type="text" id="leaD" value="6" size="6" spellcheck="false"></label>
+        <label class="fld">%rbx <input type="text" id="leaB" value="0x1000" size="10" spellcheck="false"></label>
+        <label class="fld">%rdi <input type="text" id="leaI" value="3" size="6" spellcheck="false"></label>
+        <label class="fld">比例 S
+          <select id="leaS"><option>1</option><option>2</option><option>4</option><option selected>8</option></select>
+        </label>
+        <button class="p" id="leaGo">计算</button>
+        <button class="sm" data-lea="d=6;b=0x1000;i=3;s=8">课件例（p6）</button>
+        <button class="sm" data-lea="d=0;b=0x2000;i=4;s=8">取数组元素地址（p7）</button>
+      </div>
+      <div id="leaOut"></div>
+    </div>
+
+    <h3>1.5 指令后缀：可以写，也可以不写<span class="srcref">原第 8 页</span></h3>
+    <p>大多数 x86 指令带不带后缀都行 —— <code>imul %rcx, %rax</code> 和 <code>imulq %rcx, %rax</code> <b>没有任何区别</b>。后缀只是标明操作数大小：</p>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>后缀</th><th>C 类型</th><th>位宽</th></tr>
+      <tr><td class="mono">b</td><td>byte</td><td class="mono">8</td></tr>
+      <tr><td class="mono">w</td><td>short word</td><td class="mono">16</td></tr>
+      <tr><td class="mono">l</td><td>int（long word）</td><td class="mono">32</td></tr>
+      <tr><td class="mono">q</td><td>long（quad word）</td><td class="mono">64</td></tr>
+    </table></div>
+    <div class="box"><div class="t">谁写后缀、谁不写</div>
+      <ul style="margin:6px 0 0">
+        <li>编译器输出（<code>gcc -S</code>）<b>通常带</b>后缀</li>
+        <li>反汇编输出（<code>objdump -d</code>、gdb 的 <code>disas</code>）<b>通常省略</b>后缀</li>
+        <li>Intel 的手册<b>永远省略</b>后缀</li>
+      </ul>
+      所以看汇编时要注意它的来源 —— 这是后面几节会反复出现的细节。
+    </div>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：后缀 → 寄存器匹配器</span>
+        <div class="seg" id="sfxSeg">
+          <button data-s="b">b · byte</button>
+          <button data-s="w">w · word</button>
+          <button data-s="l">l · long</button>
+          <button class="on" data-s="q">q · quad</button>
+        </div>
+      </div>
+      <div id="sfxOut"></div>
+    </div>
+  </section>
+
+  <!-- ================= 2 ================= -->
+  <section id="s2">
+    <h2>2. 条件码：隐式设置<span class="srcref">原第 13–18、22 页</span></h2>
+    <p class="lede">这是整讲的基石。CPU 里藏着 4 个只有 1 位的寄存器，记录「上一次运算的结果长什么样」。后面所有的 <code>if</code>、<code>while</code>、<code>switch</code> 都只是在读这 4 个位。</p>
+
+    <h3>2.1 处理器状态（x86-64，部分）<span class="srcref">原第 13 页</span></h3>
+    <p>课件把「正在执行的程序」需要记住的信息分成四类：</p>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>类别</th><th>存在哪</th></tr>
+      <tr><td><b>临时数据</b></td><td>寄存器文件：<code>%rax</code> … <code>%r15</code></td></tr>
+      <tr><td><b>运行时栈的位置</b></td><td><code>%rsp</code>（当前栈顶）</td></tr>
+      <tr><td><b>当前代码控制点的位置</b></td><td><code>%rip</code> 指令指针（instruction pointer）</td></tr>
+      <tr><td><b>最近一次测试的状态</b></td><td>条件码：<code>CF</code>、<code>ZF</code>、<code>SF</code>、<code>OF</code></td></tr>
+    </table></div>
+
+    <h3>2.2 四个标志位<span class="srcref">原第 14 页</span></h3>
+    <p>它们都是<b>单比特寄存器</b>，成对地服务于有符号与无符号两个世界：</p>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>标志</th><th>名称</th><th>谁在用它</th></tr>
+      <tr><td class="mono">CF</td><td>Carry Flag（进位标志）</td><td><b>无符号</b>运算</td></tr>
+      <tr><td class="mono">ZF</td><td>Zero Flag（零标志）</td><td>两者共用</td></tr>
+      <tr><td class="mono">SF</td><td>Sign Flag（符号标志）</td><td><b>有符号</b>运算</td></tr>
+      <tr><td class="mono">OF</td><td>Overflow Flag（溢出标志）</td><td><b>有符号</b>运算</td></tr>
+    </table></div>
+
+    <p>课件用一个具体例子给出全部规则：对 <code>addq Src, Dest</code>，等价于计算 <code>t = a + b</code>，然后 ——</p>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>标志</th><th>何时置 1</th><th>说人话</th></tr>
+      <tr><td class="mono">CF</td><td>从最高位<b>进位 / 借位</b>出来时</td><td>无符号溢出</td></tr>
+      <tr><td class="mono">ZF</td><td><code>t == 0</code></td><td>结果正好是零</td></tr>
+      <tr><td class="mono">SF</td><td><code>t &lt; 0</code>（按有符号解释）</td><td>结果的最高位是 1</td></tr>
+      <tr><td class="mono">OF</td><td>补码（有符号）溢出：<br><code>(a&gt;0 &amp;&amp; b&gt;0 &amp;&amp; t&lt;0) || (a&lt;0 &amp;&amp; b&lt;0 &amp;&amp; t&gt;=0)</code></td><td>两个同号数加出了反号的数</td></tr>
+    </table></div>
+
+    <div class="box bad"><div class="t">最容易记错的一条：<code>leaq</code> 不设置条件码</div>
+      课件特意强调：<b>「Not set by <code>leaq</code> instruction」</b>。因为 <code>lea</code> 是拿来做地址算术的，如果它改了标志位，夹在 <code>cmp</code> 和 <code>jle</code> 中间的 <code>lea</code> 就会把比较结果冲掉。这正是编译器喜欢用 <code>lea</code> 做算术的原因之一。
+    </div>
+
+    <div class="box warn"><div class="t">实测补充：<code>imulq</code> 不定义 ZF / SF</div>
+      课件 p14 把 <code>addq</code> 的规则讲全了，但并没有说「所有算术指令都这样」。x86 手册对<b>两操作数 <code>imul</code></b> 另有规定：
+      <b>只有 <code>CF</code> 与 <code>OF</code> 有定义</b>（用来表示乘积有没有超出 64 位），<code>SF</code>、<code>ZF</code>、<code>AF</code>、<code>PF</code> 都是未定义值。
+      <br>本条不是照抄手册 —— 本页在真实 x86-64 处理器上实测过：让 <code>imulq</code> 的<b>乘积等于 0</b>，<code>ZF</code> 仍然是 0（同样条件下 <code>addq</code> 的 <code>ZF</code> 是 1）；让乘积为<b>负数</b>，<code>SF</code> 仍然是 0。
+      可见这两个位压根不是由结果算出来的。所以在这个模拟器里选中 <code>imulq</code> 时，<code>ZF</code> 与 <code>SF</code> 会显示为「未定义」，而不是给一个看着像对的数。
+    </div>
+
+    <h3>2.3 四个位模式图：标志位到底在看哪一位<span class="srcref">原第 15–18 页</span></h3>
+    <p>课件用四张图解释每个标志位的本质。点击下面的标签逐个看 ——</p>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：四个标志位分别在「看」什么</span>
+        <div class="seg" id="figSeg">
+          <button class="on" data-f="zf">ZF</button>
+          <button data-f="sf">SF</button>
+          <button data-f="cf">CF</button>
+          <button data-f="of">OF</button>
+        </div>
+      </div>
+      <div id="figOut"></div>
+    </div>
+
+    <h3>2.4 标志位模拟器<span class="srcref">原第 14、19–20 页</span></h3>
+    <p>下面这个工具把课件第 14 页的规则做成了可以随便试的模拟器。<b>输入任意两个 64 位数、选一条指令，页面会算出结果并逐条解释每个标志位为什么是这个值。</b>所有结果都用 64 位整数在浏览器里现场算出，并且已与真实 x86-64 硬件执行的结果逐条比对过（见页脚说明）。</p>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：条件码模拟器</span>
+        <label class="fld">指令
+          <select id="fsOp">
+            <option value="addq" selected>addq</option>
+            <option value="subq">subq</option>
+            <option value="imulq">imulq</option>
+            <option value="andq">andq</option>
+            <option value="orq">orq</option>
+            <option value="xorq">xorq</option>
+            <option value="cmpq">cmpq（只置标志）</option>
+            <option value="testq">testq（只置标志）</option>
+            <option value="salq">salq</option>
+            <option value="sarq">sarq</option>
+            <option value="shrq">shrq</option>
+          </select>
+        </label>
+        <label class="fld">Src（b） <input type="text" id="fsB" value="1" size="18" spellcheck="false"></label>
+        <label class="fld">Dest（a） <input type="text" id="fsA" value="0" size="18" spellcheck="false"></label>
+        <button class="p" id="fsGo">计算</button>
+        <button class="sm" data-fs="op=subq;a=0;b=1">课件 p34 第 2 行</button>
+        <button class="sm" data-fs="op=cmpq;a=0xffffffffffffffff;b=2">课件 p34 第 3 行</button>
+        <button class="sm" data-fs="op=xorq;a=0;b=0">清零</button>
+        <button class="sm" data-fs="op=addq;a=0x7fffffffffffffff;b=1">有符号溢出</button>
+        <button class="sm" data-fs="op=addq;a=0xffffffffffffffff;b=1">无符号进位</button>
+      </div>
+      <div id="fsOut"></div>
+    </div>
+
+    <h3>2.5 <code>setl</code>：SF 与 OF 为什么要异或<span class="srcref">原第 22 页</span></h3>
+    <p>「有符号小于」的判据是 <code>SF ^ OF</code>，不是单看 <code>SF</code>。课件用一张四行的真值表解释了原因：</p>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：点击任意一行，看它对应的位模式</span>
+      </div>
+      <div id="setlOut"></div>
+    </div>
+
+    <div class="box ok"><div class="t">一句话记住这四条</div>
+      <ul style="margin:6px 0 0">
+        <li>没有溢出时，<code>SF</code> 直接就是答案 —— 结果是负的，说明 <code>a &lt; b</code>。</li>
+        <li>发生了溢出，说明<b>符号位被翻转过</b>，这时 <code>SF</code> 说的正好是反话，所以要用 <code>OF</code> 把它「异或」回来。</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ================= 3 ================= -->
+  <section id="s3">
+    <h2>3. 条件码：显式设置（cmp / test）<span class="srcref">原第 19–20 页</span></h2>
+    <p class="lede">算术指令是「顺手」改标志位。但做比较时我们并不想真的改掉哪个寄存器的值 —— 于是有了两条<b>只置标志位、不写结果</b>的指令。</p>
+
+    <h3>3.1 <code>cmpq</code>：做减法但不留结果<span class="srcref">原第 19 页</span></h3>
+    <div class="formula">cmpq Src2, Src1 &nbsp;&nbsp;⟺&nbsp;&nbsp; 像算 <code>a − b</code> 一样置标志位，<b>但不写回目的操作数</b></div>
+    <p>课件给的规则（<code>cmpq b, a</code>，即计算 <code>a − b</code>）：</p>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>标志</th><th>条件</th><th>用途</th></tr>
+      <tr><td class="mono">CF</td><td>从最高位有进位出来</td><td><b>无符号</b>比较</td></tr>
+      <tr><td class="mono">ZF</td><td><code>a == b</code></td><td>相等</td></tr>
+      <tr><td class="mono">SF</td><td><code>(a − b) &lt; 0</code>（按有符号解释）</td><td>有符号</td></tr>
+      <tr><td class="mono">OF</td><td><code>(a&gt;0 &amp;&amp; b&lt;0 &amp;&amp; (a−b)&lt;0) || (a&lt;0 &amp;&amp; b&gt;0 &amp;&amp; (a−b)&gt;0)</code></td><td>有符号溢出</td></tr>
+    </table></div>
+    <div class="box warn"><div class="t">注意操作数顺序：<code>CF</code> 是「借位」，也就是 <code>a &lt; b</code>（无符号）</div>
+      AT&T 语法的 <code>cmpq b, a</code> 是 <b>a 减 b</b>。<code>CF = 1</code> 意味着减法需要借位，也就是无符号意义下 <code>a &lt; b</code>。很多人在这一处把比较方向记反。
+    </div>
+
+    <h3>3.2 <code>testq</code>：做与运算但不留结果<span class="srcref">原第 20 页</span></h3>
+    <div class="formula">testq Src2, Src1 &nbsp;&nbsp;⟺&nbsp;&nbsp; 像算 <code>a &amp; b</code> 一样置标志位，<b>但不写回目的操作数</b></div>
+    <p>规则很简单，而且非常常用：<code>ZF</code> 在 <code>a &amp; b == 0</code> 时置 1；<code>SF</code> 在 <code>a &amp; b &lt; 0</code> 时置 1。课件提醒：让其中一个操作数当<b>掩码（mask）</b>特别有用。最常见的一行汇编是 ——</p>
+    <div class="formula">testq %rax, %rax&nbsp;&nbsp;<span style="font-family:var(--font-sans);font-size:14px;color:var(--muted)">—— 自己和自己与，唯一目的是判断 <code>%rax</code> 是不是 0、是不是负数</span></div>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：cmp / test 追踪器</span>
+        <div class="seg" id="cmsSeg">
+          <button class="on" data-c="cmpq">cmpq b, a</button>
+          <button data-c="testq">testq b, a</button>
+        </div>
+        <label class="fld">b <input type="text" id="cmsB" value="2" size="18" spellcheck="false"></label>
+        <label class="fld">a <input type="text" id="cmsA" value="0xffffffffffffffff" size="18" spellcheck="false"></label>
+        <button class="p" id="cmsGo">追踪</button>
+        <button class="sm" data-cms="m=cmpq;a=0xffffffffffffffff;b=2">课件 p34 第 3 行</button>
+        <button class="sm" data-cms="m=testq;a=0x10;b=0x10">掩码命中</button>
+        <button class="sm" data-cms="m=testq;a=0x10;b=0x20">掩码未命中</button>
+      </div>
+      <div id="cmsOut"></div>
+    </div>
+
+    <div class="box"><div class="t">为什么比较要单独做成指令？</div>
+      如果写成 <code>subq b, a</code>，<code>a</code> 的值就被破坏了。而 <code>cmp</code> / <code>test</code> 只留下「结论」，不动任何数据 —— 这使得「比较」与「分支」可以分开，中间还能插入别的指令（只要那些指令也不改标志位，比如 <code>lea</code>）。
+    </div>
+  </section>
+
+  <!-- ================= 4 ================= -->
+  <section id="s4">
+    <h2>4. 读取条件码：setX 与 movzbl<span class="srcref">原第 21、23–25、34–35 页</span></h2>
+    <p class="lede">标志位算出来了，怎么把它变成一个能存进内存、能返回给调用者的值？答案是一组 <code>setX</code> 指令 —— 它们把标志位的「组合」写成字节 <code>0</code> 或 <code>1</code>。</p>
+
+    <h3>4.1 setX 指令表<span class="srcref">原第 21 页</span></h3>
+    <p>每条 <code>setX</code> 都<b>把目的寄存器的低字节写成 0 或 1</b>，依据是指定的标志位组合。<b>它不改动其余 7 个字节。</b></p>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>SetX</th><th>条件</th><th>含义</th></tr>
+      <tr><td class="mono">sete</td><td class="mono">ZF</td><td>Equal / Zero</td></tr>
+      <tr><td class="mono">setne</td><td class="mono">~ZF</td><td>Not Equal / Not Zero</td></tr>
+      <tr><td class="mono">sets</td><td class="mono">SF</td><td>Negative</td></tr>
+      <tr><td class="mono">setns</td><td class="mono">~SF</td><td>Nonnegative</td></tr>
+      <tr><td class="mono">setg</td><td class="mono">~(SF^OF) &amp; ~ZF</td><td>Greater（<b>有符号</b>）</td></tr>
+      <tr><td class="mono">setge</td><td class="mono">~(SF^OF)</td><td>Greater or Equal（有符号）</td></tr>
+      <tr><td class="mono">setl</td><td class="mono">(SF^OF)</td><td>Less（有符号）</td></tr>
+      <tr><td class="mono">setle</td><td class="mono">(SF^OF) | ZF</td><td>Less or Equal（有符号）</td></tr>
+      <tr><td class="mono">seta</td><td class="mono">~CF &amp; ~ZF</td><td>Above（<b>无符号</b>）</td></tr>
+      <tr><td class="mono">setb</td><td class="mono">CF</td><td>Below（无符号）</td></tr>
+    </table></div>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：拨动四个标志位，看哪些 setX 会置 1</span>
+        <div class="seg" id="sxmSeg">
+          <button class="on" data-b="sf">SF</button>
+          <button data-b="of">OF</button>
+          <button data-b="cf">CF</button>
+          <button data-b="zf">ZF</button>
+        </div>
+        <button class="sm" id="sxmAll0">全 0</button>
+        <button class="sm" id="sxmAll1">全 1</button>
+      </div>
+      <div id="sxmOut"></div>
+    </div>
+
+    <h3>4.2 为什么后面总跟着一条 <code>movzbl</code><span class="srcref">原第 23–25 页</span></h3>
+    <p><code>setX</code> 只写<b>一个字节</b>，而且不改动其余字节 —— 这带来一个问题：<b>高位残留的垃圾会让返回值出错</b>。</p>
+    <p>看课件的 <code>gt</code> 函数：<code>int gt(long x, long y) { return x &gt; y; }</code>。它被编译成：</p>
+    <div class="formula" style="text-align:left">
+      <div>cmpq %rsi, %rdi&nbsp;&nbsp;&nbsp;# 比较 x : y</div>
+      <div>setg %al&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;# 大于时置 1，只写这一个字节</div>
+      <div>movzbl %al, %eax&nbsp;# 把 %rax 剩下的部分清零</div>
+      <div>ret</div>
+    </div>
+    <p>寄存器使用约定：<code>%rdi</code> 存参数 <code>x</code>，<code>%rsi</code> 存参数 <code>y</code>，<code>%rax</code> 存返回值。<code>%al</code> 是 <code>%rax</code> 的<b>低 8 位</b>。x86-64 里每个整数寄存器都能切出低字节：<code>%rax</code>→<code>%al</code>、<code>%rbx</code>→<code>%bl</code>、<code>%rcx</code>→<code>%cl</code>、<code>%rdx</code>→<code>%dl</code>、<code>%rsi</code>→<code>%sil</code>、<code>%rdi</code>→<code>%dil</code>、<code>%rsp</code>→<code>%spl</code>、<code>%rbp</code>→<code>%bpl</code>，以及 <code>%r8</code>→<code>%r8b</code> … <code>%r15</code>→<code>%r15b</code>。</p>
+    <div class="box ok"><div class="t"><code>movzbl</code> 干了两件事</div>
+      <ol style="margin:6px 0 0">
+        <li>把 <code>%al</code> 的值<b>零扩展</b>到 <code>%eax</code>，<code>%rax</code> 剩下 56 位因此全部被冲干净。</li>
+        <li>它是一条 <b>32 位指令</b>，而 x86-64 规定：<b>32 位指令会把目的寄存器的高 32 位自动清零</b>。</li>
+      </ol>
+      两件事合起来，<code>%rax</code> 就是干净的 <code>0</code> 或 <code>1</code> 了。
+    </div>
+
+    <h3>4.3 跟着课件走一遍五步练习<span class="srcref">原第 34–35 页</span></h3>
+    <p>课件在这两页给了一道纯粹靠手算的追踪题：从 <code>%rax = 0</code> 开始，逐条执行五条指令，每次都要写出 <code>%rax</code> 的值和四个标志位。下面把它做成了可单步执行的工具 —— 每一步都给出<b>为什么</b>。</p>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：五步追踪（单步 / 自动播放）</span>
+        <button class="p" id="exNext">下一步</button>
+        <button class="sm" id="exRun">自动播放</button>
+        <button class="sm" id="exReset">重来</button>
+      </div>
+      <div id="exOut"></div>
+    </div>
+
+    <div class="box warn"><div class="t">勘误：课件第 34 页把指令写成了 <code>movzblq</code></div>
+      同一份课件在第 24 页写的是 <code>movzbl %al, %eax</code>，第 34 页却写成 <code>movzblq %al, %eax</code>。这不是一条合法指令 —— 本机实测（<code>as -arch x86_64</code>）对 <code>movzblq</code> 报 <code>invalid instruction mnemonic</code>，而 <code>movzbl</code> 汇编通过。<code>b</code> 和 <code>l</code> 是<b>同一个后缀位</b>的两种取值，不能叠在一起写。本页统一采用 <b><code>movzbl</code></b>。
+    </div>
+  </section>
+
+  <!-- ================= 5 ================= -->
+  <section id="s5">
+    <h2>5. 条件跳转与 if-else<span class="srcref">原第 10–12、27–30 页</span></h2>
+    <p class="lede">有了条件码，控制流就只剩下一个问题：<b>「这个条件成立，跳还是不跳？」</b>。这一节看 C 的 <code>if-else</code> 如何被拆成一串带条件的 goto。</p>
+
+    <h3>5.1 控制流就是 goto<span class="srcref">原第 10–12 页</span></h3>
+    <p>课件用一个最小的例子：<code>void decision(int x) { if (x) { op1(); } else { op2(); } }</code>。它的汇编是：</p>
+    <div class="formula" style="text-align:left">
+      <div>decision:</div>
+      <div>&nbsp;&nbsp;subq&nbsp;&nbsp;$8, %rsp&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;# 按 ABI 对齐栈</div>
+      <div>&nbsp;&nbsp;testl&nbsp;%edi, %edi&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;# 判断 x 是否为 0</div>
+      <div>&nbsp;&nbsp;je&nbsp;&nbsp;&nbsp;&nbsp;.L2&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;# x == 0 → 跳到 else 分支</div>
+      <div>&nbsp;&nbsp;call&nbsp;&nbsp;op1</div>
+      <div>&nbsp;&nbsp;jmp&nbsp;&nbsp;&nbsp;.L1&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;# 做完 then 就跳过 else</div>
+      <div>.L2:</div>
+      <div>&nbsp;&nbsp;call&nbsp;&nbsp;op2</div>
+      <div>.L1:</div>
+      <div>&nbsp;&nbsp;addq&nbsp;&nbsp;$8, %rsp</div>
+      <div>&nbsp;&nbsp;ret</div>
+    </div>
+    <p>把这张图拆开看，就是三个方块加两条边：</p>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：点击条件，看控制流走哪条边</span>
+        <div class="seg" id="flowSeg">
+          <button class="on" data-x="1">x ≠ 0</button>
+          <button data-x="0">x == 0</button>
+        </div>
+      </div>
+      <div id="flowOut"></div>
+    </div>
+
+    <h3>5.2 <code>jX</code> 指令表<span class="srcref">原第 27 页</span></h3>
+    <p>跳转指令按条件码组合命名，与 <code>setX</code> 的条件<b>一一对应</b>（把 <code>set</code> 换成 <code>j</code> 即可）：</p>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>jX</th><th>条件</th><th>含义</th></tr>
+      <tr><td class="mono">jmp</td><td class="mono">1</td><td>无条件跳转</td></tr>
+      <tr><td class="mono">je</td><td class="mono">ZF</td><td>Equal / Zero</td></tr>
+      <tr><td class="mono">jne</td><td class="mono">~ZF</td><td>Not Equal / Not Zero</td></tr>
+      <tr><td class="mono">js</td><td class="mono">SF</td><td>Negative</td></tr>
+      <tr><td class="mono">jns</td><td class="mono">~SF</td><td>Nonnegative</td></tr>
+      <tr><td class="mono">jg</td><td class="mono">~(SF^OF) &amp; ~ZF</td><td>Greater（有符号）</td></tr>
+      <tr><td class="mono">jge</td><td class="mono">~(SF^OF)</td><td>Greater or Equal（有符号）</td></tr>
+      <tr><td class="mono">jl</td><td class="mono">(SF^OF)</td><td>Less（有符号）</td></tr>
+      <tr><td class="mono">jle</td><td class="mono">(SF^OF) | ZF</td><td>Less or Equal（有符号）</td></tr>
+      <tr><td class="mono">ja</td><td class="mono">~CF &amp; ~ZF</td><td>Above（无符号）</td></tr>
+      <tr><td class="mono">jb</td><td class="mono">CF</td><td>Below（无符号）</td></tr>
+    </table></div>
+
+    <h3>5.3 第一个完整例子：<code>absdiff</code><span class="srcref">原第 28–29 页</span></h3>
+    <p>目标是这个函数：</p>
+    <div class="formula" style="text-align:left">
+      <div>long absdiff(long x, long y) {</div>
+      <div>&nbsp;&nbsp;long result;</div>
+      <div>&nbsp;&nbsp;if (x &gt; y) result = x-y;</div>
+      <div>&nbsp;&nbsp;else&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; result = y-x;</div>
+      <div>&nbsp;&nbsp;return result;</div>
+      <div>}</div>
+    </div>
+    <p>用 <code>gcc –Og -S –fno-if-conversion</code> 编译（<code>-fno-if-conversion</code> 是为了<b>强迫</b>编译器用分支，否则它会改用条件传送，见下一节）：</p>
+    <div class="formula" style="text-align:left">
+      <div>absdiff:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;# x 在 %rdi，y 在 %rsi</div>
+      <div>&nbsp;&nbsp;cmpq&nbsp;&nbsp;%rsi, %rdi&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;# 比较 x : y</div>
+      <div>&nbsp;&nbsp;jle&nbsp;&nbsp;&nbsp;.L4&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;# x &lt;= y → 去 else 分支</div>
+      <div>&nbsp;&nbsp;movq&nbsp;&nbsp;%rdi, %rax</div>
+      <div>&nbsp;&nbsp;subq&nbsp;&nbsp;%rsi, %rax&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;# result = x - y</div>
+      <div>&nbsp;&nbsp;ret</div>
+      <div>.L4:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;# x &lt;= y</div>
+      <div>&nbsp;&nbsp;movq&nbsp;&nbsp;%rsi, %rax</div>
+      <div>&nbsp;&nbsp;subq&nbsp;&nbsp;%rdi, %rax&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;# result = y - x</div>
+      <div>&nbsp;&nbsp;ret</div>
+    </div>
+    <p>课件随后把它改写成「goto 版」，这是理解一切控制流翻译的钥匙 —— <b><code>if</code> 只是在「条件成立时跳过一段代码」</b>：</p>
+    <div class="formula" style="text-align:left">
+      <div>long absdiff_j(long x, long y) {</div>
+      <div>&nbsp;&nbsp;long result;</div>
+      <div>&nbsp;&nbsp;int ntest = x &lt;= y;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)">// 把条件取反</span></div>
+      <div>&nbsp;&nbsp;if (ntest) goto Else;</div>
+      <div>&nbsp;&nbsp;result = x-y;</div>
+      <div>&nbsp;&nbsp;goto Done;</div>
+      <div>Else:</div>
+      <div>&nbsp;&nbsp;result = y-x;</div>
+      <div>Done:</div>
+      <div>&nbsp;&nbsp;return result;</div>
+      <div>}</div>
+    </div>
+    <div class="box"><div class="t">注意 <code>ntest = x &lt;= y</code> 这一步</div>
+      汇编里的跳转是「<b>不满足条件时才跳走</b>」（<code>jle .L4</code> 跳到 else）。而 C 的 <code>if (x &gt; y)</code> 是「满足条件时执行 then」。两者的条件正好相反，所以翻译时要先<b>把测试取反</b>。这是手写 goto 版时最容易搞错的一步。
+    </div>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：absdiff 三种写法并排跑</span>
+        <label class="fld">x <input type="text" id="adX" value="6" size="8" spellcheck="false"></label>
+        <label class="fld">y <input type="text" id="adY" value="2" size="8" spellcheck="false"></label>
+        <button class="p" id="adGo">执行</button>
+        <button class="sm" data-ad="x=6;y=2">x &gt; y</button>
+        <button class="sm" data-ad="x=2;y=6">x &lt; y</button>
+        <button class="sm" data-ad="x=5;y=5">x == y</button>
+        <button class="sm" data-ad="x=-9223372036854775808;y=0">TMin, 0</button>
+      </div>
+      <div id="adOut"></div>
+    </div>
+
+    <h3>5.4 一般条件表达式的翻译<span class="srcref">原第 30 页</span></h3>
+    <p>课件把这个模式提炼成通用公式。对 <code>val = Test ? Then_Expr : Else_Expr;</code>，分支翻译法是：</p>
+    <div class="formula" style="text-align:left">
+      <div>ntest = !Test;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)">// 取反</span></div>
+      <div>if (ntest) goto Else;</div>
+      <div>val = Then_Expr;</div>
+      <div>goto Done;</div>
+      <div>Else:</div>
+      <div>&nbsp;&nbsp;val = Else_Expr;</div>
+      <div>Done:</div>
+      <div>&nbsp;&nbsp;. . .</div>
+    </div>
+    <p>核心思想只有一句：<b>为 then 和 else 各生成一段独立代码区，然后选择执行其中一个。</b>例：<code>val = x&gt;y ? x-y : y-x;</code> 就是前面那个 <code>absdiff</code>。</p>
+  </section>
+
+  <!-- ================= 6 ================= -->
+  <section id="s6">
+    <h2>6. 条件传送：不跳转的分支<span class="srcref">原第 31–33 页</span></h2>
+    <p class="lede">CPU 的流水线最怕跳转。于是 x86 提供了一类<b>不跳转也能实现条件</b>的指令 —— 但它的代价是「两条路都要算」，这个代价决定了它能用在哪些场合。</p>
+
+    <h3>6.1 <code>cmov</code> 指令<span class="srcref">原第 31 页</span></h3>
+    <p>条件传送（conditional move）指令实现的是 <code>if (Test) Dest ← Src</code>。几个关键事实：</p>
+    <ul>
+      <li>1995 年之后的 x86 处理器才支持</li>
+      <li>GCC 会尽量使用它们 —— <b>但只在确认安全时</b></li>
+      <li>为什么想要用它？<b>分支会严重打断流水线里的指令流</b>（branches are very disruptive to instruction flow through pipelines）；条件传送<b>不需要控制转移</b></li>
+    </ul>
+    <p>把条件表达式改写成条件传送时，C 代码长这样：</p>
+    <div class="formula" style="text-align:left">
+      <div>result = Then_Expr;</div>
+      <div>eval&nbsp;&nbsp; = Else_Expr;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)">// 两条路都先算出来</span></div>
+      <div>nt = !Test;</div>
+      <div>if (nt) result = eval;&nbsp;&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)">// 再挑一个</span></div>
+      <div>return result;</div>
+    </div>
+    <div class="box warn"><div class="t">关键差异：<code>Then_Expr</code> 和 <code>Else_Expr</code> 都会被求值</div>
+      分支版本只算一条路，条件传送版本<b>两条路都算</b>。这句话是所有限制的根源 —— 下一小节的三类「坏例子」全是从这里长出来的。
+    </div>
+
+    <h3>6.2 同一个 <code>absdiff</code> 的条件传送版本<span class="srcref">原第 32 页</span></h3>
+    <div class="formula" style="text-align:left">
+      <div>absdiff:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;# x 在 %rdi，y 在 %rsi</div>
+      <div>&nbsp;&nbsp;movq&nbsp;&nbsp;%rdi, %rax&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;# x</div>
+      <div>&nbsp;&nbsp;subq&nbsp;&nbsp;%rsi, %rax&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;# result = x - y&nbsp;&nbsp;（先算 then）</div>
+      <div>&nbsp;&nbsp;movq&nbsp;&nbsp;%rsi, %rdx</div>
+      <div>&nbsp;&nbsp;subq&nbsp;&nbsp;%rdi, %rdx&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;# eval&nbsp;&nbsp; = y - x&nbsp;&nbsp;（再算 else）</div>
+      <div>&nbsp;&nbsp;cmpq&nbsp;&nbsp;%rsi, %rdi&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;# 比较 x : y</div>
+      <div>&nbsp;&nbsp;cmovle %rdx, %rax&nbsp;&nbsp;&nbsp;&nbsp;# 若 x &lt;= y，result = eval</div>
+      <div>&nbsp;&nbsp;ret</div>
+    </div>
+    <p>对比 5.3 的分支版本：<b>指令条数变多了，但一次跳转都没有。</b>这就是编译器愿意做的交易。</p>
+
+    <h3>6.3 什么时候<b>不能</b>用条件传送<span class="srcref">原第 33 页</span></h3>
+    <p>课件列出三类「坏例子」，各自的原因完全不同 ——</p>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>情形</th><th>代码</th><th>问题</th><th>后果</th></tr>
+      <tr><td><b>昂贵计算</b></td><td class="mono">val = Test(x) ? Hard1(x) : Hard2(x);</td><td>两个值都会被算出来</td><td>性能变差（Bad Performance）</td></tr>
+      <tr><td><b>危险计算</b></td><td class="mono">val = p ? *p : 0;</td><td>两个值都会被算出来</td><td><b>不安全</b>（Unsafe）：<code>p</code> 为空时也会解引用</td></tr>
+      <tr><td><b>有副作用</b></td><td class="mono">val = x &gt; 0 ? x*=7 : x+=3;</td><td>两个值都会被算出来</td><td><b>非法</b>（Illegal）：<code>x</code> 被改了两次</td></tr>
+    </table></div>
+    <p>第二、三类的共性：<b>表达式必须无副作用（side-effect free）才谈得上「两条路都算」</b>。</p>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：这段代码能安全地用 cmov 改写吗？</span>
+        <button class="sm" id="cqReset">重来</button>
+      </div>
+      <div id="cqOut"></div>
+    </div>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：条件传送下「两条路都被算」的实况</span>
+        <label class="fld">x <input type="text" id="cbX" value="5" size="8" spellcheck="false"></label>
+        <button class="p" id="cbGo">执行</button>
+        <button class="sm" data-cb="10">x &gt; 0</button>
+        <button class="sm" data-cb="-3">x &lt; 0</button>
+        <button class="sm" data-cb="0">x == 0</button>
+      </div>
+      <div id="cbOut"></div>
+    </div>
+  </section>
+
+  <!-- ================= 7 ================= -->
+  <section id="s7">
+    <h2>7. 循环：do-while、while、for<span class="srcref">原第 37–47 页</span></h2>
+    <p class="lede">C 有三种循环写法，但机器层只有一种：<b>往回跳的 goto</b>。这一节看编译器如何把三种循环统一成同一个形状。</p>
+
+    <h3>7.1 例子：<code>popcount</code>（数 1 的个数）<span class="srcref">原第 37 页</span></h3>
+    <p>贯穿本节的是同一个函数 —— 数出参数 <code>x</code> 里有几个二进制 1：</p>
+    <div class="formula" style="text-align:left">
+      <div>long pcount_do(unsigned long x) {</div>
+      <div>&nbsp;&nbsp;long result = 0;</div>
+      <div>&nbsp;&nbsp;do {</div>
+      <div>&nbsp;&nbsp;&nbsp;&nbsp;result += x &amp; 0x1;&nbsp;&nbsp;&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)">// 取最低位累加</span></div>
+      <div>&nbsp;&nbsp;&nbsp;&nbsp;x &gt;&gt;= 1;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)">// 右移一位</span></div>
+      <div>&nbsp;&nbsp;} while (x);</div>
+      <div>&nbsp;&nbsp;return result;</div>
+      <div>}</div>
+    </div>
+    <p>课件顺带提了一句：<b>x86 是 CISC，本身就有 <code>popcount</code> 指令</b>（一条指令数完所有 1）—— 但为了讲清楚控制流，这里仍然手动循环。</p>
+
+    <h3>7.2 三种 goto 形式<span class="srcref">原第 38、40、42 页</span></h3>
+    <p>课件给出两张通用翻译模板，加上原本的 do-while，一共三种形状：</p>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>形式</th><th>何时用</th><th>结构特征</th></tr>
+      <tr><td><b>do-while</b><br>（循环体在前）</td><td><code>do {...} while(Test)</code> 的直接翻译</td><td>标签在<b>循环体开头</b>，条件判断在<b>末尾</b>：先做事，再决定要不要回去</td></tr>
+      <tr><td><b>jump-to-middle</b><br>（跳到中间）</td><td><code>-Og</code> 用</td><td>开头一条 <code>goto test</code> <b>直接跳到条件判断处</b></td></tr>
+      <tr><td><b>guarded-do</b><br>（do-while 转换）</td><td><code>-O1</code> 用</td><td>先把条件<b>取反挡在入口</b>（<code>if (!Test) goto done;</code>），循环体后面再判一次</td></tr>
+    </table></div>
+
+    <p>三种形式对应到 <code>popcount_while</code> 上：</p>
+    <div class="grid g3">
+      <div class="card"><h5>do-while</h5>
+        <pre class="mono" style="font-size:12.5px;margin:0;overflow-x:auto">result = 0;
+loop:
+  result += x &amp; 0x1;
+  x &gt;&gt;= 1;
+  if (x) goto loop;
+return result;</pre>
+      </div>
+      <div class="card"><h5>jump-to-middle</h5>
+        <pre class="mono" style="font-size:12.5px;margin:0;overflow-x:auto">result = 0;
+goto test;
+loop:
+  result += x &amp; 0x1;
+  x &gt;&gt;= 1;
+test:
+  if (x) goto loop;
+return result;</pre>
+      </div>
+      <div class="card"><h5>guarded-do</h5>
+        <pre class="mono" style="font-size:12.5px;margin:0;overflow-x:auto">result = 0;
+if (!x) goto done;
+loop:
+  result += x &amp; 0x1;
+  x &gt;&gt;= 1;
+  if (x) goto loop;
+done:
+return result;</pre>
+      </div>
+    </div>
+
+    <div class="box"><div class="t">课件在这里留了一个问题</div>
+      guarded-do 相比 jump-to-middle <b>「移除了跳到中间」</b>。课件追问：<b>「When is this good or bad?」</b>—— 想想看：少了入口处那次无条件跳转，代价是条件被<b>写了两遍</b>（入口一次、末尾一次），而且当循环一次都不执行时，两次判断是「重复劳动」。
+    </div>
+
+    <h3>7.3 单步走一遍循环<span class="srcref">原第 37–39 页</span></h3>
+    <p>下面的工具把三种形式做成了可单步执行的追踪器：每按一次「下一步」，它告诉你<b>现在执行到哪、跳转发生没有、寄存器变成多少</b>。</p>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：popcount 循环追踪器</span>
+        <div class="seg" id="ptSeg">
+          <button class="on" data-p="do">do-while</button>
+          <button data-p="jtm">jump-to-middle</button>
+          <button data-p="gd">guarded-do</button>
+        </div>
+        <label class="fld">x <input type="text" id="ptX" value="0xb5" size="12" spellcheck="false"></label>
+        <button class="p" id="ptGo">载入</button>
+        <button class="sm" id="ptNext">下一步</button>
+        <button class="sm" id="ptRun">自动播放</button>
+        <button class="sm" data-pt="0">x = 0（一次都不循环）</button>
+        <button class="sm" data-pt="0xff">0xff</button>
+      </div>
+      <div id="ptOut"></div>
+    </div>
+
+    <h3>7.4 对应的汇编<span class="srcref">原第 39 页</span></h3>
+    <p>课件给出 do-while 版编译后的结果 —— 注意它长得<b>和 goto 版一一对应</b>：</p>
+    <div class="formula" style="text-align:left">
+      <div>&nbsp;&nbsp;movl&nbsp;&nbsp;$0, %eax&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;# result = 0</div>
+      <div>.L2:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;# loop:</div>
+      <div>&nbsp;&nbsp;movq&nbsp;&nbsp;%rdi, %rdx</div>
+      <div>&nbsp;&nbsp;andl&nbsp;&nbsp;$1, %edx&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;# t = x &amp; 0x1</div>
+      <div>&nbsp;&nbsp;addq&nbsp;&nbsp;%rdx, %rax&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;# result += t</div>
+      <div>&nbsp;&nbsp;shrq&nbsp;&nbsp;%rdi&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;# x &gt;&gt;= 1（只写一个操作数 = 移 1 位）</div>
+      <div>&nbsp;&nbsp;jne&nbsp;&nbsp;&nbsp;.L2&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;# if (x) goto loop</div>
+      <div>&nbsp;&nbsp;rep; ret</div>
+    </div>
+    <p style="font-size:14.5px;color:var(--muted)"><code>shrq %rdi</code> 只写一个操作数，是「右移 1 位」的简写；<code>jne .L2</code> 复用 <code>shrq</code> 置好的 <code>ZF</code> —— 若移位后 <code>x</code> 变成 0，<code>ZF</code> 就是 1，<code>jne</code> 不跳，循环结束。省掉了一条 <code>test</code>。<code>rep; ret</code> 是编译器为老 AMD 处理器加的前缀。</p>
+
+    <h3>7.5 <code>for</code> 循环<span class="srcref">原第 44–47 页</span></h3>
+    <p><code>for (Init; Test; Update) Body</code> 的通用形式包含四块：<b>Init</b> 只做一次，然后反复执行 <b>Test → Body → Update</b>。课件给的例子：</p>
+    <div class="formula" style="text-align:left">
+      <div>#define WSIZE 8*sizeof(int)&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)">// 32</span></div>
+      <div>long pcount_for(unsigned long x) {</div>
+      <div>&nbsp;&nbsp;size_t i;</div>
+      <div>&nbsp;&nbsp;long result = 0;</div>
+      <div>&nbsp;&nbsp;for (i = 0; i &lt; WSIZE; i++) {</div>
+      <div>&nbsp;&nbsp;&nbsp;&nbsp;unsigned bit = (x &gt;&gt; i) &amp; 0x1;</div>
+      <div>&nbsp;&nbsp;&nbsp;&nbsp;result += bit;</div>
+      <div>&nbsp;&nbsp;}</div>
+      <div>&nbsp;&nbsp;return result;</div>
+      <div>}</div>
+    </div>
+    <p><code>for</code> → <code>while</code> 的转换最直白：<b>Init 提到循环前，Update 挂到循环体末尾</b>。</p>
+    <div class="formula" style="text-align:left">
+      <div>Init;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)">// i = 0;</span></div>
+      <div>while (Test) {&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)">// while (i &lt; WSIZE)</span></div>
+      <div>&nbsp;&nbsp;Body</div>
+      <div>&nbsp;&nbsp;Update;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)">// i++;</span></div>
+      <div>}</div>
+    </div>
+    <p>再往下变成 do-while 时，<code>Update</code> 会跑到 <code>if (Test)</code> <b>之前</b>（因为 do-while 的条件在末尾，而末尾同时也是下一轮的「更新点」）：</p>
+    <div class="formula" style="text-align:left">
+      <div>&nbsp;&nbsp;i = 0;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;# Init</div>
+      <div>&nbsp;&nbsp;if (!(i &lt; WSIZE))&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;# !Test</div>
+      <div>&nbsp;&nbsp;&nbsp;&nbsp;goto done;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)">// 课件问：这里的初始测试什么时候能被优化掉？</span></div>
+      <div>loop:</div>
+      <div>&nbsp;&nbsp;{&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;# Body</div>
+      <div>&nbsp;&nbsp;&nbsp;&nbsp;unsigned bit = (x &gt;&gt; i) &amp; 0x1;</div>
+      <div>&nbsp;&nbsp;&nbsp;&nbsp;result += bit;</div>
+      <div>&nbsp;&nbsp;}</div>
+      <div>&nbsp;&nbsp;i++;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;# Update</div>
+      <div>&nbsp;&nbsp;if (i &lt; WSIZE)&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;# Test</div>
+      <div>&nbsp;&nbsp;&nbsp;&nbsp;goto loop;</div>
+      <div>done:</div>
+      <div>&nbsp;&nbsp;return result;</div>
+    </div>
+    <div class="box ok"><div class="t">课件的问题：初始测试什么时候能优化掉？</div>
+      当编译器能<b>证明循环至少会执行一次</b>时 —— 这里 <code>i = 0</code> 且 <code>WSIZE = 32 &gt; 0</code> 都是编译期常量，初始测试 <code>i &lt; WSIZE</code> 恒真，于是可以直接删掉。这类「常量传播 + 死代码消除」是优化的常规动作。
+    </div>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：for → while → do-while 三层对照</span>
+        <label class="fld">WSIZE <input type="text" id="fcW" value="8" size="6" spellcheck="false"></label>
+        <label class="fld">x <input type="text" id="fcX" value="0xf0" size="10" spellcheck="false"></label>
+        <button class="p" id="fcGo">重算</button>
+        <button class="sm" data-fc="w=8;x=0xff">8 位全 1</button>
+        <button class="sm" data-fc="w=4;x=0x5">4 位</button>
+      </div>
+      <div id="fcOut"></div>
+    </div>
+  </section>
+
+  <!-- ================= 8 ================= -->
+  <section id="s8">
+    <h2>8. switch 与跳转表<span class="srcref">原第 49–58、62–64 页</span></h2>
+    <p class="lede">一串 <code>if-else</code> 要比较 n 次；<b>跳转表（jump table）把这个比较过程变成一次内存查表 + 一次间接跳转</b>。这是编译器最漂亮的优化之一。</p>
+
+    <h3>8.1 例子：<code>switch_eg</code><span class="srcref">原第 49 页</span></h3>
+    <div class="formula" style="text-align:left">
+      <div>long switch_eg(long x, long y, long z) {</div>
+      <div>&nbsp;&nbsp;long w = 1;</div>
+      <div>&nbsp;&nbsp;switch(x) {</div>
+      <div>&nbsp;&nbsp;&nbsp;&nbsp;case 1:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)">// 单个标签</span></div>
+      <div>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;w = y*z;</div>
+      <div>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;break;</div>
+      <div>&nbsp;&nbsp;&nbsp;&nbsp;case 2:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)">// fall through（贯穿）</span></div>
+      <div>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;w = y/z;</div>
+      <div>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;/* Fall Through */</div>
+      <div>&nbsp;&nbsp;&nbsp;&nbsp;case 3:</div>
+      <div>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;w += z;</div>
+      <div>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;break;</div>
+      <div>&nbsp;&nbsp;&nbsp;&nbsp;case 5:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)">// 多个标签共用一段代码</span></div>
+      <div>&nbsp;&nbsp;&nbsp;&nbsp;case 6:</div>
+      <div>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;w -= z;</div>
+      <div>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;break;</div>
+      <div>&nbsp;&nbsp;&nbsp;&nbsp;default:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)">// 缺了 case 4</span></div>
+      <div>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;w = 2;</div>
+      <div>&nbsp;&nbsp;}</div>
+      <div>&nbsp;&nbsp;return w;</div>
+      <div>}</div>
+    </div>
+    <p>课件点出这个例子里的三个要点：<b>多个 case 标签</b>（5 和 6）、<b>贯穿的 case</b>（2 落到 3）、<b>缺失的 case</b>（没有 4）。</p>
+
+    <h3>8.2 跳转表的结构<span class="srcref">原第 50 页</span></h3>
+    <p>跳转表是一个<b>数组，第 i 项存放「case i 对应代码块的地址」</b>。原来的 switch 被翻译成一句扩展 C：</p>
+    <div class="formula big">goto *JTab[x];</div>
+    <p>它的形状是「三段式」：左边是 switch 形式，中间是跳转表 <code>jtab</code>，右边是各个代码块 <code>Targ0 … Targn−1</code>。查表的过程就是：<b>用 x 当下标 → 取出地址 → 跳过去</b>。</p>
+
+    <h3>8.3 汇编里的设置代码<span class="srcref">原第 51–53 页</span></h3>
+    <div class="formula" style="text-align:left">
+      <div>switch_eg:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;# %rdi = x，%rsi = y，%rdx = z</div>
+      <div>&nbsp;&nbsp;movq&nbsp;&nbsp;%rdx, %rcx&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;# 把 z 挪到 %rcx 备用</div>
+      <div>&nbsp;&nbsp;cmpq&nbsp;&nbsp;$6, %rdi&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;# 比较 x : 6</div>
+      <div>&nbsp;&nbsp;ja&nbsp;&nbsp;&nbsp;&nbsp;.L8&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;# 无符号「大于」→ 走 default</div>
+      <div>&nbsp;&nbsp;jmp&nbsp;&nbsp;&nbsp;*.L4(,%rdi,8)&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;# goto *JTab[x]&nbsp;&nbsp;（间接跳转）</div>
+    </div>
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：x 取哪些值会走 default？</span>
+        <label class="fld">x <input type="text" id="jtX" value="7" size="10" spellcheck="false"></label>
+        <button class="p" id="jtGo">判断</button>
+        <button class="sm" data-jt="7">7</button>
+        <button class="sm" data-jt="-1">−1</button>
+        <button class="sm" data-jt="0">0</button>
+      </div>
+      <div id="jtOut"></div>
+    </div>
+
+    <p>跳转表本身放在只读数据段 <code>.rodata</code> 里，每一项 8 字节（一个地址）：</p>
+    <div class="formula" style="text-align:left">
+      <div>&nbsp;&nbsp;.section .rodata</div>
+      <div>&nbsp;&nbsp;.align 8&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)">// 对齐到 8 字节边界</span></div>
+      <div>.L4:</div>
+      <div>&nbsp;&nbsp;.quad .L8&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;# x = 0&nbsp;&nbsp;→ default</div>
+      <div>&nbsp;&nbsp;.quad .L3&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;# x = 1&nbsp;&nbsp;→ w = y*z</div>
+      <div>&nbsp;&nbsp;.quad .L5&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;# x = 2&nbsp;&nbsp;→ w = y/z，再贯穿</div>
+      <div>&nbsp;&nbsp;.quad .L9&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;# x = 3&nbsp;&nbsp;→ w += z</div>
+      <div>&nbsp;&nbsp;.quad .L8&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;# x = 4&nbsp;&nbsp;→ default（缺这个 case）</div>
+      <div>&nbsp;&nbsp;.quad .L7&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;# x = 5&nbsp;&nbsp;→ w -= z</div>
+      <div>&nbsp;&nbsp;.quad .L7&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;# x = 6&nbsp;&nbsp;→ w -= z（与 5 共用）</div>
+    </div>
+    <p>课件解释了三处细节：表的每一项占 <b>8 字节</b>；基地址是 <code>.L4</code>；跳转分<b>直接</b>（<code>jmp .L8</code>，目标写在指令里）与<b>间接</b>（<code>jmp *.L4(,%rdi,8)</code>，目标从内存取）。间接跳转必须<b>按 8 倍缩放</b>，因为地址是 8 字节宽 —— 所以取的地址是 <code>.L4 + x*8</code>。<b>这套机制只对 <code>0 ≤ x ≤ 6</code> 成立</b>，超出的值靠前面那条 <code>ja</code> 挡掉。</p>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：跳转表生成器（改 case 集合，看表怎么变）</span>
+        <label class="fld">case 标签 <input type="text" id="jbCases" value="1,2,3,5,6" size="22" spellcheck="false"></label>
+        <button class="p" id="jbGo">生成</button>
+        <button class="sm" data-jb="1,2,3,5,6">课件例</button>
+        <button class="sm" data-jb="0,1,2,3,4">连续</button>
+        <button class="sm" data-jb="0,100,200">稀疏</button>
+        <button class="sm" data-jb="1,2">两个</button>
+      </div>
+      <div id="jbOut"></div>
+    </div>
+
+    <h3>8.4 各个代码块<span class="srcref">原第 55–58 页</span></h3>
+    <div class="grid g2">
+      <div class="card"><h5>x == 1 → <code>.L3</code></h5>
+        <pre class="mono" style="font-size:12.5px;margin:0">.L3:
+  movq  %rsi, %rax   # y
+  imulq %rdx, %rax   # y*z
+  ret</pre>
+      </div>
+      <div class="card"><h5>x == 5, 6 → <code>.L7</code></h5>
+        <pre class="mono" style="font-size:12.5px;margin:0">.L7:
+  movl $1, %eax      # w = 1
+  subq %rdx, %rax    # w -= z
+  ret</pre>
+      </div>
+      <div class="card"><h5>default → <code>.L8</code></h5>
+        <pre class="mono" style="font-size:12.5px;margin:0">.L8:
+  movl $2, %eax      # 2
+  ret</pre>
+      </div>
+      <div class="card"><h5>x == 2, 3 → <code>.L5</code> / <code>.L9</code> / <code>.L6</code></h5>
+        <pre class="mono" style="font-size:12.5px;margin:0">.L5:                 # Case 2
+  movq %rsi, %rax
+  cqto
+  idivq %rcx         # y/z
+  jmp .L6            # goto merge
+.L9:                 # Case 3
+  movl $1, %eax      # w = 1
+.L6:                 # merge:
+  addq %rcx, %rax    # w += z
+  ret</pre>
+      </div>
+    </div>
+    <p>课件特别展示了<b>贯穿（fall through）怎么实现</b>：<code>case 2</code> 算完 <code>y/z</code> 后并不 <code>ret</code>，而是 <code>jmp</code> 到合并点 <code>.L6</code>，与 <code>case 3</code> 共享同一条 <code>w += z</code>。而 <code>case 3</code> 自己则要先执行 <code>movl $1, %eax</code> —— 因为 <code>long w = 1</code> 的初始化被<b>挪进了各个分支</b>，没走到的分支不必初始化。</p>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：switch_eg 求值器（输入 x, y, z，看结果与路径）</span>
+        <label class="fld">x <input type="text" id="swX" value="2" size="6" spellcheck="false"></label>
+        <label class="fld">y <input type="text" id="swY" value="20" size="6" spellcheck="false"></label>
+        <label class="fld">z <input type="text" id="swZ" value="4" size="6" spellcheck="false"></label>
+        <button class="p" id="swGo">求值</button>
+        <button class="sm" data-sw="x=1;y=2;z=3">x=1</button>
+        <button class="sm" data-sw="x=2;y=20;z=4">x=2（贯穿）</button>
+        <button class="sm" data-sw="x=3;y=20;z=4">x=3</button>
+        <button class="sm" data-sw="x=4;y=20;z=4">x=4（缺失）</button>
+        <button class="sm" data-sw="x=5;y=20;z=4">x=5</button>
+        <button class="sm" data-sw="x=6;y=20;z=4">x=6</button>
+        <button class="sm" data-sw="x=99;y=20;z=4">x=99（default）</button>
+      </div>
+      <div id="swOut"></div>
+    </div>
+
+    <h3>8.5 在二进制里找出跳转表<span class="srcref">原第 62–64 页（补充材料）</span></h3>
+    <p>反汇编 <code>switch_eg</code>，间接跳转的地址直接写在指令里：</p>
+    <div class="formula" style="text-align:left">
+      <div>00000000004005e0 &lt;switch_eg&gt;:</div>
+      <div>&nbsp;&nbsp;4005e0:&nbsp;&nbsp;48 89 d1&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;mov&nbsp;&nbsp;&nbsp;&nbsp;%rdx,%rcx</div>
+      <div>&nbsp;&nbsp;4005e3:&nbsp;&nbsp;48 83 ff 06&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;cmp&nbsp;&nbsp;&nbsp;&nbsp;$0x6,%rdi</div>
+      <div>&nbsp;&nbsp;4005e7:&nbsp;&nbsp;77 2b&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ja&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;400614 &lt;switch_eg+0x34&gt;</div>
+      <div>&nbsp;&nbsp;4005e9:&nbsp;&nbsp;ff 24 fd f0 07 40 00&nbsp;&nbsp;jmpq&nbsp;&nbsp;&nbsp;*0x4007f0(,%rdi,8)</div>
+      <div>&nbsp;&nbsp;…</div>
+    </div>
+    <p>从 <code>jmpq *0x4007f0(,%rdi,8)</code> 就能读出跳转表的基地址是 <b><code>0x4007f0</code></b>。用 gdb 把内存倒出来：</p>
+    <div class="formula" style="text-align:left">
+      <div>% gdb switch</div>
+      <div>(gdb) x /8xg 0x4007f0</div>
+      <div>0x4007f0:&nbsp;&nbsp;0x0000000000400614&nbsp;&nbsp;0x00000000004005f0</div>
+      <div>0x400800:&nbsp;&nbsp;0x00000000004005f8&nbsp;&nbsp;0x0000000000400602</div>
+      <div>0x400810:&nbsp;&nbsp;0x0000000000400614&nbsp;&nbsp;0x000000000040060b</div>
+      <div>0x400820:&nbsp;&nbsp;0x000000000040060b&nbsp;&nbsp;0x2c646c25203d2078</div>
+      <div>(gdb)</div>
+    </div>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：顺着间接跳转走一遍</span>
+        <label class="fld">x <input type="text" id="jlX" value="5" size="6" spellcheck="false"></label>
+        <button class="p" id="jlGo">跟踪</button>
+        <button class="sm" data-jl="1">1</button>
+        <button class="sm" data-jl="2">2</button>
+        <button class="sm" data-jl="4">4</button>
+        <button class="sm" data-jl="7">7（越界）</button>
+      </div>
+      <div id="jlOut"></div>
+    </div>
+
+    <div class="box warn"><div class="t">注意第 8 项：为什么它是「乱码」</div>
+      表里只有 7 个有效项（x = 0…6），第 8 项 <code>0x2c646c25203d2078</code> 已经<b>越过了表的末尾</b>，落在旁边的字符串常量上（按小端读出来的 ASCII 是 <code>x = %ld,</code> 的一部分）。这正说明<b>跳转表只对 <code>0 ≤ x ≤ 6</code> 有效</b> —— 那条 <code>cmpq $6 / ja</code> 的边界检查不是可有可无的装饰，它是<b>防止越界跳转</b>的安全屏障。去掉它，<code>x = 7</code> 就会跳到一段数据上当作代码执行。
+    </div>
+  </section>
+
+  <!-- ================= 9 ================= -->
+  <section id="s9">
+    <h2>9. 总结与测验<span class="srcref">原第 59–60 页</span></h2>
+    <p class="lede">用课件自己的总结表收束，然后做一遍测验 —— 题目全部来自本讲的表格与例题。</p>
+
+    <h3>9.1 C 控制 ↔ 汇编控制<span class="srcref">原第 59 页</span></h3>
+    <div class="grid g2">
+      <div class="card"><h5>C 的控制结构</h5>
+        <ul style="margin:0;padding-left:20px;font-size:14.5px">
+          <li><code>if-then-else</code></li>
+          <li><code>do-while</code></li>
+          <li><code>while</code>、<code>for</code></li>
+          <li><code>switch</code></li>
+        </ul>
+      </div>
+      <div class="card"><h5>汇编的控制手段</h5>
+        <ul style="margin:0;padding-left:20px;font-size:14.5px">
+          <li><b>条件跳转</b>（conditional jump）</li>
+          <li><b>条件传送</b>（conditional move）</li>
+          <li><b>间接跳转</b>（经跳转表）</li>
+          <li>更复杂的控制 = 编译器生成的一串指令序列</li>
+        </ul>
+      </div>
+    </div>
+    <p>课件点出两条<b>标准技法</b>：循环一律被转成 <b>do-while 或 jump-to-middle</b> 形式；<b>大的 switch 用跳转表，稀疏的 switch 可能改用决策树</b>（也就是 if-elseif-elseif-else）。</p>
+
+    <h3>9.2 下一讲<span class="srcref">原第 60 页</span></h3>
+    <p>课件的「Next Time」列出了四件事：<b>栈</b>、<b>call / return</b>、<b>过程调用的约定（procedure call discipline）</b>。这一讲把「程序怎么跳」讲完了，下一讲要解决「跳过去之后，现场怎么保存、参数怎么传、怎么回来」。</p>
+
+    <h3>9.3 测验</h3>
+    <p>每道题选完立刻判分并给出解析。答错不要紧 —— 解析里写清了依据在本讲的哪一节。</p>
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：本讲测验</span>
+        <button class="sm" id="qzReset">重来</button>
+      </div>
+      <div id="qzOut"></div>
+    </div>
+  </section>
+  </main>
+</div>
+
+<div class="footer">
+本页由 <code>ICS05-machine-control-20260921.pdf</code> 翻译整理而成 · 标志位、setX、循环与跳转表的全部数值均为页面内实时计算，并已与真实 x86-64 处理器的执行结果逐条比对。
+</div>
+<button class="totop" id="toTop">↑ 顶部</button>
+
+<script>
+"use strict";
+/* ============================================================
+   机器级编程 II：控制 · 交互式课件 —— 全部逻辑
+   约定：所有计算在页面内实时完成；无效输入必须给出提示而不是抛错。
+   64 位运算一律用 BigInt，绝不用 Number（会丢高位）。
+   ============================================================ */
+
+const $  = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+const MASK64 = (1n << 64n) - 1n;
+const SIGN64 = 1n << 63n;
+const TWO64  = 1n << 64n;
+
+const u64  = v => BigInt(v) & MASK64;
+const s64  = v => { const x = u64(v); return x >= SIGN64 ? x - TWO64 : x; };
+const hex64 = v => '0x' + u64(v).toString(16).toUpperCase().padStart(16, '0');
+const hexTrim = v => '0x' + u64(v).toString(16).toUpperCase();
+const decU = v => u64(v).toLocaleString('en-US');
+const decS = v => s64(v).toLocaleString('en-US');
+const bit = (v, i) => Number((u64(v) >> BigInt(i)) & 1n);
+
+/** 解析用户输入：支持 0x / 0b / 十进制 / 负数。返回无符号 64 位 BigInt 或 null。 */
+function parseU64(str) {
+  const t = String(str).trim().replace(/[_,\s]/g, '');
+  if (!t) return null;
+  if (/^-[0-9]+$/.test(t) || /^-0[xX][0-9a-fA-F]+$/.test(t)) {
+    const p = parseU64(t.slice(1));
+    return p === null ? null : u64(-p);
+  }
+  try {
+    if (/^0[xX][0-9a-fA-F]+$/.test(t)) return u64(BigInt(t));
+    if (/^0[bB][01]+$/.test(t))        return u64(BigInt(t));
+    if (/^[0-9]+$/.test(t))            return u64(BigInt(t));
+  } catch (e) { return null; }
+  return null;
+}
+/** 解析 data-* 里的 "k=v;k=v" 形式 —— 带字段名，字段顺序不会搞混 */
+function kvAttr(str) {
+  const out = {};
+  String(str).split(';').forEach(part => {
+    const i = part.indexOf('=');
+    if (i > 0) out[part.slice(0, i).trim()] = part.slice(i + 1).trim();
+  });
+  return out;
+}
+const badBox = msg => `<div class="box bad"><div class="t">输入无效</div>${esc(msg)}</div>`;
+const flagLamp = (name, val) =>
+  `<span class="chip ${val ? 'ok' : 'gray'}" style="font-family:var(--font-mono)">${name} = ${val}</span>`;
+
+/* ============================================================
+   1.4 LEA 计算器
+   ============================================================ */
+function renderLea(D, B, I, S) {
+  const eff = u64(B + S * I + D);
+  const rbx3 = u64(B + B * 2n);
+  return `
+  <div class="readout">
+    <dt>有效地址</dt><dd>${hexTrim(B)} + ${S} × ${hexTrim(I)} + ${D} = <b>${hex64(eff)}</b>
+      <span style="font-family:var(--font-sans);color:var(--muted)">（= ${decU(eff)}）</span></dd>
+    <dt>mem 操作数</dt><dd>mov 等指令会去<b>读 / 写</b>这个地址上的 8 字节；地址不合法就会段错误</dd>
+    <dt>lea 操作数</dt><dd>lea 把上面这个数<b>直接当结果</b>放进目的寄存器，完全不访问内存</dd>
+  </div>
+  <div class="tbl-wrap"><table class="tbl">
+    <tr><th>指令</th><th>结果</th></tr>
+    <tr><td class="mono">lea ${D}(${hexTrim(B)},${hexTrim(I)},${S}), %rax</td><td class="mono">%rax = ${hexTrim(B)} + ${S}×${hexTrim(I)} + ${D} = <b>${hexTrim(eff)}</b></td></tr>
+    <tr><td class="mono">lea (${hexTrim(B)},${hexTrim(B)},2), %rax</td><td class="mono">%rax = 3 × ${hexTrim(B)} = <b>${hexTrim(rbx3)}</b> <span style="font-family:var(--font-sans);color:var(--muted)">（课件 p7 的 rax = rbx*3）</span></td></tr>
+  </table></div>
+  <div class="box ok" style="margin-bottom:0"><div class="t">同一个式子，两种命运</div>
+    <code>${D}(${hexTrim(B)},${hexTrim(I)},${S})</code> 写在 <code>mov</code> 里是「去这个地址取数」，写在 <code>lea</code> 里就是「算出这个数」。<b>lea 不设置条件码</b>，所以它能安全地插在 <code>cmp</code> 和 <code>j</code> 中间。
+  </div>`;
+}
+
+/* ============================================================
+   1.5 后缀 → 寄存器匹配器
+   ============================================================ */
+const REGS = [
+  ['%rax', '%eax', '%ax', '%al'],   ['%rbx', '%ebx', '%bx', '%bl'],
+  ['%rcx', '%ecx', '%cx', '%cl'],   ['%rdx', '%edx', '%dx', '%dl'],
+  ['%rsi', '%esi', '%si', '%sil'],  ['%rdi', '%edi', '%di', '%dil'],
+  ['%rsp', '%esp', '%sp', '%spl'],  ['%rbp', '%ebp', '%bp', '%bpl'],
+  ['%r8', '%r8d', '%r8w', '%r8b'],  ['%r9', '%r9d', '%r9w', '%r9b'],
+  ['%r10', '%r10d', '%r10w', '%r10b'], ['%r11', '%r11d', '%r11w', '%r11b'],
+  ['%r12', '%r12d', '%r12w', '%r12b'], ['%r13', '%r13d', '%r13w', '%r13b'],
+  ['%r14', '%r14d', '%r14w', '%r14b'], ['%r15', '%r15d', '%r15w', '%r15b'],
+];
+const SUFFIX = {
+  b: { idx: 3, size: '8 位',  ctype: 'char / byte',  inst: 'movb, addb, cmpb', bits: '1 字节' },
+  w: { idx: 2, size: '16 位', ctype: 'short',        inst: 'movw, addw, cmpw', bits: '2 字节' },
+  l: { idx: 1, size: '32 位', ctype: 'int',          inst: 'movl, addl, cmpl', bits: '4 字节' },
+  q: { idx: 0, size: '64 位', ctype: 'long / 指针',  inst: 'movq, addq, cmpq', bits: '8 字节' },
+};
+function renderSuffix(s) {
+  const cfg = SUFFIX[s];
+  const rows = REGS.map(r => `<tr>
+      <td class="mono" style="color:var(--muted)">${esc(r[0])}</td>
+      <td class="mono"><b style="color:var(--accent)">${esc(r[cfg.idx])}</b></td>
+      <td class="mono" style="color:var(--muted)">${r.filter((_, i) => i !== cfg.idx).map(esc).join('　')}</td></tr>`).join('');
+  return `
+  <div class="readout" style="margin-top:0">
+    <dt>后缀</dt><dd><b>${esc(s)}</b> = ${esc(cfg.bits)} · ${esc(cfg.size)} · C 的 <code>${esc(cfg.ctype)}</code></dd>
+    <dt>指令例子</dt><dd>${esc(cfg.inst)}</dd>
+    <dt>取到的例子</dt><dd>${REGS.slice(0, 3).map(r => `<code>${esc(r[cfg.idx])}</code>`).join('、')} …</dd>
+  </div>
+  <div class="tbl-wrap"><table class="tbl">
+    <tr><th>64 位寄存器</th><th>本后缀必须用的名字</th><th>其余宽度（用错就汇编不过）</th></tr>${rows}
+  </table></div>
+  <div class="box warn" style="margin-bottom:0"><div class="t">课件 p8 的三条经验</div>
+    ① <code>imul %rcx, %rax</code> 与 <code>imulq %rcx, %rax</code> <b>没有差别</b>；② 后缀若写就必须与寄存器名匹配；
+    ③ <b>编译器输出通常带后缀，反汇编通常省略，Intel 手册永远省略</b>。
+  </div>`;
+}
+
+/* ============================================================
+   2.3 四个标志位的位模式图
+   ============================================================ */
+function bitsRow(cells) {
+  return '<div class="bits">' + cells.map(c => {
+    if (c === '…') return '<span class="b" style="width:22px;background:transparent;color:var(--muted)">…</span>';
+    /* 允许三种写法：字符串、{v,cls} 对象、裸数字/布尔（当作普通位） */
+    const ch = (c !== null && typeof c === 'object') ? c : { v: String(c), cls: '' };
+    return `<span class="b${ch.cls ? ' ' + ch.cls : ''}">${esc(ch.v)}</span>`;
+  }).join('') + '</div>';
+}
+const x8 = () => Array.from({ length: 8 }, () => 'x');
+const figRow = (label, cells) => `<div class="fgrp"><div class="fcap">${label}</div>${bitsRow(cells)}</div>`;
+
+const FIG = {
+  zf: () => ({
+    body: figRow('结果 t（64 位）', [0, 0, 0, 0, 0, 0, 0, 0, '…', 0, 0, 0, 0, 0, 0, 0, 0]),
+    note: `<b>每一位都是 0</b> —— 整个结果为零。<code>ZF</code> 就盯这一件事：<code>t == 0</code>。
+      <br>它在条件里的用途是「相等」：<code>cmpq b, a</code> 之后若 <code>ZF = 1</code>，说明 <code>a − b == 0</code>，即 <code>a == b</code>。`,
+  }),
+  sf: () => ({
+    body: `<div class="fw">
+        ${figRow('a', ['y', ...x8(), '…', ...x8()])}
+        ${figRow('b', ['y', ...x8(), '…', ...x8()])}
+        ${figRow('t = a + b', [{ v: '1', cls: 's' }, ...x8(), '…', ...x8()])}
+      </div>`,
+    note: `只看结果的<b>最高位</b>（符号位）。两个操作数的最高位都是 <code>y</code>，结果变成了 <code>1</code>。
+      <br>对<b>有符号</b>运算来说，最高位为 1 就意味着「结果是负数」—— 这就是 <code>SF</code> 的全部含义。`,
+  }),
+  cf: () => ({
+    body: `<div class="fcap">加法：从最高位向外进位</div>
+      <div class="fw">
+        ${figRow('a', [{ v: '1', cls: 'e' }, ...x8(), '…', ...x8()])}
+        ${figRow('+ b', [{ v: '1', cls: 'e' }, ...x8(), '…', ...x8()])}
+        ${figRow('t（最左边多出的那一位就是 CF）', [{ v: '1', cls: 'e' }, ...x8(), '…', ...x8()])}
+      </div>
+      <div class="fcap" style="margin-top:12px">减法：需要向最高位之外借一位</div>
+      <div class="fw">
+        ${figRow('a（看作 2<sup>64</sup> + 0xxxx…）', [{ v: '1', cls: 'e' }, { v: '0', cls: 'e' }, ...x8(), '…', ...x8()])}
+        ${figRow('− b', [{ v: '1', cls: 'e' }, ...x8(), '…', ...x8()])}
+        ${figRow('t（借位发生 → CF = 1）', [{ v: '1', cls: 'e' }, ...x8(), '…', ...x8()])}
+      </div>`,
+    note: `对<b>无符号</b>运算来说，从最高位「冒出去」的那一位就是溢出。<b>加法是进位（Carry），减法是借位（Borrow）</b>，两者共用同一个 <code>CF</code>。
+      <br>所以在 <code>cmpq b, a</code> 之后，<code>CF = 1</code> 意味着 <code>a</code> 不够减 —— 也就是无符号意义下 <code>a &lt; b</code>。`,
+  }),
+  of: () => ({
+    body: `<div class="fw">
+        ${figRow('a', ['y', ...x8(), '…', ...x8()])}
+        ${figRow('b', ['y', ...x8(), '…', ...x8()])}
+        ${figRow('t', [{ v: 'z', cls: 's' }, ...x8(), '…', ...x8()])}
+      </div>
+      <div class="formula" style="margin:10px 0 2px">z = ~y</div>`,
+    note: `<b>两个操作数同号，结果却翻了号</b> —— 这就是有符号溢出的几何图像。写成条件就是课件给的
+      <code>(a&gt;0 &amp;&amp; b&gt;0 &amp;&amp; t&lt;0) || (a&lt;0 &amp;&amp; b&lt;0 &amp;&amp; t&gt;=0)</code>。
+      <br>注意 <code>a</code> 与 <code>b</code> 的最高位<b>相同</b>（都是 y），而 <code>t</code> 的最高位是它的反（<code>z = ~y</code>）。
+      两个正数相加得到负数、两个负数相加得到正数 —— 只有这两种情况会让 <code>OF</code> 置 1。`,
+  }),
+};
+
+/* ============================================================
+   2.4 条件码模拟器（核心）
+   ============================================================ */
+const OPS = {
+  addq:  { kind: 'add',  writes: true,  doc: 'Dest = Dest + Src' },
+  subq:  { kind: 'sub',  writes: true,  doc: 'Dest = Dest − Src' },
+  imulq: { kind: 'imul', writes: true,  doc: 'Dest = Dest × Src（只保留低 64 位）' },
+  andq:  { kind: 'and',  writes: true,  doc: 'Dest = Dest & Src' },
+  orq:   { kind: 'or',   writes: true,  doc: 'Dest = Dest | Src' },
+  xorq:  { kind: 'xor',  writes: true,  doc: 'Dest = Dest ^ Src' },
+  cmpq:  { kind: 'sub',  writes: false, doc: '像 a − b 一样置标志位，不写回' },
+  testq: { kind: 'and',  writes: false, doc: '像 a & b 一样置标志位，不写回' },
+  salq:  { kind: 'shl',  writes: true,  doc: 'Dest = Dest << Src' },
+  sarq:  { kind: 'sar',  writes: true,  doc: 'Dest = Dest >> Src（算术，补符号位）' },
+  shrq:  { kind: 'shr',  writes: true,  doc: 'Dest = Dest >> Src（逻辑，补 0）' },
+};
+
+/** 返回 { res, cf, zf, sf, of, why:{...}, undef:{...} } */
+function computeFlags(op, a, b) {
+  a = u64(a); b = u64(b);
+  const o = OPS[op];
+  const why = {}, undef = {};
+  let res = a, cf = 0, of = 0;
+
+  if (o.kind === 'add' || o.kind === 'sub') {
+    res = o.kind === 'add' ? u64(a + b) : u64(a - b);
+    cf = o.kind === 'add' ? (res < a ? 1 : 0) : (a < b ? 1 : 0);
+    of = o.kind === 'add'
+      ? bit(u64((a ^ res) & (b ^ res)), 63)
+      : bit(u64((a ^ b) & (a ^ res)), 63);
+    why.cf = o.kind === 'add'
+      ? (cf ? 'a + b 超过了 2<sup>64</sup>，最高位向外冒出一个进位' : 'a + b 没有超出 64 位，没有进位')
+      : (cf ? 'a 比 b 小（无符号），减法必须借位' : 'a ≥ b（无符号），减法不需要借位');
+    why.of = o.kind === 'add'
+      ? (of ? 'a、b 同号，结果却变成反号 —— 有符号溢出' : '没有出现「同号相加得反号」的情况')
+      : (of ? 'a、b 异号，相减的结果却和 b 同号 —— 有符号溢出' : '没有出现有符号溢出');
+  } else if (o.kind === 'imul') {
+    res = u64(a * b);
+    const full = s64(a) * s64(b);
+    const fits = full >= -(1n << 63n) && full < (1n << 63n);
+    cf = of = fits ? 0 : 1;
+    why.cf = why.of = fits
+      ? '完整的乘积还在 64 位有符号范围内，没有截断'
+      : '乘积超出 64 位有符号范围，高位被截断了（CF 与 OF 同时置 1）';
+    /* 两操作数 imul 只定义 CF / OF —— 这是 x86 手册的规定，本页另用真实硬件实测证实 */
+    undef.zf = undef.sf = ['未定义',
+      'x86 手册规定：两操作数 <code>imul</code> <b>只定义 CF 与 OF</b>，SF、ZF、AF、PF 都不定义。本页用真实 x86-64 处理器实测过：<code>imulq</code> 算出乘积为 0 时 <code>ZF</code> 仍然是 0（而 <code>addq</code> 算出 0 时 <code>ZF</code> 是 1），乘积为负数时 <code>SF</code> 仍然是 0 —— 可见它们不是由结果算出来的。所以<b>不能拿 <code>imul</code> 的结果去喂 <code>setX</code></b>'];
+  } else if (o.kind === 'and' || o.kind === 'or' || o.kind === 'xor') {
+    res = o.kind === 'and' ? u64(a & b) : o.kind === 'or' ? u64(a | b) : u64(a ^ b);
+    cf = 0; of = 0;
+    why.cf = '逻辑运算一律把 CF 清 0';
+    why.of = '逻辑运算一律把 OF 清 0';
+  } else {                                   /* 移位 */
+    const cnt = Number(b & 63n);
+    if (cnt === 0) {
+      undef.cf = undef.zf = undef.sf = undef.of =
+        ['未改变', 'x86 规定：移位计数为 0 时<b>任何标志位都不改变</b>'];
+      res = a;
+    } else if (o.kind === 'shl') {
+      res = u64(a << BigInt(cnt));
+      cf = bit(a, 64 - cnt);
+      why.cf = `左移 ${cnt} 位，最后移出去的是第 ${64 - cnt} 位 = ${cf}`;
+      if (cnt === 1) { of = bit(res, 63) ^ cf; why.of = `移 1 位时 OF = 结果的符号位 ⊕ CF = ${bit(res, 63)} ⊕ ${cf} = ${of}`; }
+      else undef.of = ['未定义', 'x86 手册规定：移位计数大于 1 时 OF 未定义'];
+    } else if (o.kind === 'sar') {
+      res = u64(BigInt.asIntN(64, s64(a) >> BigInt(cnt)));
+      cf = bit(a, cnt - 1);
+      why.cf = `算术右移 ${cnt} 位，最后移出去的是第 ${cnt - 1} 位 = ${cf}（高位补符号位 ${(a >> 63n) & 1n}）`;
+      undef.of = ['未定义', 'x86 规定：右移的 OF 只在移 1 位时有定义，其余情况未定义 —— 本讲不涉及'];
+    } else {
+      res = u64(a >> BigInt(cnt));
+      cf = bit(a, cnt - 1);
+      why.cf = `逻辑右移 ${cnt} 位，最后移出去的是第 ${cnt - 1} 位 = ${cf}（高位一律补 0）`;
+      undef.of = ['未定义', 'x86 规定：右移的 OF 只在移 1 位时有定义，其余情况未定义 —— 本讲不涉及'];
+    }
+    const zf0 = res === 0n ? 1 : 0, sf0 = bit(res, 63);
+    why.zf = zf0 ? '结果为零' : '结果不为零';
+    why.sf = sf0 ? '结果最高位是 1，按有符号解释是负数' : '结果最高位是 0，按有符号解释非负';
+    return { res, cf, zf: zf0, sf: sf0, of, why, undef, kind: o.kind, writes: o.writes };
+  }
+
+  const zf = res === 0n ? 1 : 0;
+  const sf = bit(res, 63);
+  why.zf = zf ? '结果正好为零' : '结果不是零';
+  why.sf = sf ? '结果最高位是 1，按有符号解释是负数' : '结果最高位是 0，按有符号解释非负';
+  return { res, cf, zf, sf, of, why, undef, kind: o.kind, writes: o.writes };
+}
+
+/** 把标志位算成 setX 的取值（完全按课件 p21 的公式） */
+function evalSetX(cf, zf, sf, of) {
+  const x = a => a ? 1 : 0;
+  return [
+    ['sete',  'ZF',              x(zf)],
+    ['setne', '~ZF',             x(!zf)],
+    ['sets',  'SF',              x(sf)],
+    ['setns', '~SF',             x(!sf)],
+    ['setg',  '~(SF^OF) & ~ZF',  x(!(sf ^ of) && !zf)],
+    ['setge', '~(SF^OF)',        x(!(sf ^ of))],
+    ['setl',  '(SF^OF)',         x(sf ^ of)],
+    ['setle', '(SF^OF) | ZF',    x((sf ^ of) || zf)],
+    ['seta',  '~CF & ~ZF',       x(!cf && !zf)],
+    ['setb',  'CF',              x(cf)],
+  ];
+}
+
+function renderFlags(op, a, b) {
+  const f = computeFlags(op, a, b);
+  const o = OPS[op];
+  const isShift = ['shl', 'sar', 'shr'].includes(f.kind);
+  const anyUndef = !!(f.undef.cf || f.undef.zf || f.undef.sf || f.undef.of);
+  const flagRows = [
+    ['CF', f.cf, 'Carry Flag · 无符号', f.why.cf, f.undef.cf],
+    ['ZF', f.zf, 'Zero Flag · 共用',    f.why.zf, f.undef.zf],
+    ['SF', f.sf, 'Sign Flag · 有符号',  f.why.sf, f.undef.sf],
+    ['OF', f.of, 'Overflow Flag · 有符号', f.why.of, f.undef.of],
+  ].map(([n, v, sub, why, un]) => un
+    ? `<tr><td class="mono"><b>${n}</b></td><td class="mono" style="color:var(--warn)">— ${un[0]}</td><td>${sub}</td><td style="color:var(--muted)">${un[1]}</td></tr>`
+    : `<tr class="${v ? 'hl' : ''}"><td class="mono"><b>${n}</b></td>
+        <td class="mono"><b style="color:var(${v ? '--frac' : '--muted'})">${v}</b></td>
+        <td>${sub}</td><td>${why}</td></tr>`).join('');
+
+  const setxRow = evalSetX(f.cf, f.zf, f.sf, f.of).map(([n, , v]) =>
+    `<span class="chip ${v ? 'ok' : 'gray'}" style="font-family:var(--font-mono)">${n}${v ? ' → 1' : ''}</span>`).join('');
+
+  return `
+  <div class="readout" style="margin-top:0">
+    <dt>指令</dt><dd>${op} &nbsp;<span style="font-family:var(--font-sans);color:var(--muted)">${o.doc}</span></dd>
+    <dt>a（Dest）</dt><dd>${hex64(a)} <span style="font-family:var(--font-sans);color:var(--muted)">无符号 ${decU(a)} · 有符号 ${decS(a)}</span></dd>
+    <dt>b（Src）</dt><dd>${hex64(b)} <span style="font-family:var(--font-sans);color:var(--muted)">无符号 ${decU(b)} · 有符号 ${decS(b)}</span></dd>
+    <dt>结果</dt><dd>${o.writes
+      ? `${hex64(f.res)} <span style="font-family:var(--font-sans);color:var(--muted)">无符号 ${decU(f.res)} · 有符号 ${decS(f.res)}</span>`
+      : `<b>无</b> —— ${op} 只置标志位，不动任何寄存器`}</dd>
+    <dt>标志位</dt><dd>${
+      [['CF', f.cf, f.undef.cf], ['ZF', f.zf, f.undef.zf], ['SF', f.sf, f.undef.sf], ['OF', f.of, f.undef.of]]
+        .map(([n, v, un]) => un
+          ? `<span class="chip warn" style="font-family:var(--font-mono)">${n} = ${un[0]}</span>`
+          : flagLamp(n, v)).join(' ')}</dd>
+  </div>
+  <div class="tbl-wrap"><table class="tbl">
+    <tr><th>标志</th><th>值</th><th>含义</th><th>为什么是这个值</th></tr>${flagRows}
+  </table></div>
+  ${anyUndef ? `<div class="box warn" style="margin-bottom:0"><div class="t">这一组标志位不能直接喂给 setX</div>
+    上表里标了「未定义」的标志位是不确定的，拿它做判断没有意义 —— 想练 setX，请换 <code>addq</code> / <code>subq</code> / <code>cmpq</code> / <code>testq</code> 这些<b>四个标志位都有定义</b>的指令。
+  </div>` : `<div class="box"><div class="t">这批标志位喂给 setX，会得到</div>
+    <div style="margin-top:6px">${setxRow}</div>
+    <div style="margin-top:6px;font-size:13.5px;color:var(--muted)">直接套课件 p21 的公式即可 —— 想知道某一列为什么，去第 4 节的「setX 判据矩阵」拨开关。</div>
+  </div>`}
+  ${isShift ? `<div class="box warn" style="margin-bottom:0"><div class="t">关于移位指令的标志位</div>
+    课件 p14 给出的 <code>CF / OF</code> 规则是针对<b>加减法</b>的。移位指令的 <code>CF / OF</code> 另有规定（而且移 0 位时一个标志位都不改），本讲不要求掌握 ——
+    但课件 p39 用到了 <code>shrq %rdi</code> 后面紧跟 <code>jne</code>，靠的正是移位顺手置好的 <code>ZF</code>。上面的数值已与真实处理器执行结果核对过。
+  </div>` : ''}`;
+}
+
+/* ============================================================
+   2.5 setl 的 SF^OF 真值表
+   ============================================================ */
+const SETL_ROWS = [
+  { sf: 0, of: 0, imp: '没有溢出，所以 SF 说明「不小于」', less: 0, fig: null,
+    note: '没有溢出时 SF 直接反映 a−b 的符号。SF = 0 → a−b ≥ 0 → 不小于。' },
+  { sf: 1, of: 0, imp: '没有溢出，所以 SF 说明「小于」', less: 1, fig: null,
+    note: '没有溢出时 SF = 1 → a−b &lt; 0 → 小于。这是最直白的情况。' },
+  { sf: 0, of: 1, imp: '发生了溢出，SF 说明的是「负向溢出」，即小于', less: 1, fig: true,
+    note: '负向溢出：a 是负数、b 是正数，a−b 本该更负，却绕到了正数（SF = 0）。所以这里 SF 说了反话 —— 实际是小于。' },
+  { sf: 1, of: 1, imp: '发生了溢出，SF 说明的是「正向溢出」，即不小于', less: 0, fig: null,
+    note: '正向溢出：a 是正数、b 是负数，a−b 本该更正，却绕到了负数（SF = 1）。同样是反话 —— 实际是不小于。' },
+];
+let setlSel = -1;
+function renderSetl() {
+  const rows = SETL_ROWS.map((r, i) => `
+    <tr class="${i === setlSel ? 'hl' : ''}" data-setl="${i}" style="cursor:pointer">
+      <td class="mono">${r.sf}</td><td class="mono">${r.of}</td>
+      <td class="mono"><b>${r.sf ^ r.of}</b></td>
+      <td class="mono"><b style="color:${r.less ? 'var(--frac)' : 'var(--sign)'}">${r.less}</b></td>
+      <td>${esc(r.imp)}</td></tr>`).join('');
+  let extra;
+  if (setlSel >= 0) {
+    const r = SETL_ROWS[setlSel];
+    const fig = r.fig
+      ? `<div class="fcap" style="margin-top:10px">课件 p22 的「负向溢出」位模式</div>
+        <div class="fw">
+          ${figRow('a（负数）', [{ v: '1', cls: 's' }, ...x8(), '…', ...x8()])}
+          ${figRow('− b（正数）', [{ v: '0', cls: 'f' }, ...x8(), '…', ...x8()])}
+          ${figRow('t（却变成了正数）', [{ v: '0', cls: 'f' }, ...x8(), '…', ...x8()])}
+        </div>` : '';
+    extra = `<div class="box ok" style="margin-bottom:0"><div class="t">第 ${setlSel + 1} 行：SF = ${r.sf}，OF = ${r.of}</div>
+      ${esc(r.note)}${fig}</div>`;
+  } else {
+    extra = `<div class="box" style="margin-bottom:0">点上面任意一行，看它对应的推理和位模式。</div>`;
+  }
+  return `
+  <div class="tbl-wrap"><table class="tbl">
+    <tr><th>SF</th><th>OF</th><th>SF ^ OF</th><th>setl 结果</th><th>Implication（课件原文）</th></tr>${rows}
+  </table></div>${extra}`;
+}
+
+/* ============================================================
+   3.x cmp / test 追踪器
+   ============================================================ */
+function renderCmp(mode, a, b) {
+  if (mode === 'cmpq') {
+    const f = computeFlags('cmpq', a, b);
+    const t = s64(a) - s64(b);
+    const sx = s64(a), sy = s64(b);
+    return `
+    <div class="readout" style="margin-top:0">
+      <dt>指令</dt><dd>cmpq b, a &nbsp;→&nbsp; 计算 <b>a − b</b> = ${decS(a)} − (${decS(b)}) = <b>${t}</b>，但<b>不写回</b></dd>
+      <dt>a</dt><dd>${hex64(a)}</dd>
+      <dt>b</dt><dd>${hex64(b)}</dd>
+      <dt>标志位</dt><dd>${flagLamp('CF', f.cf)} ${flagLamp('ZF', f.zf)} ${flagLamp('SF', f.sf)} ${flagLamp('OF', f.of)}</dd>
+    </div>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>标志</th><th>值</th><th>判据</th><th>结论</th></tr>
+      <tr class="${f.cf ? 'hl' : ''}"><td class="mono">CF</td><td class="mono">${f.cf}</td><td class="mono">a &lt; b（无符号）</td>
+        <td>无符号比较：<b>${a < b ? 'a 在 b 之下（CF=1）' : 'a 不低于 b（CF=0）'}</b> —— 即 <code>setb</code> / <code>jb</code> 的结果</td></tr>
+      <tr class="${f.zf ? 'hl' : ''}"><td class="mono">ZF</td><td class="mono">${f.zf}</td><td class="mono">a == b</td>
+        <td><b>${a === b ? '相等' : '不相等'}</b> —— <code>sete</code> / <code>je</code></td></tr>
+      <tr class="${f.sf ? 'hl' : ''}"><td class="mono">SF</td><td class="mono">${f.sf}</td><td class="mono">(a − b) &lt; 0</td>
+        <td>差的最高位 = ${bit(u64(a - b), 63)}</td></tr>
+      <tr class="${f.of ? 'hl' : ''}"><td class="mono">OF</td><td class="mono">${f.of}</td><td class="mono">(a&gt;0 &amp;&amp; b&lt;0 &amp;&amp; (a−b)&lt;0) || (a&lt;0 &amp;&amp; b&gt;0 &amp;&amp; (a−b)&gt;0)</td>
+        <td>${f.of ? '减法发生了有符号溢出' : '没有有符号溢出'}</td></tr>
+    </table></div>
+    <div class="box ok" style="margin-bottom:0"><div class="t">所有 10 条 setcc 在这组标志下的取值</div>
+      有符号：${evalSetX(f.cf, f.zf, f.sf, f.of).slice(4, 8).map(([n, , v]) => `<code>${n}</code>${v ? '=1' : '=0'}`).join('、')}<br>
+      无符号：${evalSetX(f.cf, f.zf, f.sf, f.of).slice(8).map(([n, , v]) => `<code>${n}</code>${v ? '=1' : '=0'}`).join('、')}<br>
+      <span style="color:var(--muted)">有符号判定 <b>${(sx < sy) ? 'a &lt; b' : sx > sy ? 'a &gt; b' : 'a == b'}</b>，无符号判定 <b>${a < b ? 'a &lt; b' : a > b ? 'a &gt; b' : 'a == b'}</b>${(sx < sy) !== (a < b) && sx !== sy ? ' —— <b>两者结论不同</b>，这正是「有符号 / 无符号」必须分清的原因' : ''}</span>
+    </div>`;
+  }
+  const f = computeFlags('testq', a, b);
+  const r = u64(a & b);
+  return `
+  <div class="readout" style="margin-top:0">
+    <dt>指令</dt><dd>testq b, a &nbsp;→&nbsp; 计算 <b>a &amp; b</b> = ${hexTrim(a)} &amp; ${hexTrim(b)} = <b>${hexTrim(r)}</b>，但<b>不写回</b></dd>
+    <dt>标志位</dt><dd>${flagLamp('CF', 0)} ${flagLamp('ZF', f.zf)} ${flagLamp('SF', f.sf)} ${flagLamp('OF', 0)}</dd>
+  </div>
+  <div class="box ${f.zf ? 'ok' : 'warn'}" style="margin-bottom:0"><div class="t">
+    ${f.zf ? 'ZF = 1：a &amp; b == 0，掩码<b>没有命中</b>任何一位' : 'ZF = 0：a &amp; b ≠ 0，掩码<b>命中了</b>至少一位'}
+  </div>
+  课件 p20 说 <code>testq</code> 最典型的用法是「让其中一个操作数当掩码」。最常见的写法 <code>testq %rax, %rax</code> 是把 <code>%rax</code> 自己当掩码 ——
+  <code>a &amp; a == 0</code> 当且仅当 <code>a == 0</code>，于是 <code>ZF</code> 直接回答了「这个寄存器是不是零」。
+  <br><code>CF</code> 与 <code>OF</code> 在此一律为 0（与 <code>andq</code> 相同，因为逻辑运算不产生进位）。
+  </div>`;
+}
+
+/* ============================================================
+   4.1 setX 判据矩阵
+   ============================================================ */
+let sxmFlags = { sf: 1, of: 0, cf: 0, zf: 0 };
+function renderSetXMatrix() {
+  const { sf, of, cf, zf } = sxmFlags;
+  const all = evalSetX(cf, zf, sf, of);
+  const rows = all.map(([n, cond, v]) => {
+    const signed = ['setg', 'setge', 'setl', 'setle'].includes(n);
+    const unsign = ['seta', 'setb'].includes(n);
+    const tag = signed ? '<span class="chip">有符号</span>' : unsign ? '<span class="chip">无符号</span>' : '';
+    return `<tr class="${v ? 'hl' : ''}"><td class="mono"><b>${n}</b></td><td class="mono">${esc(cond)}</td>
+      <td>${tag}</td><td class="mono"><b style="color:${v ? 'var(--frac)' : 'var(--muted)'}">${v}</b></td></tr>`;
+  }).join('');
+  const names = ['sf', 'of', 'cf', 'zf'].map(k =>
+    `<button data-b="${k}" class="${sxmFlags[k] ? 'on' : ''}">${k.toUpperCase()} = ${sxmFlags[k]}</button>`).join('');
+  const ones = all.filter(r => r[2]);
+  return `
+  <div class="ctrls" style="margin-top:0"><span style="font-size:14px;color:var(--muted)">当前标志位（点击切换）：</span>
+    <div class="seg" id="sxmSeg2">${names}</div></div>
+  <div class="tbl-wrap"><table class="tbl">
+    <tr><th>SetX</th><th>条件</th><th>适用</th><th>取值</th></tr>${rows}
+  </table></div>
+  <div class="box" style="margin-bottom:0"><div class="t">对应的 <code>jX</code> 跳转：把 <code>set</code> 换成 <code>j</code></div>
+    当前会置 1 的是 ${ones.map(r => `<code>${r[0]}</code>`).join('、') || '<b>（一条都没有）</b>'}；
+    相等的跳转指令是 ${ones.map(r => `<code>j${r[0].slice(3)}</code>`).join('、') || '<b>（没有）</b>'}。
+    唯一例外是 <code>jmp</code> —— 它无条件跳转，不看任何标志位。
+  </div>`;
+}
+
+/* ============================================================
+   4.3 五步追踪（课件 p34）
+   ============================================================ */
+function exBuild() {
+  let rax = 0n, flags = null;
+  const defs = [
+    ['xorq %rax, %rax', '把 %rax 清零', 'xorq', 0n, 0n],
+    ['subq $1, %rax',   '%rax -= 1',   'subq', null, 1n],
+    ['cmpq $2, %rax',   '比较 %rax 与 2', 'cmpq', null, 2n],
+    ['setl %al',        '按 SF^OF 写 %al（只写一个字节）', null, null, null],
+    ['movzbl %al, %eax', '零扩展 %al 到 %eax（课件原文误写作 movzblq）', null, null, null],
+  ];
+  return defs.map(([ins, c, op, av, bv], i) => {
+    let note = '';
+    if (op) {
+      const a = av !== null ? av : rax;
+      flags = computeFlags(op, a, bv);
+      if (op !== 'cmpq') rax = flags.res;
+      if (i === 0) note = '自己异或自己 = 0，同时把标志位置成「结果为零」的状态。';
+      if (i === 1) note = '0 − 1 在 64 位里回绕到全 1，也就是无符号的最大值。CF 同时被置 1（发生了借位）。';
+      if (i === 2) note = '全 1 减 2 = 0xFFFF…FFFD，是个负数；无符号意义下它远大于 2，所以<b>不借位</b>（CF = 0）。%rax 本身<b>不变</b>。';
+    } else if (i === 3) {
+      const v = (flags.sf ^ flags.of) ? 1 : 0;
+      rax = u64((rax & ~0xFFn) | BigInt(v));
+      note = `SF ^ OF = ${flags.sf} ^ ${flags.of} = ${flags.sf ^ flags.of}，于是 %al 写成 <b>${v}</b>。只动低字节，<b>标志位不变</b>。`;
+    } else {
+      rax = u64(rax & 0xFFn);
+      note = '只保留低字节并零扩展到整个 %rax（32 位指令顺带把高 32 位清零）。<b>标志位不变</b>。';
+    }
+    return { ins, c, rax, flags: i <= 2 ? flags : null, sticky: i > 2, note };
+  });
+}
+let exIdx = -1;
+function renderEx(steps) {
+  return steps.map((s, i) => {
+    const on = i <= exIdx ? ' on' : '';
+    const f = s.flags;
+    const tail = f ? `SF=${f.sf} CF=${f.cf} OF=${f.of} ZF=${f.zf}` : '标志位不变（沿用上一步：SF=1 CF=0 OF=0 ZF=0）';
+    return `<div class="step${on}">
+      <div class="h">第 ${i + 1} 步 · ${esc(s.c)}</div>
+      <div class="m">${esc(s.ins)}</div>
+      <div class="e">%rax = <b>${hex64(s.rax)}</b>　|　${tail}${s.note ? `<br>${s.note}` : ''}</div>
+    </div>`;
+  }).join('') + (exIdx >= steps.length - 1
+    ? `<div class="box ok" style="margin-bottom:0"><div class="t">五步走完</div>
+        最终 <code>%rax = ${hex64(steps[steps.length - 1].rax)}</code>。课件 p34 那张表的每一行都能用
+        <a href="#s2">第 2 节的标志位模拟器</a>复现 —— 输入同样的数、选同样的指令即可。
+        <br>注意第 4、5 步的特性：<b><code>setX</code> 与 <code>movzbl</code> 都不修改条件码</b>，所以那两行的标志位列与第 3 行完全相同。</div>`
+    : `<div class="box" style="margin-bottom:0">按「下一步」逐条执行，或点「自动播放」。</div>`);
+}
+
+/* ============================================================
+   5.1 控制流图
+   ============================================================ */
+function renderFlow(v) {
+  const isThen = v === 1;
+  const a = on => on ? 'stroke:var(--accent);stroke-width:2.6' : 'stroke:var(--line);stroke-width:1.6';
+  const at = on => on ? 'fill:var(--accent);font-weight:700' : 'fill:var(--muted)';
+  return `<svg viewBox="0 0 700 250" width="100%" style="max-width:700px;height:auto;display:block">
+    <rect x="8" y="100" width="118" height="46" rx="8" fill="var(--paper-soft)" stroke="var(--line)"/>
+    <text x="67" y="128" text-anchor="middle" font-size="12.5" fill="var(--ink)" font-family="var(--font-mono)">decision:</text>
+    <path d="M126 123 L178 123" style="${a(true)}" fill="none"/>
+    <polygon points="178,103 268,123 178,143 88,123" fill="var(--card)" stroke="var(--line)"/>
+    <text x="178" y="127" text-anchor="middle" font-size="12" fill="var(--ink)" font-family="var(--font-mono)">x == 0 ?</text>
+    <path d="M178 143 L178 192 L296 192" style="${a(!isThen)}" fill="none"/>
+    <text x="182" y="186" font-size="11.5" style="${at(!isThen)}" font-family="var(--font-sans)">是（ZF=1）→ je .L2</text>
+    <path d="M268 123 L416 123" style="${a(isThen)}" fill="none"/>
+    <text x="286" y="115" font-size="11.5" style="${at(isThen)}" font-family="var(--font-sans)">否（ZF=0）→ 不跳</text>
+    <rect x="416" y="96" width="126" height="54" rx="8" fill="var(--paper-soft)" stroke="var(--line)"/>
+    <text x="479" y="118" text-anchor="middle" font-size="12.5" fill="var(--ink)" font-family="var(--font-mono)">call op1</text>
+    <text x="479" y="136" text-anchor="middle" font-size="11" fill="var(--muted)">then 分支</text>
+    <path d="M479 150 L479 192 L556 192" style="${a(isThen)}" fill="none"/>
+    <text x="486" y="186" font-size="11.5" style="${at(isThen)}" font-family="var(--font-mono)">jmp .L1</text>
+    <rect x="296" y="166" width="126" height="50" rx="8" fill="var(--paper-soft)" stroke="var(--line)"/>
+    <text x="359" y="187" text-anchor="middle" font-size="12.5" fill="var(--ink)" font-family="var(--font-mono)">call op2</text>
+    <text x="359" y="204" text-anchor="middle" font-size="11" fill="var(--muted)">else 分支（.L2）</text>
+    <path d="M422 192 L556 192" style="${a(!isThen)}" fill="none"/>
+    <rect x="556" y="166" width="128" height="50" rx="8" fill="var(--paper-soft)" stroke="var(--line)"/>
+    <text x="620" y="187" text-anchor="middle" font-size="12.5" fill="var(--ink)" font-family="var(--font-mono)">.L1: ret</text>
+    <text x="620" y="204" text-anchor="middle" font-size="11" fill="var(--muted)">汇合点</text>
+    <path d="M542 123 L578 123 L578 166" style="${a(isThen)}" fill="none"/>
+    <text x="14" y="30" font-size="12.5" fill="var(--muted)" font-family="var(--font-sans)">加粗 = 本次实际走的路径</text>
+  </svg>
+  <div class="box ${isThen ? '' : 'warn'}" style="margin-bottom:0"><div class="t">
+    ${isThen ? 'x ≠ 0：testl 置 ZF = 0，je <b>不跳</b>' : 'x == 0：testl 置 ZF = 1，je <b>跳转</b>'}
+  </div>
+  ${isThen
+    ? '于是顺序执行 <code>call op1</code>，做完再用 <code>jmp .L1</code> 跳过 else 分支。<b>两条边：一条不跳、一条无条件跳。</b>'
+    : '于是跳到 <code>.L2</code> 执行 <code>call op2</code>，然后自然落到 <code>.L1</code>。<b>只跳一次，省掉了那条 jmp。</b>'}
+  <br>课件 p11 的 <code>testl %edi, %edi</code> 就是第 3 节讲的 <code>test</code>：自己和自己与，唯一目的是判断 <code>x</code> 是否为零。
+  </div>`;
+}
+
+/* ============================================================
+   5.3 absdiff 三种写法
+   ============================================================ */
+function renderAbsdiff(x, y) {
+  const gt = s64(x) > s64(y);
+  const branch = gt ? u64(x - y) : u64(y - x);
+  const cmovA = u64(x - y), cmovE = u64(y - x);
+  const cmov = s64(x) <= s64(y) ? cmovE : cmovA;
+  const eq = branch === cmov;
+  return `
+  <div class="readout" style="margin-top:0">
+    <dt>x, y</dt><dd>${decS(x)}, ${decS(y)}　<span style="font-family:var(--font-sans);color:var(--muted)">（x ${gt ? '&gt;' : s64(x) === s64(y) ? '==' : '&lt;'} y）</span></dd>
+    <dt>返回值</dt><dd>${hex64(branch)} <span style="font-family:var(--font-sans);color:var(--muted)">= ${decS(branch)}</span></dd>
+  </div>
+  <div class="tbl-wrap"><table class="tbl">
+    <tr><th>版本</th><th>关键指令</th><th>实际执行的路径</th><th>结果</th></tr>
+    <tr><td><b>分支版</b><br><span style="color:var(--muted);font-size:13px">课件 p28</span></td>
+      <td class="mono">cmpq %rsi, %rdi<br>jle .L4</td>
+      <td>${gt ? '不跳 → 算 <code>x−y</code> → <code>ret</code>' : '跳转 → 算 <code>y−x</code> → <code>ret</code>'}</td>
+      <td class="mono"><b>${hexTrim(branch)}</b></td></tr>
+    <tr><td><b>goto 版</b><br><span style="color:var(--muted);font-size:13px">课件 p29</span></td>
+      <td class="mono">ntest = x &lt;= y<br>if (ntest) goto Else</td>
+      <td>${gt ? '<code>ntest = 0</code> → 不跳 → 走 then 段' : '<code>ntest = 1</code> → 跳到 Else 段'}</td>
+      <td class="mono"><b>${hexTrim(branch)}</b></td></tr>
+    <tr><td><b>cmov 版</b><br><span style="color:var(--muted);font-size:13px">课件 p32</span></td>
+      <td class="mono">cmovle %rdx, %rax</td>
+      <td><b>两条都算了</b>：<code>x−y = ${hexTrim(cmovA)}</code>、<code>y−x = ${hexTrim(cmovE)}</code>，
+        然后 ${s64(x) <= s64(y) ? '<b>选取了 eval</b>（因为 x ≤ y）' : '<b>保留了 result</b>（因为 x &gt; y）'}</td>
+      <td class="mono"><b>${hexTrim(cmov)}</b></td></tr>
+  </table></div>
+  <div class="box ${eq ? 'ok' : 'bad'}" style="margin-bottom:0"><div class="t">${eq ? '三个版本结果一致' : '结果不一致（不该发生）'}</div>
+    ${eq ? '这正是编译器敢做这种替换的前提：<b>只要两条表达式都无副作用，「先算后选」与「先选后算」等价</b>。'
+        : '请把这一例报告出来 —— 说明页面的模拟有问题。'}
+  </div>`;
+}
+
+/* ============================================================
+   6.3 cmov 安全性判断题
+   ============================================================ */
+const CMOV_Q = [
+  { code: 'val = x > 0 ? x*=7 : x+=3;', ok: false, why: '<b>有副作用</b>：<code>x*=7</code> 与 <code>x+=3</code> 都会改 <code>x</code>。两条都求值意味着 <code>x</code> 被改了两次 —— 课件把这一类标为 <b>Illegal</b>。' },
+  { code: 'val = p ? *p : 0;', ok: false, why: '<b>危险计算</b>：条件传送会把两个分支都算出来，于是 <code>*p</code> 在 <code>p</code> 为空时<b>照样被解引用</b> —— 课件把这一类标为 <b>Unsafe</b>。' },
+  { code: 'long a = x > y ? x-y : y-x;', ok: true, why: '纯计算、无副作用、两个表达式都只是读寄存器 —— 这正是课件 p32 的 <code>absdiff</code>，编译器确实会把它编译成 <code>cmovle</code>。' },
+  { code: 'val = cnt > 0 ? sum/cnt : 0;', ok: false, why: '<b>危险计算</b>：<code>cnt</code> 为 0 时 <code>sum/cnt</code> 依然会被求值，触发除零异常。它没有副作用，但「多余的求值」本身就会出错。' },
+  { code: 'val = i < n ? arr[i] : 0;', ok: false, why: '<b>危险计算</b>：<code>i ≥ n</code> 时 <code>arr[i]</code> 仍会被求值，越界读。与课件 p33 的 <code>val = p ? *p : 0</code> 属于同一类。' },
+  { code: 'val = x > 0 ? 7 : 3;', ok: true, why: '两个分支都是<b>常量</b>，求值既不会有代价也不会出错 —— 这是条件传送最理想的场景。' },
+  { code: 'val = Test(x) ? Hard1(x) : Hard2(x);', ok: false, why: '<b>昂贵计算</b>：<code>Hard1</code> 和 <code>Hard2</code> 都会被调用，白白多算一遍 —— 课件把它标为 <b>Bad Performance</b>。注意这一类只是「慢」，不像前两类那样会出错。' },
+];
+let cmovState = CMOV_Q.map(() => null);
+function renderCmov() {
+  const done = cmovState.filter(v => v !== null).length;
+  const right = CMOV_Q.filter((q, i) => cmovState[i] === q.ok).length;
+  return CMOV_Q.map((q, i) => {
+    const st = cmovState[i];
+    const cls = st === null ? '' : st === q.ok ? ' correct done' : ' wrong done';
+    return `<div class="puzzle${cls}">
+      <div class="q">${esc(q.code)}<small>能用条件传送（cmov）改写吗？</small></div>
+      <div class="btns">
+        <button class="sm" data-cq="${i}:1">能</button>
+        <button class="sm" data-cq="${i}:0">不能</button>
+      </div>
+      <div class="exp"><span class="verdict">${st === null ? '' : st === q.ok ? '✓ 判断正确' : '✗ 判断有误'}</span>
+        &nbsp;正确答案：<b>${q.ok ? '能' : '不能'}</b><br>${q.why}</div>
+    </div>`;
+  }).join('') + `<div class="box ${done === CMOV_Q.length && right === CMOV_Q.length ? 'ok' : ''}" style="margin-bottom:0">
+    <div class="t">进度：${done} / ${CMOV_Q.length}　答对 ${right}</div>
+    ${done === CMOV_Q.length
+      ? (right === CMOV_Q.length
+        ? '全对。判断依据就是课件 p33 的三类 —— 昂贵的、危险的、有副作用的：前两类<b>不能</b>用（会出错），第三类只是慢。'
+        : '回看本节表格：<b>只有「两条表达式都无副作用、且求值不会出错」时才能用条件传送。</b>')
+      : '点「能 / 不能」，立刻判定并给出依据。'}
+  </div>`;
+}
+
+/* ============================================================
+   6.x 条件传送的代价演示
+   ============================================================ */
+function renderCmovCost(x) {
+  const sx = s64(x);
+  const hard1 = u64(BigInt.asIntN(64, BigInt(sx) * 7n));
+  const hard2 = u64(BigInt.asIntN(64, BigInt(sx) + 3n));
+  const picked = sx > 0 ? hard1 : hard2;
+  return `
+  <div class="readout" style="margin-top:0">
+    <dt>x</dt><dd>${decS(x)}</dd>
+    <dt>Hard1(x) = x*7</dt><dd>${hexTrim(hard1)}　<b style="color:var(--warn)">已被求值</b>（哪怕最后没用上）</dd>
+    <dt>Hard2(x) = x+3</dt><dd>${hexTrim(hard2)}　<b style="color:var(--warn)">已被求值</b></dd>
+    <dt>val</dt><dd>${hexTrim(picked)} <span style="font-family:var(--font-sans);color:var(--muted)">（因为 x ${sx > 0 ? '&gt; 0，选了 Hard1' : '≤ 0，选了 Hard2'}）</span></dd>
+  </div>
+  <div class="tbl-wrap"><table class="tbl">
+    <tr><th>写法</th><th>实际求值的表达式</th><th>求值次数</th></tr>
+    <tr><td><b>分支</b><br><code>val = x &gt; 0 ? x*7 : x+3;</code></td>
+      <td>${sx > 0 ? '只有 <code>x*7</code>' : '只有 <code>x+3</code>'}</td><td class="mono">1 次</td></tr>
+    <tr class="hl"><td><b>条件传送</b><br><code>r = x*7; e = x+3; if (x&lt;=0) r = e;</code></td>
+      <td><code>x*7</code> 和 <code>x+3</code> 都算了</td><td class="mono">2 次</td></tr>
+  </table></div>
+  <div class="box ${sx > 0 ? 'warn' : 'bad'}" style="margin-bottom:0"><div class="t">
+    ${sx > 0 ? '这一次，被浪费掉的是 Hard2(x)' : '这一次，被浪费掉的是 Hard1(x)'}</div>
+    无论条件往哪边倒，<b>总有一半计算是白做的</b>。乘法、除法这类指令延迟很长，白做一次的代价可能超过一次跳转 ——
+    这就是课件把「昂贵计算」列为条件传送坏例子的原因。
+    <br>反过来说：如果两个分支都只是 <code>mov</code> / 加减这种一条指令的活，那么「算两次」比「猜错跳转」便宜得多，编译器就会选条件传送。
+  </div>`;
+}
+
+/* ============================================================
+   7.3 popcount 循环追踪
+   ============================================================ */
+const PT_NAME = { do: 'do-while', jtm: 'jump-to-middle', gd: 'guarded-do' };
+function popTrace(variant, x0) {
+  const steps = [];
+  const push = (c, asm, note) => steps.push({ c, asm, note });
+  let x = x0, result = 0n;
+
+  if (variant === 'jtm') push('goto test', 'jmp .L2', '入口处<b>无条件跳到</b>条件判断处 —— 这就是「jump-to-middle」名字的来历。');
+  if (variant === 'gd') {
+    push('if (!x) goto done', 'testq %rdi,%rdi / je .Ldone',
+      `先判断 <code>x</code>：现在 x = ${hexTrim(x)}，${x === 0n
+        ? '<b>等于 0</b>，直接跳到 done，循环体一次也不执行。'
+        : '<b>不等于 0</b>，穿过这道「守卫」进入循环体。'}`);
+    if (x === 0n) {
+      push('done:', '.Ldone:', '循环结束，直接返回 result。');
+      push('return result', 'ret', `<b>result = 0</b>（x 为 0，一位都没有）`);
+      return steps;
+    }
+  }
+  let iter = 0;
+  for (;;) {
+    iter++;
+    const low = bit(x, 0);
+    const before = result;
+    result = u64(result + BigInt(low));
+    push('result += x & 0x1', 'movq %rdi,%rdx / andl $1,%edx / addq %rdx,%rax',
+      `第 ${iter} 次迭代：<code>x</code> 的最低位是 <b>${low}</b>，result 从 ${decU(before)} 变成 <b>${decU(result)}</b>。`);
+    const bx = x;
+    x = u64(x >> 1n);
+    push('x >>= 1', 'shrq %rdi', `<code>x</code> 从 ${hexTrim(bx)} 右移成 <b>${hexTrim(x)}</b>（最低位被丢弃，高位补 0）。`);
+    const cont = x !== 0n;
+    push('if (x) goto loop', 'jne .L2',
+      `移位后 <code>x</code> = ${hexTrim(x)}，<b>${cont ? '不为 0 → ZF = 0 → jne 跳回 loop' : '为 0 → ZF = 1 → jne 不跳，循环结束'}</b>。`);
+    if (!cont) break;
+    if (iter > 70) { push('（已截断）', '…', 'x 的位数太多，演示到此为止。'); break; }
+  }
+  push('return result', 'rep; ret', `<b>result = ${decU(result)}</b> —— <code>${hexTrim(x0)}</code> 里一共有 ${decU(result)} 个二进制 1。`);
+  return steps;
+}
+let ptState = { variant: 'do', x: 0xb5n, steps: null, idx: -1 };
+function renderPopTrace() {
+  const st = ptState;
+  if (!st.steps) return `<div class="box" style="margin-bottom:0">点「载入」开始。</div>`;
+  const head = `<div class="readout" style="margin-top:0">
+    <dt>形式</dt><dd><b>${PT_NAME[st.variant]}</b>${st.variant === 'jtm' ? '　<span style="font-family:var(--font-sans);color:var(--muted)">-Og 用</span>'
+      : st.variant === 'gd' ? '　<span style="font-family:var(--font-sans);color:var(--muted)">-O1 用</span>' : ''}</dd>
+    <dt>x</dt><dd>${hexTrim(st.x)} = ${decU(st.x)}　<span style="font-family:var(--font-sans);color:var(--muted)">二进制 ${u64(st.x).toString(2)}</span></dd>
+  </div>`;
+  const total = st.steps.length, shown = st.idx < 0 ? 0 : st.idx + 1;
+  return head + st.steps.map((s, i) => `<div class="step${i < shown ? ' on' : ''}">
+      <div class="h">${i < shown ? '已执行' : '未执行'} · 第 ${i + 1} 步</div>
+      <div class="m">${esc(s.c)}　<span style="color:var(--muted)">// ${esc(s.asm)}</span></div>
+      <div class="e">${s.note}</div>
+    </div>`).join('') +
+    `<div class="box ${shown >= total ? 'ok' : ''}" style="margin-bottom:0">
+      进度 ${shown} / ${total}${shown >= total
+        ? '　—— 循环走完了。三种形式<b>结果完全相同</b>，差别只在跳转次数与条件判断次数。'
+        : '　—— 继续点「下一步」。'}
+    </div>`;
+}
+
+/* ============================================================
+   7.5 for → while → do-while
+   ============================================================ */
+function renderForConv(W, x) {
+  const Wn = Number(W);
+  let result = 0n;
+  const rows = [];
+  for (let i = 0; i < Wn; i++) {
+    const b = bit(x, i);
+    result += BigInt(b);
+    if (i < 14) rows.push(`<tr><td class="mono">${i}</td><td class="mono">${b}</td><td class="mono">${decU(result)}</td></tr>`);
+  }
+  const more = Wn > 14 ? `<tr><td colspan="3" style="color:var(--muted)">… 还有 ${Wn - 14} 次迭代</td></tr>` : '';
+  return `
+  <div class="readout" style="margin-top:0">
+    <dt>WSIZE</dt><dd>${Wn}　<span style="font-family:var(--font-sans);color:var(--muted)">课件里是 8*sizeof(int) = 32</span></dd>
+    <dt>x</dt><dd>${hexTrim(x)}</dd>
+    <dt>popcount</dt><dd><b>${decU(result)}</b>　<span style="font-family:var(--font-sans);color:var(--muted)">循环固定跑 ${Wn} 次（不像 do-while 版遇到 0 就停）</span></dd>
+  </div>
+  <div class="grid g3">
+    <div class="card"><h5>for 版</h5><pre class="mono" style="font-size:12px;margin:0;overflow-x:auto">for (i = 0; i &lt; ${Wn}; i++) {
+  bit = (x &gt;&gt; i) &amp; 1;
+  result += bit;
+}</pre></div>
+    <div class="card"><h5>while 版（Init 提前，Update 下移）</h5><pre class="mono" style="font-size:12px;margin:0;overflow-x:auto">i = 0;
+while (i &lt; ${Wn}) {
+  bit = (x &gt;&gt; i) &amp; 1;
+  result += bit;
+  i++;
+}</pre></div>
+    <div class="card"><h5>do-while 版（guarded-do）</h5><pre class="mono" style="font-size:12px;margin:0;overflow-x:auto">i = 0;
+if (!(i &lt; ${Wn})) goto done;
+loop:
+  bit = (x &gt;&gt; i) &amp; 1;
+  result += bit;
+  i++;
+  if (i &lt; ${Wn}) goto loop;
+done:</pre></div>
+  </div>
+  <div class="tbl-wrap"><table class="tbl">
+    <tr><th>i</th><th>(x &gt;&gt; i) &amp; 1</th><th>result</th></tr>${rows.join('')}${more}
+  </table></div>
+  <div class="box ${Wn === 0 ? 'bad' : 'ok'}" style="margin-bottom:0"><div class="t">初始测试能不能删掉？</div>
+    ${Wn === 0
+      ? 'WSIZE = 0 时 <code>i &lt; WSIZE</code> 恒假 —— 这行初始测试<b>不能删</b>，否则循环体会被错误地执行一次。'
+      : `当 <code>i = 0</code> 且 <code>WSIZE = ${Wn} &gt; 0</code> 时，<code>i &lt; WSIZE</code> 在入口处<b>恒真</b> —— 编译期就能算出来，于是 <code>if (!(i &lt; WSIZE)) goto done;</code> 是死代码，会被删掉。
+         把 WSIZE 改成 0 试试：这时初始测试恒假，循环体一次都不执行，那行就<b>不能</b>删。`}
+  </div>`;
+}
+
+/* ============================================================
+   8.3 default 边界判断
+   ============================================================ */
+function renderDefRange(x) {
+  const inRange = x <= 6n;
+  const sx = s64(x);
+  return `
+  <div class="readout" style="margin-top:0">
+    <dt>x</dt><dd>${hex64(x)}　<span style="font-family:var(--font-sans);color:var(--muted)">无符号 ${decU(x)} · 有符号 ${decS(x)}</span></dd>
+    <dt>cmpq $6, %rdi</dt><dd><code>x − 6</code> = ${hexTrim(u64(x - 6n))}　→ 据此置 CF / ZF / SF / OF</dd>
+    <dt>ja .L8</dt><dd>条件 ~CF &amp; ~ZF：${inRange ? '<b>不成立 → 不跳</b>，继续走间接跳转' : '<b>成立 → 跳到 .L8（default）</b>'}</dd>
+  </div>
+  <div class="tbl-wrap"><table class="tbl">
+    <tr><th>标志</th><th>值</th><th>说明</th></tr>
+    <tr><td class="mono">CF</td><td class="mono">${x < 6n ? 1 : 0}</td><td>无符号意义下 <code>x &lt; 6</code> ⟺ 减法需要借位</td></tr>
+    <tr><td class="mono">ZF</td><td class="mono">${x === 6n ? 1 : 0}</td><td><code>x == 6</code></td></tr>
+  </table></div>
+  <div class="box ${inRange ? 'ok' : 'warn'}" style="margin-bottom:0"><div class="t">
+    ${inRange ? `${esc(hexTrim(x))} 在 0…6 之内 → 走跳转表` : `${esc(hexTrim(x))} 不在 0…6 之内 → 走 default（w = 2）`}</div>
+    ${(sx < 0 && !inRange)
+      ? `注意 <code>x = ${decS(x)}</code> 是<b>负数</b>。取它的无符号解释是 ${decU(x)}，远大于 6 ——
+         所以一条 <code>ja</code>（无符号大于）<b>同时挡住了「负」和「过大」两种情况</b>。这就是这里必须用无符号 <code>ja</code> 而不能用有符号 <code>jg</code> 的原因：
+         用 <code>jg</code> 的话 −1 不会被挡住，会直接拿去当地址索引，跳到非法位置。`
+      : `课件 p51 在这里特意问「What range of values takes default?」答案就是 <b>x &lt; 0 或 x &gt; 6</b>（前者按无符号解释是极大的数）。`}
+  </div>`;
+}
+
+/* ============================================================
+   8.3 跳转表生成器
+   ============================================================ */
+function renderJTab(cases) {
+  const sorted = Array.from(new Set(cases)).sort((a, b) => a - b);
+  const hi = Math.max(...sorted), lo = Math.min(...sorted);
+  const span = hi + 1;
+  const density = sorted.length / span;
+  const MAXSHOW = 10;
+  const body = [];
+  let gapShown = false;
+  for (let i = 0; i <= hi; i++) {
+    const hit = sorted.includes(i);
+    if (i < MAXSHOW || i === hi) { body.push({ i, hit }); gapShown = false; }
+    else if (!gapShown) { body.push({ gap: true, n: hi - MAXSHOW }); gapShown = true; }
+  }
+  const tableRows = body.map(r => r.gap
+    ? `<tr><td colspan="3" style="color:var(--muted);text-align:center">⋮　中间省略 ${r.n} 项</td></tr>`
+    : `<tr class="${r.hit ? 'hl' : ''}"><td class="mono">${r.i}</td>
+        <td class="mono">${r.hit ? `.L${r.i}` : '.L8'}</td>
+        <td>${r.hit ? `case ${r.i} 的代码块` : '<b>default</b>（这里没有 case）'}</td></tr>`).join('');
+  const verdict = density >= 0.4
+    ? { cls: 'ok', t: '适合跳转表', d: `表长 ${span}、有效项 ${sorted.length}，命中率 ${(density * 100).toFixed(0)}% —— 表里浪费的位置不多，一次查表明显划算。` }
+    : density >= 0.1
+      ? { cls: 'warn', t: '勉强可用，但表里大半是 default', d: `表长 ${span}、有效项 ${sorted.length}，命中率只有 ${(density * 100).toFixed(0)}%。编译器此时可能改用决策树（if-elseif 链）。` }
+      : { cls: 'bad', t: '不适合跳转表', d: `表长 ${span}、有效项只有 ${sorted.length}，命中率 ${(density * 100).toFixed(1)}% —— 表几乎全是 default，白白占几百字节，编译器会改用决策树。` };
+  return `
+  <div class="readout" style="margin-top:0">
+    <dt>case 集合</dt><dd class="mono">${sorted.map(c => `case ${c}`).join('　')}</dd>
+    <dt>范围</dt><dd>${lo} … ${hi}　→ 表长 <b>${span}</b> 项 × 8 字节 = <b>${span * 8}</b> 字节</dd>
+    <dt>命中率</dt><dd><b>${(density * 100).toFixed(1)}%</b>（${sorted.length} / ${span}）</dd>
+  </div>
+  <div class="box ${verdict.cls}" style="margin-top:0"><div class="t">${verdict.t}</div>${verdict.d}</div>
+  ${lo < 0 ? `<div class="box warn"><div class="t">case 里有负数</div>
+    课件这套写法用 <code>x</code> <b>直接当索引</b>（表从 0 开始），负数会被前面那条无符号 <code>ja</code> 挡去 default，永远到不了。
+    真实编译器遇到负的 case 会先把下标归一化（<code>subq $min, %edi</code>）再查表 —— 这样表长就只有 <code>max − min + 1</code> 项。
+  </div>` : ''}
+  <div class="fcap">生成的边界检查 + 间接跳转</div>
+  <div class="formula" style="text-align:left;font-size:14px">
+    <div>switch_eg:</div>
+    <div>&nbsp;&nbsp;cmpq&nbsp;&nbsp;$${hi}, %rdi&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;# 表里只覆盖 0 … ${hi}</div>
+    <div>&nbsp;&nbsp;ja&nbsp;&nbsp;&nbsp;&nbsp;.L8&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;# 无符号「更大」→ default</div>
+    <div>&nbsp;&nbsp;jmp&nbsp;&nbsp;&nbsp;*.L4(,%rdi,8)&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;# 查表：.L4 + x*8</div>
+  </div>
+  <div class="fcap">生成的跳转表（.rodata 段）</div>
+  <div class="formula" style="text-align:left;font-size:14px">
+    <div>&nbsp;&nbsp;.section .rodata</div>
+    <div>&nbsp;&nbsp;.align 8</div>
+    <div>.L4:</div>
+    ${body.map(r => r.gap ? '&nbsp;&nbsp;⋮' : `&nbsp;&nbsp;.quad ${r.hit ? `.L${r.i}` : '.L8'}`).join('<br>')}
+  </div>
+  <div class="tbl-wrap"><table class="tbl">
+    <tr><th>x 的值</th><th>跳转目标</th><th>含义</th></tr>${tableRows}
+  </table></div>
+  <div class="box" style="margin-bottom:0"><div class="t">课件 p50 的结构图，对应关系是</div>
+    <b>Switch 形式</b>（左边一列 case）→ <b>跳转表 jtab</b>（中间那张地址清单）→ <b>Jump Targets</b>（右边的各个代码块）。
+    「多个 case 标签」表现为表里<b>两个格子填同一个地址</b>（课件里 <code>.L7</code> 出现了两次）；
+    「缺失的 case」表现为表里<b>那一格填 default 的地址</b>（课件里 x = 0 和 x = 4 都指向 <code>.L8</code>）。
+  </div>`;
+}
+
+/* ============================================================
+   8.4 switch_eg 求值器
+   ============================================================ */
+/** 课件 p49 的原始 C 语义，作为独立对照实现 */
+function swEgC(x, y, z) {
+  let w = 1n;
+  if (x === 1n) w = BigInt.asIntN(64, y * z);
+  else if (x === 2n) { w = z === 0n ? w : BigInt.asIntN(64, y / z); w = BigInt.asIntN(64, w + z); }
+  else if (x === 3n) w = BigInt.asIntN(64, 1n + z);
+  else if (x === 5n || x === 6n) w = BigInt.asIntN(64, 1n - z);
+  else w = 2n;
+  return w;
+}
+/** 按汇编标签的结构逐块求值（与课件 p55–p58 的代码块一一对应），返回 {w, path, err} */
+function swEgAsm(x, y, z) {
+  const sx = s64(x), sy = s64(y), sz = s64(z);
+  const path = [];
+  if (u64(x) > 6n) {
+    path.push(['.L8', 'movl $2, %eax / ret', 'x 不在 0…6 内（无符号比较），走 default']);
+    return { w: 2n, path, err: null };
+  }
+  if (sx === 1n) {
+    path.push(['.L3', 'movq %rsi, %rax / imulq %rdx, %rax / ret', `w = y*z = ${sy} × ${sz} = ${sy * sz}`]);
+    return { w: u64(y * z), path, err: null };
+  }
+  if (sx === 2n) {
+    if (sz === 0n) return { w: null, path, err: 'idivq 的除数为 0 —— 真实机器上会触发 #DE 异常（进程收到 SIGFPE）' };
+    if (sy === -(1n << 63n) && sz === -1n)
+      return { w: null, path, err: 'idivq 商溢出：TMin ÷ (−1) 无法用 64 位有符号表示 —— 同样触发 #DE' };
+    const q = BigInt.asIntN(64, sy / sz);
+    const w = u64(q + sz);
+    path.push(['.L5', 'movq %rsi,%rax / cqto / idivq %rcx', `w = y/z = ${sy} ÷ ${sz} = ${q}（idivq 向零截断）`]);
+    path.push(['', 'jmp .L6', '<b>贯穿</b>：不返回，直接跳到 merge 点']);
+    path.push(['.L6', 'addq %rcx, %rax / ret', `w += z → ${q} + ${sz} = ${s64(w)}`]);
+    return { w, path, err: null };
+  }
+  if (sx === 3n) {
+    const w = u64(1n + sz);
+    path.push(['.L9', 'movl $1, %eax', 'w = 1（注意 <code>long w = 1</code> 的初始化被挪到了分支里）']);
+    path.push(['.L6', 'addq %rcx, %rax / ret', `w += z → 1 + ${sz} = ${s64(w)}`]);
+    return { w, path, err: null };
+  }
+  if (sx === 5n || sx === 6n) {
+    const w = u64(1n - sz);
+    path.push(['.L7', 'movl $1,%eax / subq %rdx,%rax / ret', `w = 1 − z = 1 − ${sz} = ${s64(w)}`]);
+    return { w, path, err: null };
+  }
+  path.push(['.L8', 'movl $2, %eax / ret', 'x = 4 在表范围内但没有 case —— 跳转表第 4 格填的是 default 的地址']);
+  return { w: 2n, path, err: null };
+}
+function renderSwitch(x, y, z) {
+  const sx = s64(x), sy = s64(y), sz = s64(z);
+  const inRange = u64(x) <= 6n;
+  const r = swEgAsm(x, y, z);
+  const path = r.path, w = r.w;
+  if (r.err) return `<div class="box bad" style="margin-bottom:0"><div class="t">这一组输入在真实机器上会崩溃</div>${esc(r.err)}
+    <br>把 <code>z</code> 换成非 0 的偶数再试（例如 4）。</div>`;
+  const c = u64(swEgC(sx, sy, sz));
+  const same = w === c;
+  return `
+  <div class="readout" style="margin-top:0">
+    <dt>输入</dt><dd>x = ${decS(x)}，y = ${decS(y)}，z = ${decS(z)}</dd>
+    <dt>边界检查</dt><dd>cmpq $6, %rdi → ${inRange ? '通过' : '<b>不通过</b>'}（x 的无符号解释是 ${decU(x)}）</dd>
+    <dt>查表</dt><dd class="mono">${inRange ? `.L4 + ${sx}×8` : '（不查表，被 ja 挡住）'}</dd>
+    <dt>w</dt><dd>${hex64(w)} <span style="font-family:var(--font-sans);color:var(--muted)">= ${decS(w)}</span></dd>
+    <dt>对照</dt><dd>按课件 p49 的 C 源码语义算得 <b>${decS(c)}</b> —— ${same ? '一致' : '<b style="color:var(--sign)">不一致</b>'}</dd>
+  </div>
+  <div class="tbl-wrap"><table class="tbl">
+    <tr><th>标签</th><th>汇编</th><th>做了什么</th></tr>
+    ${path.map(([l, a, n]) => `<tr><td class="mono">${esc(l)}</td><td class="mono" style="font-size:13px">${esc(a)}</td><td>${n}</td></tr>`).join('')}
+  </table></div>
+  <div class="box ${same ? 'ok' : 'bad'}" style="margin-bottom:0"><div class="t">这一趟路径说明了什么</div>
+    ${sx === 2n ? '<b>贯穿（fall through）</b>：<code>case 2</code> 算完 <code>y/z</code> 后没有 <code>ret</code>，而是跳到 merge 点与 <code>case 3</code> 共用 <code>w += z</code> —— 对应源码里那句 <code>/* Fall Through */</code>。'
+      : sx === 4n ? '<b>缺失的 case</b>：x = 4 落在表范围内，但那一格填的是 default 的地址，所以走的是 <code>w = 2</code>。'
+      : !inRange ? '<b>边界检查生效</b>：<code>ja</code> 用无符号比较，一次挡住「小于 0」和「大于 6」两种越界。'
+      : sx === 3n ? '<b><code>long w = 1</code> 的初始化被挪进了分支</b>：只有会用到初值的分支才执行 <code>movl $1, %eax</code>，default 分支直接用 <code>movl $2</code> 把它覆盖掉。'
+      : (sx === 5n || sx === 6n) ? '<b>两个 case 共用一个代码块</b>：跳转表里第 5、6 两格填的是同一个地址 <code>.L7</code>。'
+      : '<code>case 1</code> 是最简单的一个分支：乘法后直接 <code>ret</code>。'}
+  </div>`;
+}
+
+/* ============================================================
+   8.5 间接跳转跟踪
+   ============================================================ */
+const JTAB = [
+  { x: 0, addr: '0x4007f0', val: '0x0000000000400614', dest: '.L8', desc: 'default（x = 0 没有 case）' },
+  { x: 1, addr: '0x4007f8', val: '0x00000000004005f0', dest: '.L3', desc: 'case 1：w = y*z' },
+  { x: 2, addr: '0x400800', val: '0x00000000004005f8', dest: '.L5', desc: 'case 2：w = y/z，然后贯穿' },
+  { x: 3, addr: '0x400808', val: '0x0000000000400602', dest: '.L9', desc: 'case 3：w = 1，再合并 w += z' },
+  { x: 4, addr: '0x400810', val: '0x0000000000400614', dest: '.L8', desc: 'default（x = 4 缺 case）' },
+  { x: 5, addr: '0x400818', val: '0x000000000040060b', dest: '.L7', desc: 'case 5, 6：w = 1 − z' },
+  { x: 6, addr: '0x400820', val: '0x000000000040060b', dest: '.L7', desc: 'case 5, 6：w = 1 − z' },
+];
+const JTAB_OOB = { addr: '0x400828', val: '0x2c646c25203d2078', desc: '越界：已经不在表里，落在相邻的字符串常量上' };
+const JTAB_DEST = {
+  '.L8': '400614: b8 02 00 00 00    mov    $0x2,%eax\n400619: c3                retq',
+  '.L3': '4005f0: 48 89 f0         mov    %rsi,%rax\n4005f3: 48 0f af c2       imul   %rdx,%rax\n4005f7: c3                retq',
+  '.L5': '4005f8: 48 89 f0         mov    %rsi,%rax\n4005fb: 48 99             cqto\n4005fd: 48 f7 f9          idiv   %rcx\n400600: eb 05             jmp    400607 <switch_eg+0x27>',
+  '.L9': '400602: b8 01 00 00 00    mov    $0x1,%eax\n400607: 48 01 c8          add    %rcx,%rax\n40060a: c3                retq',
+  '.L7': '40060b: b8 01 00 00 00    mov    $0x1,%eax\n400610: 48 29 d0          sub    %rdx,%rax\n400613: c3                retq',
+};
+function renderJtabLookup(x) {
+  const i = Number(s64(x));
+  const inRange = i >= 0 && i <= 6;
+  const e = inRange ? JTAB[i] : null;
+  const rows = JTAB.map(t => `<tr class="${inRange && t.x === i ? 'hl' : ''}">
+      <td class="mono">${t.x}</td><td class="mono">${t.addr}</td><td class="mono">${t.val}</td>
+      <td class="mono">${t.dest}</td><td>${esc(t.desc)}</td></tr>`).join('') +
+    `<tr style="opacity:.75"><td class="mono">7</td><td class="mono">${JTAB_OOB.addr}</td><td class="mono">${JTAB_OOB.val}</td>
+       <td class="mono">—</td><td style="color:var(--sign)">${esc(JTAB_OOB.desc)}</td></tr>`;
+  let walk;
+  if (!inRange) {
+    walk = `<div class="box warn" style="margin-bottom:0"><div class="t">x = ${i} 被 <code>ja</code> 挡住，根本走不到查表</div>
+      边界检查 <code>cmpq $6, %rdi</code> + <code>ja .L8</code> 用的是<b>无符号</b>比较：
+      ${i < 0 ? `负数 ${i} 的无符号解释是 ${decU(x)}，远大于 6` : `${i} 大于 6`}，于是直接跳 default。
+      <b>这正是那道边界检查存在的意义</b> —— 把 <code>x</code> 限制在表长之内。
+      <br>如果去掉它，<code>.L4 + 7×8</code> 就会读到表外的 ${esc(JTAB_OOB.addr)}，把 ${esc(JTAB_OOB.val)} 当地址跳过去 —— 程序会跳到一段数据上执行。</div>`;
+  } else {
+    const disp = Number((BigInt(e.addr) - 0x4007f0n) / 8n);
+    walk = `<div class="box ok" style="margin-bottom:0"><div class="t">x = ${i} 的完整跟踪</div>
+      <div class="formula" style="text-align:left;font-size:14px;margin:10px 0">
+        <div>① 取地址：.L4 + x×8 = 0x4007f0 + ${disp}×8 = <b>${e.addr}</b></div>
+        <div>② 读内存：该地址上的 8 字节 = <b>${e.val}</b>　（也就是 ${e.dest} 的地址）</div>
+        <div>③ 跳过去：%rip ← ${e.val}</div>
+        <div>④ 执行 <b>${e.dest}</b> 的代码块</div>
+      </div>
+      <div class="fcap">${e.dest} 处实际的反汇编</div>
+      <pre class="mono" style="font-size:13px;margin:0 0 10px;overflow-x:auto">${esc(JTAB_DEST[e.dest])}</pre>
+      ${esc(e.desc)}<br>
+      <span style="color:var(--muted);font-size:13.5px">缩放因子之所以是 8，是因为表里每项存一个<b>地址</b>，而 x86-64 的地址是 8 字节 —— 所以 <code>x</code> 必须乘 8 才能对上格子。
+      这就是课件 p53 说的「Must scale by factor of 8」。</span>
+    </div>`;
+  }
+  return `
+  <div class="readout" style="margin-top:0">
+    <dt>指令</dt><dd class="mono">4005e9: ff 24 fd f0 07 40 00　jmpq *0x4007f0(,%rdi,8)</dd>
+    <dt>表基地址</dt><dd class="mono">0x4007f0　<span style="font-family:var(--font-sans);color:var(--muted)">直接从指令的位移字段里读出来</span></dd>
+    <dt>x</dt><dd>${decS(x)}</dd>
+  </div>
+  <div class="tbl-wrap"><table class="tbl">
+    <tr><th>x</th><th>表项地址（.L4 + x×8）</th><th>该地址存放的值</th><th>目标标签</th><th>对应源码</th></tr>${rows}
+  </table></div>${walk}`;
+}
+
+/* ============================================================
+   9.3 测验
+   ============================================================ */
+const QUIZ = [
+  { q: '<code>cmpq %rsi, %rdi</code> 之后，<code>jg</code> 会在什么情况下跳转？',
+    o: ['~(SF^OF) & ~ZF', 'SF ^ OF', '~CF & ~ZF', 'ZF'], a: 0,
+    w: '有符号「大于」的判据是 ~(SF^OF) & ~ZF —— 先用异或消掉符号位被翻转的干扰，再排除相等。见 5.2 节的 jX 表。' },
+  { q: '为什么 <code>leaq</code> 不设置条件码这件事很重要？',
+    o: ['因为它能让 lea 跑得更快', '因为它不会冲掉前面 cmp 留下的比较结果', '因为 lea 只处理地址，没有结果可言', '因为它可以同时改两个寄存器'], a: 1,
+    w: '编译器常用 lea 做普通算术。如果它改了标志位，夹在 cmp 和 jle 中间的那条 lea 就会把比较结论覆盖掉。见 2.2 节的警告框。' },
+  { q: '<code>setX</code> 之后为什么通常紧跟一条 <code>movzbl %al, %eax</code>？',
+    o: ['为了加快执行速度', '为了让条件码被重新计算', '为了把结果转成小端序', '因为 setX 只写低字节，高位残留的垃圾会让返回值出错'], a: 3,
+    w: 'setX 只写一个字节、不改其余字节。movzbl 做零扩展，而且它是 32 位指令 —— x86-64 规定 32 位指令会把目的寄存器的高 32 位清零。见 4.2 节。' },
+  { q: '下面哪一句<b>不能</b>安全地用条件传送（cmov）改写？',
+    o: ['val = x > 0 ? 7 : 3;', 'long a = x > y ? x-y : y-x;', 'val = p ? *p : 0;', 'val = a > b ? a : b;'], a: 2,
+    w: '条件传送会把两个分支都求值，因此 p 为空时 *p 照样被解引用。这是课件 p33 三类坏例子中的「危险计算（Unsafe）」。A、B、D 都是无副作用的纯计算。' },
+  { q: '<code>while</code> 的 guarded-do 翻译相比 jump-to-middle，代价是什么？',
+    o: ['少了一次无条件跳转，但条件被写了两遍', '多了一次无条件跳转，但条件只写一遍', '两者完全等价，没有任何区别', 'guarded-do 无法处理循环体要执行很多次的情况'], a: 0,
+    w: 'guarded-do 把「跳到中间」的那次无条件跳转换成了入口守卫 if (!Test) goto done，代价是测试条件在入口和末尾各出现一次。见 7.2 节。' },
+  { q: '对课件里的 <code>switch_eg(2, 20, 4)</code>，返回的 w 是多少？',
+    o: ['5', '20', '9', '80'], a: 2,
+    w: 'x = 2 走 case 2：w = y/z = 20/4 = 5，然后贯穿到 case 3 的 w += z，得 5 + 4 = 9。用 8.4 节的求值器可以直接验证。' },
+  { q: '跳转表里 <code>jmp *.L4(,%rdi,8)</code> 为什么必须乘 8？',
+    o: ['因为 x 最多到 8', '因为表里每项存着一个 8 字节的地址', '因为要对齐到 8 字节边界', '因为 %rdi 是 8 字节寄存器'], a: 1,
+    w: '表项是 .quad，每个存一个 8 字节地址，所以下标要按元素大小缩放。见课件 p53 与 8.3 节。' },
+  { q: '<code>cmpq $6, %rdi</code> 后面接 <code>ja .L8</code>，为什么一条指令就能同时挡住 <code>x &gt; 6</code> 和 <code>x &lt; 0</code>？',
+    o: ['因为 ja 会自动取绝对值', '因为 ja 是无符号比较，负数的无符号解释极大', '因为 cmp 已经把负数的符号位清掉了', '因为 x 保证是 int 而不是 long'], a: 1,
+    w: '负数在无符号解释下是极大的数，一定「大于」6，因此被 ja 一并挡去 default。这也是这里不能用有符号 jg 的原因。见 8.3 节。' },
+  { q: '<code>testq %rax, %rax</code> 之后 ZF = 1 说明什么？',
+    o: ['%rax 是负数', '%rax 是零', '%rax 发生了溢出', '%rax 的最低位是 1'], a: 1,
+    w: 'a & a 当且仅当 a == 0 时为 0，而 ZF 正是在 a & b == 0 时置 1。这是「判断寄存器是否为零」的标准写法。见 3.2 节。' },
+  { q: '课件 p34 的练习里，<code>setl %al</code> 执行后 <code>%rax</code> 变成 <code>0xFFFF FFFF FFFF FF01</code>，为什么高 7 个字节还是 FF？',
+    o: ['因为 setl 写的是整个 %rax', '因为 setl 只写低字节，其余 7 字节保持原样', '因为 %rax 之前是负数', '因为 setl 会自动做符号扩展'], a: 1,
+    w: 'setl 只把低字节写成 0 或 1，其余字节不动 —— 所以 %rax 从全 1 变成 …FF01。要清干净得靠后面那条 movzbl。见 4.2、4.3 节。' },
+];
+let qzState = QUIZ.map(() => null);
+function renderQuiz() {
+  const answered = qzState.filter(v => v !== null).length;
+  const right = QUIZ.filter((q, i) => qzState[i] === q.a).length;
+  const list = QUIZ.map((q, i) => {
+    const sel = qzState[i];
+    const cls = sel === null ? '' : sel === q.a ? ' correct done' : ' wrong done';
+    return `<div class="puzzle${cls}" style="flex-direction:column;align-items:stretch">
+      <div class="q" style="white-space:normal"><b>${i + 1}.</b> ${q.q}</div>
+      <div style="display:flex;flex-wrap:wrap;gap:7px;margin-top:8px">
+        ${q.o.map((o, j) => `<button class="sm" data-qzo="${i}:${j}"
+          style="${sel === null ? '' : j === q.a ? 'border-color:var(--ok-bd);background:var(--ok-bg)'
+            : j === sel ? 'border-color:var(--bad-bd);background:var(--bad-bg)' : 'opacity:.6'}">
+          ${'ABCD'[j]}. ${o}</button>`).join('')}
+      </div>
+      <div class="exp"><span class="verdict">${sel === null ? '' : sel === q.a ? '✓ 正确' : '✗ 错误'}</span>
+        &nbsp;正确答案：<b>${'ABCD'[q.a]}. ${q.o[q.a]}</b><br>${q.w}</div>
+    </div>`;
+  }).join('');
+  const score = answered === 0 ? '' : `<div class="box ${right === QUIZ.length ? 'ok' : right >= QUIZ.length / 2 ? 'warn' : 'bad'}" style="margin-bottom:0">
+    <div class="t">已答 ${answered} / ${QUIZ.length} 题，答对 ${right} 题</div>
+    ${answered === QUIZ.length
+      ? (right === QUIZ.length ? '全对 —— 这一讲的四块（条件码 / 分支 / 循环 / switch）都拿下了。'
+        : '错题上方已标出正确答案与依据，回到对应小节再看一遍即可。')
+      : '继续答题，每题都会立即给出解析。'}
+  </div>`;
+  return list + score;
+}
+
+/* ============================================================
+   初始化
+   ============================================================ */
+function initAll() {
+  /* --- 1.4 LEA --- */
+  const leaD = $('#leaD'), leaB = $('#leaB'), leaI = $('#leaI'), leaS = $('#leaS');
+  function doLea() {
+    const D = parseU64(leaD.value), B = parseU64(leaB.value), I = parseU64(leaI.value);
+    if (D === null || B === null || I === null) { $('#leaOut').innerHTML = badBox('三个输入都要是十进制或 0x… 形式的 64 位整数。'); return; }
+    $('#leaOut').innerHTML = renderLea(D, B, I, BigInt(leaS.value));
+  }
+  $('#leaGo').addEventListener('click', doLea);
+  [leaD, leaB, leaI].forEach(el => el.addEventListener('keydown', e => { if (e.key === 'Enter') doLea(); }));
+  leaS.addEventListener('change', doLea);
+  $$('[data-lea]').forEach(b => b.addEventListener('click', () => {
+    const kv = kvAttr(b.dataset.lea);
+    leaD.value = kv.d; leaB.value = kv.b; leaI.value = kv.i; leaS.value = kv.s; doLea();
+  }));
+  doLea();
+
+  /* --- 1.5 后缀 --- */
+  function doSuffix(s) {
+    $$('#sfxSeg button').forEach(b => b.classList.toggle('on', b.dataset.s === s));
+    $('#sfxOut').innerHTML = renderSuffix(s);
+  }
+  $$('#sfxSeg button').forEach(b => b.addEventListener('click', () => doSuffix(b.dataset.s)));
+  doSuffix('q');
+
+  /* --- 2.3 标志位图 --- */
+  function doFig(f) {
+    $$('#figSeg button').forEach(b => b.classList.toggle('on', b.dataset.f === f));
+    const g = FIG[f]();
+    $('#figOut').innerHTML = `${g.body}<div class="box" style="margin-bottom:0"><div class="t">${f.toUpperCase()} 在看哪一位</div>${g.note}</div>`;
+  }
+  $$('#figSeg button').forEach(b => b.addEventListener('click', () => doFig(b.dataset.f)));
+  doFig('zf');
+
+  /* --- 2.4 标志位模拟器 --- */
+  const fsOp = $('#fsOp'), fsA = $('#fsA'), fsB = $('#fsB');
+  function doFlags() {
+    const a = parseU64(fsA.value), b = parseU64(fsB.value);
+    if (a === null || b === null) { $('#fsOut').innerHTML = badBox('a 与 b 都要是 64 位整数（支持 0x… / 0b… / 十进制 / 负数）。'); return; }
+    $('#fsOut').innerHTML = renderFlags(fsOp.value, a, b);
+  }
+  $('#fsGo').addEventListener('click', doFlags);
+  [fsA, fsB].forEach(el => el.addEventListener('keydown', e => { if (e.key === 'Enter') doFlags(); }));
+  fsOp.addEventListener('change', doFlags);
+  $$('[data-fs]').forEach(b => b.addEventListener('click', () => {
+    const kv = kvAttr(b.dataset.fs);
+    fsOp.value = kv.op; fsB.value = kv.b; fsA.value = kv.a; doFlags();
+  }));
+  doFlags();
+
+  /* --- 2.5 setl 真值表 --- */
+  function doSetl() {
+    $('#setlOut').innerHTML = renderSetl();
+    $$('[data-setl]').forEach(tr => tr.addEventListener('click', () => {
+      setlSel = setlSel === +tr.dataset.setl ? -1 : +tr.dataset.setl;
+      doSetl();
+    }));
+  }
+  doSetl();
+
+  /* --- 3 cmp / test --- */
+  let cmsMode = 'cmpq';
+  const cmsA = $('#cmsA'), cmsB = $('#cmsB');
+  function doCms() {
+    const a = parseU64(cmsA.value), b = parseU64(cmsB.value);
+    if (a === null || b === null) { $('#cmsOut').innerHTML = badBox('a 与 b 都要是 64 位整数。'); return; }
+    $('#cmsOut').innerHTML = renderCmp(cmsMode, a, b);
+  }
+  $$('#cmsSeg button').forEach(b => b.addEventListener('click', () => {
+    cmsMode = b.dataset.c;
+    $$('#cmsSeg button').forEach(x => x.classList.toggle('on', x === b));
+    doCms();
+  }));
+  $('#cmsGo').addEventListener('click', doCms);
+  [cmsA, cmsB].forEach(el => el.addEventListener('keydown', e => { if (e.key === 'Enter') doCms(); }));
+  $$('[data-cms]').forEach(b => b.addEventListener('click', () => {
+    const kv = kvAttr(b.dataset.cms);
+    cmsMode = kv.m; cmsA.value = kv.a; cmsB.value = kv.b;
+    $$('#cmsSeg button').forEach(x => x.classList.toggle('on', x.dataset.c === kv.m));
+    doCms();
+  }));
+  doCms();
+
+  /* --- 4.1 setX 矩阵 --- */
+  function doSxm() {
+    $('#sxmOut').innerHTML = renderSetXMatrix();
+    $$('#sxmSeg2 button').forEach(b => b.addEventListener('click', () => {
+      sxmFlags[b.dataset.b] = sxmFlags[b.dataset.b] ? 0 : 1;
+      doSxm();
+    }));
+  }
+  $('#sxmAll0').addEventListener('click', () => { sxmFlags = { sf: 0, of: 0, cf: 0, zf: 0 }; doSxm(); });
+  $('#sxmAll1').addEventListener('click', () => { sxmFlags = { sf: 1, of: 1, cf: 1, zf: 1 }; doSxm(); });
+  doSxm();
+
+  /* --- 4.3 五步追踪 --- */
+  const exSteps = exBuild();
+  let exTimer = null;
+  function doEx() {
+    $('#exOut').innerHTML = renderEx(exSteps);
+    $('#exNext').textContent = exIdx >= exSteps.length - 1 ? '已完成' : `下一步（${exIdx + 2}/${exSteps.length}）`;
+  }
+  $('#exNext').addEventListener('click', () => { if (exIdx < exSteps.length - 1) { exIdx++; doEx(); } });
+  $('#exReset').addEventListener('click', () => { clearInterval(exTimer); exTimer = null; exIdx = -1; doEx(); });
+  $('#exRun').addEventListener('click', () => {
+    clearInterval(exTimer);
+    if (exIdx < 0) { exIdx = 0; doEx(); }
+    exTimer = setInterval(() => {
+      if (exIdx >= exSteps.length - 1) { clearInterval(exTimer); exTimer = null; return; }
+      exIdx++; doEx();
+    }, 420);
+  });
+  doEx();
+
+  /* --- 5.1 控制流图 --- */
+  function doFlow(v) {
+    $$('#flowSeg button').forEach(b => b.classList.toggle('on', b.dataset.x === v));
+    $('#flowOut').innerHTML = renderFlow(+v);
+  }
+  $$('#flowSeg button').forEach(b => b.addEventListener('click', () => doFlow(b.dataset.x)));
+  doFlow('1');
+
+  /* --- 5.3 absdiff --- */
+  const adX = $('#adX'), adY = $('#adY');
+  function doAd() {
+    const x = parseU64(adX.value), y = parseU64(adY.value);
+    if (x === null || y === null) { $('#adOut').innerHTML = badBox('x 与 y 都要是 64 位整数（可以带负号）。'); return; }
+    $('#adOut').innerHTML = renderAbsdiff(x, y);
+  }
+  $('#adGo').addEventListener('click', doAd);
+  [adX, adY].forEach(el => el.addEventListener('keydown', e => { if (e.key === 'Enter') doAd(); }));
+  $$('[data-ad]').forEach(b => b.addEventListener('click', () => {
+    const kv = kvAttr(b.dataset.ad); adX.value = kv.x; adY.value = kv.y; doAd();
+  }));
+  doAd();
+
+  /* --- 6.3 cmov 判断 --- */
+  function doCq() {
+    $('#cqOut').innerHTML = renderCmov();
+    $$('[data-cq]').forEach(b => b.addEventListener('click', () => {
+      const [i, v] = b.dataset.cq.split(':');
+      if (cmovState[+i] !== null) return;
+      cmovState[+i] = v === '1'; doCq();
+    }));
+  }
+  $('#cqReset').addEventListener('click', () => { cmovState = CMOV_Q.map(() => null); doCq(); });
+  doCq();
+
+  /* --- 6.4 cmov 代价 --- */
+  const cbX = $('#cbX');
+  function doCb() {
+    const x = parseU64(cbX.value);
+    if (x === null) { $('#cbOut').innerHTML = badBox('x 要是一个 64 位整数。'); return; }
+    $('#cbOut').innerHTML = renderCmovCost(x);
+  }
+  $('#cbGo').addEventListener('click', doCb);
+  cbX.addEventListener('keydown', e => { if (e.key === 'Enter') doCb(); });
+  $$('[data-cb]').forEach(b => b.addEventListener('click', () => { cbX.value = b.dataset.cb; doCb(); }));
+  doCb();
+
+  /* --- 7.3 popcount 追踪 --- */
+  const ptX = $('#ptX');
+  let ptTimer = null;
+  function doPt(reset) {
+    if (reset) {
+      const x = parseU64(ptX.value);
+      if (x === null) { $('#ptOut').innerHTML = badBox('x 要是一个 64 位无符号整数。'); return; }
+      ptState = { variant: ptState.variant, x, steps: popTrace(ptState.variant, x), idx: -1 };
+    }
+    $('#ptOut').innerHTML = renderPopTrace();
+  }
+  $$('#ptSeg button').forEach(b => b.addEventListener('click', () => {
+    clearInterval(ptTimer); ptTimer = null;
+    ptState.variant = b.dataset.p;
+    $$('#ptSeg button').forEach(x => x.classList.toggle('on', x === b));
+    doPt(true);
+  }));
+  $('#ptGo').addEventListener('click', () => { clearInterval(ptTimer); ptTimer = null; doPt(true); });
+  ptX.addEventListener('keydown', e => { if (e.key === 'Enter') { clearInterval(ptTimer); ptTimer = null; doPt(true); } });
+  $('#ptNext').addEventListener('click', () => {
+    if (!ptState.steps) { doPt(true); return; }
+    if (ptState.idx < ptState.steps.length - 1) { ptState.idx++; doPt(false); }
+  });
+  $('#ptRun').addEventListener('click', () => {
+    if (!ptState.steps) doPt(true);
+    clearInterval(ptTimer);
+    ptTimer = setInterval(() => {
+      if (ptState.idx >= ptState.steps.length - 1) { clearInterval(ptTimer); ptTimer = null; return; }
+      ptState.idx++; doPt(false);
+    }, 260);
+  });
+  $$('[data-pt]').forEach(b => b.addEventListener('click', () => {
+    ptX.value = b.dataset.pt; clearInterval(ptTimer); ptTimer = null; doPt(true);
+  }));
+  doPt(true);
+
+  /* --- 7.5 for 转换 --- */
+  const fcW = $('#fcW'), fcX = $('#fcX');
+  function doFc() {
+    const w = parseU64(fcW.value), x = parseU64(fcX.value);
+    if (w === null || x === null || w > 64n) { $('#fcOut').innerHTML = badBox('WSIZE 要是 0…64 之间的整数，x 要是 64 位无符号整数。'); return; }
+    $('#fcOut').innerHTML = renderForConv(w, x);
+  }
+  $('#fcGo').addEventListener('click', doFc);
+  [fcW, fcX].forEach(el => el.addEventListener('keydown', e => { if (e.key === 'Enter') doFc(); }));
+  $$('[data-fc]').forEach(b => b.addEventListener('click', () => {
+    const kv = kvAttr(b.dataset.fc); fcW.value = kv.w; fcX.value = kv.x; doFc();
+  }));
+  doFc();
+
+  /* --- 8.3 default 范围 --- */
+  const jtX = $('#jtX');
+  function doJt() {
+    const x = parseU64(jtX.value);
+    if (x === null) { $('#jtOut').innerHTML = badBox('x 要是一个 64 位整数。'); return; }
+    $('#jtOut').innerHTML = renderDefRange(x);
+  }
+  $('#jtGo').addEventListener('click', doJt);
+  jtX.addEventListener('keydown', e => { if (e.key === 'Enter') doJt(); });
+  $$('[data-jt]').forEach(b => b.addEventListener('click', () => { jtX.value = b.dataset.jt; doJt(); }));
+  doJt();
+
+  /* --- 8.3 跳转表生成器 --- */
+  const jbCases = $('#jbCases');
+  function doJb() {
+    const raw = jbCases.value.split(/[,\s]+/).filter(Boolean);
+    const cs = [];
+    for (const t of raw) {
+      const v = parseU64(t);
+      if (v === null || v > 64n) { $('#jbOut').innerHTML = badBox('case 标签要是 0…64 的整数，用逗号分隔。'); return; }
+      cs.push(Number(v));
+    }
+    if (!cs.length) { $('#jbOut').innerHTML = badBox('至少给一个 case 标签，例如 1,2,3,5,6。'); return; }
+    $('#jbOut').innerHTML = renderJTab(cs);
+  }
+  $('#jbGo').addEventListener('click', doJb);
+  jbCases.addEventListener('keydown', e => { if (e.key === 'Enter') doJb(); });
+  $$('[data-jb]').forEach(b => b.addEventListener('click', () => { jbCases.value = b.dataset.jb; doJb(); }));
+  doJb();
+
+  /* --- 8.4 switch_eg --- */
+  const swX = $('#swX'), swY = $('#swY'), swZ = $('#swZ');
+  function doSw() {
+    const x = parseU64(swX.value), y = parseU64(swY.value), z = parseU64(swZ.value);
+    if (x === null || y === null || z === null) { $('#swOut').innerHTML = badBox('x、y、z 都要是 64 位整数（可以带负号）。'); return; }
+    $('#swOut').innerHTML = renderSwitch(x, y, z);
+  }
+  $('#swGo').addEventListener('click', doSw);
+  [swX, swY, swZ].forEach(el => el.addEventListener('keydown', e => { if (e.key === 'Enter') doSw(); }));
+  $$('[data-sw]').forEach(b => b.addEventListener('click', () => {
+    const kv = kvAttr(b.dataset.sw); swX.value = kv.x; swY.value = kv.y; swZ.value = kv.z; doSw();
+  }));
+  doSw();
+
+  /* --- 8.5 间接跳转 --- */
+  const jlX = $('#jlX');
+  function doJl() {
+    const x = parseU64(jlX.value);
+    if (x === null) { $('#jlOut').innerHTML = badBox('x 要是一个 64 位整数（可以给负数试试）。'); return; }
+    $('#jlOut').innerHTML = renderJtabLookup(x);
+  }
+  $('#jlGo').addEventListener('click', doJl);
+  jlX.addEventListener('keydown', e => { if (e.key === 'Enter') doJl(); });
+  $$('[data-jl]').forEach(b => b.addEventListener('click', () => { jlX.value = b.dataset.jl; doJl(); }));
+  doJl();
+
+  /* --- 9.3 测验 --- */
+  function doQz() {
+    $('#qzOut').innerHTML = renderQuiz();
+    $$('[data-qzo]').forEach(b => b.addEventListener('click', () => {
+      const [i, j] = b.dataset.qzo.split(':').map(Number);
+      if (qzState[i] !== null) return;
+      qzState[i] = j; doQz();
+    }));
+  }
+  $('#qzReset').addEventListener('click', () => { qzState = QUIZ.map(() => null); doQz(); });
+  doQz();
+}
+
+document.addEventListener('DOMContentLoaded', initAll);
+</script>
+</body>
+</html>

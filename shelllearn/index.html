@@ -1,0 +1,4877 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>命令行学习模拟器 · bash / fish 从零开始</title>
+<style>
+/* ============================================================
+ * termkit.css —— 通用终端学习页样式内核
+ * 从 git-learn/style.css 提取，去掉 git 专有部分（提交图/三区），
+ * 扩充目录树 / 变量表 / 管道可视化 / 展开过程 等通用面板。
+ * ============================================================ */
+
+:root {
+  --bg: #0d1117;
+  --panel: #161b22;
+  --panel-2: #1c2128;
+  --panel-3: #21262d;
+  --border: #30363d;
+  --text: #e6edf3;
+  --muted: #8b949e;
+  --dim: #6e7681;
+  --green: #3fb950;
+  --red: #f85149;
+  --yellow: #d29922;
+  --blue: #58a6ff;
+  --purple: #bc8cff;
+  --teal: #39c5cf;
+  --mono: ui-monospace, SFMono-Regular, "Cascadia Mono", Consolas, "Liberation Mono", Menlo, monospace;
+  --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB",
+          "Microsoft YaHei", "Source Han Sans SC", sans-serif;
+}
+
+* { box-sizing: border-box; }
+html, body {
+  margin: 0; padding: 0; height: 100%;
+  background: var(--bg); color: var(--text);
+  font-family: var(--sans); font-size: 14px; line-height: 1.6;
+}
+button { font-family: inherit; cursor: pointer; }
+
+/* ---------- 顶栏 ---------- */
+.topbar {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  padding: 10px 16px; background: var(--panel);
+  border-bottom: 1px solid var(--border);
+}
+.brand { display: flex; align-items: baseline; gap: 10px; margin-right: auto; }
+.brand h1 { font-size: 16px; margin: 0; font-weight: 600; letter-spacing: .3px; }
+.brand .tag { font-size: 12px; color: var(--muted); }
+
+.btn {
+  background: var(--panel-3); color: var(--text);
+  border: 1px solid var(--border); border-radius: 6px;
+  padding: 5px 11px; font-size: 13px; transition: .15s;
+}
+.btn:hover { background: #2d333b; border-color: #4b545e; }
+.btn.primary { background: #1f6feb; border-color: #1f6feb; }
+.btn.primary:hover { background: #388bfd; }
+.btn.ghost { background: transparent; }
+.btn:disabled { opacity: .45; cursor: not-allowed; }
+
+.switch { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); cursor: pointer; user-select: none; }
+.switch input { accent-color: var(--green); }
+
+/* shell 语言切换（bash / fish） */
+.seg { display: flex; border: 1px solid var(--border); border-radius: 6px; overflow: hidden; }
+.seg button {
+  background: var(--panel-2); color: var(--muted); border: none;
+  padding: 5px 12px; font-size: 13px; font-family: var(--mono);
+}
+.seg button.on { background: #1f6feb; color: #fff; }
+
+.progress-pill {
+  font-size: 12px; color: var(--muted);
+  border: 1px solid var(--border); border-radius: 999px; padding: 3px 10px;
+  background: var(--panel-2);
+}
+
+/* ---------- 布局 ---------- */
+.layout {
+  display: grid;
+  grid-template-columns: 300px minmax(380px, 1fr) 400px;
+  gap: 12px; padding: 12px;
+  height: calc(100vh - 53px); align-items: stretch;
+}
+.panel {
+  background: var(--panel); border: 1px solid var(--border); border-radius: 10px;
+  display: flex; flex-direction: column; min-height: 0; min-width: 0; overflow: hidden;
+}
+.panel-head {
+  padding: 9px 12px; font-size: 12px; font-weight: 600; letter-spacing: .6px;
+  color: var(--muted); text-transform: uppercase;
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; gap: 8px;
+  background: var(--panel-2); flex: none;
+}
+.panel-head .right { margin-left: auto; font-weight: 400; text-transform: none; letter-spacing: 0; }
+.panel-body { overflow: auto; padding: 10px 12px; min-height: 0; }
+.panel-body::-webkit-scrollbar, .term-out::-webkit-scrollbar,
+.panel-body::-webkit-scrollbar { width: 10px; height: 10px; }
+.panel-body::-webkit-scrollbar-thumb, .term-out::-webkit-scrollbar-thumb { background: #30363d; border-radius: 6px; }
+.panel-body::-webkit-scrollbar-track, .term-out::-webkit-scrollbar-track { background: transparent; }
+
+/* ---------- 终端 ---------- */
+.term-out {
+  flex: 1; overflow: auto; padding: 12px 14px;
+  font-family: var(--mono); font-size: 12.5px; line-height: 1.65;
+  white-space: pre-wrap; word-break: break-word; background: #0b0e13;
+}
+.term-out .line { min-height: 1.1em; }
+.term-out .plain { color: var(--text); }
+.term-out .err { color: var(--red); }
+.term-out .ok { color: var(--green); }
+.term-out .muted { color: var(--muted); }
+.term-out .dim { color: var(--dim); }
+.term-out .bold { color: var(--text); font-weight: 600; }
+.term-out .green { color: var(--green); }
+.term-out .red { color: var(--red); }
+.term-out .yellow { color: var(--yellow); }
+.term-out .cyan { color: var(--teal); }
+.term-out .blue { color: var(--blue); }
+.term-out .purple { color: var(--purple); }
+.term-out .cmd { color: var(--blue); font-weight: 600; }
+.term-out .hint {
+  color: #b8a45a; background: #d2992212; border-left: 2px solid #d2992266;
+  padding: 2px 8px; display: block; margin: 1px 0;
+}
+.term-out .echo { color: var(--dim); }
+.term-out .divider { color: var(--dim); margin: 6px 0; }
+/* 展开过程 / 管道 的折叠块 */
+.term-out .trace {
+  border-left: 2px solid #1f6feb66; background: #1f6feb10;
+  padding: 3px 9px; margin: 2px 0; display: block;
+}
+.term-out .trace .k { color: var(--purple); }
+.term-out .trace .v { color: var(--teal); }
+
+.term-input-row {
+  display: flex; align-items: center; gap: 8px; flex: none;
+  border-top: 1px solid var(--border); padding: 8px 12px; background: var(--panel-2);
+}
+.term-input-row .prompt { font-family: var(--mono); font-size: 12.5px; white-space: nowrap; }
+.term-input-row .prompt .u { color: var(--green); }
+.term-input-row .prompt .p { color: var(--blue); }
+.term-input-row .prompt .s { color: var(--muted); }
+.term-input-row input {
+  flex: 1; background: transparent; border: none; outline: none;
+  color: var(--text); font-family: var(--mono); font-size: 13px; padding: 2px 0;
+}
+.term-input-row input::placeholder { color: #4b545e; }
+
+.chips { display: flex; gap: 6px; flex-wrap: wrap; padding: 8px 12px; flex: none;
+         border-top: 1px solid var(--border); background: var(--panel); }
+.chips .chip {
+  font-family: var(--mono); font-size: 11.5px;
+  background: var(--panel-3); border: 1px solid var(--border); color: #c9d1d9;
+  border-radius: 999px; padding: 3px 10px;
+}
+.chips .chip:hover { border-color: var(--blue); color: var(--blue); }
+
+/* ---------- 课程列表 ---------- */
+.lesson-item {
+  display: block; width: 100%; text-align: left;
+  background: transparent; border: 1px solid transparent; border-radius: 8px;
+  padding: 7px 10px; margin-bottom: 3px; color: var(--text); transition: .12s;
+}
+.lesson-item:hover { background: var(--panel-2); }
+.lesson-item.active { background: #1f6feb22; border-color: #1f6feb66; }
+.lesson-item .ch { font-size: 11px; color: var(--dim); display: block; }
+.lesson-item .tt { font-size: 13px; font-weight: 500; }
+.lesson-item.done .tt::after { content: " ✓"; color: var(--green); }
+.part-title {
+  font-size: 11px; color: var(--teal); letter-spacing: .8px;
+  margin: 12px 0 5px; padding-left: 2px; font-weight: 600;
+}
+.part-title:first-child { margin-top: 0; }
+
+.lesson-detail { border-top: 1px solid var(--border); padding: 12px 0 0; margin-top: 10px; }
+.lesson-detail h2 { font-size: 15px; margin: 0 0 2px; }
+.lesson-detail .goal { font-size: 12px; color: var(--teal); margin-bottom: 8px; }
+.lesson-detail p { margin: 0 0 8px; font-size: 12.5px; color: #c9d1d9; }
+.lesson-detail code {
+  font-family: var(--mono); font-size: 12px; background: #ffffff12;
+  padding: 0 4px; border-radius: 4px; color: var(--yellow);
+}
+.lesson-actions { display: flex; gap: 8px; margin: 10px 0 4px; flex-wrap: wrap; }
+.explain { margin-top: 14px; border-top: 1px dashed var(--border); padding-top: 10px; }
+.explain-title { font-size: 11.5px; color: var(--muted); font-weight: 600; letter-spacing: .5px; margin-bottom: 6px; }
+
+.tasks { list-style: none; margin: 8px 0 0; padding: 0; }
+.tasks li {
+  display: flex; gap: 8px; align-items: flex-start;
+  padding: 6px 8px; border-radius: 6px; margin-bottom: 2px;
+  font-size: 13px; color: var(--muted); border: 1px solid transparent;
+}
+.tasks li .box { flex: none; width: 16px; text-align: center; color: var(--dim); }
+.tasks li.ok { color: var(--text); background: #3fb9501a; border-color: #3fb95033; }
+.tasks li.ok .box { color: var(--green); }
+.tasks li .txt { flex: 1; min-width: 0; }
+.tasks li .hint {
+  display: block; font-family: var(--mono); font-size: 11.5px;
+  color: var(--dim); margin-top: 2px; word-break: break-word;
+}
+.all-done {
+  margin-top: 10px; padding: 8px 10px; border-radius: 8px;
+  background: #3fb9501a; border: 1px solid #3fb95055; color: var(--green); font-size: 13px;
+}
+
+/* ---------- 右侧页签 ---------- */
+.tabs { display: flex; gap: 2px; padding: 6px 8px 0; background: var(--panel-2);
+        border-bottom: 1px solid var(--border); flex: none; }
+.tabs button {
+  background: transparent; border: 1px solid transparent; border-bottom: none;
+  color: var(--muted); font-size: 12.5px; padding: 5px 11px;
+  border-radius: 7px 7px 0 0;
+}
+.tabs button.on { background: var(--panel); color: var(--text); border-color: var(--border); }
+.tab-body { flex: 1; overflow: auto; padding: 10px 12px; min-height: 0; }
+
+/* ---------- 目录树 ---------- */
+.tree { font-family: var(--mono); font-size: 12px; line-height: 1.75; }
+.tree .row { display: flex; align-items: center; gap: 6px; border-radius: 5px; padding: 0 4px; white-space: nowrap; }
+.tree .row:hover { background: var(--panel-2); }
+.tree .row.cur { background: #1f6feb26; box-shadow: inset 2px 0 0 var(--blue); }
+.tree .row .ico { flex: none; width: 14px; text-align: center; color: var(--dim); }
+.tree .row.dir .ico { color: var(--blue); }
+.tree .row .nm { color: #c9d1d9; }
+.tree .row.dir .nm { color: var(--blue); font-weight: 500; }
+.tree .row.cur .nm { color: #fff; }
+.tree .row.anc .nm { color: #d0d7de; }
+.tree .row .sz { color: var(--dim); margin-left: auto; padding-left: 8px; font-size: 11px; }
+.tree .row .tw { cursor: pointer; user-select: none; color: var(--dim); width: 12px; flex: none; }
+.tree .kids { padding-left: 14px; }
+.tree .kids.hide { display: none; }
+.tree-empty { color: var(--dim); font-size: 12px; }
+
+/* ---------- 变量表 ---------- */
+.vars { font-family: var(--mono); font-size: 12px; }
+.vars .grp { font-size: 11px; color: var(--teal); letter-spacing: .5px; margin: 10px 0 4px; font-weight: 600; }
+.vars .grp:first-child { margin-top: 0; }
+.vars .vrow { display: flex; gap: 8px; padding: 2px 4px; border-radius: 5px; }
+.vars .vrow:hover { background: var(--panel-2); }
+.vars .vrow .k { color: var(--purple); flex: none; }
+.vars .vrow .val { color: var(--teal); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.vars .vrow .val.long { color: var(--muted); }
+.vars .note { color: var(--dim); font-size: 11.5px; margin-top: 8px; line-height: 1.6; }
+
+/* ---------- 管道可视化 ---------- */
+.pipe { font-family: var(--mono); font-size: 12px; }
+.pipe-stage {
+  border: 1px solid var(--border); border-radius: 8px;
+  background: var(--panel-2); padding: 7px 9px; margin-bottom: 4px;
+}
+.pipe-stage .hd { display: flex; align-items: center; gap: 6px; }
+.pipe-stage .idx {
+  flex: none; width: 17px; height: 17px; border-radius: 50%;
+  background: #1f6feb; color: #fff; font-size: 10px;
+  display: flex; align-items: center; justify-content: center;
+}
+.pipe-stage .cmd { color: var(--blue); font-weight: 600; }
+.pipe-stage .meta { color: var(--dim); font-size: 11px; margin-left: auto; }
+.pipe-stage .io { margin-top: 4px; padding-left: 23px; color: var(--muted); font-size: 11.5px; }
+.pipe-stage .io .lbl { color: var(--dim); }
+.pipe-stage .io .val { color: var(--yellow); }
+.pipe-stage .st-ok { color: var(--green); }
+.pipe-stage .st-err { color: var(--red); }
+.pipe-arrow { text-align: center; color: var(--dim); font-size: 11px; line-height: 1; margin: 1px 0 5px; }
+
+/* ---------- 弹窗 ---------- */
+.modal {
+  position: fixed; inset: 0; background: #000000b3;
+  display: none; align-items: center; justify-content: center; z-index: 50; padding: 24px;
+}
+.modal.open { display: flex; }
+.modal-card {
+  background: var(--panel); border: 1px solid var(--border); border-radius: 12px;
+  width: min(780px, 100%); max-height: 86vh; display: flex; flex-direction: column;
+  box-shadow: 0 16px 48px #00000080;
+}
+.modal-card header {
+  display: flex; align-items: center; padding: 12px 16px; border-bottom: 1px solid var(--border);
+}
+.modal-card header h3 { margin: 0; font-size: 15px; }
+.modal-card header .btn { margin-left: auto; }
+.modal-card .content { padding: 14px 16px; overflow: auto; }
+.modal-foot { display: flex; gap: 8px; margin-top: 12px; align-items: center; }
+
+.cheat-group { margin-bottom: 14px; }
+.cheat-group h4 { margin: 0 0 6px; font-size: 12px; color: var(--teal); letter-spacing: .5px; }
+.cheat-row {
+  display: flex; gap: 10px; align-items: baseline; padding: 4px 6px;
+  border-radius: 6px; cursor: pointer; border: 1px solid transparent;
+}
+.cheat-row:hover { background: var(--panel-2); border-color: var(--border); }
+.cheat-row code { font-family: var(--mono); font-size: 12px; color: var(--blue); flex: none; }
+.cheat-row span { font-size: 12.5px; color: var(--muted); }
+/* 双列对照（bash ↔ fish） */
+.cheat-row.two { display: grid; grid-template-columns: 1fr 1fr 1.1fr; gap: 10px; }
+.cheat-row.two code.fish { color: var(--teal); }
+.cheat-head { display: grid; grid-template-columns: 1fr 1fr 1.1fr; gap: 10px;
+  font-size: 11px; color: var(--dim); padding: 0 6px 5px; letter-spacing: .5px; }
+
+.editor-area {
+  width: 100%; min-height: 200px; resize: vertical;
+  background: #0b0e13; color: var(--text); border: 1px solid var(--border); border-radius: 8px;
+  font-family: var(--mono); font-size: 13px; padding: 10px; line-height: 1.6;
+}
+.editor-name { font-family: var(--mono); color: var(--teal); font-size: 13px; margin-bottom: 8px; }
+.editor-tip { font-size: 12px; color: var(--muted); }
+
+.toast {
+  position: fixed; left: 50%; bottom: 28px; transform: translateX(-50%) translateY(20px);
+  background: var(--panel-3); border: 1px solid var(--border); color: var(--text);
+  padding: 9px 16px; border-radius: 999px; font-size: 13px; opacity: 0;
+  transition: .25s; pointer-events: none; z-index: 100;
+}
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+.toast.good { border-color: #3fb95088; }
+
+/* ---------- 响应式 ---------- */
+@media (max-width: 1300px) { .layout { grid-template-columns: 260px minmax(320px, 1fr) 340px; } }
+@media (max-width: 1080px) {
+  html, body { height: auto; }
+  .layout { grid-template-columns: 1fr; grid-auto-rows: minmax(300px, auto); height: auto; overflow: auto; }
+  .panel { max-height: 68vh; }
+}
+
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">
+    <h1>命令行学习模拟器</h1>
+    <span class="tag">在这儿敲命令不会弄坏任何东西</span>
+  </div>
+
+  <div class="seg" title="切换要学的 shell 语法">
+    <button id="langBash" class="on">bash</button>
+    <button id="langFish">fish</button>
+  </div>
+  <span class="progress-pill" id="progressPill">进度 0 / 18 章</span>
+  <label class="switch" title="每条命令后用黄色便签解释发生了什么">
+    <input type="checkbox" id="hintsToggle" checked> 新手解释
+  </label>
+  <button class="btn" id="btnCheat">命令速查表</button>
+  <button class="btn" id="btnWipe" title="清空文件系统，保留进度和操作记录">清空沙盒</button>
+  <button class="btn ghost" id="btnResetAll" title="清空沙盒 + 清空所有进度">重新开始</button>
+</header>
+
+<main class="layout">
+
+  <!-- ============ 左：章节 ============ -->
+  <aside class="panel">
+    <div class="panel-head">章节 <span class="right">按顺序学，也可以随便跳</span></div>
+    <div class="panel-body">
+      <div id="lessonList"></div>
+      <div class="lesson-detail">
+        <h2 id="lessonTitle"></h2>
+        <div class="goal" id="lessonGoal"></div>
+        <div class="lesson-actions">
+          <button class="btn primary" data-demo>▶ 自动演示</button>
+          <button class="btn" id="btnRestartLesson">↻ 重来本章</button>
+        </div>
+        <ul class="tasks" id="taskList"></ul>
+        <div class="all-done" id="allDone">✓ 本章全部完成！点上面的章节列表进入下一章。</div>
+        <div class="explain">
+          <div class="explain-title">讲解</div>
+          <div id="lessonIntro"></div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ============ 中：终端 ============ -->
+  <section class="panel" id="terminalPanel">
+    <div class="panel-head">
+      终端
+      <span class="right">按 / 聚焦 · ↑↓ 历史 · Tab 补全 · Ctrl+L 清屏</span>
+    </div>
+    <div class="term-out" id="termOut"></div>
+    <div class="chips">
+      <button class="chip" data-cmd="ls -la">ls -la</button>
+      <button class="chip" data-cmd="cd projects">cd projects</button>
+      <button class="chip" data-cmd="cat readme.txt">cat readme.txt</button>
+      <button class="chip" data-cmd="grep ERROR projects/app.log">grep ERROR …</button>
+      <button class="chip" data-cmd="cat projects/app.log | grep ERROR | wc -l">管道组合</button>
+      <button class="chip" data-cmd="echo 你好 > /tmp/x.txt">echo &gt; 文件</button>
+      <button class="chip" data-cmd="help">help</button>
+    </div>
+    <div class="term-input-row">
+      <span class="prompt" id="prompt"></span>
+      <input id="cmd" placeholder="在这里输入命令，按回车执行" autocomplete="off" spellcheck="false">
+    </div>
+  </section>
+
+  <!-- ============ 右：目录树 / 变量 / 管道 ============ -->
+  <aside class="panel">
+    <div class="tabs" id="tabs">
+      <button data-tab="tree" class="on">目录树</button>
+      <button data-tab="vars">变量</button>
+      <button data-tab="pipe">数据流</button>
+    </div>
+    <div class="tab-body">
+      <div id="tab-tree"></div>
+      <div id="tab-vars" style="display:none"></div>
+      <div id="tab-pipe" style="display:none"></div>
+    </div>
+    <div class="chips" style="border-top:1px solid var(--border)">
+      <button class="chip" id="btnNewFile">＋ 新建 / 编辑文件</button>
+      <button class="chip" id="btnShowAll">显示整个系统</button>
+    </div>
+  </aside>
+
+</main>
+
+<!-- ============ 速查表 ============ -->
+<div class="modal" id="cheatModal">
+  <div class="modal-card">
+    <header>
+      <h3>命令速查表</h3>
+      <button class="btn" id="cheatClose">关闭 (Esc)</button>
+    </header>
+    <div class="content" id="cheatBody"></div>
+  </div>
+</div>
+
+<!-- ============ 文件编辑器 ============ -->
+<div class="modal" id="editorModal">
+  <div class="modal-card">
+    <header>
+      <h3 id="editorTitle">编辑文件</h3>
+      <button class="btn" id="editorCancel">取消 (Esc)</button>
+    </header>
+    <div class="content">
+      <div class="editor-name" id="editorName"></div>
+      <input class="editor-area" id="editorNameInput" style="min-height:auto;display:none"
+             placeholder="新文件名，例如 hello.sh">
+      <textarea class="editor-area" id="editorArea" spellcheck="false"
+                placeholder="#!/bin/bash&#10;echo 你好"></textarea>
+      <div class="modal-foot">
+        <button class="btn primary" id="editorSave">保存</button>
+        <label class="switch"><input type="checkbox" id="editorExec"> 保存后加上执行权限 (chmod +x)</label>
+        <span class="editor-tip" id="editorPath"></span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ============================================================
+ * termkit.js —— 终端学习页 UI 内核
+ * 从 git-learn/ui.js 提取出的项目无关部分：终端输出与控制、
+ * 命令历史、Tab 补全、一键演示、课程面板与任务判分、速查表、
+ * 弹窗、进度存储、Toast。
+ *
+ * 使用方只需：准备约定的 DOM、提供一个「执行命令」的回调。
+ * ============================================================ */
+(function (global) {
+  'use strict';
+
+  /* ---------------- 基础工具 ---------------- */
+  function qs(sel, root) { return (root || document).querySelector(sel); }
+  function qsa(sel, root) { return Array.prototype.slice.call((root || document).querySelectorAll(sel)); }
+
+  function h(tag, cls, text) {
+    const n = document.createElement(tag);
+    if (cls) n.className = cls;
+    if (text !== undefined && text !== null) n.textContent = text;
+    return n;
+  }
+
+  function esc(s) {
+    return String(s)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  }
+
+  /* 中文字符按 2 个宽度算 */
+  const WIDE = /[\u1100-\u115F\u2E80-\uA4CF\uAC00-\uD7A3\uF900-\uFAFF\uFE30-\uFE6F\uFF00-\uFF60\uFFE0-\uFFE6]/;
+  function dispWidth(s) {
+    let w = 0;
+    for (const ch of String(s)) w += WIDE.test(ch) ? 2 : 1;
+    return w;
+  }
+  function truncate(s, maxUnits) {
+    s = String(s);
+    if (dispWidth(s) <= maxUnits) return s;
+    let out = '', w = 0;
+    for (const ch of s) {
+      const cw = WIDE.test(ch) ? 2 : 1;
+      if (w + cw > maxUnits - 1) break;
+      out += ch; w += cw;
+    }
+    return out + '…';
+  }
+
+  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+  /* 把带 `反引号` 的纯文本渲染成带 <code> 的节点 */
+  function richText(text) {
+    const frag = document.createDocumentFragment();
+    String(text).split(/(`[^`]*`)/).forEach((seg) => {
+      if (/^`[^`]*`$/.test(seg)) frag.appendChild(h('code', null, seg.slice(1, -1)));
+      else if (seg) frag.appendChild(document.createTextNode(seg));
+    });
+    return frag;
+  }
+
+  /* ---------------- Toast ---------------- */
+  let toastEl = null, toastTimer = null;
+  function toast(msg, good) {
+    if (!toastEl) {
+      toastEl = h('div', 'toast');
+      document.body.appendChild(toastEl);
+    }
+    toastEl.textContent = msg;
+    toastEl.className = 'toast show' + (good ? ' good' : '');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => { toastEl.className = 'toast'; }, 2600);
+  }
+
+  /* ---------------- 进度存储 ---------------- */
+  class Progress {
+    constructor(key) {
+      this.key = key;
+      this.data = { done: {} };
+      try {
+        const raw = global.localStorage.getItem(key);
+        if (raw) this.data = JSON.parse(raw) || { done: {} };
+      } catch (e) { /* 隐私模式下可能不可用 */ }
+    }
+    save() {
+      try { global.localStorage.setItem(this.key, JSON.stringify(this.data)); } catch (e) {}
+    }
+    isDone(id) { return !!this.data.done[id]; }
+    markDone(id) { if (!this.data.done[id]) { this.data.done[id] = true; this.save(); return true; } return false; }
+    count(lessons) { return lessons.filter((l) => this.isDone(l.id)).length; }
+    clear() { this.data = { done: {} }; this.save(); }
+  }
+
+  /* ---------------- 终端 ---------------- */
+  class Terminal {
+    /**
+     * @param {object} o
+     *   outEl / inputEl / promptEl : 元素或选择器
+     *   onSubmit(cmd, term)        : 用户回车时调用
+     *   completer(value)           : 返回候选命令数组（可选）
+     *   promptHtml()               : 返回提示符 HTML（可选，动态）
+     *   historyLimit               : 历史条数上限
+     */
+    constructor(o) {
+      this.out = typeof o.outEl === 'string' ? qs(o.outEl) : o.outEl;
+      this.input = typeof o.inputEl === 'string' ? qs(o.inputEl) : o.inputEl;
+      this.promptEl = o.promptEl ? (typeof o.promptEl === 'string' ? qs(o.promptEl) : o.promptEl) : null;
+      this.onSubmit = o.onSubmit || function () {};
+      this.completer = o.completer || null;
+      this.promptHtml = o.promptHtml || null;
+      this.history = [];
+      this.histIdx = 0;
+      this.historyLimit = o.historyLimit || 200;
+      this.busy = false;
+      this._bind();
+      this.updatePrompt();
+    }
+
+    _bind() {
+      const self = this;
+      this.input.addEventListener('keydown', function (e) {
+        if (self.busy) { e.preventDefault(); return; }
+        if (e.key === 'Enter') {
+          const v = self.input.value;
+          if (v.trim()) {
+            self.history.push(v.trim());
+            if (self.history.length > self.historyLimit) self.history.shift();
+            self.histIdx = self.history.length;
+          }
+          self.input.value = '';
+          self.onSubmit(v, self);
+        } else if (e.key === 'ArrowUp') {
+          e.preventDefault();
+          if (!self.history.length) return;
+          self.histIdx = Math.max(0, self.histIdx - 1);
+          self.input.value = self.history[self.histIdx] || '';
+          self._caretEnd();
+        } else if (e.key === 'ArrowDown') {
+          e.preventDefault();
+          if (!self.history.length) return;
+          self.histIdx = Math.min(self.history.length, self.histIdx + 1);
+          self.input.value = self.history[self.histIdx] || '';
+          self._caretEnd();
+        } else if (e.key === 'Tab') {
+          e.preventDefault();
+          self._complete();
+        } else if (e.key === 'l' && e.ctrlKey) {
+          e.preventDefault();
+          self.clear();
+        }
+      });
+    }
+
+    _caretEnd() {
+      const n = this.input.value.length;
+      try { this.input.setSelectionRange(n, n); } catch (e) {}
+    }
+
+    _complete() {
+      if (!this.completer) return;
+      const v = this.input.value;
+      if (!v) { this.printMuted(this.completer('').join('   ')); return; }
+      const hits = this.completer(v);
+      if (!hits || !hits.length) return;
+      if (hits.length === 1) { this.input.value = hits[0]; this._caretEnd(); return; }
+      let common = hits[0];
+      hits.forEach((s) => {
+        let i = 0;
+        while (i < common.length && i < s.length && common[i] === s[i]) i++;
+        common = common.slice(0, i);
+      });
+      if (common.length > v.length) { this.input.value = common; this._caretEnd(); }
+      else this.printMuted(hits.join('   '));
+    }
+
+    setBusy(b) {
+      this.busy = b;
+      this.input.disabled = b;
+      this.input.placeholder = b ? '演示中…' : (this._ph || '');
+    }
+
+    updatePrompt() {
+      if (this.promptEl && this.promptHtml) this.promptEl.innerHTML = this.promptHtml();
+    }
+
+    /* ---- 输出 ---- */
+    print(item) {
+      const div = h('div', 'line');
+      if (item.spans) {
+        item.spans.forEach((s) => {
+          const sp = h('span', s.cls || 'plain', s.text);
+          div.appendChild(sp);
+        });
+      } else {
+        div.className = 'line ' + (item.cls || 'plain');
+        div.textContent = (item.text === '' || item.text === undefined) ? '\u00a0' : item.text;
+      }
+      this.out.appendChild(div);
+      this.scroll();
+      return div;
+    }
+    printText(text, cls) { return this.print({ text: text, cls: cls }); }
+    printMuted(text) { return this.print({ text: text, cls: 'muted' }); }
+    printLines(lines) { (lines || []).forEach((l) => this.print(l)); }
+    /** 打印 {lines, hints} 形式的结果 */
+    printResult(res, showHints) {
+      this.printLines(res.lines || []);
+      if (showHints && res.hints && res.hints.length) {
+        res.hints.forEach((t) => this.print({ text: '提示 · ' + t, cls: 'hint' }));
+      }
+    }
+    echo(cmd, promptHtml) {
+      const div = h('div', 'line echo');
+      const p = h('span', null, '');
+      p.innerHTML = promptHtml || (this.promptEl ? this.promptEl.innerHTML : '') || '$ ';
+      div.appendChild(p);
+      div.appendChild(document.createTextNode(' ' + cmd));
+      this.out.appendChild(div);
+      this.scroll();
+    }
+    divider(text) {
+      const n = Math.max(0, 46 - dispWidth(text));
+      this.print({ text: '── ' + text + ' ' + '─'.repeat(n), cls: 'divider' });
+    }
+    clear() { this.out.innerHTML = ''; }
+    scroll() { this.out.scrollTop = this.out.scrollHeight; }
+    focus() { try { this.input.focus(); } catch (e) {} }
+
+    /** 顺序执行演示命令；run(cmd) 由调用方提供，返回 Promise 或值 */
+    async playDemo(cmds, run, delay) {
+      if (this.busy) return;
+      this.setBusy(true);
+      qsa('[data-demo]').forEach((b) => { b.disabled = true; });
+      this.divider('开始自动演示');
+      for (const c of cmds) {
+        await run(c, this);
+        await sleep(delay || 700);
+      }
+      this.divider('演示结束，轮到你了');
+      this.setBusy(false);
+      qsa('[data-demo]').forEach((b) => { b.disabled = false; });
+      this.focus();
+    }
+  }
+
+  /* ---------------- 课程面板 ---------------- */
+  /**
+   * 约定的 DOM id：
+   *   #lessonList #lessonTitle #lessonGoal #lessonIntro
+   *   #taskList #allDone #progressPill
+   */
+  class LessonPanel {
+    constructor(o) {
+      this.lessons = o.lessons;
+      this.engine = o.engine;                   // 传给 check(e)
+      this.progress = new Progress(o.progressKey || 'termkit-progress');
+      this.current = null;
+      this.onStart = o.onStart || function () {};
+      this.ids = Object.assign({
+        list: '#lessonList', title: '#lessonTitle', goal: '#lessonGoal',
+        intro: '#lessonIntro', tasks: '#taskList', allDone: '#allDone', pill: '#progressPill',
+      }, o.ids || {});
+      this.el = {};
+      Object.keys(this.ids).forEach((k) => { this.el[k] = qs(this.ids[k]); });
+    }
+
+    renderList() {
+      const box = this.el.list;
+      if (!box) return;
+      box.innerHTML = '';
+      let lastPart = null;
+      this.lessons.forEach((l) => {
+        if (l.part && l.part !== lastPart) {
+          lastPart = l.part;
+          box.appendChild(h('div', 'part-title', l.part));
+        }
+        const b = h('button', 'lesson-item' +
+          (this.current && l.id === this.current.id ? ' active' : '') +
+          (this.progress.isDone(l.id) ? ' done' : ''));
+        b.appendChild(h('span', 'ch', l.chapter));
+        b.appendChild(h('span', 'tt', l.title));
+        b.addEventListener('click', () => this.start(l, true));
+        box.appendChild(b);
+      });
+      if (this.el.pill) {
+        this.el.pill.textContent = '进度 ' + this.progress.count(this.lessons) + ' / ' + this.lessons.length + ' 章';
+      }
+    }
+
+    renderDetail() {
+      const l = this.current;
+      if (!l) return;
+      if (this.el.title) this.el.title.textContent = l.chapter + ' · ' + l.title;
+      if (this.el.goal) this.el.goal.textContent = l.goal || '';
+      if (this.el.intro) {
+        this.el.intro.innerHTML = '';
+        (l.intro || []).forEach((p) => {
+          const el = document.createElement('p');
+          el.appendChild(richText(p));
+          this.el.intro.appendChild(el);
+        });
+      }
+      if (this.el.tasks) {
+        this.el.tasks.innerHTML = '';
+        l.tasks.forEach((t, i) => {
+          const li = h('li');
+          li.dataset.idx = i;
+          li.appendChild(h('span', 'box', '☐'));
+          const wrap = h('span', 'txt');
+          wrap.appendChild(richText(t.text));
+          if (t.hint) wrap.appendChild(h('span', 'hint', '▸ ' + t.hint));
+          li.appendChild(wrap);
+          this.el.tasks.appendChild(li);
+        });
+      }
+      if (this.el.allDone) this.el.allDone.style.display = 'none';
+    }
+
+    /** 进入某章：重置沙盒（由调用方在 onStart 里做），刷新界面 */
+    start(lesson, announce) {
+      this.current = lesson;
+      this.onStart(lesson);
+      this.renderDetail();
+      this.renderList();
+      this.evaluate();
+      if (announce) toast('已进入：' + lesson.title);
+    }
+
+    /** 每次命令执行后调用，刷新勾选状态 */
+    evaluate(taskListEl) {
+      const l = this.current;
+      if (!l) return false;
+      const items = (taskListEl || this.el.tasks).children;
+      // 任务清单还没渲染出来时不能判"全部通过"，否则会误报通关并写脏进度
+      if (!items.length) return false;
+      let all = true;
+      let matched = 0;
+      l.tasks.forEach((t, i) => {
+        let ok = false;
+        try { ok = !!t.check(this.engine); } catch (e) { ok = false; }
+        const li = items[i];
+        if (li) {
+          matched++;
+          li.classList.toggle('ok', ok);
+          const box = li.querySelector('.box');
+          if (box) box.textContent = ok ? '☑' : '☐';
+        }
+        if (!ok) all = false;
+      });
+      if (matched < l.tasks.length) return false;
+      if (this.el.allDone) this.el.allDone.style.display = all ? '' : 'none';
+      if (all && this.progress.markDone(l.id)) {
+        this.renderList();
+        toast('✓ 「' + l.title + '」通关！', true);
+      }
+      return all;
+    }
+  }
+
+  /* ---------------- 速查表 ---------------- */
+  /**
+   * groups: [{ title, rows: [[cmd, desc] | [bash, fish, desc]] , two: bool }]
+   * 点击一行把命令填进输入框。
+   */
+  class CheatSheet {
+    constructor(o) {
+      this.bodyEl = typeof o.el === 'string' ? qs(o.el) : o.el;
+      this.modalEl = typeof o.modal === 'string' ? qs(o.modal) : o.modal;
+      this.inputEl = typeof o.input === 'string' ? qs(o.input) : o.input;
+      this.groups = o.groups || [];
+      this.render();
+    }
+    render() {
+      if (!this.bodyEl) return;
+      const box = this.bodyEl;
+      box.innerHTML = '';
+      this.groups.forEach((g) => {
+        const wrap = h('div', 'cheat-group');
+        wrap.appendChild(h('h4', null, g.title));
+        if (g.two) {
+          const head = h('div', 'cheat-head');
+          head.appendChild(h('span', null, 'bash'));
+          head.appendChild(h('span', null, 'fish'));
+          head.appendChild(h('span', null, '说明'));
+          wrap.appendChild(head);
+        }
+        g.rows.forEach((row) => {
+          const isTwo = row.length === 3 && g.two;
+          const r = h('div', 'cheat-row' + (isTwo ? ' two' : ''));
+          const fill = isTwo ? row[1] : row[0];
+          if (isTwo) {
+            r.appendChild(h('code', null, row[0]));
+            r.appendChild(h('code', 'fish', row[1]));
+            r.appendChild(h('span', null, row[2]));
+          } else {
+            r.appendChild(h('code', null, row[0]));
+            r.appendChild(h('span', null, row[1]));
+          }
+          r.addEventListener('click', () => {
+            if (this.modalEl) this.modalEl.classList.remove('open');
+            if (this.inputEl) {
+              this.inputEl.value = fill;
+              this.inputEl.focus();
+              const n = fill.length;
+              try { this.inputEl.setSelectionRange(n, n); } catch (e) {}
+            }
+            toast('已填入输入框：' + fill);
+          });
+          wrap.appendChild(r);
+        });
+        box.appendChild(wrap);
+      });
+    }
+    open() { if (this.modalEl) this.modalEl.classList.add('open'); }
+    close() { if (this.modalEl) this.modalEl.classList.remove('open'); }
+  }
+
+  /* ---------------- 弹窗助手 ---------------- */
+  const Modal = {
+    open(sel) { const e = typeof sel === 'string' ? qs(sel) : sel; if (e) e.classList.add('open'); },
+    close(sel) { const e = typeof sel === 'string' ? qs(sel) : sel; if (e) e.classList.remove('open'); },
+    bindClose(sel, btnSel) {
+      const e = typeof sel === 'string' ? qs(sel) : sel;
+      if (!e) return;
+      e.addEventListener('click', (ev) => { if (ev.target === e) e.classList.remove('open'); });
+      if (btnSel) qsa(btnSel).forEach((b) => b.addEventListener('click', () => e.classList.remove('open')));
+    },
+  };
+
+  global.TermKit = {
+    qs, qsa, h, esc, dispWidth, truncate, sleep, toast, richText,
+    Progress, Terminal, LessonPanel, CheatSheet, Modal,
+  };
+  if (typeof module !== 'undefined' && module.exports) module.exports = global.TermKit;
+})(typeof window !== 'undefined' ? window : globalThis);
+
+</script>
+<script>
+/* ============================================================
+ * shell.js —— 迷你 shell 解释器
+ * 虚拟文件系统 + 词法分析 + 展开 + 语法分析 + 执行。
+ * 支持 bash 与 fish 两套语法，管道 / 重定向 / 变量 / 流程控制齐备。
+ * 命令实现见 commands.js（通过 Shell.register 注册）。
+ * ============================================================ */
+(function (global) {
+  'use strict';
+
+  const USER = 'xinyan';
+  const HOST = 'cachyos';
+  const HOME = '/home/' + USER;
+
+  /* ============================================================
+   * 一、虚拟文件系统
+   * ============================================================ */
+  class FsError extends Error {
+    constructor(code, path) { super(code); this.code = code; this.path = path; }
+  }
+
+  function mkDir(mode) { return { type: 'dir', mode: mode === undefined ? 0o755 : mode, children: Object.create(null) }; }
+  function mkFile(content, mode) { return { type: 'file', mode: mode === undefined ? 0o644 : mode, content: content === undefined ? '' : content }; }
+  function mkLink(target) { return { type: 'link', mode: 0o777, content: target }; }
+
+  class VFS {
+    constructor() { this.root = mkDir(); }
+
+    /* ---- 路径 ---- */
+    resolve(cwd, p) {
+      p = String(p === undefined ? '' : p);
+      if (p === '~') p = HOME;
+      else if (p.indexOf('~/') === 0) p = HOME + p.slice(1);
+      const parts = (p.indexOf('/') === 0) ? [] : cwd.split('/').filter(Boolean);
+      p.split('/').forEach((seg) => {
+        if (seg === '' || seg === '.') return;
+        if (seg === '..') { parts.pop(); return; }
+        parts.push(seg);
+      });
+      return '/' + parts.join('/');
+    }
+
+    /** 逐级查找；follow=false 时不跟随最后一段的符号链接 */
+    _lookup(abs, follow) {
+      const parts = abs.split('/').filter(Boolean);
+      let node = this.root;
+      let cur = '';
+      for (let i = 0; i < parts.length; i++) {
+        cur += '/' + parts[i];
+        if (node.type !== 'dir') throw new FsError('ENOTDIR', cur);
+        let child = node.children[parts[i]];
+        if (!child) throw new FsError('ENOENT', cur);
+        const isLast = (i === parts.length - 1);
+        if (child.type === 'link' && (!isLast || follow !== false)) {
+          child = this._lookup(this.resolve('/', child.content), true);
+        }
+        node = child;
+      }
+      return node;
+    }
+
+    exists(abs) { try { this._lookup(abs, true); return true; } catch (e) { return false; } }
+    stat(abs) { return this._lookup(abs, true); }
+    isDir(abs) { try { return this._lookup(abs, true).type === 'dir'; } catch (e) { return false; } }
+    isLink(abs) { try { return this._lookup(abs, false).type === 'link'; } catch (e) { return false; } }
+
+    _parent(abs) {
+      const idx = abs.lastIndexOf('/');
+      const dir = idx === 0 ? '/' : abs.slice(0, idx);
+      const name = abs.slice(idx + 1);
+      return { dir: this._lookup(dir, true), name: name, dirPath: dir };
+    }
+
+    mkdir(abs, parents) {
+      const parts = abs.split('/').filter(Boolean);
+      let node = this.root, cur = '';
+      for (let i = 0; i < parts.length; i++) {
+        cur += '/' + parts[i];
+        const isLast = (i === parts.length - 1);
+        let child = node.children[parts[i]];
+        if (child) {
+          if (child.type !== 'dir') throw new FsError('EEXIST', cur);
+          if (isLast && !parents) throw new FsError('EEXIST', cur);
+        } else {
+          child = mkDir();
+          node.children[parts[i]] = child;
+        }
+        node = child;
+      }
+    }
+
+    /** list: [{name, type, size, mode, isLink}] */
+    list(abs) {
+      const node = this._lookup(abs, true);
+      if (node.type !== 'dir') throw new FsError('ENOTDIR', abs);
+      return Object.keys(node.children).map((name) => {
+        const raw = node.children[name];
+        let target = raw, followed = true;
+        if (raw.type === 'link') {
+          try { target = this._lookup(this.resolve(abs, raw.content), true); } catch (e) { followed = false; target = null; }
+        }
+        return {
+          name: name,
+          type: raw.type === 'link' ? (followed && target ? target.type : 'link') : raw.type,
+          isLink: raw.type === 'link',
+          linkTarget: raw.type === 'link' ? raw.content : null,
+          size: !target ? 0 : (target.type === 'dir' ? 4096 : String(target.content).length),
+          mode: raw.mode,
+        };
+      });
+    }
+
+    readFile(abs) {
+      const node = this._lookup(abs, true);
+      if (node.type === 'dir') throw new FsError('EISDIR', abs);
+      if ((node.mode & 0o444) === 0) throw new FsError('EACCES', abs);
+      return node.content;
+    }
+
+    writeFile(abs, content, append) {
+      const par = this._parent(abs);
+      if (par.dir.type !== 'dir') throw new FsError('ENOTDIR', par.dirPath);
+      let node = par.dir.children[par.name];
+      if (node && node.type === 'dir') throw new FsError('EISDIR', abs);
+      if (node && (node.mode & 0o222) === 0) throw new FsError('EACCES', abs);
+      if (!node) { node = mkFile(''); par.dir.children[par.name] = node; }
+      node.content = append ? (node.content + content) : content;
+      return node;
+    }
+
+    createFile(abs) {
+      const par = this._parent(abs);
+      if (par.dir.children[par.name]) return;
+      par.dir.children[par.name] = mkFile('');
+    }
+
+    remove(abs) {
+      const par = this._parent(abs);
+      const node = par.dir.children[par.name];
+      if (!node) throw new FsError('ENOENT', abs);
+      if (node.type === 'dir' && Object.keys(node.children).length) throw new FsError('ENOTEMPTY', abs);
+      delete par.dir.children[par.name];
+      return node;
+    }
+
+    /** 递归删除，返回文件数 */
+    removeRecursive(abs) {
+      const node = this._lookup(abs, false);
+      let n = 0;
+      if (node.type === 'dir') {
+        Object.keys(node.children).forEach((k) => { n += this.removeRecursive(abs + '/' + k); });
+      } else n = 1;
+      const par = this._parent(abs);
+      delete par.dir.children[par.name];
+      return n;
+    }
+
+    copyInto(srcAbs, dstAbs, recursive) {
+      const src = this._lookup(srcAbs, false);
+      if (src.type === 'dir' && !recursive) throw new FsError('EISDIR', srcAbs);
+      const par = this._parent(dstAbs);
+      if (par.dir.children[par.name] && par.dir.children[par.name].type === 'dir') {
+        // 目标是目录，复制进去
+        const inner = par.dir.children[par.name];
+        const base = srcAbs.split('/').filter(Boolean).pop();
+        inner.children[base] = this._clone(src);
+        return;
+      }
+      par.dir.children[par.name] = this._clone(src);
+    }
+
+    _clone(node) {
+      if (node.type === 'dir') {
+        const d = mkDir(node.mode);
+        Object.keys(node.children).forEach((k) => { d.children[k] = this._clone(node.children[k]); });
+        return d;
+      }
+      return node.type === 'link' ? mkLink(node.content) : mkFile(node.content, node.mode);
+    }
+
+    move(srcAbs, dstAbs) {
+      const par = this._parent(dstAbs);
+      if (par.dir.children[par.name] && par.dir.children[par.name].type === 'dir') {
+        const base = srcAbs.split('/').filter(Boolean).pop();
+        dstAbs = dstAbs.replace(/\/$/, '') + '/' + base;
+      }
+      const sp = this._parent(srcAbs);
+      const node = sp.dir.children[sp.name];
+      if (!node) throw new FsError('ENOENT', srcAbs);
+      const dp = this._parent(dstAbs);
+      if (dp.dir.children[dp.name]) throw new FsError('EEXIST', dstAbs);
+      delete sp.dir.children[sp.name];
+      dp.dir.children[dp.name] = node;
+    }
+
+    chmod(abs, mode) {
+      const node = this._lookup(abs, false);
+      node.mode = mode;
+    }
+
+    /* 目录树（给右侧面板用） */
+    tree(abs, depth, maxDepth) {
+      const node = this._lookup(abs, true);
+      const out = [];
+      const walk = (n, path, d) => {
+        if (d > (maxDepth === undefined ? 4 : maxDepth)) return;
+        Object.keys(n.children).sort().forEach((name) => {
+          const child = n.children[name];
+          const p = path + '/' + name;
+          out.push({ path: p, name: name, type: child.type, depth: d, size: child.type === 'dir' ? 0 : String(child.content).length });
+          if (child.type === 'dir') walk(child, p, d + 1);
+        });
+      };
+      walk(node, abs === '/' ? '' : abs, 1);
+      return out;
+    }
+  }
+
+  function seedFS() {
+    const fs = new VFS();
+    ['/bin', '/etc', '/tmp', '/usr', '/usr/bin', '/usr/local', '/var', '/opt', HOME,
+      HOME + '/文档', HOME + '/下载', HOME + '/图片', HOME + '/projects', HOME + '/projects/notes'].forEach((d) => {
+      try { fs.mkdir(d, true); } catch (e) {}
+    });
+    const F = (p, c) => fs.writeFile(p, c);
+    F('/etc/hostname', HOST + '\n');
+    F('/etc/os-release', 'NAME="CachyOS Linux"\nID=cachyos\nVERSION_ID="2026.09"\nPRETTY_NAME="CachyOS Linux"\n');
+    F(HOME + '/readme.txt',
+      '这是我的家目录。\n你可以在这里随便折腾，反正只是个模拟器。\n\n试试：ls -la\nthen: cat readme.txt\n');
+    F(HOME + '/文档/购物清单.txt', '牛奶\n鸡蛋\n面包\n咖啡豆\n牛奶\n');
+    F(HOME + '/文档/待办.txt', '1. 学会用 cd\n2. 学会用 grep\n3. 写一个自己的脚本\n');
+    F(HOME + '/projects/notes/第一天.md',
+      '# 第一天\n\n今天学会了 pwd 和 ls。\n路径分绝对路径和相对路径。\n');
+    F(HOME + '/projects/notes/第二天.md',
+      '# 第二天\n\n学会了重定向：echo hi > a.txt\n还有管道：cat a.txt | wc -l\n');
+    F(HOME + '/projects/app.log',
+      ['[INFO] 服务启动', '[INFO] 载入配置 config.yaml', '[WARN] 缓存未命中 key=user:42',
+        '[ERROR] 连接数据库失败 timeout=30s', '[INFO] 重试第 1 次', '[INFO] 重试成功',
+        '[ERROR] 连接数据库失败 timeout=30s', '[WARN] 磁盘使用率 81%', '[INFO] 请求 /api/list 耗时 12ms',
+        '[INFO] 请求 /api/detail 耗时 340ms', '[ERROR] 连接数据库失败 timeout=30s', '[INFO] 服务就绪'].join('\n') + '\n');
+    F(HOME + '/projects/config.yaml', 'server:\n  port: 8080\n  host: 127.0.0.1\ndb:\n  url: localhost:5432\n  pool: 10\nlog:\n  level: info\n');
+    F(HOME + '/.bashrc', '# ~/.bashrc —— 每次打开新终端都会自动执行这个文件\nalias ll="ls -l"\nalias la="ls -a"\nexport EDITOR=vim\nPATH="$PATH:$HOME/.local/bin"\n');
+    F(HOME + '/.profile', '# ~/.profile\n# 登录时执行一次\n');
+    F(HOME + '/projects/notes/.secret', '（隐藏文件：以 . 开头的文件 ls 默认看不到，要用 ls -a）\n');
+    mkdirSafe(fs, HOME + '/projects/bin');
+    F(HOME + '/projects/bin/hello.sh', '#!/bin/bash\necho "你好，脚本！"\n');
+    fs.chmod(HOME + '/projects/bin/hello.sh', 0o644);
+    F('/tmp/example.txt', '临时文件\n');
+    F('/etc/passwd', ['root:x:0:0:root:/root:/bin/bash', USER + ':x:1000:1000:' + USER + ':' + HOME + ':/bin/bash',
+      'nobody:x:65534:65534:nobody:/nonexistent:/usr/sbin/nologin'].join('\n') + '\n');
+    F(HOME + '/文档/名单.txt', '张三\n李四\n王五\n张三\n赵六\n李四\n');
+    return fs;
+  }
+  function mkdirSafe(fs, p) { try { fs.mkdir(p, true); } catch (e) {} }
+
+  /* ============================================================
+   * 二、词法分析
+   * ============================================================ */
+  const REDIR_OPS = ['&>>', '2>>', '&>', '2>', '>>', '>', '<', '<<<'];
+  const OPS3 = ['&>>'];
+  const OPS2 = ['2>>', '&&', '||', '>>', '&>', '2>'];
+  const OPS1 = ['|', ';', '&', '>', '<', '(' , ')'];
+
+  class LexError extends Error {}
+
+  function isBlank(c) { return c === ' ' || c === '\t'; }
+  function isName(s) { return /^[A-Za-z_][A-Za-z0-9_]*$/.test(s); }
+
+  /**
+   * 返回 token 数组：
+   *   {t:'word', parts:[{k,v,q}], text:'原文'}
+   *   {t:'op', v:'|'}
+   * q: 0 未加引号 / 1 单引号 / 2 双引号
+   */
+  function lex(src, lang) {
+    const toks = [];
+    const s = String(src);
+    let i = 0;
+    const n = s.length;
+
+    function pushWord(parts, raw) {
+      if (!parts.length) return;
+      toks.push({ t: 'word', parts: parts, text: raw });
+    }
+
+    while (i < n) {
+      const c = s[i];
+      if (isBlank(c)) { i++; continue; }
+      if (c === '\n') { toks.push({ t: 'op', v: '\n' }); i++; continue; }
+      if (c === '#') { while (i < n && s[i] !== '\n') i++; continue; }
+
+      // 操作符
+      if (c === '\\' && s[i + 1] === '\n') { i += 2; continue; }
+      const three = s.substr(i, 3);
+      if (OPS3.indexOf(three) !== -1) { toks.push({ t: 'op', v: three }); i += 3; continue; }
+      const two = s.substr(i, 2);
+      if (OPS2.indexOf(two) !== -1) { toks.push({ t: 'op', v: two }); i += 2; continue; }
+      if (lang === 'bash' && (c === '(' || c === ')')) { toks.push({ t: 'op', v: c }); i++; continue; }
+      if (OPS1.indexOf(c) !== -1 && !(lang === 'fish' && c === '(')) {
+        if (c === '&' && s[i + 1] === '&') { /* 已由 two 处理 */ }
+        toks.push({ t: 'op', v: c }); i++; continue;
+      }
+
+      // 普通词
+      const parts = [];
+      let raw = '';
+      let cur = '';
+      const flush = (k, q) => {
+        if (cur !== '') { parts.push({ k: 'lit', v: cur, q: q }); cur = ''; }
+      };
+      while (i < n) {
+        const ch = s[i];
+        if (isBlank(ch) || ch === '\n') break;
+        if (ch === '#' && raw === '' && parts.length === 0) break;
+        if (lang === 'bash' && (ch === '(' || ch === ')')) break;
+        if (ch === '|' || ch === ';' || ch === '&' || ch === '>' || ch === '<') break;
+
+        if (ch === '\\') {
+          const nx = s[i + 1];
+          if (nx === '\n') { i += 2; continue; }
+          if (nx === undefined) { raw += '\\'; cur += '\\'; i++; continue; }
+          raw += '\\' + nx; cur += nx; i += 2; continue;
+        }
+
+        if (ch === "'") {
+          flush('lit', 0);
+          i++;
+          let buf = '';
+          while (i < n && s[i] !== "'") { buf += s[i]; i++; }
+          if (i >= n) throw new LexError("单引号没有闭合");
+          i++;
+          raw += "'" + buf + "'";
+          parts.push({ k: 'lit', v: buf, q: 1 });
+          continue;
+        }
+
+        if (ch === '"') {
+          flush('lit', 0);
+          i++;
+          raw += '"';
+          let buf = '';
+          const sub = [];
+          const flushBuf = () => { if (buf !== '') { sub.push({ k: 'lit', v: buf, q: 2 }); buf = ''; } };
+          while (i < n && s[i] !== '"') {
+            const d = s[i];
+            if (d === '\\') {
+              const nx = s[i + 1];
+              if (nx === '"' || nx === '\\' || nx === '$' || nx === '`') { buf += nx; raw += '\\' + nx; i += 2; continue; }
+              if (nx === '\n') { i += 2; continue; }
+              buf += '\\'; raw += '\\'; i++; continue;
+            }
+            if (d === '$' || (d === '`' && lang === 'bash')) {
+              flushBuf();
+              const r = readDollar(s, i, lang);
+              sub.push(r.part); raw += r.raw; i = r.next;
+              continue;
+            }
+            buf += d; raw += d; i++;
+          }
+          if (i >= n) throw new LexError('双引号没有闭合');
+          i++; raw += '"';
+          flushBuf();
+          sub.forEach((p) => parts.push(p));
+          continue;
+        }
+
+        if (ch === '$' || (ch === '`' && lang === 'bash')) {
+          flush('lit', 0);
+          const r = readDollar(s, i, lang);
+          parts.push(r.part); raw += r.raw; i = r.next;
+          continue;
+        }
+
+        if (lang === 'fish' && ch === '(') {
+          flush('lit', 0);
+          const r = readParen(s, i);
+          parts.push({ k: 'cmd', v: r.inner, q: 0 }); raw += r.raw; i = r.next;
+          continue;
+        }
+
+        cur += ch; raw += ch; i++;
+      }
+      flush('lit', 0);
+      pushWord(parts, raw);
+    }
+    return toks;
+  }
+
+  /* 读取 $... / `...`，返回 {part, raw, next} */
+  function readDollar(s, i, lang) {
+    const n = s.length;
+    const ch = s[i];
+    if (lang === 'fish' && s[i + 1] === '?') {
+      throw new LexError("$? 不是退出码。fish 里请用 $status");
+    }
+    if (ch === '`') {
+      let j = i + 1, buf = '';
+      while (j < n && s[j] !== '`') { buf += s[j]; j++; }
+      if (j >= n) throw new LexError('反引号没有闭合');
+      return { part: { k: 'cmd', v: buf, q: 0 }, raw: '`' + buf + '`', next: j + 1 };
+    }
+    const next = s[i + 1];
+    if (next === '(') {
+      if (s[i + 2] === '(') {
+        let j = i + 3, depth = 1, buf = '';
+        while (j < n) {
+          if (s.substr(j, 2) === '((') { depth++; buf += '(('; j += 2; continue; }
+          if (s.substr(j, 2) === '))') { depth--; if (depth === 0) break; buf += '))'; j += 2; continue; }
+          buf += s[j]; j++;
+        }
+        return { part: { k: 'arith', v: buf, q: 0 }, raw: '$((' + buf + '))', next: j + 2 };
+      }
+      let j = i + 2, depth = 1, buf = '';
+      while (j < n) {
+        const c = s[j];
+        if (c === '(') depth++;
+        else if (c === ')') { depth--; if (depth === 0) break; }
+        else if (c === "'") { buf += c; j++; while (j < n && s[j] !== "'") { buf += s[j]; j++; } }
+        buf += c; j++;
+      }
+      if (j >= n) throw new LexError('$() 没有闭合');
+      return { part: { k: 'cmd', v: buf, q: 0 }, raw: '$(' + buf + ')', next: j + 1 };
+    }
+    if (next === '{') {
+      let j = i + 2, buf = '';
+      while (j < n && s[j] !== '}') { buf += s[j]; j++; }
+      if (j >= n) throw new LexError('${ 没有闭合');
+      return { part: { k: 'var', v: buf, q: 0 }, raw: '${' + buf + '}', next: j + 1 };
+    }
+    if (next === undefined) return { part: { k: 'lit', v: '$', q: 0 }, raw: '$', next: i + 1 };
+    if (/[A-Za-z_]/.test(next)) {
+      let j = i + 1, buf = '';
+      while (j < n && /[A-Za-z0-9_]/.test(s[j])) { buf += s[j]; j++; }
+      return { part: { k: 'var', v: buf, q: 0 }, raw: '$' + buf, next: j };
+    }
+    if (/[0-9]/.test(next) || next === '?' || next === '#' || next === '@' || next === '*' ||
+        next === '$' || next === '!' || next === '-') {
+      return { part: { k: 'var', v: next, q: 0 }, raw: '$' + next, next: i + 2 };
+    }
+    return { part: { k: 'lit', v: '$', q: 0 }, raw: '$', next: i + 1 };
+  }
+
+  function readParen(s, i) {
+    const n = s.length;
+    let j = i + 1, depth = 1, buf = '';
+    while (j < n) {
+      const c = s[j];
+      if (c === '(') depth++;
+      else if (c === ')') { depth--; if (depth === 0) break; }
+      buf += c; j++;
+    }
+    if (j >= n) throw new LexError('( 没有闭合');
+    return { inner: buf, raw: '(' + buf + ')', next: j + 1 };
+  }
+
+  /* ============================================================
+   * 三、语法分析
+   * ============================================================ */
+  class ParseError extends Error {}
+
+  class Parser {
+    constructor(toks, lang) { this.toks = toks; this.i = 0; this.lang = lang; }
+    peek(k) { return this.toks[this.i + (k || 0)] || null; }
+    next() { return this.toks[this.i++] || null; }
+    eof() { return this.i >= this.toks.length; }
+    isOp(t, v) { return !!t && t.t === 'op' && t.v === v; }
+    isWord(t, v) { return !!t && t.t === 'word' && t.text === v && !t.parts.some((p) => p.q); }
+    skipSeps() { while (!this.eof() && (this.isOp(this.peek(), ';') || this.isOp(this.peek(), '\n'))) this.next(); }
+    expectWord(w) {
+      const t = this.peek();
+      if (!this.isWord(t, w)) throw new ParseError('语法错误：这里应该是 ' + w);
+      this.next();
+    }
+    kw() { return this.lang === 'fish' ? FISH_KW : BASH_KW; }
+
+    parseProgram() {
+      const list = this.parseList(new Set());
+      if (!this.eof()) throw new ParseError('多余的内容：' + (this.peek().text || this.peek().v));
+      return list;
+    }
+
+    parseList(stops) {
+      const items = [];
+      for (;;) {
+        this.skipSeps();
+        if (this.eof()) break;
+        const t = this.peek();
+        // fish: `false; or echo x` —— and/or 出现在命令位置时是分隔符
+        if (this.lang === 'fish' && (this.isWord(t, 'and') || this.isWord(t, 'or'))) {
+          this.next();
+          if (items.length) items[items.length - 1].sep = (t.text === 'and' ? '&&' : '||');
+          continue;
+        }
+        if (t.t === 'word' && stops.has(t.text)) break;
+        if (this.isOp(t, ')')) break;
+        const part = this.parseAndOr(stops);
+        if (!part) break;
+        part.items.forEach((x) => items.push(x));
+        if (this.isOp(this.peek(), '&')) { this.next(); if (items.length) items[items.length - 1].sep = '&'; }
+      }
+      return { t: 'list', items: items };
+    }
+
+    parseAndOr(stops) {
+      const first = this.parsePipeline(stops);
+      if (!first) return null;
+      const items = [{ node: first, sep: ';' }];
+      for (;;) {
+        const t = this.peek();
+        let sep = null;
+        if (this.isOp(t, '&&')) sep = '&&';
+        else if (this.isOp(t, '||')) sep = '||';
+        else if (this.lang === 'fish' && this.isWord(t, 'and')) sep = '&&';
+        else if (this.lang === 'fish' && this.isWord(t, 'or')) sep = '||';
+        if (!sep) break;
+        this.next();
+        this.skipSeps();
+        const nx = this.parsePipeline(stops);
+        if (!nx) break;
+        items[items.length - 1].sep = sep;
+        items.push({ node: nx, sep: ';' });
+      }
+      return { t: 'list', items: items };
+    }
+
+    parsePipeline(stops) {
+      const cmds = [this.parseCommand(stops)];
+      if (!cmds[0]) return null;
+      while (this.isOp(this.peek(), '|')) {
+        this.next();
+        this.skipSeps();
+        const c = this.parseCommand(stops);
+        if (!c) throw new ParseError('管道后面缺少命令');
+        cmds.push(c);
+      }
+      return cmds.length === 1 ? cmds[0] : { t: 'pipe', cmds: cmds };
+    }
+
+    parseCommand(stops) {
+      const t = this.peek();
+      if (!t) return null;
+
+      if (this.isOp(t, '(') && this.lang === 'bash') {
+        this.next();
+        const body = this.parseList(new Set());
+        if (!this.isOp(this.peek(), ')')) throw new ParseError('( 没有对应的 )');
+        this.next();
+        return { t: 'subshell', body: body };
+      }
+
+      if (t.t !== 'word') return null;
+
+      if (this.isWord(t, 'if')) return this.parseIf(stops);
+      if (this.isWord(t, 'for')) return this.parseFor(stops);
+      if (this.isWord(t, 'while')) return this.parseWhile(stops);
+      if (this.lang === 'fish' && (this.isWord(t, 'and') || this.isWord(t, 'or'))) return null;
+      // fish 3.0+ 起 ! 和 not 都能用
+      if (this.lang === 'fish' && this.isWord(t, '!')) {
+        this.next();
+        const innerBang = this.parsePipeline(stops);
+        return { t: 'not', node: innerBang };
+      }
+      if (this.isWord(t, 'not') && this.lang === 'fish') {
+        this.next();
+        const inner = this.parsePipeline(stops);
+        return { t: 'not', node: inner };
+      }
+      if (this.isWord(t, 'function') && this.lang === 'fish') return this.parseFishFunc(stops);
+      if (this.isWord(t, 'function') && this.lang === 'bash') {
+        this.next();
+        const nameT = this.next();
+        if (!nameT || nameT.t !== 'word') throw new ParseError('function 后面要跟函数名');
+        return this.parseBashFuncBody(nameT.text);
+      }
+      // bash: name() { ... }
+      if (this.lang === 'bash' && this.isOp(this.peek(1), '(') && this.isOp(this.peek(2), ')') &&
+          isName(t.text) && !stops.has(t.text)) {
+        this.next(); this.next(); this.next();
+        return this.parseBashFuncBody(t.text);
+      }
+      return this.parseSimple(stops);
+    }
+
+    parseBashFuncBody(name) {
+      this.skipSeps();
+      if (!this.isWord(this.peek(), '{')) throw new ParseError('函数体要用 { } 包起来');
+      this.next();
+      const body = this.parseList(new Set(['}']));
+      this.expectWord('}');
+      return { t: 'func', name: name, body: body };
+    }
+
+    parseFishFunc(stops) {
+      this.next(); // function
+      const nameT = this.next();
+      if (!nameT || nameT.t !== 'word') throw new ParseError('function 后面要跟函数名');
+      // 跳过 --description 之类的选项
+      while (this.peek() && this.peek().t === 'word' && String(this.peek().text).indexOf('--') === 0) this.next();
+      this.skipSeps();
+      const body = this.parseList(new Set(['end']));
+      this.expectWord('end');
+      return { t: 'func', name: nameT.text, body: body };
+    }
+
+    parseIf(stops) {
+      this.next(); // if
+      const branches = [];
+      for (;;) {
+        const cond = this.parseAndOr(new Set(['then']));
+        this.skipSeps();
+        if (this.lang === 'bash') { this.expectWord('then'); this.skipSeps(); }
+        else if (cond && this.isWord(this.peek(), 'then')) { this.next(); this.skipSeps(); }
+        const bodyStops = this.lang === 'fish' ? new Set(['else', 'end']) : new Set(['elif', 'else', 'fi']);
+        const body = this.parseList(bodyStops);
+        branches.push({ cond: cond, body: body });
+        if (this.isWord(this.peek(), 'elif')) { this.next(); this.skipSeps(); continue; }
+        break;
+      }
+      let elseBody = null;
+      if (this.isWord(this.peek(), 'else')) {
+        this.next(); this.skipSeps();
+        elseBody = this.parseList(this.lang === 'fish' ? new Set(['end']) : new Set(['fi']));
+      }
+      if (this.lang === 'bash') this.expectWord('fi'); else this.expectWord('end');
+      return { t: 'if', branches: branches, elseBody: elseBody };
+    }
+
+    parseFor(stops) {
+      this.next(); // for
+      const varT = this.next();
+      if (!varT || varT.t !== 'word') throw new ParseError('for 后面要跟变量名');
+      const words = [];
+      if (this.isWord(this.peek(), 'in')) {
+        this.next();
+        while (!this.eof()) {
+          const t = this.peek();
+          if (this.isOp(t, ';') || this.isOp(t, '\n')) break;
+          if (t.t === 'word' && (t.text === 'do' || (this.lang === 'fish' && t.text === 'end'))) break;
+          words.push(this.next());
+        }
+      }
+      this.skipSeps();
+      if (this.lang === 'bash') { this.expectWord('do'); this.skipSeps(); }
+      const body = this.parseList(this.lang === 'fish' ? new Set(['end']) : new Set(['done']));
+      if (this.lang === 'bash') this.expectWord('done'); else this.expectWord('end');
+      return { t: 'for', name: varT.text, words: words, body: body };
+    }
+
+    parseWhile(stops) {
+      this.next(); // while
+      const cond = this.parseAndOr(new Set(['do']));
+      this.skipSeps();
+      if (this.lang === 'bash') { this.expectWord('do'); this.skipSeps(); }
+      const body = this.parseList(this.lang === 'fish' ? new Set(['end']) : new Set(['done']));
+      if (this.lang === 'bash') this.expectWord('done'); else this.expectWord('end');
+      return { t: 'while', cond: cond, body: body };
+    }
+
+    parseSimple(stops) {
+      const assigns = [], words = [], redirs = [];
+      const kwSet = this.kw();
+      while (!this.eof()) {
+        const t = this.peek();
+        if (t.t === 'op') {
+          if (t.v === ';' || t.v === '\n' || t.v === '|' || t.v === '&&' || t.v === '||' ||
+              t.v === '&' || t.v === ')') break;
+          if (REDIR_OPS.indexOf(t.v) !== -1) {
+            this.next();
+            const target = this.next();
+            if (!target) throw new ParseError('重定向后面缺少文件名');
+            redirs.push({ op: t.v, target: target });
+            continue;
+          }
+          break;
+        }
+        if (t.t === 'word' && stops.has(t.text)) break;
+        if (this.lang === 'fish' && (this.isWord(t, 'and') || this.isWord(t, 'or'))) break;
+        if (this.lang === 'bash' && BASH_END_WORDS.has(t.text) && !words.length && !assigns.length) break;
+
+        // 赋值 FOO=bar（仅 bash，且出现在命令名之前）
+        if (this.lang === 'bash' && !words.length) {
+          const p0 = t.parts[0];
+          if (p0 && p0.k === 'lit' && p0.q === 0) {
+            const m = /^([A-Za-z_][A-Za-z0-9_]*)=([\s\S]*)$/.exec(p0.v);
+            if (m) {
+              this.next();
+              const rest = t.parts.slice(1);
+              const valParts = (m[2] !== '' ? [{ k: 'lit', v: m[2], q: 0 }] : []).concat(rest);
+              assigns.push({ name: m[1], parts: valParts });
+              continue;
+            }
+          }
+        }
+        words.push(this.next());
+      }
+      return { t: 'simple', assigns: assigns, words: words, redirs: redirs };
+    }
+  }
+
+  const BASH_KW = { if: 1, then: 1, elif: 1, else: 1, fi: 1, for: 1, do: 1, done: 1, while: 1, function: 1 };
+  const FISH_KW = { if: 1, else: 1, end: 1, for: 1, while: 1, function: 1, and: 1, or: 1, not: 1 };
+  const BASH_END_WORDS = new Set(['then', 'fi', 'elif', 'else', 'do', 'done', '}']);
+
+  /* ============================================================
+   * 四、IO
+   * ============================================================ */
+  class IO {
+    constructor(stdin) { this.in = stdin || ''; this._e = []; this.hints = []; }
+    _push(stream, text, cls) {
+      const str = String(text === undefined ? '' : text).replace(/\n$/, '');
+      str.split('\n').forEach((line) => { this._e.push({ stream: stream, text: line, cls: cls }); });
+    }
+    o(text, cls) { this._push('out', text, cls); }
+    e(text, cls) { this._push('err', text, cls); }
+    get out() { return this._e.filter((x) => x.stream === 'out'); }
+    get err() { return this._e.filter((x) => x.stream === 'err'); }
+    get entries() { return this._e; }
+    text(streams) { return this._e.filter((x) => streams.indexOf(x.stream) !== -1).map((x) => x.text).join('\n'); }
+    dropStreams(streams) { this._e = this._e.filter((x) => streams.indexOf(x.stream) === -1); }
+    hint(t) { this.hints.push(t); }
+  }
+
+  /* ============================================================
+   * 五、Shell
+   * ============================================================ */
+  const MAX_STEPS = 40000;
+
+  class Shell {
+    constructor(opts) {
+      opts = opts || {};
+      this.fs = opts.fs || seedFS();
+      this.lang = opts.lang || 'bash';
+      this.cwd = opts.cwd || HOME;
+      this.vars = Object.create(null);   // name -> {v:string, list:[]|null, exp:bool}
+      this.funcs = Object.create(null);
+      this.aliases = Object.create(null);
+      this.status = 0;
+      this.positional = [];
+      this.steps = 0;
+      this.lastPipeline = [];
+      this.traces = [];
+      this.hintsOn = true;
+      this.historyList = [];
+      this.resetFlags();
+      this.initVars();
+    }
+
+    resetFlags() {
+      this.usedCommands = Object.create(null);
+      this.flags = Object.create(null);
+      this.visitedDirs = Object.create(null);
+      this.visitedDirs[this.cwd] = true;
+    }
+
+    initVars() {
+      const set = (k, v, exp) => { this.vars[k] = { v: v, list: null, exp: !!exp }; };
+      set('HOME', HOME, true);
+      set('USER', USER, true);
+      set('LOGNAME', USER, true);
+      set('SHELL', this.lang === 'fish' ? '/usr/bin/fish' : '/bin/bash', true);
+      set('HOSTNAME', HOST, true);
+      set('PATH', '/usr/local/bin:/usr/bin:/bin:/usr/local/sbin:/usr/sbin', true);
+      set('PWD', this.cwd, true);
+      set('LANG', 'zh_CN.UTF-8', true);
+      set('TERM', 'xterm-256color', true);
+      set('EDITOR', 'vim', false);
+      set('PS1', '\\u@\\h:\\w\\$ ', false);
+      this.vars['?'] = { v: '0', list: null, exp: false };
+    }
+
+    /* ---- 语言切换：保留文件系统与变量，换一套语法 ---- */
+    setLang(lang) {
+      this.lang = lang;
+      this.vars.SHELL = { v: lang === 'fish' ? '/usr/bin/fish' : '/bin/bash', list: null, exp: true };
+    }
+
+    /* ---- 变量 ---- */
+    getVar(name) {
+      if (name === '?') return { v: String(this.status), list: null };
+      if (name === '$') return { v: String(1000 + (this.steps % 100)), list: null };
+      if (name === '#') return { v: String(this.positional.length), list: null };
+      if (name === '0') return { v: this.lang === 'fish' ? 'fish' : 'bash', list: null };
+      if (/^[1-9]$/.test(name)) return { v: this.positional[Number(name) - 1] || '', list: null };
+      if (name === '@' || name === '*') return { v: this.positional.join(' '), list: this.positional.slice() };
+      if (name === 'PWD') return { v: this.cwd, list: null };
+      if (name === 'status' && this.lang === 'fish') return { v: String(this.status), list: null };
+      if (name === 'argv' && this.lang === 'fish') return { v: this.positional.join(' '), list: this.positional.slice() };
+      if (name === 'HOME') return { v: HOME, list: null };
+      if (name === 'USER') return { v: USER, list: null };
+      const got = this.vars[name];
+      if (got) return { v: got.v, list: got.list };
+      return { v: '', list: null };
+    }
+    setVar(name, value, exp, list) {
+      const prev = this.vars[name];
+      this.vars[name] = { v: value, list: list || null, exp: exp === undefined ? (prev ? prev.exp : false) : !!exp };
+    }
+    exportVar(name, value, list) { this.vars[name] = { v: value, list: list || null, exp: true }; }
+    unsetVar(name) { delete this.vars[name]; }
+    listVars(kind) {
+      const out = [];
+      Object.keys(this.vars).sort().forEach((k) => {
+        const v = this.vars[k];
+        if (kind === 'env' && !v.exp) return;
+        if (kind === 'shell' && v.exp) return;
+        out.push({ name: k, value: v.list ? v.list.join(' ') : v.v, exported: v.exp });
+      });
+      return out;
+    }
+
+    /* ---- 提示符 ---- */
+    shortPath(p) {
+      if (p === HOME) return '~';
+      if (p.indexOf(HOME + '/') === 0) return '~' + p.slice(HOME.length);
+      return p;
+    }
+    prompt() {
+      const p = this.shortPath(this.cwd);
+      if (this.lang === 'fish') {
+        return '<span class="u">' + USER + '@' + HOST + '</span> <span class="p">' + p + '</span><span class="s">❯</span> ';
+      }
+      const root = USER === 'root' ? '#' : '$';
+      return '<span class="u">' + USER + '@' + HOST + '</span>:<span class="p">' + p + '</span><span class="s">' + root + '</span> ';
+    }
+
+    /* ============================================================
+     * 展开
+     * ============================================================ */
+    expandParts(parts, io) {
+      let out = '';
+      parts.forEach((p) => {
+        if (p.k === 'lit') { out += p.v; return; }
+        if (p.k === 'var') {
+          const g = this.getVar(p.v);
+          const joiner = (g.list && g.list.length) ? ' ' : '';
+          out += g.list ? g.list.join(' ') : g.v;
+          if (joiner === '' && g.list && !g.list.length) out += '';
+          return;
+        }
+        if (p.k === 'cmd') {
+          out += this.commandSubst(p.v);
+          return;
+        }
+        if (p.k === 'arith') { out += String(this.arith(p.v)); return; }
+      });
+      return out;
+    }
+
+    /** 把一个词展开成 0..n 个字符串 */
+    expandWord(word, opts) {
+      opts = opts || {};
+      const quotedAny = word.parts.some((p) => p.q === 1 || p.q === 2);
+      const allLit = word.parts.every((p) => p.k === 'lit');
+
+      // 1) 花括号展开（只在整词都是字面量时做，属于简化）
+      let rawValues;
+      if (allLit && !quotedAny) {
+        const be = braceExpand(word.parts.map((p) => p.v).join(''), this.lang);
+        rawValues = be || [word.parts.map((p) => p.v).join('')];
+      } else {
+        rawValues = [null];
+      }
+
+      let results = [];
+      rawValues.forEach((fixed) => {
+        let val = fixed !== null ? fixed : this.expandParts(word.parts, opts.io);
+        if (!quotedAny && opts.split !== false) {
+          results = results.concat(val.split(/\s+/).filter((x) => x !== ''));
+        } else {
+          results.push(val);
+        }
+      });
+
+      // 2) 通配符
+      if (!quotedAny && opts.glob !== false) {
+        const expanded = [];
+        results.forEach((r) => {
+          if (/[*?\[]/.test(r)) {
+            const m = this.glob(r);
+            if (m.length) { expanded.push.apply(expanded, m); return; }
+          }
+          expanded.push(r);
+        });
+        results = expanded;
+      }
+      return results;
+    }
+
+    expandWordOne(word, io) {
+      const r = this.expandWord(word, { split: false, glob: false, io: io });
+      return r.length ? r[0] : '';
+    }
+
+    glob(pattern) {
+      // 找到第一个含通配符的段，从那里开始遍历
+      const isAbs = pattern.indexOf('/') === 0;
+      const segs = pattern.split('/').filter((x, i) => !(i === 0 && x === ''));
+      let base, start;
+      if (isAbs) { base = '/'; start = 0; }
+      else {
+        // 相对路径：支持 ./ 与 ../
+        base = this.cwd; start = 0;
+      }
+      const results = [];
+      const walk = (dirAbs, idx) => {
+        if (idx >= segs.length) { results.push(dirAbs); return; }
+        const seg = segs[idx];
+        if (seg === '.') return walk(dirAbs, idx + 1);
+        if (seg === '..') return walk(this.fs.resolve(dirAbs, '..'), idx + 1);
+        if (!/[*?\[]/.test(seg)) {
+          let abs = (dirAbs === '/' ? '' : dirAbs) + '/' + seg;
+          abs = this.fs.resolve('/', abs);
+          if (this.fs.isLink(abs)) { try { abs = this.fs.resolve('/', this.fs.stat(abs) === null ? abs : (this.fs._lookup(abs, false).content)); } catch (e) {} }
+          if (this.fs.exists(abs)) walk(abs, idx + 1);
+          return;
+        }
+        let names;
+        try { names = this.fs.list(dirAbs).map((e) => e.name); } catch (e) { return; }
+        const re = globToRe(seg);
+        names.forEach((nm) => {
+          if (nm.charAt(0) === '.' && seg.charAt(0) !== '.') return;
+          if (re.test(nm)) walk((dirAbs === '/' ? '' : dirAbs) + '/' + nm, idx + 1);
+        });
+      };
+      walk(base, start);
+      let out = results;
+      if (!isAbs) {
+        out = results.map((r) => {
+          if (r === this.cwd) return '.';
+          if (r.indexOf(this.cwd + '/') === 0) {
+            const rel = r.slice(this.cwd.length + 1);
+            return pattern.indexOf('./') === 0 ? './' + rel : rel;
+          }
+          return r;
+        });
+      }
+      return out.sort();
+    }
+
+    /* ---- 命令替换 ---- */
+    commandSubst(src) {
+      const sub = new Shell({ fs: this.fs, lang: this.lang, cwd: this.cwd });
+      sub.vars = Object.assign(Object.create(null), this.vars);
+      sub.funcs = Object.assign(Object.create(null), this.funcs);
+      sub.aliases = Object.assign(Object.create(null), this.aliases);
+      sub.positional = this.positional.slice();
+      sub.status = this.status;
+      sub.hush = true;
+      let text = '';
+      try { text = sub.runCapture(src); } catch (e) { text = ''; }
+      this.steps += sub.steps;
+      return text.replace(/\n+$/, '');
+    }
+
+    runCapture(src) {
+      const toks = lex(src, this.lang);
+      const ast = new Parser(toks, this.lang).parseProgram();
+      const io = new IO('');
+      this.execNode(ast, io);
+      return io.text(['out']);
+    }
+
+    /* ---- 算术 ---- */
+    _numOf(name) {
+      const g = this.getVar(name);
+      const n = parseInt(g.v, 10);
+      return String(isNaN(n) ? 0 : n);
+    }
+    arith(expr) {
+      let src = String(expr);
+      src = src.replace(/\$\{([A-Za-z_][A-Za-z0-9_]*)\}/g, (m, n) => this._numOf(n));
+      src = src.replace(/\$([A-Za-z_][A-Za-z0-9_]*|\?|#|\$)/g, (m, n) => this._numOf(n));
+      src = src.replace(/[A-Za-z_][A-Za-z0-9_]*/g, (m) => this._numOf(m));
+      if (!/^[-+*/%()<>=!&|^~?:0-9\s.]*$/.test(src)) return 0;
+      try {
+        const val = Function('"use strict";return (' + src + ');')();
+        return (typeof val === 'number' && isFinite(val)) ? Math.trunc(val) : 0;
+      } catch (e) { return 0; }
+    }
+
+    /* ============================================================
+     * 执行
+     * ============================================================ */
+    run(src) {
+      const res = { lines: [], hints: [], status: 0, ok: true };
+      this.traces = [];
+      this.lastPipeline = [];
+      const text = String(src === undefined || src === null ? '' : src);
+      if (!text.trim()) { res.status = this.status; return res; }
+
+      let ast;
+      try {
+        const toks = lex(text, this.lang);
+        ast = new Parser(toks, this.lang).parseProgram();
+      } catch (e) {
+        res.lines = [{ stream: 'err', text: (this.lang === 'fish' ? 'fish: ' : 'bash: ') + '语法错误：' + e.message, cls: 'err' }];
+        res.status = 2; res.ok = false;
+        this.status = 2;
+        return res;
+      }
+      const io = new IO('');
+      try {
+        this.status = this.execNode(ast, io);
+      } catch (e) {
+        if (e && e.__exit !== undefined) {
+          this.status = e.__exit;
+        } else if (e && e.__budget) {
+          io.e('错误：命令执行次数超过上限（' + MAX_STEPS + '），可能是死循环，已中断。');
+          this.status = 1;
+        } else {
+          io.e('内部错误：' + (e && e.message));
+          this.status = 1;
+        }
+      }
+      res.lines = io.entries;
+      res.hints = io.hints;
+      res.status = this.status;
+      res.ok = this.status === 0;
+      res.traces = this.traces;
+      res.pipeline = this.lastPipeline;
+      this.vars['?'] = { v: String(this.status), list: null, exp: false };
+      return res;
+    }
+
+    tick() {
+      if (++this.steps > MAX_STEPS) { const e = new Error('budget'); e.__budget = true; throw e; }
+    }
+
+    execNode(node, io) {
+      this.tick();
+      if (!node) return 0;
+      switch (node.t) {
+        case 'list': return this.execList(node, io);
+        case 'pipe': return this.execPipe(node, io);
+        case 'simple': return this.execSimple(node, io);
+        case 'if': return this.execIf(node, io);
+        case 'for': return this.execFor(node, io);
+        case 'while': return this.execWhile(node, io);
+        case 'func': this.funcs[node.name] = node.body; return 0;
+        case 'subshell': {
+          const sub = new Shell({ fs: this.fs, lang: this.lang, cwd: this.cwd });
+          sub.vars = Object.assign(Object.create(null), this.vars);
+          sub.funcs = Object.assign(Object.create(null), this.funcs);
+          sub.aliases = Object.assign(Object.create(null), this.aliases);
+          sub.hush = true;
+          const st = sub.execNode(node.body, io);
+          this.steps += sub.steps;
+          return st;
+        }
+        case 'not': return this.execNode(node.node, io) === 0 ? 1 : 0;
+        default: return 0;
+      }
+    }
+
+    execList(node, io) {
+      let last = this.status;
+      let run = true;
+      for (let i = 0; i < node.items.length; i++) {
+        const it = node.items[i];
+        if (run) last = this.execNode(it.node, io);
+        if (it.sep === '&&') run = (last === 0);
+        else if (it.sep === '||') run = (last !== 0);
+        else run = true;
+        this.status = last;
+      }
+      return last;
+    }
+
+    execPipe(node, io) {
+      let stdin = '';
+      const stages = [];
+      const savedCwd = this.cwd;
+      const savedVars = Object.assign(Object.create(null), this.vars);
+      for (let i = 0; i < node.cmds.length; i++) {
+        const sub = new IO(stdin);
+        sub.hints = io.hints;
+        const cmdText = this.describe(node.cmds[i]);
+        const st = this.execSimple(node.cmds[i], sub);
+        stages.push({
+          cmd: cmdText,
+          stdin: stdin,
+          inLines: stdin === '' ? [] : stdin.replace(/\n$/, '').split('\n'),
+          out: sub.out, err: sub.err, status: st,
+        });
+        // 只有最后一段的输出显示到终端；stderr 始终透传
+        if (i === node.cmds.length - 1) {
+          sub.out.forEach((x) => io._e.push(x));
+        }
+        sub.err.forEach((x) => io._e.push(x));
+        stdin = sub.text(['out']);
+        // 管道各段在子进程里跑，不影响主 shell 的状态
+        this.cwd = savedCwd;
+        Object.keys(this.vars).forEach((k) => { if (!(k in savedVars)) delete this.vars[k]; });
+        Object.keys(savedVars).forEach((k) => { this.vars[k] = savedVars[k]; });
+      }
+      this.lastPipeline = stages;
+      this.flags.pipe = true;
+      return stages.length ? stages[stages.length - 1].status : 0;
+    }
+
+    describe(node) {
+      if (!node || node.t !== 'simple') return '(复合命令)';
+      return node.words.map((w) => w.text).join(' ');
+    }
+
+    execIf(node, io) {
+      for (let i = 0; i < node.branches.length; i++) {
+        const br = node.branches[i];
+        const condIO = new IO('');
+        const st = this.execNode(br.cond, condIO);
+        if (st === 0) return this.execNode(br.body, io);
+      }
+      if (node.elseBody) return this.execNode(node.elseBody, io);
+      return 0;
+    }
+
+    execFor(node, io) {
+      let items;
+      if (node.words.length) {
+        items = [];
+        node.words.forEach((w) => { items = items.concat(this.expandWord(w, { io: io })); });
+      } else items = this.positional.slice();
+      this.flags.loop = true;
+      let last = 0;
+      for (let i = 0; i < items.length; i++) {
+        this.setVar(node.name, items[i], undefined, null);
+        last = this.execNode(node.body, io);
+        this.tick();
+      }
+      return last;
+    }
+
+    execWhile(node, io) {
+      this.flags.loop = true;
+      let last = 0;
+      for (let i = 0; i < 10000; i++) {
+        const condIO = new IO('');
+        if (this.execNode(node.cond, condIO) !== 0) break;
+        last = this.execNode(node.body, io);
+        this.tick();
+      }
+      return last;
+    }
+
+    execSimple(node, io) {
+      // 纯赋值：FOO=bar
+      if (!node.words.length && node.assigns.length) {
+        node.assigns.forEach((a) => {
+          const v = this.expandWordOne({ parts: a.parts }, io);
+          this.setVar(a.name, v);
+        });
+        return 0;
+      }
+      if (!node.words.length) return 0;
+
+      // 展开
+      const argv = [];
+      const traces = [];
+      node.words.forEach((w) => {
+        const before = w.text;
+        const values = this.expandWord(w, { io: io });
+        if (values.join(' ') !== before) traces.push({ from: before, to: values.join(' ') });
+        values.forEach((v) => argv.push(v));
+      });
+      if (traces.length) this.traces.push({ cmd: argv.join(' '), steps: traces });
+
+      if (!argv.length) return 0;
+
+      // 直接执行脚本：./x.sh 或 /abs/x.sh
+      const name0 = argv[0];
+      if (name0.indexOf('/') !== -1) {
+        const abs = this.fs.resolve(this.cwd, name0);
+        if (this.fs.exists(abs)) {
+          if (this.fs.isDir(abs)) { io.e('bash: ' + name0 + ': Is a directory'); return 126; }
+          if ((this.fs.stat(abs).mode & 0o111) === 0) {
+            io.e('bash: ' + name0 + ': Permission denied');
+            io.hint('脚本必须有可执行权限才能 ./ 运行：先 chmod +x ' + name0 + '；或者用 bash ' + name0 + ' 绕过。');
+            return 126;
+          }
+          const r = this.execFile(abs, argv.slice(1));
+          r.io.out.forEach((x) => io._e.push(x));
+          r.io.err.forEach((x) => io._e.push(x));
+          r.io.hints.forEach((h) => io.hint(h));
+          this.flags.script = true;
+          return r.status;
+        }
+      }
+
+      // 别名
+      if (this.aliases[name0] !== undefined) {
+        const rest = argv.slice(1).map((a) => /\s/.test(a) ? JSON.stringify(a) : a).join(' ');
+        const aliasSrc = this.aliases[name0] + (rest ? ' ' + rest : '');
+        try {
+          const toks = lex(aliasSrc, this.lang);
+          const ast = new Parser(toks, this.lang).parseProgram();
+          return this.execNode(ast, io);
+        } catch (e) { /* 别名内容坏了就当解析失败 */ }
+      }
+
+      if (node.redirs.length) {
+        const inSt = this.applyInputRedirs(node.redirs, io);
+        if (inSt) return inSt;
+      }
+
+      // 自定义函数
+      if (this.funcs[argv[0]]) {
+        const savedPos = this.positional;
+        this.positional = argv.slice(1);
+        let fst = 0;
+        try { fst = this.execNode(this.funcs[argv[0]], io); }
+        finally { this.positional = savedPos; }
+        this.flags.func = true;
+        if (node.redirs.length) fst = this.applyOutputRedirs(node.redirs, io, fst);
+        return fst;
+      }
+
+      if (this.lang === 'fish' && /^[A-Za-z_][A-Za-z0-9_]*=/.test(argv[0])) {
+        const nm = argv[0].slice(0, argv[0].indexOf('='));
+        io.e("fish: 不支持使用 '='。在 fish 中，请使用 'set " + nm + " " + argv[0].slice(argv[0].indexOf('=') + 1) + "'。");
+        io.hint('fish 定义变量用 set，导出用 set -x；bash 那套 名字=值 在这里行不通。');
+        return 127;
+      }
+
+      const cmd = Shell.commands[argv[0]];
+      this.usedCommands[argv[0]] = true;
+      if (!cmd) {
+        io.e((this.lang === 'fish' ? 'fish' : 'bash') + ': 未找到命令：' + argv[0]);
+        const guess = suggest(argv[0]);
+        if (guess) io.hint('没有 ' + argv[0] + ' 这个命令。你是想用 ' + guess + ' 吗？');
+        else io.hint('本模拟器只实现了课程用到的命令，输入 help 看支持哪些。');
+        return 127;
+      }
+
+      let status = 0;
+      try {
+        status = cmd.run(this, argv, io) || 0;
+      } catch (e) {
+        if (e instanceof FsError) {
+          io.e(argv[0] + ': ' + fsMsg(e));
+          status = 1;
+        } else if (e && (e.__budget || e.__exit !== undefined)) { throw e; }
+        else { io.e(argv[0] + ': ' + (e && e.message ? e.message : '执行出错')); status = 1; }
+      }
+
+      // 重定向
+      if (node.redirs.length) status = this.applyOutputRedirs(node.redirs, io, status);
+      return status;
+    }
+
+    /** 输入重定向必须在命令执行前生效 */
+    applyInputRedirs(redirs, io) {
+      let status = 0;
+      redirs.forEach((r) => {
+        if (r.op !== '<' && r.op !== '<<<') return;
+        const target = this.expandWordOne(r.target, io);
+        if (r.op === '<<<') { io.in = target + '\n'; return; }
+        if (target === '/dev/null') { io.in = ''; return; }
+        try { io.in = this.fs.readFile(this.fs.resolve(this.cwd, target)); }
+        catch (e) { io.e('bash: ' + target + ': ' + fsMsg(e)); status = 1; }
+      });
+      this.flags.redirect = true;
+      return status;
+    }
+
+    applyOutputRedirs(redirs, io, status) {
+      redirs.forEach((r) => {
+        if (r.op === '<' || r.op === '<<<') return;
+        const target = this.expandWordOne(r.target, io);
+        const isErr = (r.op === '2>' || r.op === '2>>');
+        const isBoth = (r.op === '&>' || r.op === '&>>');
+        const append = (r.op === '>>' || r.op === '2>>' || r.op === '&>>');
+        const streams = isBoth ? ['out', 'err'] : [isErr ? 'err' : 'out'];
+        const text = io.text(streams);
+        io.dropStreams(streams);
+        this.flags.redirect = true;
+        if (append) this.flags.append = true;
+        if (target === '/dev/null') return;
+        try {
+          const abs = this.fs.resolve(this.cwd, target);
+          this.fs.writeFile(abs, text === '' ? '' : text + '\n', append);
+        } catch (e) {
+          io.e('bash: ' + target + ': ' + fsMsg(e));
+          status = 1;
+        }
+      });
+      return status;
+    }
+
+    /** 执行脚本文件，返回 {io, status} */
+    execFile(abs, args) {
+      const content = this.fs.readFile(abs);
+      const lines = content.split('\n');
+      let body = content;
+      let shebang = null;
+      if (lines[0] && lines[0].indexOf('#!') === 0) {
+        shebang = lines[0].slice(2).trim();
+        body = lines.slice(1).join('\n');
+      }
+      const sub = new Shell({ fs: this.fs, lang: this.lang, cwd: this.cwd });
+      sub.vars = Object.assign(Object.create(null), this.vars);
+      sub.funcs = this.funcs;
+      sub.aliases = this.aliases;
+      sub.positional = args || [];
+      sub.hush = true;
+      sub.usedCommands = this.usedCommands;
+      sub.historyList = this.historyList;
+      const io = new IO('');
+      let status = 0;
+      try {
+        const toks = lex(body, this.lang);
+        const ast = new Parser(toks, this.lang).parseProgram();
+        status = sub.execNode(ast, io);
+      } catch (e) {
+        if (e && e.__exit !== undefined) status = e.__exit;
+        else io.e((this.lang === 'fish' ? 'fish' : 'bash') + ': ' + String(abs).split('/').pop() + ': ' + (e.message || 'error'));
+      }
+      this.steps += sub.steps;
+      this.cwd = sub.cwd;
+      this.flags.script = true;
+      return { io: io, status: status, shebang: shebang };
+    }
+
+    /* ---- 旧接口保留 ---- */
+    runScriptFile(abs, args) {
+      const content = this.fs.readFile(abs);
+      const lines = content.split('\n');
+      let body = content;
+      if (lines[0] && lines[0].indexOf('#!') === 0) body = lines.slice(1).join('\n');
+      const sub = new Shell({ fs: this.fs, lang: this.lang, cwd: this.cwd });
+      sub.vars = Object.assign(Object.create(null), this.vars);
+      sub.funcs = this.funcs;
+      sub.aliases = this.aliases;
+      sub.positional = args || [];
+      sub.hush = true;
+      const io = new IO('');
+      try {
+        const toks = lex(body, this.lang);
+        const ast = new Parser(toks, this.lang).parseProgram();
+        sub.execNode(ast, io);
+      } catch (e) {
+        io.e((this.lang === 'fish' ? 'fish' : 'bash') + ': ' + String(abs).split('/').pop() + ': ' + e.message);
+      }
+      this.steps += sub.steps;
+      return io;
+    }
+
+    /* ---- 课程校验辅助 ---- */
+    used(name) { return !!this.usedCommands[name]; }
+    usedAny(names) { return names.some((n) => !!this.usedCommands[n]); }
+    remember(dir) { this.visitedDirs[dir] = true; }
+    snapshot() {
+      return {
+        cwd: this.cwd,
+        lang: this.lang,
+        status: this.status,
+        vars: this.listVars(),
+        env: this.listVars('env'),
+        aliases: Object.assign({}, this.aliases),
+        tree: this.fs.tree(this.cwd === HOME ? HOME : this.cwd, 1, 3),
+        rootTree: this.fs.tree('/', 1, 1),
+        homeTree: this.fs.tree(HOME, 1, 3),
+        lastPipeline: this.lastPipeline,
+      };
+    }
+  }
+
+  Shell.commands = Object.create(null);
+  Shell.register = function (name, spec) { Shell.commands[name] = spec; };
+  Shell.VFS = VFS;
+  Shell.IO = IO;
+  Shell.seedFS = seedFS;
+  Shell.HOME = HOME;
+  Shell.USER = USER;
+  Shell.HOST = HOST;
+  Shell.lex = lex;
+  Shell.Parser = Parser;
+
+  /* ============================================================
+   * 工具函数
+   * ============================================================ */
+  function fsMsg(e) {
+    switch (e.code) {
+      case 'ENOENT': return 'No such file or directory';
+      case 'EISDIR': return 'Is a directory';
+      case 'ENOTDIR': return 'Not a directory';
+      case 'EEXIST': return 'File exists';
+      case 'ENOTEMPTY': return 'Directory not empty';
+      case 'EACCES': return 'Permission denied';
+      default: return 'error';
+    }
+  }
+
+  function globToRe(seg) {
+    let re = '^';
+    for (let i = 0; i < seg.length; i++) {
+      const c = seg[i];
+      if (c === '*') re += '[^/]*';
+      else if (c === '?') re += '[^/]';
+      else if (c === '[') {
+        let j = i + 1, body = '';
+        if (seg[j] === '!') { body += '^'; j++; }
+        while (j < seg.length && seg[j] !== ']') { body += seg[j].replace(/\\/g, '\\\\'); j++; }
+        if (j >= seg.length) { re += '\\['; continue; }
+        re += '[' + body + ']';
+        i = j;
+      } else re += c.replace(/[.+^${}()|\\\]]/g, '\\$&');
+    }
+    return new RegExp(re + '$');
+  }
+
+  function braceExpand(str, lang) {
+    const open = str.indexOf('{');
+    if (open === -1) return null;
+    let depth = 0, close = -1;
+    for (let i = open; i < str.length; i++) {
+      if (str[i] === '{') depth++;
+      else if (str[i] === '}') { depth--; if (depth === 0) { close = i; break; } }
+    }
+    if (close === -1) return null;
+    const pre = str.slice(0, open), inner = str.slice(open + 1, close), post = str.slice(close + 1);
+    let options = null;
+    // fish 支持 {a,b} 但 {1..3} 不展开（和真实 fish 一致）
+    const seq = (lang === 'fish') ? null : /^(-?\d+)\.\.(-?\d+)(?:\.\.(-?\d+))?$/.exec(inner);
+    if (seq) {
+      const a = parseInt(seq[1], 10), b = parseInt(seq[2], 10);
+      const step = Math.abs(parseInt(seq[3] || '1', 10)) * (a <= b ? 1 : -1);
+      options = [];
+      for (let v = a; (step > 0 ? v <= b : v >= b); v += step) options.push(String(v));
+    } else if (lang !== 'fish' && /^[A-Za-z]\.\.[A-Za-z]$/.test(inner)) {
+      const a = inner.charCodeAt(0), b = inner.charCodeAt(4);
+      options = [];
+      for (let c = a; c <= b; c++) options.push(String.fromCharCode(c));
+    } else if (inner.indexOf(',') !== -1) {
+      options = inner.split(',');
+    }
+    if (!options) return null;
+    let out = [];
+    options.forEach((o) => {
+      const sub = braceExpand(pre + o + post, lang);
+      if (sub) out = out.concat(sub); else out.push(pre + o + post);
+    });
+    return out;
+  }
+
+  const SUGGEST = {
+    sl: 'ls', l: 'ls', ll: 'ls -l', dir: 'ls', cta: 'cat', mdkir: 'mkdir', mrdir: 'rmdir',
+    gerp: 'grep', grop: 'grep', ehco: 'echo', ecoh: 'echo', cdm: 'cd', griep: 'grep',
+    whcih: 'which', fnd: 'find', tuch: 'touch', mvoe: 'mv', cpy: 'cp', rmove: 'rm',
+  };
+  function suggest(name) {
+    if (SUGGEST[name]) return SUGGEST[name];
+    const all = Object.keys(Shell.commands);
+    let best = null, bestD = 3;
+    all.forEach((c) => {
+      const d = editDist(name, c);
+      if (d < bestD) { bestD = d; best = c; }
+    });
+    return bestD <= 2 ? best : null;
+  }
+  function editDist(a, b) {
+    const m = a.length, n = b.length;
+    const dp = [];
+    for (let i = 0; i <= m; i++) { dp.push([i]); }
+    for (let j = 0; j <= n; j++) { dp[0][j] = j; }
+    for (let i = 1; i <= m; i++) {
+      for (let j = 1; j <= n; j++) {
+        dp[i][j] = Math.min(dp[i - 1][j] + 1, dp[i][j - 1] + 1, dp[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+      }
+    }
+    return dp[m][n];
+  }
+
+  const api = {
+    Shell: Shell, VFS: VFS, IO: IO, seedFS: seedFS, lex: lex, Parser: Parser,
+    braceExpand: braceExpand, globToRe: globToRe, fsMsg: fsMsg,
+    HOME: HOME, USER: USER, HOST: HOST,
+  };
+  global.ShellKit = api;
+  global.Shell = Shell;
+  if (typeof module !== 'undefined' && module.exports) module.exports = api;
+})(typeof window !== 'undefined' ? window : globalThis);
+
+</script>
+<script>
+/* ============================================================
+ * commands.js —— 迷你 shell 的命令实现
+ * 依赖 shell.js（先加载），通过 Shell.register 注册命令。
+ * ============================================================ */
+(function (global) {
+  'use strict';
+
+  const Shell = global.Shell;
+  const K = global.ShellKit;
+
+  /* ---------------- 通用助手 ---------------- */
+  function opts(argv, valueFlags, dashLong) {
+    const o = { _: [] };
+    const vf = valueFlags || {};
+    const dl = dashLong || [];
+    for (let i = 0; i < argv.length; i++) {
+      const a = argv[i];
+      if (a === '--') { for (let k = i + 1; k < argv.length; k++) o._.push(argv[k]); break; }
+      if (a.length > 1 && a.slice(0, 2) === '--') {
+        const body = a.slice(2);
+        const eq = body.indexOf('=');
+        if (eq !== -1) o[body.slice(0, eq)] = body.slice(eq + 1);
+        else if (vf[body]) o[body] = argv[++i];
+        else o[body] = true;
+        continue;
+      }
+      if (a.length > 1 && a[0] === '-') {
+        const body0 = a.slice(1);
+        if (dl.indexOf(body0) !== -1) {
+          if (vf[body0]) o[body0] = argv[++i]; else o[body0] = true;
+          continue;
+        }
+        const chars = body0;
+        for (let k = 0; k < chars.length; k++) {
+          const c = chars[k];
+          if (vf[c]) {
+            if (k === chars.length - 1) o[c] = argv[++i];
+            else { o[c] = chars.slice(k + 1); }
+            break;
+          }
+          o[c] = true;
+        }
+        continue;
+      }
+      o._.push(a);
+    }
+    return o;
+  }
+
+  function modeStr(mode, type) {
+    const t = type === 'dir' ? 'd' : (type === 'link' ? 'l' : '-');
+    const bits = [(mode >> 6) & 7, (mode >> 3) & 7, mode & 7];
+    let s = t;
+    bits.forEach((b) => { s += (b & 4 ? 'r' : '-') + (b & 2 ? 'w' : '-') + (b & 1 ? 'x' : '-'); });
+    return s;
+  }
+  function sizeStr(n, human) {
+    if (!human) return String(n);
+    const u = ['', 'K', 'M', 'G'];
+    let i = 0, v = n;
+    while (v >= 1024 && i < u.length - 1) { v /= 1024; i++; }
+    return (i === 0 ? String(v) : v.toFixed(1)) + u[i];
+  }
+  const MON = ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月'];
+  function dateStr() {
+    const d = new Date();
+    return MON[d.getMonth()] + ' ' + String(d.getDate()).padStart(2, ' ') + ' ' +
+      String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+  }
+  function classify(name, type) {
+    if (type === 'dir') return 'blue';
+    if (type === 'link') return 'cyan';
+    if (/\.(sh|bash)$/.test(name)) return 'green';
+    return 'plain';
+  }
+  function linesOf(text) { return String(text).replace(/\n$/, '').split('\n'); }
+
+  /* ---------------- 导航 ---------------- */
+  Shell.register('pwd', {
+    help: 'pwd —— 显示当前所在目录',
+    run(sh, argv, io) {
+      io.o(sh.cwd);
+      io.hint('你现在在 ' + sh.shortPath(sh.cwd) + '。命令行里所有相对路径都是从这里算起的。');
+      return 0;
+    },
+  });
+
+  Shell.register('cd', {
+    help: 'cd [目录] —— 切换目录；cd 回家，cd - 回上一个目录，cd .. 上一层',
+    run(sh, argv, io) {
+      const o = opts(argv.slice(1), {});
+      let target = o._[0];
+      if (target === undefined) target = '~';
+      if (target === '-') {
+        if (!sh.oldpwd) { io.e('cd: OLDPWD 没有设置'); return 1; }
+        const t = sh.oldpwd;
+        sh.oldpwd = sh.cwd;
+        sh.cwd = t;
+        io.o(sh.cwd);
+        return 0;
+      }
+      const abs = sh.fs.resolve(sh.cwd, target);
+      if (!sh.fs.exists(abs)) { io.e("cd: " + target + ": No such file or directory"); return 1; }
+      if (!sh.fs.isDir(abs)) { io.e("cd: " + target + ": Not a directory"); return 1; }
+      sh.oldpwd = sh.cwd;
+      sh.cwd = abs;
+      sh.setVar('PWD', abs, true);
+      sh.remember(abs);
+      io.hint('目录变了：现在在 ' + sh.shortPath(abs) + '。注意提示符里的路径也跟着变了。');
+      return 0;
+    },
+  });
+
+  Shell.register('ls', {
+    help: 'ls [-l] [-a] [-h] [路径...] —— 列出目录内容',
+    run(sh, argv, io) {
+      const o = opts(argv.slice(1), {});
+      const targets = o._.length ? o._ : ['.'];
+      const showAll = !!(o.a || o.A);
+      const long = !!o.l;
+      const human = !!o.h;
+      let status = 0;
+      const multi = targets.length > 1;
+      const out = [];
+
+      targets.forEach((t) => {
+        const abs = sh.fs.resolve(sh.cwd, t);
+        let st;
+        try { st = sh.fs.stat(abs); }
+        catch (e) { io.e("ls: 无法访问 '" + t + "': " + K.fsMsg(e)); status = 2; return; }
+        if (st.type !== 'dir') {
+          out.push({ header: null, items: [{ name: t, abs: abs, entry: entryOf(sh, abs, t) }] });
+          return;
+        }
+        let es;
+        try { es = sh.fs.list(abs); } catch (e) { io.e("ls: " + t + ": " + K.fsMsg(e)); status = 2; return; }
+        if (!showAll) es = es.filter((x) => x.name.charAt(0) !== '.');
+        es.sort((a, b) => (a.name < b.name ? -1 : 1));
+        out.push({ header: multi ? t + ':' : null, items: es.map((e) => ({ name: e.name, abs: abs + '/' + e.name, entry: e })) });
+      });
+
+      out.forEach((block) => {
+        if (block.header) io.o(block.header);
+        if (long) {
+          io.o('total ' + block.items.length);
+          block.items.forEach((it) => {
+            const e = it.entry;
+            const name = e.isLink ? (it.name + ' -> ' + e.linkTarget) : it.name;
+            io.o(Shell.pad(modeStr(e.mode, e.type), 11) + ' 1 ' + K.USER + ' ' + K.USER + ' ' +
+              Shell.pad(sizeStr(e.size, human), 6) + ' ' + dateStr() + ' ' + name, classify(it.name, e.type));
+          });
+        } else {
+          block.items.forEach((it) => io.o(it.name, classify(it.name, it.entry.type)));
+        }
+      });
+      io.hint(showAll ? '带 -a 时以 . 开头的隐藏文件也会列出来。' : '看不见以 . 开头的隐藏文件？加 -a：ls -a');
+      sh.flags.ls = true;
+      if (long) sh.flags.lsL = true;
+      if (showAll) sh.flags.lsA = true;
+      return status;
+    },
+  });
+
+  function entryOf(sh, abs, name) {
+    const st = sh.fs.stat(abs);
+    return {
+      name: name, type: st.type, isLink: sh.fs.isLink(abs), linkTarget: null,
+      size: st.type === 'dir' ? 4096 : String(st.content).length, mode: st.mode,
+    };
+  }
+
+  Shell.register('tree', {
+    help: 'tree [目录] —— 用树形显示目录结构',
+    run(sh, argv, io) {
+      const o = opts(argv.slice(1), {});
+      const abs = sh.fs.resolve(sh.cwd, o._[0] || '.');
+      if (!sh.fs.isDir(abs)) { io.e('tree: ' + (o._[0] || '.') + ': Not a directory'); return 1; }
+      io.o(sh.shortPath(abs), 'blue');
+      const walk = (dir, prefix, depth) => {
+        if (depth > 3) return;
+        let es;
+        try { es = sh.fs.list(dir); } catch (e) { return; }
+        es = es.filter((x) => x.name.charAt(0) !== '.').sort((a, b) => (a.name < b.name ? -1 : 1));
+        es.forEach((e, i) => {
+          const last = i === es.length - 1;
+          io.o(prefix + (last ? '└── ' : '├── ') + e.name, classify(e.name, e.type));
+          if (e.type === 'dir') walk(dir + '/' + e.name, prefix + (last ? '    ' : '│   '), depth + 1);
+        });
+      };
+      walk(abs, '', 1);
+      sh.flags.tree = true;
+      return 0;
+    },
+  });
+
+  /* ---------------- 文件操作 ---------------- */
+  Shell.register('mkdir', {
+    help: 'mkdir [-p] 目录... —— 新建目录，-p 可以一次建多层',
+    run(sh, argv, io) {
+      const o = opts(argv.slice(1), {});
+      if (!o._.length) { io.e('mkdir: 缺少操作数'); return 1; }
+      let status = 0;
+      o._.forEach((d) => {
+        const abs = sh.fs.resolve(sh.cwd, d);
+        try { sh.fs.mkdir(abs, !!o.p); }
+        catch (e) { io.e("mkdir: 无法创建目录 '" + d + "': " + K.fsMsg(e)); status = 1; }
+      });
+      if (o.p) io.hint('-p 的意思是 parents：中间缺的目录会一起建出来，已存在也不报错。');
+      sh.flags.mkdir = true;
+      return status;
+    },
+  });
+
+  Shell.register('rmdir', {
+    help: 'rmdir 目录... —— 删除空目录',
+    run(sh, argv, io) {
+      const o = opts(argv.slice(1), {});
+      if (!o._.length) { io.e('rmdir: 缺少操作数'); return 1; }
+      let status = 0;
+      o._.forEach((d) => {
+        const abs = sh.fs.resolve(sh.cwd, d);
+        try {
+          const st = sh.fs.stat(abs);
+          if (st.type !== 'dir') throw { code: 'ENOTDIR' };
+          sh.fs.remove(abs);
+        } catch (e) { io.e("rmdir: 删除 '" + d + "' 失败: " + K.fsMsg(e || { code: '' })); status = 1; }
+      });
+      return status;
+    },
+  });
+
+  Shell.register('touch', {
+    help: 'touch 文件... —— 新建空文件（已存在则什么都不做）',
+    run(sh, argv, io) {
+      const o = opts(argv.slice(1), {});
+      if (!o._.length) { io.e('touch: 缺少操作数'); return 1; }
+      let status = 0;
+      o._.forEach((f) => {
+        try { sh.fs.createFile(sh.fs.resolve(sh.cwd, f)); }
+        catch (e) { io.e("touch: 无法创建 '" + f + "': " + K.fsMsg(e)); status = 1; }
+      });
+      sh.flags.touch = true;
+      return status;
+    },
+  });
+
+  Shell.register('cp', {
+    help: 'cp [-r] 源 目标 —— 复制文件；目录要加 -r',
+    run(sh, argv, io) {
+      const o = opts(argv.slice(1), {});
+      const recursive = !!(o.r || o.R);
+      if (o._.length < 2) { io.e('cp: 缺少操作数（用法：cp 源 目标）'); return 1; }
+      const dstRaw = o._[o._.length - 1];
+      const srcs = o._.slice(0, -1);
+      let status = 0;
+      srcs.forEach((s) => {
+        const sa = sh.fs.resolve(sh.cwd, s);
+        const da = sh.fs.resolve(sh.cwd, dstRaw);
+        try {
+          if (!sh.fs.exists(sa)) throw { code: 'ENOENT' };
+          if (sh.fs.isDir(sa) && !recursive) {
+            io.e("cp: -r 未指定；略过目录 '" + s + "'");
+            status = 1; return;
+          }
+          sh.fs.copyInto(sa, da, recursive);
+        } catch (e) { io.e("cp: 无法复制 '" + s + "': " + K.fsMsg(e || { code: '' })); status = 1; }
+      });
+      if (recursive) io.hint('复制目录必须带 -r（recursive，递归），因为目录里可能还有目录。');
+      sh.flags.cp = true;
+      return status;
+    },
+  });
+
+  Shell.register('mv', {
+    help: 'mv 源 目标 —— 移动或重命名',
+    run(sh, argv, io) {
+      const o = opts(argv.slice(1), {});
+      if (o._.length < 2) { io.e('mv: 缺少操作数（用法：mv 源 目标）'); return 1; }
+      const dstRaw = o._[o._.length - 1];
+      const srcs = o._.slice(0, -1);
+      let status = 0;
+      srcs.forEach((s) => {
+        try { sh.fs.move(sh.fs.resolve(sh.cwd, s), sh.fs.resolve(sh.cwd, dstRaw)); }
+        catch (e) { io.e("mv: 无法移动 '" + s + "': " + K.fsMsg(e || { code: '' })); status = 1; }
+      });
+      io.hint('mv 同时承担「移动」和「重命名」两件事：目标在同一目录就是改名。');
+      sh.flags.mv = true;
+      return status;
+    },
+  });
+
+  Shell.register('rm', {
+    help: 'rm [-r] [-f] 文件... —— 删除；目录要加 -r',
+    run(sh, argv, io) {
+      const o = opts(argv.slice(1), {});
+      const recursive = !!(o.r || o.R);
+      const force = !!o.f;
+      if (!o._.length) { io.e('rm: 缺少操作数'); return 1; }
+      let status = 0;
+      o._.forEach((f) => {
+        const abs = sh.fs.resolve(sh.cwd, f);
+        try {
+          if (!sh.fs.exists(abs)) {
+            if (!force) { io.e("rm: 无法删除 '" + f + "': No such file or directory"); status = 1; }
+            return;
+          }
+          if (sh.fs.isDir(abs)) {
+            if (!recursive) { io.e("rm: 无法删除 '" + f + "': Is a directory（要删目录请加 -r）"); status = 1; return; }
+            sh.fs.removeRecursive(abs);
+            return;
+          }
+          sh.fs.remove(abs);
+        } catch (e) { io.e("rm: 无法删除 '" + f + "': " + K.fsMsg(e || { code: '' })); status = 1; }
+      });
+      if (recursive) io.hint('rm -r 会连同目录里所有东西一起删，删完找不回来（没有回收站）。');
+      sh.flags.rm = true;
+      return status;
+    },
+  });
+
+  Shell.register('ln', {
+    help: 'ln -s 目标 链接名 —— 建立符号链接（快捷方式）',
+    run(sh, argv, io) {
+      const o = opts(argv.slice(1), {});
+      if (o._.length < 2) { io.e('ln: 用法：ln -s 目标 链接名'); return 1; }
+      const target = o._[0], name = o._[1];
+      const abs = sh.fs.resolve(sh.cwd, name);
+      try {
+        const par = sh.fs._parent(abs);
+        par.dir.children[par.name] = { type: 'link', mode: 0o777, content: target };
+      } catch (e) { io.e('ln: ' + K.fsMsg(e)); return 1; }
+      io.hint('符号链接就是「快捷方式」：ls -l 里会显示 名字 -> 目标。');
+      sh.flags.ln = true;
+      return o.s ? 0 : 0;
+    },
+  });
+
+  Shell.register('chmod', {
+    help: 'chmod 权限 文件... —— 修改权限，如 chmod +x a.sh / chmod 644 a.txt',
+    run(sh, argv, io) {
+      const rest = argv.slice(1);
+      let i = 0;
+      while (i < rest.length && (rest[i] === '-R' || rest[i] === '-v' || rest[i] === '--recursive')) i++;
+      if (rest.length - i < 2) { io.e('chmod: 用法：chmod 权限 文件...'); return 1; }
+      const spec = rest[i], files = rest.slice(i + 1);
+      let status = 0;
+      files.forEach((f) => {
+        const abs = sh.fs.resolve(sh.cwd, f);
+        try {
+          const st = sh.fs.stat(abs);
+          let mode = st.mode;
+          if (/^[0-7]{3,4}$/.test(spec)) mode = parseInt(spec.slice(-3), 8);
+          else {
+            const m = /^([ugoa]*)([+\-=])([rwx]+)$/.exec(spec);
+            if (!m) throw { code: 'EINVAL' };
+            const who = m[1] || 'a';
+            const add = m[2] === '+', set = m[2] === '=';
+            let bits = 0;
+            if (m[3].indexOf('r') !== -1) bits |= 4;
+            if (m[3].indexOf('w') !== -1) bits |= 2;
+            if (m[3].indexOf('x') !== -1) bits |= 1;
+            const targets = [];
+            if (who.indexOf('u') !== -1 || who === 'a') targets.push(6);
+            if (who.indexOf('g') !== -1 || who === 'a') targets.push(3);
+            if (who.indexOf('o') !== -1 || who === 'a') targets.push(0);
+            targets.forEach((shift) => {
+              if (set) mode = (mode & ~(7 << shift)) | (bits << shift);
+              else if (add) mode |= (bits << shift);
+              else mode &= ~(bits << shift);
+            });
+          }
+          sh.fs.chmod(abs, mode);
+        } catch (e) { io.e("chmod: 无法修改 '" + f + "' 的权限: " + K.fsMsg(e || { code: '' })); status = 1; }
+      });
+      io.hint('rwx 三组分别对应用户、同组、其他人。+x 就是「加上可执行」，脚本必须有它才能 ./ 运行。');
+      sh.flags.chmod = true;
+      return status;
+    },
+  });
+
+  /* ---------------- 查看文件 ---------------- */
+  Shell.register('cat', {
+    help: 'cat [-n] 文件... —— 把文件内容原样打印出来',
+    run(sh, argv, io) {
+      const o = opts(argv.slice(1), {});
+      if (!o._.length) { io.o(io.in.replace(/\n$/, '')); return 0; }
+      let status = 0, n = 0;
+      o._.forEach((f) => {
+        try {
+          const text = sh.fs.readFile(sh.fs.resolve(sh.cwd, f));
+          if (o.n) linesOf(text).forEach((l) => { n++; io.o(String(n).padStart(6) + '\t' + l); });
+          else io.o(text);
+        } catch (e) { io.e("cat: " + f + ": " + K.fsMsg(e)); status = 1; }
+      });
+      sh.flags.cat = true;
+      return status;
+    },
+  });
+
+  Shell.register('head', {
+    help: 'head [-n 行数] 文件 —— 只看开头几行（默认 10 行）',
+    run(sh, argv, io) {
+      const o = opts(argv.slice(1), { n: true });
+      const n = parseInt(o.n, 10) || 10;
+      const src = o._.length ? null : io.in;
+      if (!o._.length) { linesOf(src).slice(0, n).forEach((l) => io.o(l)); return 0; }
+      let status = 0;
+      o._.forEach((f) => {
+        try { linesOf(sh.fs.readFile(sh.fs.resolve(sh.cwd, f))).slice(0, n).forEach((l) => io.o(l)); }
+        catch (e) { io.e('head: ' + f + ': ' + K.fsMsg(e)); status = 1; }
+      });
+      sh.flags.head = true;
+      return status;
+    },
+  });
+
+  Shell.register('tail', {
+    help: 'tail [-n 行数] 文件 —— 只看结尾几行（默认 10 行）',
+    run(sh, argv, io) {
+      const o = opts(argv.slice(1), { n: true });
+      const n = parseInt(o.n, 10) || 10;
+      if (!o._.length) { linesOf(io.in).slice(-n).forEach((l) => io.o(l)); return 0; }
+      let status = 0;
+      o._.forEach((f) => {
+        try { linesOf(sh.fs.readFile(sh.fs.resolve(sh.cwd, f))).slice(-n).forEach((l) => io.o(l)); }
+        catch (e) { io.e('tail: ' + f + ': ' + K.fsMsg(e)); status = 1; }
+      });
+      sh.flags.tail = true;
+      return status;
+    },
+  });
+
+  Shell.register('less', {
+    help: 'less 文件 —— 分页查看（模拟器里直接全部打印）',
+    run(sh, argv, io) {
+      const o = opts(argv.slice(1), {});
+      if (!o._.length) { io.e('less: 用法：less 文件'); return 1; }
+      try {
+        const text = sh.fs.readFile(sh.fs.resolve(sh.cwd, o._[0]));
+        io.o(text);
+      } catch (e) { io.e('less: ' + o._[0] + ': ' + K.fsMsg(e)); return 1; }
+      io.hint('真实终端里 less 会分页、支持上下翻页和 /搜索；这里没有分页器，直接全部显示。');
+      sh.flags.less = true;
+      return 0;
+    },
+  });
+  Shell.register('more', Shell.commands['less']);
+
+  Shell.register('wc', {
+    help: 'wc [-l] [-w] [-c] [文件] —— 统计行数/词数/字节数',
+    run(sh, argv, io) {
+      const o = opts(argv.slice(1), {});
+      const pick = (text, label) => {
+        const lines = linesOf(text).length;
+        const words = text.split(/\s+/).filter(Boolean).length;
+        const chars = text.length;
+        const l7 = (n) => String(n).padStart(7);
+        if (o.l) io.o(l7(lines) + (label ? ' ' + label : ''));
+        else if (o.w) io.o(l7(words) + (label ? ' ' + label : ''));
+        else if (o.c) io.o(l7(chars) + (label ? ' ' + label : ''));
+        else io.o(l7(lines) + l7(words) + l7(chars) + (label ? ' ' + label : ''));
+      };
+      if (!o._.length) { pick(io.in, ''); return 0; }
+      let status = 0;
+      o._.forEach((f) => {
+        try { pick(sh.fs.readFile(sh.fs.resolve(sh.cwd, f)), f); }
+        catch (e) { io.e('wc: ' + f + ': ' + K.fsMsg(e)); status = 1; }
+      });
+      sh.flags.wc = true;
+      return status;
+    },
+  });
+
+  Shell.register('nl', {
+    help: 'nl 文件 —— 带行号打印',
+    run(sh, argv, io) {
+      const o = opts(argv.slice(1), {});
+      const text = o._.length ? sh.fs.readFile(sh.fs.resolve(sh.cwd, o._[0])) : io.in;
+      linesOf(text).forEach((l, i) => io.o(String(i + 1).padStart(6) + '\t' + l));
+      return 0;
+    },
+  });
+
+  /* ---------------- 文本处理 ---------------- */
+  Shell.register('echo', {
+    help: 'echo [-n] 内容... —— 打印一行',
+    run(sh, argv, io) {
+      const o = opts(argv.slice(1), {});
+      io.o(o._.join(' '));
+      sh.flags.echo = true;
+      return 0;
+    },
+  });
+
+  Shell.register('printf', {
+    help: 'printf 格式 参数... —— 按格式输出，如 printf "%s-%s\\n" a b',
+    run(sh, argv, io) {
+      const o = opts(argv.slice(1), {});
+      const fmt = o._[0] || '';
+      const args = o._.slice(1);
+      let out = '', ai = 0;
+      for (let i = 0; i < fmt.length; i++) {
+        if (fmt[i] === '\\' && i + 1 < fmt.length) {
+          const c = fmt[++i];
+          out += c === 'n' ? '\n' : c === 't' ? '\t' : c === '\\' ? '\\' : c;
+        } else if (fmt[i] === '%' && i + 1 < fmt.length) {
+          const c = fmt[++i];
+          if (c === 's') out += (args[ai++] !== undefined ? args[ai - 1] : '');
+          else if (c === 'd') out += String(parseInt(args[ai++], 10) || 0);
+          else if (c === '%') out += '%';
+          else out += '%' + c;
+        } else out += fmt[i];
+      }
+      io.o(out);
+      return 0;
+    },
+  });
+
+  Shell.register('grep', {
+    help: 'grep [-i] [-v] [-n] [-c] [-r] [-l] 模式 [文件...] —— 按行筛选',
+    run(sh, argv, io) {
+      const o = opts(argv.slice(1), {});
+      const M = o.e ? 'e' : '';
+      if (!o._.length && !M) { io.e('grep: 用法：grep 模式 [文件...]'); return 2; }
+      const pattern = o._[0];
+      const files = o._.slice(1);
+      let re;
+      try { re = new RegExp(pattern, o.i ? 'i' : ''); }
+      catch (e) { io.e('grep: 正则写错了：' + e.message); return 2; }
+
+      const matchLine = (line) => {
+        let hit = re.test(line);
+        if (o.w) hit = new RegExp('\\b' + pattern + '\\b', o.i ? 'i' : '').test(line);
+        return o.v ? !hit : hit;
+      };
+      let status = 1, printed = 0, totalMatches = 0;
+
+      const doText = (text, label, withLabel) => {
+        const ls = linesOf(text);
+        let c = 0;
+        ls.forEach((l, i) => {
+          if (matchLine(l)) {
+            c++; totalMatches++;
+            if (o.l) return;
+            if (o.c) return;
+            const pre = (withLabel ? label + ':' : '') + (o.n ? (i + 1) + ':' : '');
+            io.o(pre + l, 'plain');
+            printed++;
+          }
+        });
+        if (o.c) io.o(String(c));
+        if (o.l && c) io.o(label);
+        if (c) status = 0;
+        return c;
+      };
+
+      if (!files.length) { doText(io.in, '(标准输入)', false); }
+      else {
+        files.forEach((f) => {
+          const abs = sh.fs.resolve(sh.cwd, f);
+          try {
+            const st = sh.fs.stat(abs);
+            if (st.type === 'dir') {
+              if (!o.r) { io.e('grep: ' + f + ': Is a directory'); status = 2; return; }
+              const walk = (dir) => {
+                sh.fs.list(dir).forEach((e) => {
+                  const p = dir + '/' + e.name;
+                  if (e.type === 'dir') walk(p);
+                  else doText(sh.fs.readFile(p), sh.shortPath(p), true);
+                });
+              };
+              walk(abs);
+            } else doText(sh.fs.readFile(abs), f, files.length > 1);
+          } catch (e) { io.e('grep: ' + f + ': ' + K.fsMsg(e)); status = 2; }
+        });
+      }
+      sh.flags.grep = true;
+      if (o.r) sh.flags.grepR = true;
+      if (o.i) sh.flags.grepI = true;
+      if (o.v) sh.flags.grepV = true;
+      if (!o.c && !o.l) {
+        io.hint(o.v ? '-v 表示「反过来」：只打印不匹配的行。' : '默认是「包含这个模式的行就打印出来」，支持正则。');
+      }
+      return printed === 0 && !o.c && !o.l ? 1 : status;
+    },
+  });
+
+  Shell.register('sort', {
+    help: 'sort [-n] [-r] [-u] [文件] —— 按行排序',
+    run(sh, argv, io) {
+      const o = opts(argv.slice(1), { k: true });
+      const text = o._.length ? sh.fs.readFile(sh.fs.resolve(sh.cwd, o._[0])) : io.in;
+      let ls = linesOf(text);
+      if (o.n) ls.sort((a, b) => (parseFloat(a) || 0) - (parseFloat(b) || 0));
+      else ls.sort();
+      if (o.r) ls.reverse();
+      if (o.u) ls = ls.filter((v, i) => i === 0 || v !== ls[i - 1]);
+      ls.forEach((l) => io.o(l));
+      sh.flags.sort = true;
+      return 0;
+    },
+  });
+
+  Shell.register('uniq', {
+    help: 'uniq [-c] [-d] [文件] —— 去掉相邻重复行（通常配合 sort 用）',
+    run(sh, argv, io) {
+      const o = opts(argv.slice(1), {});
+      const text = o._.length ? sh.fs.readFile(sh.fs.resolve(sh.cwd, o._[0])) : io.in;
+      const ls = linesOf(text);
+      const groups = [];
+      ls.forEach((l) => {
+        const last = groups[groups.length - 1];
+        if (last && last.v === l) last.n++;
+        else groups.push({ v: l, n: 1 });
+      });
+      groups.forEach((g) => {
+        if (o.d && g.n < 2) return;
+        if (o.u && g.n > 1) return;
+        io.o(o.c ? String(g.n).padStart(7) + ' ' + g.v : g.v);
+      });
+      sh.flags.uniq = true;
+      return 0;
+    },
+  });
+
+  Shell.register('cut', {
+    help: 'cut -d 分隔符 -f 字段 [文件] —— 按列切分',
+    run(sh, argv, io) {
+      const o = opts(argv.slice(1), { d: true, f: true, c: true });
+      const text = o._.length ? sh.fs.readFile(sh.fs.resolve(sh.cwd, o._[0])) : io.in;
+      const ls = linesOf(text);
+      if (o.c) {
+        const range = String(o.c).split(',');
+        ls.forEach((l) => io.o(range.map((r) => {
+          const m = /^(\d+)-(\d+)$/.exec(r);
+          if (m) return l.slice(Number(m[1]) - 1, Number(m[2]));
+          return l.charAt(Number(r) - 1);
+        }).join('')));
+        return 0;
+      }
+      if (!o.f) { io.e('cut: 需要 -f（字段）或 -c（字符）'); return 1; }
+      const d = o.d === undefined ? '\t' : o.d;
+      const fields = String(o.f).split(',').map((x) => parseInt(x, 10));
+      ls.forEach((l) => {
+        const parts = l.split(d);
+        io.o(fields.map((n) => (parts[n - 1] !== undefined ? parts[n - 1] : '')).join(d));
+      });
+      sh.flags.cut = true;
+      return 0;
+    },
+  });
+
+  Shell.register('tr', {
+    help: 'tr 原字符 新字符 —— 字符替换，如 tr a-z A-Z',
+    run(sh, argv, io) {
+      const o = opts(argv.slice(1), { d: true });
+      const a = o._[0], b = o._[1];
+      const src = io.in.replace(/\n$/, '');
+      const expand = (s) => {
+        if (s === undefined) return '';
+        return s.replace(/([A-Za-z0-9])-([A-Za-z0-9])/g, (m, x, y) => {
+          let r = '';
+          for (let c = x.charCodeAt(0); c <= y.charCodeAt(0); c++) r += String.fromCharCode(c);
+          return r;
+        });
+      };
+      const from = expand(a), to = expand(b);
+      let out = '';
+      for (const ch of src) {
+        const idx = from.indexOf(ch);
+        if (idx === -1) out += ch;
+        else if (!o.d) out += to[idx] !== undefined ? to[idx] : to.charAt(to.length - 1);
+      }
+      io.o(out);
+      sh.flags.tr = true;
+      return 0;
+    },
+  });
+
+  Shell.register('sed', {
+    help: 'sed "s/旧/新/g" [文件] —— 替换文本；也支持 -n 与 /模式/p',
+    run(sh, argv, io) {
+      const o = opts(argv.slice(1), { e: true });
+      const script = o.e || o._[0];
+      const files = o.e ? o._ : o._.slice(1);
+      if (!script) { io.e('sed: 用法：sed "s/旧/新/g" 文件'); return 1; }
+      const text = files.length ? sh.fs.readFile(sh.fs.resolve(sh.cwd, files[0])) : io.in;
+      const ls = linesOf(text);
+      const s = /^s(.)(.*?)\1(.*?)\1([gi]*)$/.exec(script);
+      const addr = /^\/(.*)\/([pd])$/.exec(script);
+      let status = 0;
+      try {
+        ls.forEach((l) => {
+          if (s) {
+            const re = new RegExp(s[2], s[4].indexOf('g') !== -1 ? 'g' + (s[4].indexOf('i') !== -1 ? 'i' : '') : (s[4].indexOf('i') !== -1 ? 'i' : ''));
+            const out = l.replace(re, s[3]);
+            if (o.n) { if (out !== l) io.o(out); }
+            else io.o(out);
+          } else if (addr) {
+            const re = new RegExp(addr[1]);
+            if (re.test(l)) { if (addr[2] === 'p') io.o(l); }
+            else if (!o.n) io.o(l);
+          } else if (/^\d+d$/.test(script)) {
+            const n = parseInt(script, 10);
+            if (ls.indexOf(l) !== n - 1) io.o(l);
+          } else io.o(l);
+        });
+      } catch (e) { io.e('sed: ' + e.message); status = 1; }
+      sh.flags.sed = true;
+      io.hint('sed 的 s 命令格式是 s/旧/新/，结尾加 g 表示「一行里全部替换」而不是只换第一个。');
+      return status;
+    },
+  });
+
+  Shell.register('awk', {
+    help: 'awk [-F 分隔符] \'{print $1}\' [文件] —— 按列处理（简化版）',
+    run(sh, argv, io) {
+      const o = opts(argv.slice(1), { F: true, f: true });
+      const prog = o._[0];
+      const files = o._.slice(1);
+      if (!prog) { io.e('awk: 用法：awk \'{print $1}\' 文件'); return 1; }
+      const text = files.length ? sh.fs.readFile(sh.fs.resolve(sh.cwd, files[0])) : io.in;
+      const sep = o.F === undefined ? /\s+/ : new RegExp(o.F);
+      const m = /\{\s*print\s+(.+?)\s*\}/.exec(prog);
+      let status = 0;
+      try {
+        linesOf(text).forEach((l, i) => {
+          if (!m) { io.o(l); return; }
+          const fields = l.split(sep);
+          const out = m[1].split(',').map((expr) => {
+            expr = expr.trim();
+            if (expr === '$0') return l;
+            if (expr === 'NR') return String(i + 1);
+            const fm = /^\$(\d+)$/.exec(expr);
+            if (fm) return fields[Number(fm[1]) - 1] !== undefined ? fields[Number(fm[1]) - 1] : '';
+            return expr.replace(/^"|"$/g, '');
+          }).join(' ');
+          io.o(out);
+        });
+      } catch (e) { io.e('awk: ' + e.message); status = 1; }
+      sh.flags.awk = true;
+      return status;
+    },
+  });
+
+  /* ---------------- 查找 ---------------- */
+  Shell.register('find', {
+    help: 'find [起点] [-name 模式] [-type f|d] [-maxdepth N] —— 找文件',
+    run(sh, argv, io) {
+      const o = opts(argv.slice(1), { name: true, type: true, maxdepth: true },
+        ['name', 'type', 'maxdepth', 'iname', 'path']);
+      const start = o._[0] || '.';
+      const abs = sh.fs.resolve(sh.cwd, start);
+      if (!sh.fs.exists(abs)) { io.e("find: '" + start + "': No such file or directory"); return 1; }
+      const maxDepth = o.maxdepth !== undefined ? parseInt(o.maxdepth, 10) : 99;
+      const nameRe = o.name ? K.globToRe(o.name) : null;
+      let found = 0;
+      const base = sh.fs.resolve(sh.cwd, start);
+      const rel = (p) => {
+        if (p === base) return start === '.' ? '.' : start;
+        const r = p.slice(base.length + 1);
+        return (start === '.' ? './' : (start.replace(/\/$/, '') + '/')) + r;
+      };
+      const walk = (dir, depth) => {
+        if (depth > maxDepth) return;
+        let es;
+        try { es = sh.fs.list(dir); } catch (e) { return; }
+        es.forEach((e) => {
+          const p = dir + '/' + e.name;
+          const okType = !o.type || (o.type === 'd' ? e.type === 'dir' : e.type !== 'dir');
+          const okName = !nameRe || nameRe.test(e.name);
+          if (okType && okName) { io.o(rel(p), e.type === 'dir' ? 'blue' : 'plain'); found++; }
+          if (e.type === 'dir') walk(p, depth + 1);
+        });
+      };
+      const st = sh.fs.stat(abs);
+      if (st.type === 'dir') walk(abs, 1);
+      else io.o(rel(abs));
+      sh.flags.find = true;
+      return 0;
+    },
+  });
+
+  Shell.register('which', {
+    help: 'which 命令 —— 显示命令所在路径',
+    run(sh, argv, io) {
+      const o = opts(argv.slice(1), {});
+      let status = 0;
+      o._.forEach((c) => {
+        if (Shell.commands[c]) io.o('/usr/bin/' + c);
+        else if (sh.aliases[c] !== undefined) io.o(c + ': 是别名 → ' + sh.aliases[c]);
+        else if (sh.funcs[c]) io.o(c + ': 是函数');
+        else { io.e('which: 找不到 ' + c); status = 1; }
+      });
+      sh.flags.which = true;
+      return status;
+    },
+  });
+
+  Shell.register('type', {
+    help: 'type 命令 —— 说明这个命令是什么类型',
+    run(sh, argv, io) {
+      const o = opts(argv.slice(1), {});
+      let status = 0;
+      o._.forEach((c) => {
+        if (sh.aliases[c] !== undefined) io.o(c + ' 是别名 → ' + sh.aliases[c]);
+        else if (sh.funcs[c]) io.o(c + ' 是函数');
+        else if (Shell.commands[c]) {
+          const builtin = ['cd', 'export', 'alias', 'set', 'source', '.', 'exit', 'read', 'unset'].indexOf(c) !== -1;
+          io.o(c + ' 是' + (builtin ? ' shell 内建命令' : '外部命令（/usr/bin/' + c + '）'));
+        } else { io.e('type: 找不到 ' + c); status = 1; }
+      });
+      return status;
+    },
+  });
+
+  Shell.register('xargs', {
+    help: 'xargs 命令 —— 把标准输入的每一行变成命令的参数',
+    run(sh, argv, io) {
+      const o = opts(argv.slice(1), { n: true, I: true });
+      const cmd = o._[0];
+      if (!cmd) { io.e('xargs: 用法：... | xargs 命令'); return 1; }
+      const items = io.in.split('\n').map((x) => x.trim()).filter(Boolean);
+      if (!items.length) return 0;
+      let status = 0;
+      if (o.I) {
+        items.forEach((it) => {
+          const args = o._.slice(1).map((a) => a.split(o.I).join(it));
+          status = runSimple(sh, cmd, args, io);
+        });
+        return status;
+      }
+      const per = parseInt(o.n, 10) || items.length;
+      for (let i = 0; i < items.length; i += per) {
+        status = runSimple(sh, cmd, o._.slice(1).concat(items.slice(i, i + per)), io);
+      }
+      sh.flags.xargs = true;
+      return status;
+    },
+  });
+
+  function runSimple(sh, name, args, parentIO) {
+    const cmd = Shell.commands[name];
+    if (!cmd) { parentIO.e('xargs: ' + name + ': 未找到命令'); return 127; }
+    const io = new K.IO('');
+    io.hints = parentIO.hints;
+    let st = 0;
+    try { st = cmd.run(sh, [name].concat(args), io) || 0; }
+    catch (e) { parentIO.e(name + ': ' + (e.message || 'error')); st = 1; }
+    io.out.forEach((x) => parentIO._e.push(x));
+    io.err.forEach((x) => parentIO._e.push(x));
+    return st;
+  }
+
+  /* ---------------- shell 内建 ---------------- */
+  Shell.register('export', {
+    help: 'export 变量=值 —— 把变量导出成环境变量，子进程才能看到',
+    run(sh, argv, io) {
+      const o = opts(argv.slice(1), {});
+      if (!o._.length) { sh.listVars('env').forEach((v) => io.o('declare -x ' + v.name + '="' + v.value + '"')); return 0; }
+      o._.forEach((a) => {
+        const eq = a.indexOf('=');
+        const name = eq === -1 ? a : a.slice(0, eq);
+        const val = eq === -1 ? (sh.vars[name] ? sh.vars[name].v : '') : a.slice(eq + 1);
+        sh.exportVar(name, val, null);
+      });
+      io.hint('导出的变量才会传给子进程（比如你运行的脚本）。没导出的变量只在当前 shell 里有。');
+      sh.flags.export = true;
+      return 0;
+    },
+  });
+
+  Shell.register('unset', {
+    help: 'unset 变量名 —— 删除变量',
+    run(sh, argv, io) {
+      opts(argv.slice(1), {})._.forEach((n) => sh.unsetVar(n));
+      return 0;
+    },
+  });
+
+  Shell.register('env', {
+    help: 'env —— 列出所有环境变量',
+    run(sh, argv, io) {
+      sh.listVars('env').forEach((v) => io.o(v.name + '=' + v.value));
+      sh.flags.env = true;
+      return 0;
+    },
+  });
+
+  Shell.register('set', {
+    help: 'set —— bash 里列出所有变量；fish 里用 set 定义变量',
+    run(sh, argv, io) {
+      const o = opts(argv.slice(1), {});
+      if (sh.lang !== 'fish') {
+        if (!o._.length) {
+          sh.listVars().forEach((v) => io.o(v.name + '=' + v.value));
+          return 0;
+        }
+        io.hint('bash 里定义变量不用 set，直接写：名字=值（等号两边不能有空格）。');
+        return 1;
+      }
+      // fish
+      if (!o._.length) {
+        sh.listVars().forEach((v) => io.o(v.name + ' ' + v.value));
+        return 0;
+      }
+      const erase = !!o.e;
+      const exp = !!o.x;
+      const global = !!o.g;
+      const name = o._[0];
+      if (erase) { sh.unsetVar(name); return 0; }
+      const values = o._.slice(1);
+      if (!values.length) { io.o(name); return 0; }
+      sh.setVar(name, values.join(' '), exp || undefined, values);
+      if (exp) sh.flags.export = true;
+      io.hint('fish 用 set 定义变量，set -x 相当于 bash 的 export。');
+      sh.flags.setVar = true;
+      return 0;
+    },
+  });
+
+  Shell.register('alias', {
+    help: 'alias 名字=\'命令\' —— 给命令起小名；直接输入 alias 列出全部',
+    run(sh, argv, io) {
+      const o = opts(argv.slice(1), {});
+      if (!o._.length) {
+        Object.keys(sh.aliases).forEach((k) => io.o("alias " + k + "='" + sh.aliases[k] + "'"));
+        return 0;
+      }
+      o._.forEach((a) => {
+        const eq = a.indexOf('=');
+        if (eq === -1) {
+          if (sh.aliases[a] !== undefined) io.o("alias " + a + "='" + sh.aliases[a] + "'");
+          else { io.e('alias: ' + a + ': 没有这个别名'); }
+          return;
+        }
+        const name = a.slice(0, eq);
+        let val = a.slice(eq + 1);
+        if (/^'.*'$/.test(val) || /^".*"$/.test(val)) val = val.slice(1, -1);
+        sh.aliases[name] = val;
+      });
+      io.hint('别名只是「文字替换」，定义完就能当命令用。写进 ~/.bashrc 才能每次开终端都生效。');
+      sh.flags.alias = true;
+      return 0;
+    },
+  });
+
+  Shell.register('unalias', {
+    help: 'unalias 名字 —— 删除别名',
+    run(sh, argv, io) {
+      opts(argv.slice(1), {})._.forEach((n) => { delete sh.aliases[n]; });
+      return 0;
+    },
+  });
+
+  Shell.register('history', {
+    help: 'history —— 显示你敲过的命令',
+    run(sh, argv, io) {
+      if (!sh.historyList.length) { io.hint('还没有历史记录。'); return 0; }
+      sh.historyList.forEach((h, i) => io.o(String(i + 1).padStart(5) + '  ' + h));
+      sh.flags.history = true;
+      return 0;
+    },
+  });
+
+  Shell.register('source', {
+    help: 'source 脚本 —— 在当前 shell 里执行脚本（变量会留下来）',
+    run(sh, argv, io) {
+      const o = opts(argv.slice(1), {});
+      if (!o._.length) { io.e('source: 缺少文件名'); return 1; }
+      const abs = sh.fs.resolve(sh.cwd, o._[0]);
+      if (!sh.fs.exists(abs)) { io.e('bash: ' + o._[0] + ': No such file or directory'); return 1; }
+      sh.flags.source = true;
+      return sh.execSource(abs, io);
+    },
+  });
+  Shell.register('.', Shell.commands['source']);
+
+  Shell.register('exit', {
+    help: 'exit [状态码] —— 退出当前 shell / 脚本',
+    run(sh, argv, io) {
+      const o = opts(argv.slice(1), {});
+      const code = o._.length ? parseInt(o._[0], 10) : sh.status;
+      const e = { __exit: code };
+      throw e;
+    },
+  });
+
+  Shell.register('true', { help: 'true —— 什么也不做，返回成功(0)', run() { return 0; } });
+  Shell.register('false', { help: 'false —— 什么也不做，返回失败(1)', run() { return 1; } });
+
+  Shell.register('test', {
+    help: 'test 表达式 / [ 表达式 ] —— 条件判断，如 [ -f 文件 ]、[ "$a" = "$b" ]',
+    run(sh, argv, io) {
+      let args = argv.slice(1);
+      if (argv[0] === '[') {
+        if (args[args.length - 1] !== ']') { io.e('[: 缺少 ]'); return 2; }
+        args = args.slice(0, -1);
+      }
+      return evalTest(sh, args) ? 0 : 1;
+    },
+  });
+  Shell.register('[', Shell.commands['test']);
+
+  function evalTest(sh, a) {
+    if (!a.length) return false;
+    if (a[0] === '!') return !evalTest(sh, a.slice(1));
+    const unary = { '-e': 'exists', '-f': 'file', '-d': 'dir', '-r': 'readable', '-w': 'writable', '-x': 'exec' };
+    if (a.length === 2 && unary[a[0]]) {
+      const abs = sh.fs.resolve(sh.cwd, a[1]);
+      switch (unary[a[0]]) {
+        case 'exists': return sh.fs.exists(abs);
+        case 'file': return sh.fs.exists(abs) && !sh.fs.isDir(abs);
+        case 'dir': return sh.fs.exists(abs) && sh.fs.isDir(abs);
+        case 'readable': return sh.fs.exists(abs) && (sh.fs.stat(abs).mode & 0o444) !== 0;
+        case 'writable': return sh.fs.exists(abs) && (sh.fs.stat(abs).mode & 0o222) !== 0;
+        case 'exec': return sh.fs.exists(abs) && (sh.fs.stat(abs).mode & 0o111) !== 0;
+      }
+    }
+    if (a.length === 2 && a[0] === '-z') return a[1] === '';
+    if (a.length === 2 && a[0] === '-n') return a[1] !== '';
+    if (a.length === 3) {
+      const [x, op, y] = a;
+      if (op === '=' || op === '==') return x === y;
+      if (op === '!=') return x !== y;
+      const nx = parseInt(x, 10), ny = parseInt(y, 10);
+      if (op === '-eq') return nx === ny;
+      if (op === '-ne') return nx !== ny;
+      if (op === '-lt') return nx < ny;
+      if (op === '-gt') return nx > ny;
+      if (op === '-le') return nx <= ny;
+      if (op === '-ge') return nx >= ny;
+    }
+    if (a.length === 1) return a[0] !== '';
+    return false;
+  }
+
+  Shell.register('read', {
+    help: 'read 变量名 —— 从标准输入读一行给变量',
+    run(sh, argv, io) {
+      const o = opts(argv.slice(1), {});
+      const name = o._[0] || 'REPLY';
+      const line = io.in.split('\n')[0] || '';
+      sh.setVar(name, line);
+      io.in = io.in.split('\n').slice(1).join('\n');
+      return 0;
+    },
+  });
+
+  /* ---------------- 系统信息 ---------------- */
+  Shell.register('date', {
+    help: 'date —— 显示当前日期时间',
+    run(sh, argv, io) {
+      const d = new Date();
+      const p = (n) => String(n).padStart(2, '0');
+      io.o(d.getFullYear() + '年 ' + (d.getMonth() + 1) + '月 ' + d.getDate() + '日 星期' +
+        '日一二三四五六'.charAt(d.getDay()) + ' ' + p(d.getHours()) + ':' + p(d.getMinutes()) + ':' + p(d.getSeconds()) +
+        ' CST');
+      return 0;
+    },
+  });
+  Shell.register('whoami', { help: 'whoami —— 显示当前用户名', run(sh, argv, io) { io.o(K.USER); return 0; } });
+  Shell.register('id', {
+    help: 'id —— 显示用户和组 ID',
+    run(sh, argv, io) { io.o('uid=1000(' + K.USER + ') gid=1000(' + K.USER + ') groups=1000(' + K.USER + '),27(sudo)'); return 0; },
+  });
+  Shell.register('uname', {
+    help: 'uname [-a] —— 显示系统信息',
+    run(sh, argv, io) {
+      const o = opts(argv.slice(1), {});
+      if (o.a) io.o('Linux ' + K.HOST + ' 7.2.6-1-cachyos #1 SMP PREEMPT_DYNAMIC x86_64 GNU/Linux');
+      else io.o('Linux');
+      return 0;
+    },
+  });
+  Shell.register('hostname', { help: 'hostname —— 显示主机名', run(sh, argv, io) { io.o(K.HOST); return 0; } });
+  Shell.register('df', {
+    help: 'df [-h] —— 显示磁盘占用',
+    run(sh, argv, io) {
+      const o = opts(argv.slice(1), {});
+      io.o('文件系统        1K-块      已用      可用 已用% 挂载点');
+      io.o('/dev/nvme0n1p2 ' + (o.h ? '  468G' : '490234752') + ' ' + (o.h ? '  212G' : '222298112') +
+        ' ' + (o.h ? '  233G' : '244011008') + '  48% /');
+      return 0;
+    },
+  });
+  Shell.register('du', {
+    help: 'du [-h] [-s] [目录] —— 统计占用空间',
+    run(sh, argv, io) {
+      const o = opts(argv.slice(1), {});
+      const abs = sh.fs.resolve(sh.cwd, o._[0] || '.');
+      const size = (p) => {
+        let total = 0;
+        const walk = (dir) => {
+          let es; try { es = sh.fs.list(dir); } catch (e) { return; }
+          es.forEach((e) => {
+            if (e.type === 'dir') walk(dir + '/' + e.name);
+            else total += e.size;
+          });
+        };
+        walk(p);
+        return total;
+      };
+      const n = size(abs);
+      io.o((o.h ? (n / 1024).toFixed(1) + 'K' : String(Math.ceil(n / 1024))) + '\t' + (o._[0] || '.'));
+      return 0;
+    },
+  });
+  Shell.register('ps', {
+    help: 'ps —— 显示进程（模拟输出）',
+    run(sh, argv, io) {
+      io.o('    PID TTY          TIME CMD');
+      io.o('   1024 pts/0    00:00:00 bash');
+      io.o('   1088 pts/0    00:00:00 ps');
+      return 0;
+    },
+  });
+  Shell.register('sleep', {
+    help: 'sleep 秒数 —— 等待（模拟器里立刻返回）',
+    run(sh, argv, io) {
+      io.hint('模拟器里 sleep 不会真的等待，否则页面会卡住。');
+      return 0;
+    },
+  });
+  Shell.register('seq', {
+    help: 'seq 起点 终点 —— 生成一串数字',
+    run(sh, argv, io) {
+      const o = opts(argv.slice(1), {});
+      const nums = o._.map(Number);
+      let a = 1, b = 1, step = 1;
+      if (nums.length === 1) { b = nums[0]; }
+      else if (nums.length === 2) { a = nums[0]; b = nums[1]; }
+      else if (nums.length >= 3) { a = nums[0]; step = nums[1]; b = nums[2]; }
+      if (!isFinite(a) || !isFinite(b)) { io.e('seq: 参数要是数字'); return 1; }
+      for (let v = a; step > 0 ? v <= b : v >= b; v += step) io.o(String(v));
+      sh.flags.seq = true;
+      return 0;
+    },
+  });
+  Shell.register('tee', {
+    help: 'tee [-a] 文件 —— 把输入同时写到文件和屏幕',
+    run(sh, argv, io) {
+      const o = opts(argv.slice(1), {});
+      const text = io.in.replace(/\n$/, '');
+      if (o._.length) {
+        try { sh.fs.writeFile(sh.fs.resolve(sh.cwd, o._[0]), text + '\n', !!o.a); }
+        catch (e) { io.e('tee: ' + o._[0] + ': ' + K.fsMsg(e)); return 1; }
+      }
+      io.o(text);
+      sh.flags.tee = true;
+      return 0;
+    },
+  });
+  Shell.register('clear', {
+    help: 'clear —— 清屏',
+    run(sh, argv, io) { io.special = 'clear'; return 0; },
+  });
+  Shell.register('sudo', {
+    help: 'sudo 命令 —— 以管理员身份执行（模拟器里只是提示）',
+    run(sh, argv, io) {
+      const o = opts(argv.slice(1), {});
+      io.hint('sudo 会以 root 身份执行命令。真实系统里它要你输入自己的密码，而且别乱用。');
+      sh.flags.sudo = true;
+      return 0;
+    },
+  });
+
+  /* 用指定解释器运行脚本：bash x.sh / sh x.sh / fish x.sh */
+  ['bash', 'sh', 'fish', 'zsh', 'dash'].forEach((name) => {
+    Shell.register(name, {
+      help: name + ' 脚本 [参数...] —— 用这个解释器运行脚本文件',
+      run(sh, argv, io) {
+        const o = opts(argv.slice(1), {});
+        const file = o._[0];
+        if (!file) { io.hint('这里 ' + name + ' 只用来运行脚本，例如：' + name + ' hello.sh'); return 0; }
+        const abs = sh.fs.resolve(sh.cwd, file);
+        if (!sh.fs.exists(abs)) { io.e(name + ': ' + file + ': No such file or directory'); return 127; }
+        const r = sh.execFile(abs, o._.slice(1));
+        r.io.out.forEach((x) => io._e.push(x));
+        r.io.err.forEach((x) => io._e.push(x));
+        r.io.hints.forEach((h) => io.hint(h));
+        return r.status;
+      },
+    });
+  });
+
+  Shell.register('man', {
+    help: 'man 命令 —— 查看用法',
+    run(sh, argv, io) {
+      const o = opts(argv.slice(1), {});
+      const c = o._[0];
+      if (!c) { io.e('man: 要看哪个命令？例如 man ls'); return 1; }
+      const spec = Shell.commands[c];
+      if (!spec) { io.e('没有 ' + c + ' 的手册页'); return 1; }
+      io.o(c.toUpperCase() + '(1)', 'bold');
+      io.o('');
+      io.o('名称', 'bold');
+      io.o('    ' + c + ' —— ' + (spec.help || '').replace(/^[^—]*——\s*/, ''));
+      io.o('');
+      io.o('说明', 'bold');
+      io.o('    这是本模拟器内置的帮助，不是真实 man 手册。');
+      return 0;
+    },
+  });
+
+  Shell.register('help', {
+    help: 'help —— 列出本模拟器支持的所有命令',
+    run(sh, argv, io) {
+      io.o('本模拟器支持的命令：', 'bold');
+      io.o('');
+      const names = Object.keys(Shell.commands).sort();
+      names.forEach((n) => {
+        if (!Shell.commands[n].help) return;
+        io.o('  ' + Shell.pad(n, 10) + Shell.commands[n].help.replace(/^[^—]*——\s*/, ''), 'plain');
+      });
+      io.o('');
+      io.o('另外还支持：管道 | 、重定向 > >> < 2> &> 、通配符 * ? [] {} 、变量 $VAR 、', 'muted');
+      io.o('命令替换 $(...) 、逻辑 && || 、流程控制 if/for/while 、脚本 ./x.sh 、函数。', 'muted');
+      return 0;
+    },
+  });
+
+  /* 文本对齐助手（按显示宽度补空格） */
+  Shell.pad = function (s, n) {
+    s = String(s);
+    let w = 0;
+    for (const ch of s) w += /[\u2E80-\uA4CF\uFF00-\uFF60]/.test(ch) ? 2 : 1;
+    return s + ' '.repeat(Math.max(0, n - w));
+  };
+
+  /* source 的实现挂在 Shell 原型上（需要访问 Parser） */
+  Shell.prototype.execSource = function (abs, io) {
+    const content = this.fs.readFile(abs);
+    const sub = new Shell({ fs: this.fs, lang: this.lang, cwd: this.cwd });
+    sub.vars = this.vars;
+    sub.funcs = this.funcs;
+    sub.aliases = this.aliases;
+    sub.positional = this.positional.slice();
+    sub.hush = true;
+    sub.historyList = this.historyList;
+    sub.usedCommands = this.usedCommands;
+    try {
+      const toks = K.lex(content, this.lang);
+      const ast = new K.Parser(toks, this.lang).parseProgram();
+      const st = sub.execNode(ast, io);
+      this.cwd = sub.cwd;
+      this.steps += sub.steps;
+      return st;
+    } catch (e) {
+      io.e('source: ' + e.message);
+      return 1;
+    }
+  };
+})(typeof window !== 'undefined' ? window : globalThis);
+
+</script>
+<script>
+/* ============================================================
+ * lessons.js —— 命令行学习网页的课程数据
+ * 18 章 / 4 个部分。导出全局 LESSONS，同时支持 node 里 require。
+ * 每个任务用 check(e) 校验，e 是 Shell 实例（或 ui.js 里的 engine 代理）。
+ * ============================================================ */
+(function (global) {
+  'use strict';
+
+  /* ---------------- 判分用的小助手（都要防炸） ---------------- */
+  function ok(e, p) { try { return !!e.fs.exists(p); } catch (err) { return false; } }
+  function txt(e, p) { try { return String(e.fs.readFile(p)); } catch (err) { return ''; } }
+  function has(e, p, s) { return txt(e, p).indexOf(s) !== -1; }
+  function mode(e, p) { try { return e.fs.stat(p).mode; } catch (err) { return 0; } }
+  function lines(e, p) {
+    const t = txt(e, p);
+    if (t === '') return 0;
+    return t.replace(/\n$/, '').split('\n').length;
+  }
+  function varIs(e, name, value) {
+    const v = e.vars && e.vars[name];
+    return !!v && v.v === value;
+  }
+  function exported(e, name) {
+    const v = e.vars && e.vars[name];
+    return !!v && !!v.exp;
+  }
+
+  const LESSONS = [
+
+    /* ==========================================================
+     * 第一部分 · 认识终端
+     * ========================================================== */
+    {
+      id: 'ch1',
+      part: '第一部分 · 认识终端',
+      chapter: '第 1 章',
+      title: '终端、shell 和你的第一条命令',
+      lang: 'bash',
+      goal: '分清终端、shell、bash 各是什么，并敢在提示符后面敲下第一条命令。',
+      intro: [
+        '欢迎来到命令行。你眼前这个能打字、能出结果的东西，叫终端（terminal）。它本身不聪明，只负责把你敲的字送出去、把结果拿回来显示。真正听懂你说什么、去干活的是它背后的 shell。',
+        '我们平时说的 bash、zsh、fish，都是 shell 的具体实现，就像「汽车」和「丰田」「大众」的关系。这个模拟器默认给你 bash。你在提示符 `xinyan@cachyos:~$` 后面敲的每一行，bash 都会先解析、再执行。',
+        '命令的写法很简单：命令名 + 空格 + 参数。比如 `echo 你好` 里的 `echo` 是命令名，「你好」是参数。命令名大小写敏感，`echo` 和 `Echo` 是两个完全不同的东西。',
+        '新手最容易犯的错是「怕敲错」。放心，这个沙盒是虚拟的，随便折腾都行。`~` 就是你的家目录 `/home/xinyan`，里面已经放了些练习用的文件。',
+        '这一章先把三个最基本的「自我介绍」命令敲一遍：`echo` 让终端说话，`whoami` 看你是谁，`hostname` 看机器叫什么。',
+      ],
+      tasks: [
+        { text: '让终端跟你打个招呼：打印一句话。', hint: 'echo 你好，世界', check: (e) => e.used('echo') },
+        { text: '问一下终端「我现在是谁」。', hint: 'whoami', check: (e) => e.used('whoami') },
+        { text: '看看这台机器叫什么名字（顺便看看系统信息）。', hint: 'hostname  或者  uname -a', check: (e) => e.usedAny(['hostname', 'uname']) },
+        { text: '看一眼今天的日期。', hint: 'date', check: (e) => e.used('date') },
+      ],
+      demo: [
+        'echo 你好，世界',
+        'whoami',
+        'hostname',
+        'uname -a',
+        'date',
+        'echo $SHELL',
+        'echo 我现在在 $(pwd)',
+        'pwd',
+      ],
+    },
+
+    {
+      id: 'ch2',
+      part: '第一部分 · 认识终端',
+      chapter: '第 2 章',
+      title: '我在哪：pwd、ls、cd 与路径',
+      lang: 'bash',
+      goal: '弄清楚「当前目录」这个概念，会用 pwd / ls / cd 和绝对、相对路径到处走。',
+      intro: [
+        '命令行里有个特别重要的概念：你「现在站在哪里」。这个位置叫当前工作目录（current working directory）。所有相对路径都是从这里出发去算的，所以走错地方，后面的命令全会出错。',
+        '`pwd` 就是 print working directory，把当前位置打印出来。`ls` 列出当前位置有什么。`cd` 换位置，change directory。这三个命令你会用一辈子。',
+        '路径分两种。以 `/` 开头的是绝对路径，比如 `/home/xinyan/projects`，从根目录一路写到底，不管你在哪它都指向同一个地方。不以 `/` 开头的是相对路径，比如 `projects`，意思是「当前目录下的 projects」。',
+        '还有几个简写要记住：`~` 是你的家目录 `/home/xinyan`，`.` 是当前目录，`..` 是上一层目录。所以 `cd ~` 回家，`cd ..` 往上走一层，`cd ../..` 往上两层。',
+        '小技巧：`cd -` 可以回到上一个待过的目录，在两个目录之间来回跳特别方便。另外 `ls -a` 能看到以 `.` 开头的隐藏文件，`ls -l` 能看到权限、大小、时间等详情。',
+      ],
+      tasks: [
+        { text: '去 /tmp 逛一圈（用绝对路径）。', hint: 'cd /tmp', check: (e) => e.visitedDirs['/tmp'] === true },
+        { text: '在家目录里把隐藏文件也列出来。', hint: 'cd ~; ls -a', check: (e) => e.flags.lsA === true },
+        { text: '用「相对路径」进到 projects 里面的 notes 目录。', hint: 'cd projects/notes', check: (e) => e.visitedDirs['/home/xinyan/projects/notes'] === true },
+        { text: '从 notes 回到上一层，最后停在 projects 目录。', hint: 'cd ..', check: (e) => e.cwd === '/home/xinyan/projects' },
+        { text: '再去逛逛文档目录（试试用 ~ 简写）。', hint: 'cd ~/文档', check: (e) => e.visitedDirs['/home/xinyan/文档'] === true },
+      ],
+      demo: [
+        'pwd',
+        'cd /tmp',
+        'ls -a',
+        'cd ~/文档',
+        'ls',
+        'cd ~/projects/notes',
+        'cd ..',
+        'pwd',
+      ],
+    },
+
+    {
+      id: 'ch3',
+      part: '第一部分 · 认识终端',
+      chapter: '第 3 章',
+      title: '看文件内容：cat、head、tail、less、wc、nl',
+      lang: 'bash',
+      goal: '会挑合适的命令查看文件内容，能只看开头、只看结尾、数行数、加行号。',
+      intro: [
+        '会走路之后就该学会看东西了。Linux 里「一切皆文件」，配置、日志、脚本都是文本文件，所以「看文件内容」是最常用的操作。',
+        '`cat` 把整个文件原样吐出来，适合小文件；`less` 适合大文件（真实终端里可以上下翻页、按 / 搜索，这里为了简单直接全部打印）；`head` 看开头，`tail` 看结尾，默认各 10 行。',
+        '`head -n 5 app.log` 看前 5 行，`tail -n 3 app.log` 看最后 3 行。查日志时最常用 `tail`，因为最新的记录总在最后。',
+        '`wc` 是 word count，用来数数：`wc -l` 数行数，`wc -w` 数单词数，`wc -c` 数字节。`nl` 则会在每行前面加上行号，方便跟别人说「第 7 行有问题」。',
+        '这些命令都只是「读」，不会改动文件，所以放心大胆地看。练习目标放在 `~/projects/app.log`，它有 12 行，里面有 3 行 ERROR。',
+      ],
+      tasks: [
+        { text: '用 cat 把 app.log 完整看一遍。', hint: 'cd ~/projects; cat app.log', check: (e) => e.flags.cat === true },
+        { text: '只看 app.log 的开头几行。', hint: 'head -n 3 app.log', check: (e) => e.flags.head === true },
+        { text: '只看 app.log 的结尾几行。', hint: 'tail -n 3 app.log', check: (e) => e.flags.tail === true },
+        { text: '数一数 app.log 一共有多少行。', hint: 'wc -l app.log', check: (e) => e.flags.wc === true },
+        { text: '用分页查看器打开它（less 或 more 都行）。', hint: 'less app.log', check: (e) => e.flags.less === true },
+      ],
+      demo: [
+        'cd /home/xinyan/projects',
+        'cat app.log',
+        'head -n 3 app.log',
+        'tail -n 3 app.log',
+        'wc -l app.log',
+        'wc -w app.log',
+        'nl app.log',
+        'less app.log',
+      ],
+    },
+
+    {
+      id: 'ch4',
+      part: '第一部分 · 认识终端',
+      chapter: '第 4 章',
+      title: '增删改：mkdir、touch、cp、mv、rm',
+      lang: 'bash',
+      goal: '会新建目录和文件，会复制、移动、改名、删除，并知道目录操作为什么要加 -r。',
+      intro: [
+        '看会了，接着学改。在命令行里增删改文件靠几个短命令：`mkdir` 建目录、`touch` 建空文件、`cp` 复制、`mv` 移动或改名、`rm` 删除。',
+        '`mkdir -p a/b/c` 里的 `-p` 是 parents，中间缺的目录会一起建出来，而且目录已存在也不报错——新手请无脑加 `-p`。',
+        '`cp` 复制目录要加 `-r`（recursive，递归），因为目录里可能还有目录。不加就会提示你。`cp 源 目标目录/` 表示把源复制进目录里。',
+        '`mv` 身兼两职：目标在同一个目录就是改名，目标是个目录就是移动。`mv 旧名 新名` 就是重命名。',
+        '`rm` 删除文件，删目录要加 `-r`。注意：命令行里没有回收站，`rm -r` 删掉就真没了，敲之前看清楚路径。',
+      ],
+      prepare: [
+        'mkdir -p /home/xinyan/练习/源目录 /home/xinyan/练习/要删的目录',
+        "printf '练习内容\\n' > /home/xinyan/练习/源目录/笔记.txt",
+        "printf '垃圾\\n' > /home/xinyan/练习/要删的目录/里面.txt",
+      ],
+      tasks: [
+        { text: '在 ~/练习 里一次建出多层目录：一层/二层/三层。', hint: 'cd ~/练习; mkdir -p 一层/二层/三层', check: (e) => e.fs.isDir('/home/xinyan/练习/一层/二层/三层') },
+        { text: '把 源目录 整个复制成 源目录副本（里面的文件也要在）。', hint: 'cp -r 源目录 源目录副本', check: (e) => ok(e, '/home/xinyan/练习/源目录副本/笔记.txt') },
+        { text: '把 源目录/笔记.txt 改名成 随笔.txt。', hint: 'mv 源目录/笔记.txt 源目录/随笔.txt', check: (e) => !ok(e, '/home/xinyan/练习/源目录/笔记.txt') && ok(e, '/home/xinyan/练习/源目录/随笔.txt') },
+        { text: '把 要删的目录 连里面的东西一起删掉。', hint: 'rm -r 要删的目录', check: (e) => !ok(e, '/home/xinyan/练习/要删的目录') },
+        { text: '在 ~/练习 里新建一个空文件 便签.txt。', hint: 'touch 便签.txt', check: (e) => ok(e, '/home/xinyan/练习/便签.txt') && txt(e, '/home/xinyan/练习/便签.txt') === '' },
+      ],
+      demo: [
+        'cd /home/xinyan/练习',
+        'mkdir -p 一层/二层/三层',
+        'cp -r 源目录 源目录副本',
+        'if [ -f 源目录/笔记.txt ] && [ ! -e 源目录/随笔.txt ]; then mv 源目录/笔记.txt 源目录/随笔.txt; fi',
+        'touch 便签.txt',
+        'rm -rf 要删的目录',
+        'ls -l',
+        'tree .',
+      ],
+    },
+
+    {
+      id: 'ch5',
+      part: '第一部分 · 认识终端',
+      chapter: '第 5 章',
+      title: '通配符与引号：什么时候 shell 会「动手」',
+      lang: 'bash',
+      goal: '会用 * ? [] {} 批量匹配文件，并说清楚单引号、双引号、反斜杠各自阻止了什么展开。',
+      intro: [
+        '通配符（wildcard）是 shell 的一大杀器。`*` 匹配任意多个字符，`?` 匹配恰好一个字符，`[]` 匹配括号里的任意一个字符，`{}` 则会把一个词展开成好几个词。',
+        '比如 `*.txt` 表示所有以 .txt 结尾的文件；`照片?.jpg` 匹配 照片1.jpg、照片2.jpg；`照片[12].jpg` 只匹配 1 和 2；`{报告,笔记}.txt` 等于同时写了 报告.txt 和 笔记.txt。',
+        '关键来了：这些展开都是 shell 干的，不是命令干的。命令拿到的已经是一串展开好的文件名。如果没有任何文件匹配，bash 会把原样的 `*.txt` 直接交给命令，这也是为什么有时候会看到「文件不存在：*.txt」这种奇怪的报错。',
+        '那怎么阻止展开？加引号。单引号 `\'...\'` 里的东西原封不动，连 `$` 变量都不展开；双引号 `"..."` 里变量会展开，但通配符不会展开。想只转义一个字符，就在它前面加反斜杠，比如 `\\$HOME`。',
+        '一句话总结：引号决定 shell 要不要动手——单引号最严格，什么都不动；双引号只放行变量和命令替换；不加引号则通配符、变量全部展开。',
+      ],
+      prepare: [
+        'mkdir -p /home/xinyan/通配符',
+        'touch /home/xinyan/通配符/照片1.jpg /home/xinyan/通配符/照片2.jpg /home/xinyan/通配符/照片3.jpg',
+      ],
+      tasks: [
+        { text: '用花括号一次建出两个文件：报告.txt 和 笔记.txt。', hint: 'cd ~/通配符; touch {报告,笔记}.txt', check: (e) => ok(e, '/home/xinyan/通配符/报告.txt') && ok(e, '/home/xinyan/通配符/笔记.txt') },
+        { text: '把目录里所有 .txt 文件一次性复制进 备份/。', hint: 'mkdir -p 备份; cp *.txt 备份/', check: (e) => ok(e, '/home/xinyan/通配符/备份/报告.txt') && ok(e, '/home/xinyan/通配符/备份/笔记.txt') },
+        { text: '用 [] 只复制 照片1.jpg 和 照片2.jpg（不要 3）。', hint: 'cp 照片[12].jpg 备份/', check: (e) => ok(e, '/home/xinyan/通配符/备份/照片1.jpg') && ok(e, '/home/xinyan/通配符/备份/照片2.jpg') && !ok(e, '/home/xinyan/通配符/备份/照片3.jpg') },
+        { text: '用单引号把 `$HOME` 原样写进 引号.txt。', hint: "echo '单引号里的 $HOME 不会展开' > 引号.txt", check: (e) => has(e, '/home/xinyan/通配符/引号.txt', '$HOME') },
+        { text: '用双引号让 `$HOME` 展开，结果写进 双引号.txt。', hint: 'echo "双引号里的 $HOME 会展开：$HOME" > 双引号.txt', check: (e) => has(e, '/home/xinyan/通配符/双引号.txt', '/home/xinyan') },
+      ],
+      demo: [
+        'cd /home/xinyan/通配符',
+        'touch {报告,笔记}.txt',
+        'echo 照片?.jpg',
+        'mkdir -p 备份',
+        'cp *.txt 备份/',
+        'cp 照片[12].jpg 备份/',
+        "echo '单引号里的 $HOME 不会展开' > 引号.txt; echo \"双引号里的 $HOME 会展开：$HOME\" > 双引号.txt",
+        'cat 引号.txt 双引号.txt',
+      ],
+    },
+
+    /* ==========================================================
+     * 第二部分 · shell 的看家本领
+     * ========================================================== */
+    {
+      id: 'ch6',
+      part: '第二部分 · shell 的看家本领',
+      chapter: '第 6 章',
+      title: '重定向：>、>>、<、2>、&> 与 /dev/null',
+      lang: 'bash',
+      goal: '知道 stdout 和 stderr 的区别，会用重定向把结果写进文件、把错误单独接住或丢掉。',
+      intro: [
+        '到目前为止，命令的输出都直接打在屏幕上。shell 允许你改「输出流去哪」，这叫重定向。',
+        '每个程序其实有三条管道：标准输入 stdin（编号 0）、标准输出 stdout（编号 1）、标准错误 stderr（编号 2）。正常结果走 stdout，报错信息走 stderr——分开的好处是你可以只把错误存下来。',
+        '`>` 把标准输出写进文件（会覆盖原有内容，小心！），`>>` 追加到文件末尾，`<` 把文件内容当作标准输入喂给命令，`2>` 单独接住错误信息，`&>` 把正常输出和错误一起接住。',
+        '`/dev/null` 是个特殊的「黑洞文件」，写进去的东西直接消失。`ls /nope 2> /dev/null` 的意思就是「报错别吵，我不关心」。',
+        '有个坑一定要记住：`>` 是覆盖，不是追加。`echo 新内容 > 笔记.txt` 会把原来的内容清空，想保留就写 `>>`。另外，重定向的目标文件不存在时 shell 会自动创建它。',
+      ],
+      prepare: [
+        'mkdir -p /home/xinyan/重定向',
+      ],
+      tasks: [
+        { text: '把「第一行」写进 第一行.txt。', hint: 'cd ~/重定向; echo 第一行 > 第一行.txt', check: (e) => txt(e, '/home/xinyan/重定向/第一行.txt').trim() === '第一行' },
+        { text: '往 追加.txt 里先写第一行，再追加第二行（两行都要在）。', hint: 'echo 第一行 > 追加.txt; echo 第二行 >> 追加.txt', check: (e) => has(e, '/home/xinyan/重定向/追加.txt', '第一行') && has(e, '/home/xinyan/重定向/追加.txt', '第二行') && e.flags.append === true },
+        { text: '把 ls /nonexistent 的报错单独存进 错误.txt。', hint: 'ls /nonexistent 2> 错误.txt', check: (e) => has(e, '/home/xinyan/重定向/错误.txt', 'No such file') },
+        { text: '把同一条命令的正常输出和错误一起存进 全部.txt。', hint: 'ls /nonexistent &> 全部.txt', check: (e) => has(e, '/home/xinyan/重定向/全部.txt', 'No such file') },
+        { text: '用 < 把 第一行.txt 喂给 wc 数行数（结果不用存，看一眼就行）。', hint: 'wc -l < 第一行.txt', check: (e) => e.flags.redirect === true && e.used('wc') === true },
+      ],
+      demo: [
+        'cd /home/xinyan/重定向',
+        'echo 第一行 > 第一行.txt',
+        'echo 第一行 > 追加.txt',
+        'echo 第二行 >> 追加.txt',
+        'ls /nonexistent 2> 错误.txt',
+        'ls /nonexistent &> 全部.txt',
+        'wc -l < 第一行.txt',
+        'ls /nonexistent 2> /dev/null; cat 错误.txt 全部.txt 追加.txt',
+      ],
+    },
+
+    {
+      id: 'ch7',
+      part: '第二部分 · shell 的看家本领',
+      chapter: '第 7 章',
+      title: '管道 |：把小工具接起来',
+      lang: 'bash',
+      goal: '理解「每个命令只做一件事」的思想，会用管道把两三个命令串成一条流水线。',
+      intro: [
+        '这一章是 shell 的灵魂：管道 `|`。它把前一个命令的输出，直接接到后一个命令的输入上。',
+        '为什么这么重要？因为 Unix 哲学是「每个命令只做一件事，并且做好」。`cat` 只负责输出，`grep` 只负责筛选，`wc` 只负责数数。想「从日志里数出错误行数」，就把它们串起来：`cat app.log | grep ERROR | wc -l`。',
+        '看这条命令就像看流水线：原料（cat）→ 筛选（grep）→ 计数（wc）。每一步都很简单，合起来却完成了原来要写程序才能做的事。',
+        '管道可以接很多段，理论上没有上限。而且管道里的命令是在子进程里跑的，它们在管道里改目录、改变量，都不会影响你当前这个 shell。',
+        '写管道前先在脑子里想清楚数据长什么样：是一行行文本，还是几列，还是一个个数字。想清楚了，把零件拼起来就是分分钟的事。',
+      ],
+      prepare: [
+        'mkdir -p /home/xinyan/管道',
+      ],
+      tasks: [
+        { text: '随便跑一条管道（有一个 | 就算）。', hint: 'cat ~/projects/app.log | wc -l', check: (e) => e.flags.pipe === true },
+        { text: '统计 app.log 里 ERROR 的行数，把结果存进 错误数.txt。', hint: 'grep ERROR ~/projects/app.log | wc -l > ~/管道/错误数.txt', check: (e) => txt(e, '/home/xinyan/管道/错误数.txt').trim() === '3' },
+        { text: '统计名单里每个人出现了几次，结果存进 名单统计.txt。', hint: 'sort ~/文档/名单.txt | uniq -c > ~/管道/名单统计.txt', check: (e) => has(e, '/home/xinyan/管道/名单统计.txt', '2 张三') },
+        { text: '把 app.log 排序后取前 3 行，存进 前三行.txt。', hint: 'cat ~/projects/app.log | sort | head -n 3 > ~/管道/前三行.txt', check: (e) => has(e, '/home/xinyan/管道/前三行.txt', '[INFO]') || has(e, '/home/xinyan/管道/前三行.txt', '[') },
+      ],
+      demo: [
+        'cd /home/xinyan/projects',
+        'cat app.log | wc -l',
+        'grep ERROR app.log | wc -l > /home/xinyan/管道/错误数.txt',
+        'sort /home/xinyan/文档/名单.txt | uniq -c > /home/xinyan/管道/名单统计.txt',
+        'cat app.log | sort | head -n 3 > /home/xinyan/管道/前三行.txt',
+        'cat /home/xinyan/管道/错误数.txt',
+        'cat /home/xinyan/管道/名单统计.txt',
+        'cat /home/xinyan/管道/前三行.txt',
+      ],
+    },
+
+    {
+      id: 'ch8',
+      part: '第二部分 · shell 的看家本领',
+      chapter: '第 8 章',
+      title: '过滤与统计：grep、sort、uniq 组合拳',
+      lang: 'bash',
+      goal: '熟练使用 grep 的常用开关，并能把 sort / uniq / head / tail 组合成统计流水线。',
+      intro: [
+        '上一章的流水线里，最常出现的零件是 `grep`。它的作用只有一句话：把包含某个模式的行挑出来。',
+        '常用开关：`-i` 忽略大小写，`-v` 反过来（只要不匹配的行），`-n` 显示行号，`-c` 只输出匹配的行数，`-r` 递归搜索整个目录，`-l` 只列出哪些文件里有。模式是正则表达式，`ERROR` 这种普通文本当然也能用。',
+        '`sort` 负责排序，`-n` 按数字大小而不是字典序，`-r` 倒序，`-u` 顺手去重。`uniq` 只能去掉「相邻的」重复行，所以想真正去重，必须 `sort 文件 | uniq`；顺序反了就白干——这是一个经典陷阱。',
+        '`uniq -c` 数每行出现了几次，`uniq -d` 只留下重复出现的行。统计「谁出现得最多」的经典写法是 `sort | uniq -c | sort -nr`。',
+        '`head`、`tail` 也能接在管道后面，比如 `... | sort | head -n 5` 看排行榜前五名。把筛选、排序、去重、计数这几块拼起来，日志分析就够用了。',
+      ],
+      prepare: [
+        'mkdir -p /home/xinyan/日志分析',
+      ],
+      tasks: [
+        { text: '忽略大小写找出所有 error 行（试试 -i）。', hint: 'grep -i error ~/projects/app.log', check: (e) => e.flags.grepI === true },
+        { text: '把「不是 ERROR」的行全部存进 非错误行.txt（应该有 9 行）。', hint: 'grep -v ERROR ~/projects/app.log > ~/日志分析/非错误行.txt', check: (e) => lines(e, '/home/xinyan/日志分析/非错误行.txt') === 9 },
+        { text: '带行号找出 ERROR 行，存进 带行号.txt。', hint: 'grep -n ERROR ~/projects/app.log > ~/日志分析/带行号.txt', check: (e) => has(e, '/home/xinyan/日志分析/带行号.txt', '4:[ERROR]') },
+        { text: '递归搜索 notes 目录里含「学会」的文件，结果存进 递归.txt。', hint: 'grep -r 学会 ~/projects/notes > ~/日志分析/递归.txt', check: (e) => has(e, '/home/xinyan/日志分析/递归.txt', '第一天.md') && has(e, '/home/xinyan/日志分析/递归.txt', '第二天.md') },
+        { text: '找出名单里重复出现的名字，结果存进 重复.txt。', hint: 'sort ~/文档/名单.txt | uniq -d > ~/日志分析/重复.txt', check: (e) => has(e, '/home/xinyan/日志分析/重复.txt', '张三') && has(e, '/home/xinyan/日志分析/重复.txt', '李四') },
+      ],
+      demo: [
+        'cd /home/xinyan/projects',
+        'grep -i error app.log | wc -l',
+        'grep -i error app.log | wc -l > /home/xinyan/日志分析/大小写.txt',
+        'grep -v ERROR app.log > /home/xinyan/日志分析/非错误行.txt',
+        'grep -n ERROR app.log > /home/xinyan/日志分析/带行号.txt',
+        'grep -r 学会 /home/xinyan/projects/notes > /home/xinyan/日志分析/递归.txt',
+        'sort /home/xinyan/文档/名单.txt | uniq -d > /home/xinyan/日志分析/重复.txt',
+        'grep -c ERROR app.log',
+      ],
+    },
+
+    {
+      id: 'ch9',
+      part: '第二部分 · shell 的看家本领',
+      chapter: '第 9 章',
+      title: '文本处理：cut、tr、sed、awk 入门',
+      lang: 'bash',
+      goal: '会按列取数据、按字符替换、做文本替换，能用 awk 取某一列或某一行号。',
+      intro: [
+        '光筛选还不够，有时候你要的是「只要某一列」或者「把某些字符换掉」。这时候轮到 cut / tr / sed / awk 出场。',
+        '`cut` 按列切：`cut -d: -f1 /etc/passwd` 的意思是以冒号分隔、取第 1 列。`-d` 指定分隔符，`-f` 指定要第几列（可以 `-f1,3`），`-c` 则按字符位置切，比如 `cut -c1-4`。',
+        '`tr` 做字符替换：`echo hello | tr a-z A-Z` 变成大写。它只能按字符一对一地换，不能按单词换，所以替换单词要用 sed。',
+        '`sed` 是流编辑器，最常用的是替换：`sed \'s/旧/新/g\' 文件`。结尾的 `g` 表示一行里全部替换，不加 `g` 只换每行第一个。它默认不改原文件，只把结果打到屏幕上，所以想保存要配合重定向。',
+        '`awk` 按列处理文本，最常用的形式是 `awk -F: \'{print $1, $3}\' 文件`：`-F` 指定分隔符，`$1` 是第一列，`$3` 是第三列，`NR` 是当前行号。awk 本身是一整门语言，这里只学最常用的取值。',
+      ],
+      prepare: [
+        'mkdir -p /home/xinyan/文本处理',
+      ],
+      tasks: [
+        { text: '用 cut 取出 /etc/passwd 里所有用户名，存进 用户名.txt。', hint: 'cut -d: -f1 /etc/passwd > ~/文本处理/用户名.txt', check: (e) => has(e, '/home/xinyan/文本处理/用户名.txt', 'xinyan') && txt(e, '/home/xinyan/文本处理/用户名.txt').split('\n')[0] === 'root' },
+        { text: '用 awk 取出 /etc/passwd 的第 3 列（UID），存进 uid.txt。', hint: "awk -F: '{print $3}' /etc/passwd > ~/文本处理/uid.txt", check: (e) => has(e, '/home/xinyan/文本处理/uid.txt', '1000') },
+        { text: '把 hello shell 变成全大写，存进 大写.txt。', hint: 'echo hello shell | tr a-z A-Z > ~/文本处理/大写.txt', check: (e) => txt(e, '/home/xinyan/文本处理/大写.txt').trim() === 'HELLO SHELL' },
+        { text: '把 /etc/os-release 里的 Linux 换成 操作系统，存进 替换.txt。', hint: "sed 's/Linux/操作系统/g' /etc/os-release > ~/文本处理/替换.txt", check: (e) => has(e, '/home/xinyan/文本处理/替换.txt', 'CachyOS 操作系统') },
+        { text: '把用户名和 UID 两列拼在一起（取前 2 行即可），存进 组合.txt。', hint: "awk -F: '{print $1, $3}' /etc/passwd | head -n 2 > ~/文本处理/组合.txt", check: (e) => has(e, '/home/xinyan/文本处理/组合.txt', 'root 0') },
+      ],
+      demo: [
+        'cd /home/xinyan/文本处理',
+        'cut -d: -f1 /etc/passwd | head -n 3',
+        'cut -d: -f1 /etc/passwd > 用户名.txt',
+        "awk -F: '{print $3}' /etc/passwd > uid.txt",
+        'echo hello shell | tr a-z A-Z > 大写.txt',
+        "sed 's/Linux/操作系统/g' /etc/os-release > 替换.txt",
+        "awk -F: '{print $1, $3}' /etc/passwd | head -n 2 > 组合.txt",
+        "sed -n '/ERROR/p' /home/xinyan/projects/app.log | head -n 1",
+      ],
+    },
+
+    {
+      id: 'ch10',
+      part: '第二部分 · shell 的看家本领',
+      chapter: '第 10 章',
+      title: '查找文件：find、which、type、xargs',
+      lang: 'bash',
+      goal: '会用 find 按名字和类型找文件，会用 which / type 判断命令来历，会用 xargs 把结果变成参数。',
+      intro: [
+        '文件多了就需要「找」。`find` 从某个目录出发挨个往下翻，按条件挑出文件。',
+        '最常用的三条：`find . -name "*.log"` 按名字找，`-type f` 只要文件、`-type d` 只要目录，`-maxdepth 2` 限制往下翻几层。建议养成用 `-maxdepth` 的习惯，不然在真实系统里会翻很久。',
+        '`which 命令` 告诉你这个命令的可执行文件在哪；`type 命令` 更进一步，会说明它是外部命令、shell 内建、别名还是函数——排查「为什么这个命令行为和我以为的不一样」时很好用。',
+        '`xargs` 是把「标准输入里的一行行文本」变成「命令的参数」的转换器。因为很多命令不认管道输入，只认命令行参数，比如 `wc -l` 后面必须跟文件名。',
+        '所以 `find . -name "*.md" | xargs wc -l` 成了固定套路：find 找出一堆文件，xargs 把它们一个个塞到 wc 后面。想对一批文件做同一件事，这就是标准写法。',
+      ],
+      prepare: [
+        'mkdir -p /home/xinyan/查找',
+      ],
+      tasks: [
+        { text: '找出 ~/projects 下所有 .md 文件，结果存进 找到的md.txt。', hint: 'find ~/projects -name "*.md" > ~/查找/找到的md.txt', check: (e) => has(e, '/home/xinyan/查找/找到的md.txt', '第一天.md') && has(e, '/home/xinyan/查找/找到的md.txt', '第二天.md') },
+        { text: '用 -maxdepth 2 -type d 列出家目录两层的目录，存进 目录.txt。', hint: 'find ~ -maxdepth 2 -type d > ~/查找/目录.txt', check: (e) => has(e, '/home/xinyan/查找/目录.txt', '/home/xinyan/projects') && has(e, '/home/xinyan/查找/目录.txt', '/home/xinyan/projects/notes') },
+        { text: '数一数 ~/projects 下有多少个普通文件，存进 文件数.txt。', hint: 'find ~/projects -type f | wc -l > ~/查找/文件数.txt', check: (e) => parseInt(txt(e, '/home/xinyan/查找/文件数.txt'), 10) >= 6 },
+        { text: '用 which 查 grep 和 find 的位置，用 type 看 cd 是什么类型，分别存进两个文件。', hint: 'which grep find > ~/查找/工具路径.txt; type cd > ~/查找/类型.txt', check: (e) => has(e, '/home/xinyan/查找/工具路径.txt', '/usr/bin/grep') && has(e, '/home/xinyan/查找/类型.txt', '内建') },
+        { text: '用 find + xargs 统计 notes 里所有 md 的行数，存进 行数.txt。', hint: 'find ~/projects/notes -name "*.md" | xargs wc -l > ~/查找/行数.txt', check: (e) => has(e, '/home/xinyan/查找/行数.txt', '第一天.md') },
+      ],
+      demo: [
+        'cd /home/xinyan/查找',
+        'find /home/xinyan/projects -name "*.md"',
+        'find /home/xinyan/projects -name "*.md" > 找到的md.txt',
+        'find /home/xinyan -maxdepth 2 -type d > 目录.txt',
+        'find /home/xinyan/projects -type f | wc -l > 文件数.txt',
+        'which grep find > 工具路径.txt; type cd > 类型.txt',
+        'find /home/xinyan/projects/notes -name "*.md" | xargs wc -l > 行数.txt',
+        'find /home/xinyan -maxdepth 1 -name "*.txt"',
+      ],
+    },
+
+    {
+      id: 'ch11',
+      part: '第二部分 · shell 的看家本领',
+      chapter: '第 11 章',
+      title: '变量与环境：$VAR、export、env、PATH、.bashrc',
+      lang: 'bash',
+      goal: '会定义和使用变量，理解 export 的作用（为什么只有导出后 env 里才看得到），知道 PATH 和 .bashrc 是干什么的。',
+      intro: [
+        '变量就是给一个值起个名字。bash 里写法很严格：`名字=值`，等号两边绝对不能有空格。`SITE=家里` 是对的，`SITE = 家里` 会被当成「运行一个叫 SITE 的命令」，直接报错。',
+        '取值要在名字前加 `$`，比如 `echo $SITE`。想拼接字符用 `${SITE}啊`，花括号能把变量名的边界标清楚。',
+        '这里有个新手必踩的坑：你设的变量，运行脚本时不一定「传得过去」。bash 的规则是「只有 export 过的变量才进入环境变量，交给子进程」。`env` 命令列出的就是环境变量，可以用它验证：设了变量但没 export，`env` 里就搜不到。',
+        '`export SITE` 把已有变量导出，`export SITE=家里` 一次完成设置加导出，`unset SITE` 删除变量。',
+        '`PATH` 是最重要的环境变量：你敲 `ls` 时，shell 就是按 PATH 里列的目录一个个去找名为 ls 的可执行文件。`~/.bashrc` 是每次打开新终端都会自动执行的文件，别名、PATH、提示符通常都写在这里。',
+      ],
+      prepare: [
+        'mkdir -p /home/xinyan/环境',
+      ],
+      tasks: [
+        { text: '定义一个普通变量 SITE，值是 家里。', hint: 'SITE=家里', check: (e) => varIs(e, 'SITE', '家里') },
+        { text: '把 SITE 导出成环境变量。', hint: 'export SITE', check: (e) => exported(e, 'SITE') },
+        { text: '用 env 验证 SITE 真的进去了，结果存进 导出后.txt。', hint: 'env | grep SITE > ~/环境/导出后.txt', check: (e) => has(e, '/home/xinyan/环境/导出后.txt', 'SITE=家里') },
+        { text: '看看 ~/.bashrc 里定义了什么别名，存进 别名.txt。', hint: 'grep alias ~/.bashrc > ~/环境/别名.txt', check: (e) => has(e, '/home/xinyan/环境/别名.txt', 'll') },
+        { text: '把 $HOME/.local/bin 追加到 PATH 后面。', hint: 'PATH="$PATH:$HOME/.local/bin"', check: (e) => !!e.vars.PATH && e.vars.PATH.v.indexOf('/home/xinyan/.local/bin') !== -1 },
+      ],
+      demo: [
+        'cd /home/xinyan/环境',
+        'SITE=家里',
+        'echo 变量 SITE=$SITE',
+        'env | grep SITE',
+        'export SITE',
+        'env | grep SITE > 导出后.txt',
+        'grep alias /home/xinyan/.bashrc > 别名.txt',
+        'PATH="$PATH:$HOME/.local/bin"; echo $PATH',
+      ],
+    },
+
+    /* ==========================================================
+     * 第三部分 · 让 shell 替你干活
+     * ========================================================== */
+    {
+      id: 'ch12',
+      part: '第三部分 · 让 shell 替你干活',
+      chapter: '第 12 章',
+      title: '命令替换与算术：$( )、$(( ))、$?、&& 与 ||',
+      lang: 'bash',
+      goal: '会把命令的输出嵌进另一条命令，会做整数运算，会用退出码和 && / || 控制执行流程。',
+      intro: [
+        '有些命令的输出，你不想看，只想拿来用。把它塞进另一条命令里，叫命令替换：`$(命令)`，老写法是反引号 `` `命令` ``。',
+        '比如 `echo "今天在 $(pwd)"`，shell 会先跑 `pwd`，把结果替换进去，再执行 echo。命令替换可以嵌套，也可以放在双引号里。',
+        '算术用 `$(( ))`：`echo $((6*7))` 得到 42，里面可以直接写变量名，比如 `$((N+1))`。注意它只做整数运算，想要小数要用别的工具。',
+        '`$?` 是上一条命令的退出码：0 表示成功，非 0 表示失败。这是脚本能做判断的基础，`grep` 没找到内容会返回 1，`cd` 失败也会返回非 0。',
+        '配合 `&&` 和 `||` 就能做短路逻辑：`A && B` 表示 A 成功才执行 B，`A || B` 表示 A 失败才执行 B。`测试命令 && 成功时做的事 || 失败时做的事` 是脚本里的万能句式。',
+      ],
+      prepare: [
+        'mkdir -p /home/xinyan/算术',
+      ],
+      tasks: [
+        { text: '用 $(( )) 算出 6*7，存进变量 N。', hint: 'N=$((6*7))', check: (e) => varIs(e, 'N', '42') },
+        { text: '用命令替换写一句话：我是谁、机器叫什么，存进 我是谁.txt。', hint: 'echo "我是 $(whoami)，机器是 $(hostname)" > ~/算术/我是谁.txt', check: (e) => has(e, '/home/xinyan/算术/我是谁.txt', 'xinyan') && has(e, '/home/xinyan/算术/我是谁.txt', 'cachyos') },
+        { text: '用反引号把日期嵌进一句话，存进 时间.txt。', hint: 'echo "现在时间 `date`" > ~/算术/时间.txt', check: (e) => has(e, '/home/xinyan/算术/时间.txt', '现在时间') },
+        { text: '让一条命令故意失败，然后看 $? 是不是 1，把结果存进 退出码.txt。', hint: 'false; echo "上一条命令的退出码是 $?" > ~/算术/退出码.txt', check: (e) => has(e, '/home/xinyan/算术/退出码.txt', '1') },
+        { text: '用 && 和 || 判断 readme.txt 在不在：在就写 存在.txt，不在就写 不存在.txt。', hint: 'test -f ~/readme.txt && echo 存在 > ~/算术/存在.txt || echo 不存在 > ~/算术/不存在.txt', check: (e) => ok(e, '/home/xinyan/算术/存在.txt') && !ok(e, '/home/xinyan/算术/不存在.txt') },
+      ],
+      demo: [
+        'cd /home/xinyan/算术',
+        'echo $((6*7))',
+        'N=$((6*7)); echo 算出来是 $N',
+        'echo "我是 $(whoami)，机器是 $(hostname)" > 我是谁.txt',
+        'echo "现在时间 `date`" > 时间.txt',
+        'false; echo "上一条命令的退出码是 $?" > 退出码.txt',
+        'test -f /home/xinyan/readme.txt && echo 存在 > 存在.txt || echo 不存在 > 不存在.txt',
+        'cat 我是谁.txt 退出码.txt 存在.txt',
+      ],
+    },
+
+    {
+      id: 'ch13',
+      part: '第三部分 · 让 shell 替你干活',
+      chapter: '第 13 章',
+      title: '别名、历史、Tab 补全与快捷键',
+      lang: 'bash',
+      goal: '会定义和删除别名，知道 history、Tab 补全和各种快捷键能帮你少敲很多字。',
+      intro: [
+        '每天敲的命令里，总有几条又长又常用。`alias` 可以给它起个小名：`alias ll=\'ls -l\'`，之后敲 `ll` 就等于敲了 `ls -l`。',
+        '等号右边的命令要用引号包起来，因为里面有空格。别名本质上是「文字替换」，定义完立刻生效；`unalias ll` 删除，直接敲 `alias` 列出全部。',
+        '别名写在命令行里只管当前这个 shell；想每次开终端都生效，得把它写进 `~/.bashrc`，这样新终端启动时会自动执行。',
+        '`history` 列出你敲过的命令。真实终端里可以用方向键 ↑↓ 翻历史，`Ctrl+R` 反向搜索历史（敲几个字母就能找到以前那条超长命令），这些在这个模拟器里没法演示，知道有这回事就行。',
+        '还有几个能救命的小习惯：Tab 键补全文件名和命令名，少敲很多字还能防拼错；`Ctrl+C` 中断当前命令；`Ctrl+A` / `Ctrl+E` 跳到行首 / 行尾；`Ctrl+L` 清屏。',
+      ],
+      tasks: [
+        { text: '定义一个别名 la，等于 ls -a。', hint: "alias la='ls -a'", check: (e) => e.aliases && e.aliases.la === 'ls -a' },
+        { text: '定义别名 ll 等于 ls -l，然后真的用一次 ll。', hint: "alias ll='ls -l'; ll", check: (e) => e.flags.lsL === true },
+        { text: '用一次刚定义的 la，确认隐藏文件出来了。', hint: 'la', check: (e) => e.flags.lsA === true },
+        { text: '把 ll 这个别名删掉（la 留着）。', hint: 'unalias ll', check: (e) => e.used('unalias') === true && (!e.aliases || e.aliases.la === 'ls -a') },
+        { text: '看一眼你的命令历史。', hint: 'history', check: (e) => e.used('history') === true },
+      ],
+      demo: [
+        'cd /home/xinyan',
+        "alias ll='ls -l'",
+        'll',
+        "alias la='ls -a'",
+        'la',
+        'type ll',
+        'unalias ll',
+        'history',
+      ],
+    },
+
+    {
+      id: 'ch14',
+      part: '第三部分 · 让 shell 替你干活',
+      chapter: '第 14 章',
+      title: '写第一个脚本：shebang、chmod +x、位置参数',
+      lang: 'bash',
+      goal: '会写脚本文件、加执行权限、用 ./ 或 bash 运行，并会用 $1、$# 接收参数。',
+      intro: [
+        '把一长串命令写进文件，它就变成了脚本。脚本能重复运行、能接受参数，是自动化真正开始的地方。',
+        '脚本第一行惯例写 `#!/bin/bash`，这叫 shebang，告诉系统「用 bash 来解释我」。它在 shell 眼里是注释，但对执行至关重要。',
+        '刚写好的脚本默认没有执行权限，`./脚本.sh` 会报 Permission denied。两种办法：`chmod +x 脚本.sh` 之后用 `./脚本.sh` 运行，或者不授权直接用 `bash 脚本.sh`。',
+        '脚本可以接收参数：`$1` 是第一个参数，`$2` 是第二个，`$#` 是参数个数，`$@` 是所有参数的列表，`$0` 是脚本名。',
+        '注意 `./` 不能省。出于安全考虑，shell 不会在「当前目录」里找命令；`./脚本.sh` 的意思是「就在当前目录下，运行这个文件」。',
+      ],
+      prepare: [
+        'mkdir -p /home/xinyan/脚本',
+      ],
+      tasks: [
+        { text: '写一个脚本 ~/脚本/打招呼.sh，第一行是 shebang，第二行把第一个参数写进 参数.txt。', hint: "printf '#!/bin/bash\\necho 你好，$1 > /home/xinyan/脚本/参数.txt\\n' > ~/脚本/打招呼.sh", check: (e) => has(e, '/home/xinyan/脚本/打招呼.sh', '#!/bin/bash') },
+        { text: '给 打招呼.sh 加上执行权限。', hint: 'chmod +x 打招呼.sh', check: (e) => (mode(e, '/home/xinyan/脚本/打招呼.sh') & 0o111) !== 0 },
+        { text: '运行它（执行过脚本就算，直接跑或用 bash 跑都行）。', hint: './打招呼.sh 世界', check: (e) => e.flags.script === true },
+        { text: '运行的时候传个参数 世界，让它写进 参数.txt。', hint: './打招呼.sh 世界', check: (e) => has(e, '/home/xinyan/脚本/参数.txt', '世界') },
+        { text: '再写一个 循环.sh，用 for 把「第 1 次、第 2 次、第 3 次」追加进 循环结果.txt。', hint: "printf '#!/bin/bash\\nfor i in 1 2 3; do echo 第 $i 次 >> /home/xinyan/脚本/循环结果.txt; done\\n' > ~/脚本/循环.sh; bash 循环.sh", check: (e) => has(e, '/home/xinyan/脚本/循环结果.txt', '第 3 次') },
+      ],
+      demo: [
+        'cd /home/xinyan/脚本',
+        "printf '#!/bin/bash\\necho 你好，$1 > /home/xinyan/脚本/参数.txt\\necho 脚本跑完了\\n' > 打招呼.sh",
+        './打招呼.sh 世界',
+        'chmod +x 打招呼.sh',
+        './打招呼.sh 世界',
+        "printf '#!/bin/bash\\nfor i in 1 2 3; do echo 第 $i 次 >> /home/xinyan/脚本/循环结果.txt; done\\n' > 循环.sh",
+        'bash 循环.sh',
+        'cat 参数.txt 循环结果.txt',
+      ],
+    },
+
+    {
+      id: 'ch15',
+      part: '第三部分 · 让 shell 替你干活',
+      chapter: '第 15 章',
+      title: '条件与循环：if、test、for、while、函数',
+      lang: 'bash',
+      goal: '会让脚本「看情况」执行，会遍历一组值或文件，会把一段逻辑打包成函数。',
+      intro: [
+        '脚本只会从上到下一条条执行还不够，你还想让它「看情况」和「重复做」。这就是条件与循环。',
+        '条件判断有两种写法：`test -f 文件` 和它的简写 `[ -f 文件 ]`（方括号两边都要有空格！）。常用判断：`-f` 是文件、`-d` 是目录、`-e` 存在、`-z` 字符串为空；数字比较用 `-eq -ne -lt -gt`，字符串比较用 `=` 和 `!=`。',
+        '`if 条件; then ...; elif ...; then ...; else ...; fi` 就是完整的条件结构。记住最后要用 `fi`（if 倒过来写）收尾，写脚本时忘了它是最常见的语法错误。',
+        '`for 变量 in 一组值; do ...; done` 遍历一组值，值可以是 `1 2 3`、可以是 `*.txt` 展开出的文件列表，也可以是命令替换的结果。`while 条件; do ...; done` 只要条件成立就一直循环，改条件变量的那一行千万别忘，不然就是死循环。',
+        '函数把一段逻辑打包起个名字：`名字() { ... }`，调用时像命令一样用，参数同样通过 `$1` `$2` 取。函数让脚本从「一长串」变成「一块块」，可读性立刻上一个台阶。',
+      ],
+      prepare: [
+        'mkdir -p /home/xinyan/流程',
+      ],
+      tasks: [
+        { text: '用 if 判断 ~/文档 目录在不在，把结论写进 判断.txt。', hint: 'if [ -d ~/文档 ]; then echo 有文档目录 > 判断.txt; else echo 没有这个目录 > 判断.txt; fi', check: (e) => has(e, '/home/xinyan/流程/判断.txt', '有文档目录') },
+        { text: '用 for 循环把「第 1 次」到「第 3 次」追加进 循环.txt。', hint: 'for i in 1 2 3; do echo 第 $i 次 >> 循环.txt; done', check: (e) => e.flags.loop === true && has(e, '/home/xinyan/流程/循环.txt', '第 3 次') },
+        { text: '用 while 循环把 0、1、2 各写一行进 数字.txt。', hint: 'i=0; while [ $i -lt 3 ]; do echo $i >> 数字.txt; i=$((i+1)); done', check: (e) => txt(e, '/home/xinyan/流程/数字.txt').replace(/\n$/, '') === '0\n1\n2' },
+        { text: '用 for 遍历 ~/文档 里所有 .txt，把路径追加进 文件列表.txt。', hint: 'for f in ~/文档/*.txt; do echo $f >> 文件列表.txt; done', check: (e) => has(e, '/home/xinyan/流程/文件列表.txt', '名单.txt') && has(e, '/home/xinyan/流程/文件列表.txt', '购物清单.txt') },
+        { text: '定义一个函数 mkcd，它先建目录再 cd 进去；然后用它进到 ~/流程/新目录。', hint: 'mkcd() { mkdir -p "$1"; cd "$1"; }; mkcd /home/xinyan/流程/新目录', check: (e) => e.fs.isDir('/home/xinyan/流程/新目录') && e.cwd === '/home/xinyan/流程/新目录' },
+      ],
+      demo: [
+        'cd /home/xinyan/流程',
+        'rm -f 判断.txt 循环.txt 数字.txt 文件列表.txt',
+        'if [ -d /home/xinyan/文档 ]; then echo 有文档目录 > 判断.txt; else echo 没有这个目录 > 判断.txt; fi',
+        'for i in 1 2 3; do echo 第 $i 次 >> 循环.txt; done',
+        'i=0; while [ $i -lt 3 ]; do echo $i >> 数字.txt; i=$((i+1)); done',
+        'for f in /home/xinyan/文档/*.txt; do echo $f >> 文件列表.txt; done',
+        'mkcd() { mkdir -p "$1"; cd "$1"; }',
+        'mkcd /home/xinyan/流程/新目录; pwd',
+      ],
+    },
+
+    /* ==========================================================
+     * 第四部分 · 进阶
+     * ========================================================== */
+    {
+      id: 'ch16',
+      part: '第四部分 · 进阶',
+      chapter: '第 16 章',
+      title: '权限：读懂 ls -l、chmod、sudo 与 Permission denied',
+      lang: 'bash',
+      goal: '会读权限串，会用数字法和 +x 改权限，看到 Permission denied 知道该查什么。',
+      intro: [
+        '`ls -l` 的第一列那串 `-rw-r--r--` 就是权限，一共 10 个字符：第 1 位是类型（`-` 文件、`d` 目录、`l` 链接），后面三组各 3 位，依次是「你自己（u）」「同组的人（g）」「其他人（o）」的读（r）写（w）执行（x）权限。',
+        '`rwx` 换算成数字是 4+2+1：`rwx`=7，`rw-`=6，`r-x`=5，`r--`=4。所以 `chmod 755 脚本` 是「我有全部权限，别人只能读和进」，`chmod 644 文件` 是「我能改，别人只能读」。',
+        '也可以按加减来：`chmod +x 脚本` 给所有身份加上执行位，`chmod u+x` 只给自己加，`chmod -x` 去掉。日常最常用的就是 `chmod +x`。',
+        '脚本必须有 x 权限才能 `./` 运行，没有就报 Permission denied；文件没有 r 权限连 `cat` 都读不了。所以在 Linux 里，看到 Permission denied 的第一反应应该是「查权限」，而不是「文件是不是坏了」。',
+        '`sudo 命令` 是以管理员（root）身份执行命令。真实系统里它会要你输入自己的密码，而且权力极大，能删系统文件，别乱用。这个模拟器里只是演示一下概念。',
+      ],
+      prepare: [
+        'mkdir -p /home/xinyan/权限',
+        "printf '秘密内容\\n' > /home/xinyan/权限/秘密.txt",
+        "printf '#!/bin/bash\\necho 脚本可以跑了\\n' > /home/xinyan/权限/跑起来.sh",
+      ],
+      tasks: [
+        { text: '用 ls -l 看一眼这个目录的权限。', hint: 'cd ~/权限; ls -l', check: (e) => e.flags.lsL === true },
+        { text: '把 秘密.txt 改成只有自己能读写（600）。', hint: 'chmod 600 秘密.txt', check: (e) => (mode(e, '/home/xinyan/权限/秘密.txt') & 0o777) === 0o600 },
+        { text: '给 跑起来.sh 加上执行权限。', hint: 'chmod +x 跑起来.sh', check: (e) => (mode(e, '/home/xinyan/权限/跑起来.sh') & 0o111) !== 0 },
+        { text: '运行 跑起来.sh（亲身体会一下加权限前后的差别）。', hint: './跑起来.sh', check: (e) => e.flags.script === true },
+        { text: '用 sudo 体验一下以管理员身份跑命令。', hint: 'sudo echo 你好', check: (e) => e.used('sudo') === true },
+      ],
+      demo: [
+        'cd /home/xinyan/权限',
+        'ls -l',
+        'chmod 000 秘密.txt',
+        'cat 秘密.txt',
+        'chmod 600 秘密.txt',
+        'cat 秘密.txt',
+        'chmod +x 跑起来.sh',
+        './跑起来.sh; sudo echo 用管理员权限跑一条命令',
+      ],
+    },
+
+    {
+      id: 'ch17',
+      part: '第四部分 · 进阶',
+      chapter: '第 17 章',
+      title: 'fish 与 bash 的差异：换 shell 就要换语法',
+      lang: 'fish',
+      goal: '认识 fish 的基本语法，能和 bash 一一对照：set / set -x、( )、and / or / not、$status、end 收尾。',
+      intro: [
+        '前面学的都是 bash。shell 不止 bash 一种，fish（friendly interactive shell）以「开箱即用的补全和彩色提示符」著称，很多人的日常 shell 就是它。',
+        '但请注意：shell 的语法不是通用的！换 shell 就要换写法。这一章用 fish 模式，把 bash 和 fish 摆在一起对照着看。',
+        '变量：bash 是 `SITE=家里`，fish 是 `set SITE 家里`；导出给子进程，bash 用 `export`，fish 用 `set -x`。在 fish 里写 `SITE=家里` 会直接报错：「不支持使用 =，请用 set SITE 家里」。这是两套语法最直观的分界线。',
+        '命令替换：bash 用 `$(命令)` 或反引号，fish 的传统写法是圆括号 `(命令)`（新版 fish 也接受 `$(命令)`；注意反引号在 fish 里只是普通字符，不会执行命令）。逻辑连接：`&&` `||` `!` 在新版 fish 里同样能用，但传统写法是 `and` `or` `not`；退出码则相反，bash 用 `?` 变量，fish 必须用 `$status`——真实 fish 里敲 `$?` 会直接报错，请养成用 `$status` 的习惯。',
+        '流程控制：bash 的块用 then/fi、do/done 收尾，fish 一律用 `end` 收尾；函数是 `function 名字 ... end`。把这几条对照记住，你就能在两套语法之间自由切换了。',
+      ],
+      prepare: [
+        'mkdir -p /home/xinyan/fish练习',
+        "printf '第一行\\n第二行\\n' > /home/xinyan/fish练习/数据.txt",
+      ],
+      tasks: [
+        { text: '用 fish 的 set 定义一个变量 SITE，值是 海边。', hint: 'set SITE 海边', check: (e) => varIs(e, 'SITE', '海边') },
+        { text: '用 set -x 把 SITE 导出成环境变量。', hint: 'set -x SITE 海边', check: (e) => exported(e, 'SITE') },
+        { text: '用 fish 的圆括号命令替换，把数据.txt 的行数写进 统计.txt。', hint: 'echo 行数 (cat 数据.txt | wc -l) > 统计.txt', check: (e) => has(e, '/home/xinyan/fish练习/统计.txt', '行数 2') },
+        { text: '用 and / or 判断读取是否成功，把结论写进 状态.txt。', hint: 'cat 数据.txt > /dev/null; and echo 读取成功 > 状态.txt; or echo 读取失败 > 状态.txt', check: (e) => has(e, '/home/xinyan/fish练习/状态.txt', '读取成功') },
+        { text: '用 for ... end 把目录里的文件名追加进 列表.txt。', hint: 'for f in (ls /home/xinyan/fish练习); echo $f >> 列表.txt; end', check: (e) => has(e, '/home/xinyan/fish练习/列表.txt', '数据.txt') },
+        { text: '用 function ... end 定义函数 hi，输出「你好」加参数，结果写进 问候.txt。', hint: 'function hi; echo 你好 $argv; end; hi 世界 > 问候.txt', check: (e) => has(e, '/home/xinyan/fish练习/问候.txt', '你好 世界') },
+      ],
+      demo: [
+        'cd /home/xinyan/fish练习',
+        'set SITE 海边; echo $SITE',
+        'set -x SITE 海边; env | grep SITE',
+        'echo 行数 (cat 数据.txt | wc -l) > 统计.txt',
+        'cat 数据.txt > /dev/null; and echo 读取成功 > 状态.txt; or echo 读取失败 > 状态.txt',
+        'false; or echo 上一条状态是 $status; true && echo fish也认 && echo 连着写',
+        'if test -d /home/xinyan/文档; echo 有文档目录; else; echo 没有; end',
+        'for f in (ls /home/xinyan/fish练习); echo $f >> 列表.txt; end; function hi; echo 你好 $argv; end; hi 世界 > 问候.txt',
+      ],
+    },
+
+    {
+      id: 'ch18',
+      part: '第四部分 · 进阶',
+      chapter: '第 18 章',
+      title: '实战片段合集：日志分析、批量操作、备份脚本',
+      lang: 'bash',
+      goal: '把前面学的零件拼成四个能直接用的实战片段：日志分析、批量复制、find+xargs、备份脚本。',
+      intro: [
+        '到这里，零件都学齐了，该拼装成真正有用的东西了。这一章的四个片段都是日常最常遇到的活儿，建议背下来。',
+        '日志分析：`grep ERROR app.log | wc -l` 数错误行数；`grep ERROR app.log | sort | uniq -c | sort -nr` 找出出现最多的错误。排查线上问题时，这两条能省很多时间。',
+        '批量操作：`for f in *.jpg; do cp $f 备份_$f; done` 给一批文件加前缀。真实场景里常见的是批量改名、批量转格式、批量压缩，套路完全一样。',
+        '查找加批处理：`find 目录 -name "*.md" | xargs wc -l`，find 负责找，xargs 负责把结果变成参数。想对一批文件做同一件事，这就是标准写法。',
+        '写一个备份脚本：把要备份的文件复制到备份目录，加一句 echo 报平安，`chmod +x` 之后丢进定时任务就能自动跑。脚本的价值不在于多复杂，而在于「你不用再记它」。',
+      ],
+      prepare: [
+        'mkdir -p /home/xinyan/实战/日志 /home/xinyan/实战/照片',
+        'touch /home/xinyan/实战/照片/照片1.jpg /home/xinyan/实战/照片/照片2.jpg /home/xinyan/实战/照片/照片3.jpg',
+      ],
+      tasks: [
+        { text: '日志分析：数出 app.log 里 ERROR 的条数，存进 日志/错误数.txt。', hint: 'grep -c ERROR ~/projects/app.log > ~/实战/日志/错误数.txt', check: (e) => txt(e, '/home/xinyan/实战/日志/错误数.txt').trim() === '3' },
+        { text: '找出出现最多的那条错误，存进 日志/最常见.txt。', hint: 'grep ERROR ~/projects/app.log | sort | uniq -c | sort -nr > ~/实战/日志/最常见.txt', check: (e) => has(e, '/home/xinyan/实战/日志/最常见.txt', '连接数据库失败') },
+        { text: '批量操作：给照片目录里所有 jpg 都复制一份，名字加前缀 备份_。', hint: 'cd ~/实战/照片 && for f in *.jpg; do cp "$f" "备份_$f"; done', check: (e) => ok(e, '/home/xinyan/实战/照片/备份_照片1.jpg') && ok(e, '/home/xinyan/实战/照片/备份_照片3.jpg') },
+        { text: 'find + xargs：统计 ~/projects 里所有 md 文件的行数，存进 日志/md行数.txt。', hint: 'find ~/projects -name "*.md" | xargs wc -l > ~/实战/日志/md行数.txt', check: (e) => has(e, '/home/xinyan/实战/日志/md行数.txt', '第一天.md') },
+        { text: '写一个备份脚本 ~/实战/备份.sh：建 ~/实战/备份 目录，把 ~/文档 里的 txt 都复制过去，然后 chmod +x 并运行它。', hint: "printf '#!/bin/bash\\nmkdir -p /home/xinyan/实战/备份\\ncp /home/xinyan/文档/*.txt /home/xinyan/实战/备份/\\necho 备份完成\\n' > ~/实战/备份.sh; chmod +x ~/实战/备份.sh; ~/实战/备份.sh", check: (e) => (mode(e, '/home/xinyan/实战/备份.sh') & 0o111) !== 0 && ok(e, '/home/xinyan/实战/备份/名单.txt') },
+      ],
+      demo: [
+        'cd /home/xinyan/实战',
+        'grep -c ERROR /home/xinyan/projects/app.log > 日志/错误数.txt',
+        'grep ERROR /home/xinyan/projects/app.log | sort | uniq -c | sort -nr > 日志/最常见.txt',
+        'find /home/xinyan/projects -name "*.md" | xargs wc -l > 日志/md行数.txt',
+        'cd /home/xinyan/实战/照片 && for f in *.jpg; do cp $f 备份_$f; done',
+        "cd /home/xinyan/实战 && printf '#!/bin/bash\\nmkdir -p /home/xinyan/实战/备份\\ncp /home/xinyan/文档/*.txt /home/xinyan/实战/备份/\\necho 备份完成\\n' > 备份.sh",
+        'chmod +x 备份.sh && ./备份.sh',
+        'ls /home/xinyan/实战/备份',
+      ],
+    },
+  ];
+
+  global.LESSONS = LESSONS;
+  if (typeof module !== 'undefined' && module.exports) module.exports = { LESSONS: LESSONS };
+})(typeof window !== 'undefined' ? window : globalThis);
+
+</script>
+<script>
+/* ============================================================
+ * ui.js —— 界面装配
+ * 把 termkit（通用终端内核）+ shell（解释器）+ lessons（课程）
+ * 拼成一个可用的学习页面。
+ * ============================================================ */
+(function () {
+  'use strict';
+
+  const TK = window.TermKit;
+  const { h, esc } = TK;
+  const $ = TK.qs;
+
+  const LESSONS = window.LESSONS || [];
+  const HOME = window.ShellKit.HOME;
+
+  /* ---------------- 状态 ---------------- */
+  let shell = new window.Shell({ lang: 'bash' });
+  let hintsOn = true;
+  let showWholeSystem = false;
+  const collapsed = Object.create(null);
+  let currentLesson = null;
+  let editingPath = null;
+  let running = false;
+
+  /* ---------------- 终端 ---------------- */
+  const term = new TK.Terminal({
+    outEl: '#termOut',
+    inputEl: '#cmd',
+    promptEl: '#prompt',
+    promptHtml: () => shell.prompt(),
+    completer: complete,
+    onSubmit: (line) => execute(line),
+  });
+
+  const COMPLETIONS = [
+    'ls', 'ls -la', 'ls -l', 'cd ', 'cd ..', 'pwd', 'cat ', 'head -n 5 ', 'tail -n 5 ',
+    'touch ', 'mkdir -p ', 'cp ', 'cp -r ', 'mv ', 'rm ', 'rm -r ', 'ln -s ',
+    'echo ', 'printf ', 'grep ', 'grep -i ', 'grep -n ', 'grep -r ', 'wc -l ',
+    'sort ', 'sort -n ', 'uniq -c ', 'cut -d', 'tr ', 'sed ', 'awk ', 'find ',
+    'find . -name ', 'which ', 'type ', 'xargs ', 'chmod +x ', 'chmod 755 ',
+    'export ', 'env', 'alias ', 'history', 'source ', 'bash ', 'cd /tmp',
+    'ls /home/xinyan', 'cat readme.txt', 'cat projects/app.log',
+    'if ', 'for i in 1 2 3; do echo $i; done', 'while ', 'test ', '[ ',
+    'clear', 'help', 'tree', 'seq 1 5', 'date', 'whoami',
+  ];
+  function complete(v) {
+    if (!v) return COMPLETIONS;
+    if (v.indexOf(' ') === -1) {
+      const cmds = Object.keys(window.Shell.commands).sort();
+      return cmds.filter((c) => c.indexOf(v) === 0).concat(COMPLETIONS.filter((c) => c.indexOf(v) === 0 && c !== v));
+    }
+    // 路径补全
+    const sp = v.lastIndexOf(' ');
+    const head = v.slice(0, sp + 1);
+    const frag = v.slice(sp + 1);
+    const slash = frag.lastIndexOf('/');
+    const dirPart = slash === -1 ? '' : frag.slice(0, slash + 1);
+    const namePart = slash === -1 ? frag : frag.slice(slash + 1);
+    const absDir = shell.fs.resolve(shell.cwd, dirPart || '.');
+    let names = [];
+    try { names = shell.fs.list(absDir).map((e) => e.name); } catch (e) { return []; }
+    return names.filter((n) => n.indexOf(namePart) === 0).map((n) => {
+      let p = dirPart + n;
+      try { if (shell.fs.isDir(shell.fs.resolve(shell.cwd, p))) p += '/'; } catch (e) {}
+      return head + p;
+    });
+  }
+
+  function printResult(r) {
+    r.lines.forEach((l) => term.print({ text: l.text, cls: l.cls }));
+    if (hintsOn) {
+      (r.hints || []).forEach((t) => term.print({ text: '提示 · ' + t, cls: 'hint' }));
+      (r.traces || []).forEach((tr) => {
+        if (!tr.steps || !tr.steps.length) return;
+        term.print({ text: '展开过程 · ' + tr.cmd, cls: 'trace' });
+        tr.steps.forEach((st) => term.print({ text: '    ' + st.from + '   →   ' + st.to, cls: 'trace' }));
+      });
+    }
+  }
+
+  function execute(line, silent) {
+    const cmd = String(line === undefined || line === null ? '' : line).trim();
+    if (!cmd) return null;
+    if (/^clear$/i.test(cmd)) { term.clear(); refresh(); return null; }
+    if (!silent) term.echo(cmd);
+    shell.historyList.push(cmd);
+    const r = shell.run(cmd);
+    printResult(r);
+    refresh();
+    return r;
+  }
+
+  /* ---------------- 右栏：目录树 ---------------- */
+  function collectTree(dir, depth, out) {
+    let entries;
+    try { entries = shell.fs.list(dir); } catch (e) { return; }
+    entries.sort((a, b) => {
+      if ((a.type === 'dir') !== (b.type === 'dir')) return a.type === 'dir' ? -1 : 1;
+      return a.name < b.name ? -1 : 1;
+    });
+    entries.forEach((e) => {
+      const p = (dir === '/' ? '' : dir) + '/' + e.name;
+      out.push({ path: p, name: e.name, type: e.type, size: e.size, isLink: e.isLink,
+                 linkTarget: e.linkTarget, depth: depth });
+      if (e.type === 'dir' && !collapsed[p]) collectTree(p, depth + 1, out);
+    });
+  }
+
+  function renderTree() {
+    const box = $('#tab-tree');
+    if (!box) return;
+    box.innerHTML = '';
+    const wrap = h('div', 'tree');
+    const rootPath = showWholeSystem ? '/' : HOME;
+    const ancestors = new Set();
+    if (!showWholeSystem) {
+      let p = shell.cwd;
+      while (p && p.length > HOME.length) { ancestors.add(p); p = p.slice(0, p.lastIndexOf('/')) || '/'; }
+    }
+    const rows = [];
+    rows.push({ path: rootPath, name: rootPath === '/' ? '/（根目录）' : '~ (家目录)', type: 'dir', depth: 0, size: 0 });
+    if (!collapsed[rootPath]) collectTree(rootPath, 1, rows);
+
+    rows.forEach((r) => {
+      const isCur = r.path === shell.cwd;
+      const row = h('div', 'row' + (r.type === 'dir' ? ' dir' : '') + (isCur ? ' cur' : '') +
+        (ancestors.has(r.path) ? ' anc' : ''));
+      row.style.paddingLeft = (r.depth * 14 + 4) + 'px';
+      if (r.type === 'dir' && r.depth > 0) {
+        const tw = h('span', 'tw', collapsed[r.path] ? '▸' : '▾');
+        tw.addEventListener('click', (ev) => {
+          ev.stopPropagation();
+          collapsed[r.path] = !collapsed[r.path];
+          renderTree();
+        });
+        row.appendChild(tw);
+      } else {
+        row.appendChild(h('span', 'tw', ''));
+      }
+      row.appendChild(h('span', 'ico', r.type === 'dir' ? '📁' : (r.isLink ? '🔗' : '·')));
+      row.appendChild(h('span', 'nm', r.name + (r.isLink && r.linkTarget ? ' → ' + r.linkTarget : '')));
+      if (r.type !== 'dir') row.appendChild(h('span', 'sz', String(r.size) + 'B'));
+      row.title = r.path + (isCur ? '　← 你现在在这里' : '　点击可 cd 过去');
+      row.addEventListener('click', () => {
+        if (r.type === 'dir') {
+          execute('cd ' + (/\s/.test(r.path) ? JSON.stringify(r.path) : r.path));
+        } else {
+          execute('cat ' + (/\s/.test(r.path) ? JSON.stringify(r.path) : r.path));
+        }
+      });
+      wrap.appendChild(row);
+    });
+    box.appendChild(wrap);
+    box.appendChild(h('div', 'vars')).appendChild(h('div', 'note',
+      '点目录 = cd 过去；点文件 = cat 看内容。蓝色是目录，🔗 是符号链接。'));
+  }
+
+  /* ---------------- 右栏：变量 ---------------- */
+  function renderVars() {
+    const box = $('#tab-vars');
+    if (!box) return;
+    box.innerHTML = '';
+    const wrap = h('div', 'vars');
+
+    const addGroup = (title, rows) => {
+      if (!rows.length) return;
+      wrap.appendChild(h('div', 'grp', title));
+      rows.forEach((v) => {
+        const r = h('div', 'vrow');
+        r.appendChild(h('span', 'k', v.name + '='));
+        const val = v.value.length > 60 ? v.value.slice(0, 60) + '…' : v.value;
+        r.appendChild(h('span', 'val' + (v.value.length > 60 ? ' long' : ''), val || '（空）'));
+        r.title = v.name + '=' + v.value + '　（点击填进输入框）';
+        r.addEventListener('click', () => {
+          const inp = $('#cmd');
+          inp.value = 'echo $' + v.name;
+          inp.focus();
+        });
+        wrap.appendChild(r);
+      });
+    };
+
+    const isFish = shell.lang === 'fish';
+    const all = shell.listVars().filter((v) => !(isFish && v.name === '?'));
+    addGroup('特殊变量', isFish
+      ? [{ name: 'status', value: String(shell.status) + '（上一个命令的退出码；fish 里不能用 $?）' },
+         { name: 'PWD', value: shell.cwd }, { name: 'HOME', value: HOME }]
+      : [{ name: '?', value: String(shell.status) + '（上一个命令的退出码）' },
+         { name: 'PWD', value: shell.cwd }, { name: 'HOME', value: HOME }]);
+    addGroup('已导出（子进程可见）', all.filter((v) => v.exported && ['HOME', 'PWD', 'USER', 'LOGNAME', 'SHELL', 'HOSTNAME', 'PATH', 'LANG', 'TERM'].indexOf(v.name) === -1));
+    addGroup('路径与身份', all.filter((v) => ['PATH', 'SHELL', 'USER', 'HOSTNAME', 'LANG', 'TERM'].indexOf(v.name) !== -1));
+    const junk = isFish ? ['PS1', '?'] : ['?'];
+    addGroup('普通变量（没导出，子进程看不到）', all.filter((v) => !v.exported && junk.indexOf(v.name) === -1));
+    const aliases = Object.keys(shell.aliases);
+    if (aliases.length) {
+      addGroup('别名', aliases.map((a) => ({ name: a, value: shell.aliases[a] })));
+    }
+    box.appendChild(wrap);
+    box.appendChild(h('div', 'vars')).appendChild(h('div', 'note',
+      'export 过的变量才会传给子进程。设一个试试：' + (shell.lang === 'fish' ? 'set -x DEMO 你好' : 'export DEMO=你好')));
+  }
+
+  /* ---------------- 右栏：数据流 ---------------- */
+  function renderPipe() {
+    const box = $('#tab-pipe');
+    if (!box) return;
+    box.innerHTML = '';
+    const wrap = h('div', 'pipe');
+    const stages = shell.lastPipeline || [];
+
+    if (!stages.length) {
+      wrap.appendChild(h('div', 'note',
+        '这里会显示「上一次管道」的数据是怎么一段段流过去的。\n\n' +
+        '先试一条：cat projects/app.log | grep ERROR | wc -l\n\n' +
+        '每个命令只做一件小事，用 | 串起来就能完成复杂任务——这是 shell 最核心的思想。'));
+      box.appendChild(wrap);
+      return;
+    }
+
+    stages.forEach((st, i) => {
+      const card = h('div', 'pipe-stage');
+      const hd = h('div', 'hd');
+      hd.appendChild(h('span', 'idx', String(i + 1)));
+      hd.appendChild(h('span', 'cmd', st.cmd || '(复合命令)'));
+      hd.appendChild(h('span', 'meta', '退出码 ' + st.status));
+      card.appendChild(hd);
+
+      const io = h('div', 'io');
+      const inN = st.inLines ? st.inLines.length : 0;
+      if (i > 0) {
+        const first = st.inLines && st.inLines.length ? st.inLines[0] : '';
+        io.appendChild(h('div', null, '')).innerHTML =
+          '<span class="lbl">吃进来 </span><span class="val">' + inN + ' 行</span>' +
+          (first ? '<span class="lbl">　第一行：</span>' + esc(first.slice(0, 40)) : '');
+      } else {
+        io.innerHTML = '<span class="lbl">吃进来 </span><span class="val">（没接管道，读的是文件或参数）</span>';
+      }
+      const outN = st.out ? st.out.length : 0;
+      const outLine = h('div');
+      outLine.innerHTML = '<span class="lbl">吐出去 </span><span class="val">' + outN + ' 行</span>' +
+        (outN ? '<span class="lbl">　第一行：</span>' + esc(String(st.out[0].text).slice(0, 40)) : '');
+      io.appendChild(outLine);
+      if (st.err && st.err.length) {
+        const e = h('div');
+        e.innerHTML = '<span class="lbl">标准错误 </span><span class="st-err">' + esc(String(st.err[0].text).slice(0, 50)) + '</span>';
+        io.appendChild(e);
+      }
+      card.appendChild(io);
+      wrap.appendChild(card);
+      if (i < stages.length - 1) wrap.appendChild(h('div', 'pipe-arrow', '↓'));
+    });
+    box.appendChild(wrap);
+    const tip = h('div', 'vars');
+    tip.appendChild(h('div', 'note',
+      '数据只往一个方向流：上一个命令的「吐出去」变成下一个命令的「吃进来」。' +
+      '最后一段的输出才会显示在终端上。'));
+    box.appendChild(tip);
+  }
+
+  /* ---------------- 刷新 ---------------- */
+  function refresh() {
+    try { term.updatePrompt(); renderTree(); renderVars(); renderPipe(); } catch (e) { console.error(e); }
+    try { if (lessonPanel) lessonPanel.evaluate(); } catch (e) { console.error(e); }
+  }
+
+  /* ---------------- 课程 ---------------- */
+  let lessonPanel = null;
+
+  function startLesson(l) {
+    currentLesson = l;
+    shell = new window.Shell({ lang: l.lang || 'bash' });
+    (l.prepare || []).forEach((c) => shell.run(c));
+    shell.historyList = [];
+    term.clear();
+    setLangButtons(l.lang || 'bash');
+    term.divider(l.chapter + ' · ' + l.title);
+    term.print({ text: l.goal || '', cls: 'cyan' });
+    term.print({ text: '' });
+    if (l.intro && l.intro.length) {
+      term.print({ text: '左边有讲解，右边有目录树；先读一读，再照着任务敲。', cls: 'muted' });
+    }
+    if (l.tasks && l.tasks.length) {
+      term.print({ text: '▸ 你的第一个目标：' + l.tasks[0].text, cls: 'ok' });
+      term.print({ text: '   提示：' + l.tasks[0].hint, cls: 'muted' });
+    }
+    term.print({ text: '' });
+    if (l.prepare && l.prepare.length) {
+      term.print({ text: '（本章的沙盒已经替你准备好了）', cls: 'muted' });
+    }
+    term.print({ text: '提示 · 命令执行后，黄色的便签会解释刚才发生了什么。', cls: 'hint' });
+    refresh();
+    term.focus();
+  }
+
+  function setLangButtons(lang) {
+    $('#langBash').classList.toggle('on', lang !== 'fish');
+    $('#langFish').classList.toggle('on', lang === 'fish');
+  }
+
+  /* ---------------- 语言切换 ---------------- */
+  function switchLang(lang) {
+    if (shell.lang === lang) return;
+    shell.setLang(lang);
+    setLangButtons(lang);
+    term.divider('已切换到 ' + lang);
+    if (lang === 'fish') {
+      term.print({ text: 'fish 的语法和 bash 不一样：变量用 set，命令替换用 ( )，条件用 and/or，块用 end 结束。', cls: 'muted' });
+      term.print({ text: '试试：set NAME 世界   然后   echo $NAME', cls: 'muted' });
+    } else {
+      term.print({ text: '回到 bash 了。变量用 名字=值，命令替换用 $( )，条件用 && ||，块用 fi/done 结束。', cls: 'muted' });
+    }
+    refresh();
+    term.focus();
+  }
+
+  /* ---------------- 文件编辑器 ---------------- */
+  function openEditor(path) {
+    editingPath = path || null;
+    const exists = path && shell.fs.exists(shell.fs.resolve(shell.cwd, path));
+    $('#editorTitle').textContent = exists ? '编辑文件' : '新建文件';
+    $('#editorName').style.display = path ? '' : 'none';
+    $('#editorNameInput').style.display = path ? 'none' : '';
+    $('#editorNameInput').value = 'hello.sh';
+    $('#editorName').textContent = path ? shell.fs.resolve(shell.cwd, path) : '';
+    $('#editorArea').value = exists ? shell.fs.readFile(shell.fs.resolve(shell.cwd, path)) : '#!/bin/bash\n\necho "你好，脚本！"\n';
+    $('#editorPath').textContent = '保存到：' + shell.shortPath(shell.cwd);
+    $('#editorModal').classList.add('open');
+    setTimeout(() => ($('#editorArea')).focus(), 40);
+  }
+  function closeEditor() { $('#editorModal').classList.remove('open'); }
+
+  /* ---------------- 速查表 ---------------- */
+  const CHEAT = [
+    { title: 'bash ↔ fish 对照（★ 表示 fish 里必须是这个写法）', two: true, rows: [
+      ['NAME=值', 'set NAME 值 ★', '定义变量'],
+      ['export NAME=值', 'set -x NAME 值', '导出成环境变量'],
+      ['echo $NAME', 'echo $NAME', '读变量（两边一样）'],
+      ['$(命令)', '(命令) 或 $(命令)', '命令替换'],
+      ['`命令`（反引号）', '不支持，用 (命令)', '反引号在 fish 里只是普通字符'],
+      ['$? ★', '$status', '退出码'],
+      ['a && b', 'a && b 或 a; and b', '两边都支持，and 是 fish 传统写法'],
+      ['a \|\| b', 'a \|\| b 或 a; or b', '两边都支持'],
+      ['! 命令', '! 命令 或 not 命令', '取反'],
+      ['if ...; then ...; fi', 'if ...; ...; end ★', '条件（fish 没有 then）'],
+      ['for x in ...; do ...; done', 'for x in ...; ...; end ★', '循环（fish 没有 do）'],
+      ['while ...; do ...; done', 'while ...; ...; end ★', '循环'],
+      ['函数名() { ...; }', 'function 函数名; ...; end ★', '定义函数'],
+      ['{1..3} 数字区间', '不支持，用 seq 3', 'fish 只支持 {a,b} 不支持 {1..3}'],
+    ] },
+    { title: '导航与查看', rows: [
+      ['pwd', '我在哪个目录'],
+      ['ls -la', '列出所有文件（含隐藏），带详情'],
+      ['cd 目录 / cd .. / cd ~ / cd -', '切换目录 / 上一层 / 回家 / 回上一个'],
+      ['cat 文件', '查看文件内容'],
+      ['head -n 5 / tail -n 5 文件', '看开头 / 结尾 5 行'],
+      ['less 文件', '分页查看（模拟器里直接全显示）'],
+      ['tree', '树形显示目录'],
+    ] },
+    { title: '增删改', rows: [
+      ['mkdir -p a/b/c', '一次建多层目录'],
+      ['touch 文件', '新建空文件'],
+      ['cp 源 目标 / cp -r 目录 目标', '复制文件 / 复制目录'],
+      ['mv 源 目标', '移动或重命名'],
+      ['rm 文件 / rm -r 目录', '删除（没有回收站！）'],
+      ['ln -s 目标 链接名', '建符号链接（快捷方式）'],
+    ] },
+    { title: '重定向与管道', rows: [
+      ['命令 > 文件', '把输出写进文件（覆盖）'],
+      ['命令 >> 文件', '把输出追加到文件末尾'],
+      ['命令 < 文件', '从文件读取输入'],
+      ['命令 2> 文件', '只把错误信息写进文件'],
+      ['命令 &> 文件', '标准输出和错误都写进去'],
+      ['命令 2>/dev/null', '把错误丢掉'],
+      ['a | b | c', '把 a 的输出喂给 b，再喂给 c'],
+    ] },
+    { title: '文本处理', rows: [
+      ['grep 模式 文件', '按行筛选（-i 忽略大小写、-v 反向、-n 行号、-c 计数、-r 递归）'],
+      ['sort / sort -n / sort -u', '排序 / 按数字 / 去重'],
+      ['uniq -c', '去掉相邻重复行并计数（通常跟在 sort 后面）'],
+      ['cut -d: -f2', '按分隔符取某一列'],
+      ['tr a-z A-Z', '字符替换'],
+      ['sed "s/旧/新/g"', '文本替换'],
+      ['awk \'{print $1}\'', '按列处理'],
+      ['wc -l / -w / -c', '统计行数 / 词数 / 字节数'],
+    ] },
+    { title: '查找与变量', rows: [
+      ['find . -name "*.log"', '按名字找文件'],
+      ['find . -type d', '只找目录'],
+      ['which 命令 / type 命令', '命令在哪、是什么类型'],
+      ['... | xargs 命令', '把输入的每一行变成命令的参数'],
+      ['名字=值 / export 名字=值', '定义变量 / 导出变量'],
+      ['env', '列出所有环境变量'],
+      ['alias ll="ls -l"', '给命令起小名'],
+      ['history', '看敲过的命令'],
+    ] },
+    { title: '流程控制与脚本', rows: [
+      ['if 条件; then ...; else ...; fi', '条件分支'],
+      ['for i in 1 2 3; do ...; done', '循环'],
+      ['while 条件; do ...; done', '循环'],
+      ['[ -f 文件 ] / [ "$a" = "$b" ]', '判断条件'],
+      ['chmod +x 脚本.sh', '给脚本加执行权限'],
+      ['./脚本.sh 参数', '运行脚本'],
+      ['bash 脚本.sh', '用指定解释器运行（不需要 x 权限）'],
+      ['source 脚本.sh', '在当前 shell 里执行（变量会留下）'],
+    ] },
+  ];
+
+  /* ---------------- 启动 ---------------- */
+  lessonPanel = new TK.LessonPanel({
+    lessons: LESSONS,
+    engine: null,
+    progressKey: 'shell-learn-progress-v1',
+    onStart: (l) => startLesson(l),
+  });
+  lessonPanel.engine = {
+    get usedCommands() { return shell.usedCommands; },
+    get flags() { return shell.flags; },
+    get fs() { return shell.fs; },
+    get cwd() { return shell.cwd; },
+    get visitedDirs() { return shell.visitedDirs; },
+    get vars() { return shell.vars; },
+    get aliases() { return shell.aliases; },
+    get status() { return shell.status; },
+    get lang() { return shell.lang; },
+    used(n) { return shell.used(n); },
+    usedAny(ns) { return shell.usedAny(ns); },
+    read(p) { return shell.fs.readFile(shell.fs.resolve(shell.cwd, p)); },
+    exists(p) { return shell.fs.exists(shell.fs.resolve(shell.cwd, p)); },
+    isDir(p) { return shell.fs.isDir(shell.fs.resolve(shell.cwd, p)); },
+    mode(p) { return shell.fs.stat(shell.fs.resolve(shell.cwd, p)).mode; },
+    get home() { return HOME; },
+  };
+
+  const cheat = new TK.CheatSheet({
+    el: '#cheatBody', modal: '#cheatModal', input: '#cmd', groups: CHEAT,
+  });
+
+  /* 事件绑定 */
+  $('#btnCheat').addEventListener('click', () => cheat.open());
+  $('#cheatClose').addEventListener('click', () => cheat.close());
+  $('#langBash').addEventListener('click', () => switchLang('bash'));
+  $('#langFish').addEventListener('click', () => switchLang('fish'));
+  $('#btnNewFile').addEventListener('click', () => openEditor(null));
+  $('#btnRestartLesson').addEventListener('click', () => { if (currentLesson) startLesson(currentLesson); });
+  $('#btnShowAll').addEventListener('click', () => {
+    showWholeSystem = !showWholeSystem;
+    $('#btnShowAll').textContent = showWholeSystem ? '只看家目录' : '显示整个系统';
+    renderTree();
+  });
+  $('#editorCancel').addEventListener('click', closeEditor);
+  $('#editorSave').addEventListener('click', () => {
+    const p = editingPath !== null ? editingPath : $('#editorNameInput').value.trim();
+    if (!p) { TK.toast('请填文件名'); return; }
+    const abs = shell.fs.resolve(shell.cwd, p);
+    if (abs.indexOf(HOME) !== 0 && abs.indexOf('/tmp') !== 0) {
+      TK.toast('为了安全，只能在 ~ 或 /tmp 下写文件');
+      return;
+    }
+    try {
+      shell.fs.writeFile(abs, $('#editorArea').value);
+      if ($('#editorExec').checked) shell.fs.chmod(abs, shell.fs.stat(abs).mode | 0o111);
+      shell.observe && shell.observe();
+    } catch (e) {
+      TK.toast('保存失败：' + e.message);
+      return;
+    }
+    closeEditor();
+    term.divider('已保存 ' + shell.shortPath(abs) +
+      ($('#editorExec').checked ? '（并加了执行权限）' : ''));
+    term.print({ text: '文件在工作区里了。跑脚本的话：' + shell.shortPath(abs) +
+      ($('#editorExec').checked ? '（直接 ./ 运行）' : '（先 chmod +x，或用 bash 运行）'), cls: 'muted' });
+    refresh();
+    term.focus();
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') { cheat.close(); closeEditor(); }
+    if (e.key === '/' && !/INPUT|TEXTAREA/.test(document.activeElement.tagName)) {
+      e.preventDefault(); term.focus();
+    }
+  });
+  $('#terminalPanel').addEventListener('click', (e) => {
+    if (window.getSelection().toString()) return;
+    if (!e.target.closest('button, a, input, textarea')) term.focus();
+  });
+  TK.qsa('.chips .chip[data-cmd]').forEach((c) => {
+    c.addEventListener('click', () => {
+      const inp = $('#cmd');
+      inp.value = c.dataset.cmd;
+      inp.focus();
+      const n = inp.value.length;
+      try { inp.setSelectionRange(n, n); } catch (e) {}
+    });
+  });
+  TK.qsa('[data-demo]').forEach((b) => {
+    b.addEventListener('click', () => {
+      if (!currentLesson || running) return;
+      running = true;
+      term.playDemo(currentLesson.demo || [], (cmd) => {
+        if (cmd === '__reset__') {
+          shell = new window.Shell({ lang: currentLesson.lang || 'bash' });
+          (currentLesson.prepare || []).forEach((c) => shell.run(c));
+          term.clear();
+          refresh();
+          return;
+        }
+        execute(cmd);
+      }).then(() => { running = false; });
+    });
+  });
+  TK.qsa('#tabs button').forEach((b) => {
+    b.addEventListener('click', () => {
+      TK.qsa('#tabs button').forEach((x) => x.classList.toggle('on', x === b));
+      ['tree', 'vars', 'pipe'].forEach((k) => {
+        $('#tab-' + k).style.display = (k === b.dataset.tab) ? '' : 'none';
+      });
+    });
+  });
+  $('#hintsToggle').addEventListener('change', (e) => {
+    hintsOn = e.target.checked;
+    TK.toast(hintsOn ? '已打开新手解释' : '已关闭新手解释');
+  });
+  $('#btnWipe').addEventListener('click', () => {
+    const lang = shell.lang;
+    shell = new window.Shell({ lang: lang });
+    term.divider('已清空沙盒（章节进度保留）');
+    refresh();
+    TK.toast('沙盒已清空');
+  });
+  $('#btnResetAll').addEventListener('click', () => {
+    if (!confirm('这会清空沙盒 + 清空所有章节进度，确定吗？')) return;
+    lessonPanel.progress.clear();
+    lessonPanel.renderList();
+    startLesson(LESSONS[0]);
+    TK.toast('已全部重置');
+  });
+
+  /* 暴露给控制台调试 / 自动化测试 */
+  window.ShellLearnUI = {
+    get shell() { return shell; },
+    execute, refresh, startLesson, switchLang, openEditor,
+    get lesson() { return currentLesson; },
+    get term() { return term; },
+  };
+
+  /* 开场 */
+  if (LESSONS.length) {
+    // 走 LessonPanel.start 而不是直接 startLesson，这样任务判分的 current 才会被设上
+    lessonPanel.start(LESSONS[0], false);
+  } else {
+    term.print({ text: '课程数据没有加载成功。', cls: 'err' });
+  }
+  term.scroll();
+})();
+
+</script>
+</body>
+</html>

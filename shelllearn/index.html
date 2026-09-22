@@ -207,6 +207,72 @@ button { font-family: inherit; cursor: pointer; }
   background: #3fb9501a; border: 1px solid #3fb95055; color: var(--green); font-size: 13px;
 }
 
+/* ---------- 弹窗 ---------- */
+.modal {
+  position: fixed; inset: 0; background: #000000b3;
+  display: none; align-items: center; justify-content: center; z-index: 50; padding: 24px;
+}
+.modal.open { display: flex; }
+.modal-card {
+  background: var(--panel); border: 1px solid var(--border); border-radius: 12px;
+  width: min(780px, 100%); max-height: 86vh; display: flex; flex-direction: column;
+  box-shadow: 0 16px 48px #00000080;
+}
+.modal-card header {
+  display: flex; align-items: center; padding: 12px 16px; border-bottom: 1px solid var(--border);
+}
+.modal-card header h3 { margin: 0; font-size: 15px; }
+.modal-card header .btn { margin-left: auto; }
+.modal-card .content { padding: 14px 16px; overflow: auto; }
+.modal-foot { display: flex; gap: 8px; margin-top: 12px; align-items: center; }
+
+.cheat-group { margin-bottom: 14px; }
+.cheat-group h4 { margin: 0 0 6px; font-size: 12px; color: var(--teal); letter-spacing: .5px; }
+.cheat-row {
+  display: flex; gap: 10px; align-items: baseline; padding: 4px 6px;
+  border-radius: 6px; cursor: pointer; border: 1px solid transparent;
+}
+.cheat-row:hover { background: var(--panel-2); border-color: var(--border); }
+.cheat-row code { font-family: var(--mono); font-size: 12px; color: var(--blue); flex: none; }
+.cheat-row span { font-size: 12.5px; color: var(--muted); }
+/* 双列对照（bash ↔ fish） */
+.cheat-row.two { display: grid; grid-template-columns: 1fr 1fr 1.1fr; gap: 10px; }
+.cheat-row.two code.fish { color: var(--teal); }
+.cheat-head { display: grid; grid-template-columns: 1fr 1fr 1.1fr; gap: 10px;
+  font-size: 11px; color: var(--dim); padding: 0 6px 5px; letter-spacing: .5px; }
+
+.editor-area {
+  width: 100%; min-height: 200px; resize: vertical;
+  background: #0b0e13; color: var(--text); border: 1px solid var(--border); border-radius: 8px;
+  font-family: var(--mono); font-size: 13px; padding: 10px; line-height: 1.6;
+}
+.editor-name { font-family: var(--mono); color: var(--teal); font-size: 13px; margin-bottom: 8px; }
+.editor-tip { font-size: 12px; color: var(--muted); }
+
+.toast {
+  position: fixed; left: 50%; bottom: 28px; transform: translateX(-50%) translateY(20px);
+  background: var(--panel-3); border: 1px solid var(--border); color: var(--text);
+  padding: 9px 16px; border-radius: 999px; font-size: 13px; opacity: 0;
+  transition: .25s; pointer-events: none; z-index: 100;
+}
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+.toast.good { border-color: #3fb95088; }
+
+/* ---------- 响应式 ---------- */
+@media (max-width: 1300px) { .layout { grid-template-columns: 260px minmax(320px, 1fr) 340px; } }
+@media (max-width: 1080px) {
+  html, body { height: auto; }
+  .layout { grid-template-columns: 1fr; grid-auto-rows: minmax(300px, auto); height: auto; overflow: auto; }
+  .panel { max-height: 68vh; }
+}
+
+</style>
+<style>
+/* ============================================================
+ * term-panels.css —— 右栏数据面板（页签 / 目录树 / 变量 / 管道数据流）
+ * 只有用到这些面板的项目才需要引入（shell-learn 用了）。
+ * ============================================================ */
+
 /* ---------- 右侧页签 ---------- */
 .tabs { display: flex; gap: 2px; padding: 6px 8px 0; background: var(--panel-2);
         border-bottom: 1px solid var(--border); flex: none; }
@@ -267,64 +333,6 @@ button { font-family: inherit; cursor: pointer; }
 .pipe-stage .st-err { color: var(--red); }
 .pipe-arrow { text-align: center; color: var(--dim); font-size: 11px; line-height: 1; margin: 1px 0 5px; }
 
-/* ---------- 弹窗 ---------- */
-.modal {
-  position: fixed; inset: 0; background: #000000b3;
-  display: none; align-items: center; justify-content: center; z-index: 50; padding: 24px;
-}
-.modal.open { display: flex; }
-.modal-card {
-  background: var(--panel); border: 1px solid var(--border); border-radius: 12px;
-  width: min(780px, 100%); max-height: 86vh; display: flex; flex-direction: column;
-  box-shadow: 0 16px 48px #00000080;
-}
-.modal-card header {
-  display: flex; align-items: center; padding: 12px 16px; border-bottom: 1px solid var(--border);
-}
-.modal-card header h3 { margin: 0; font-size: 15px; }
-.modal-card header .btn { margin-left: auto; }
-.modal-card .content { padding: 14px 16px; overflow: auto; }
-.modal-foot { display: flex; gap: 8px; margin-top: 12px; align-items: center; }
-
-.cheat-group { margin-bottom: 14px; }
-.cheat-group h4 { margin: 0 0 6px; font-size: 12px; color: var(--teal); letter-spacing: .5px; }
-.cheat-row {
-  display: flex; gap: 10px; align-items: baseline; padding: 4px 6px;
-  border-radius: 6px; cursor: pointer; border: 1px solid transparent;
-}
-.cheat-row:hover { background: var(--panel-2); border-color: var(--border); }
-.cheat-row code { font-family: var(--mono); font-size: 12px; color: var(--blue); flex: none; }
-.cheat-row span { font-size: 12.5px; color: var(--muted); }
-/* 双列对照（bash ↔ fish） */
-.cheat-row.two { display: grid; grid-template-columns: 1fr 1fr 1.1fr; gap: 10px; }
-.cheat-row.two code.fish { color: var(--teal); }
-.cheat-head { display: grid; grid-template-columns: 1fr 1fr 1.1fr; gap: 10px;
-  font-size: 11px; color: var(--dim); padding: 0 6px 5px; letter-spacing: .5px; }
-
-.editor-area {
-  width: 100%; min-height: 200px; resize: vertical;
-  background: #0b0e13; color: var(--text); border: 1px solid var(--border); border-radius: 8px;
-  font-family: var(--mono); font-size: 13px; padding: 10px; line-height: 1.6;
-}
-.editor-name { font-family: var(--mono); color: var(--teal); font-size: 13px; margin-bottom: 8px; }
-.editor-tip { font-size: 12px; color: var(--muted); }
-
-.toast {
-  position: fixed; left: 50%; bottom: 28px; transform: translateX(-50%) translateY(20px);
-  background: var(--panel-3); border: 1px solid var(--border); color: var(--text);
-  padding: 9px 16px; border-radius: 999px; font-size: 13px; opacity: 0;
-  transition: .25s; pointer-events: none; z-index: 100;
-}
-.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
-.toast.good { border-color: #3fb95088; }
-
-/* ---------- 响应式 ---------- */
-@media (max-width: 1300px) { .layout { grid-template-columns: 260px minmax(320px, 1fr) 340px; } }
-@media (max-width: 1080px) {
-  html, body { height: auto; }
-  .layout { grid-template-columns: 1fr; grid-auto-rows: minmax(300px, auto); height: auto; overflow: auto; }
-  .panel { max-height: 68vh; }
-}
 
 </style>
 </head>
@@ -866,6 +874,92 @@ button { font-family: inherit; cursor: pointer; }
     close() { if (this.modalEl) this.modalEl.classList.remove('open'); }
   }
 
+
+  /* ---------------- 文件编辑器 ---------------- */
+  /**
+   * git-learn 与 shell-learn 都要"编辑虚拟文件系统里的文件"，
+   * 界面完全一样，只有"读写落到哪里"不同，所以用回调注入。
+   *
+   * opts: {
+   *   modal, titleEl, nameEl, nameInputEl, areaEl, saveEl, cancelEl, noteEl, auxEl,
+   *   defaultName, defaultContent,
+   *   resolve(path) -> {abs} | {error}    把用户输入解析成绝对路径
+   *   read(abs) -> string | null          null 表示文件不存在（走新建流程）
+   *   write(abs, content, aux)            抛异常表示保存失败
+   *   displayPath(abs) -> string
+   *   onSaved(abs, aux)
+   * }
+   */
+  class FileEditor {
+    constructor(o) {
+      this.o = o;
+      const pick = (k) => (typeof o[k] === 'string' ? qs(o[k]) : o[k]);
+      this.modal = pick('modal');
+      this.titleEl = pick('titleEl');
+      this.nameEl = pick('nameEl');
+      this.nameInput = pick('nameInputEl');
+      this.area = pick('areaEl');
+      this.saveEl = pick('saveEl');
+      this.cancelEl = pick('cancelEl');
+      this.noteEl = pick('noteEl');
+      this.auxEl = pick('auxEl');
+      this.path = null;
+      const self = this;
+      if (this.saveEl) this.saveEl.addEventListener('click', () => self.save());
+      if (this.cancelEl) this.cancelEl.addEventListener('click', () => self.close());
+      if (this.modal) this.modal.addEventListener('click', (e) => { if (e.target === self.modal) self.close(); });
+    }
+
+    _absOf(p) {
+      try {
+        const r = this.o.resolve(p);
+        return (r && r.abs) ? r.abs : null;
+      } catch (e) { return null; }
+    }
+
+    open(path) {
+      this.path = path || null;
+      const abs = this.path ? this._absOf(this.path) : null;
+      let content = null;
+      if (abs) { try { content = this.o.read(abs); } catch (e) { content = null; } }
+      const exists = content !== null && content !== undefined;
+
+      if (this.titleEl) this.titleEl.textContent = exists ? '编辑文件' : '新建文件';
+      if (this.nameEl) {
+        this.nameEl.style.display = this.path ? '' : 'none';
+        this.nameEl.textContent = (this.path && abs) ? (this.o.displayPath ? this.o.displayPath(abs) : abs) : '';
+      }
+      if (this.nameInput) {
+        this.nameInput.style.display = this.path ? 'none' : '';
+        this.nameInput.value = this.o.defaultName || 'new-file.txt';
+      }
+      if (this.area) this.area.value = exists ? content : (this.o.defaultContent || '');
+      if (this.auxEl) this.auxEl.checked = false;
+      if (this.noteEl) this.noteEl.textContent = this.o.note || '';
+      if (this.modal) this.modal.classList.add('open');
+      const target = (this.path && exists) ? this.area : this.nameInput;
+      if (target) setTimeout(() => { try { target.focus(); } catch (e) {} }, 40);
+    }
+
+    close() { if (this.modal) this.modal.classList.remove('open'); }
+
+    save() {
+      const raw = this.path !== null ? this.path : (this.nameInput ? this.nameInput.value.trim() : '');
+      if (!raw) { toast('请填文件名'); return; }
+      const abs = this._absOf(raw);
+      if (!abs) { toast('这个路径不允许写'); return; }
+      const aux = this.auxEl ? !!this.auxEl.checked : false;
+      try {
+        this.o.write(abs, this.area ? this.area.value : '', aux);
+      } catch (e) {
+        toast('保存失败：' + ((e && e.message) ? e.message : e));
+        return;
+      }
+      this.close();
+      if (this.o.onSaved) this.o.onSaved(abs, aux);
+    }
+  }
+
   /* ---------------- 弹窗助手 ---------------- */
   const Modal = {
     open(sel) { const e = typeof sel === 'string' ? qs(sel) : sel; if (e) e.classList.add('open'); },
@@ -880,7 +974,7 @@ button { font-family: inherit; cursor: pointer; }
 
   global.TermKit = {
     qs, qsa, h, esc, dispWidth, truncate, sleep, toast, richText,
-    Progress, Terminal, LessonPanel, CheatSheet, Modal,
+    Progress, Terminal, LessonPanel, CheatSheet, FileEditor, Modal,
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = global.TermKit;
 })(typeof window !== 'undefined' ? window : globalThis);
@@ -4338,7 +4432,6 @@ button { font-family: inherit; cursor: pointer; }
   let showWholeSystem = false;
   const collapsed = Object.create(null);
   let currentLesson = null;
-  let editingPath = null;
   let running = false;
 
   /* ---------------- 终端 ---------------- */
@@ -4632,21 +4725,37 @@ button { font-family: inherit; cursor: pointer; }
     term.focus();
   }
 
-  /* ---------------- 文件编辑器 ---------------- */
-  function openEditor(path) {
-    editingPath = path || null;
-    const exists = path && shell.fs.exists(shell.fs.resolve(shell.cwd, path));
-    $('#editorTitle').textContent = exists ? '编辑文件' : '新建文件';
-    $('#editorName').style.display = path ? '' : 'none';
-    $('#editorNameInput').style.display = path ? 'none' : '';
-    $('#editorNameInput').value = 'hello.sh';
-    $('#editorName').textContent = path ? shell.fs.resolve(shell.cwd, path) : '';
-    $('#editorArea').value = exists ? shell.fs.readFile(shell.fs.resolve(shell.cwd, path)) : '#!/bin/bash\n\necho "你好，脚本！"\n';
-    $('#editorPath').textContent = '保存到：' + shell.shortPath(shell.cwd);
-    $('#editorModal').classList.add('open');
-    setTimeout(() => ($('#editorArea')).focus(), 40);
-  }
-  function closeEditor() { $('#editorModal').classList.remove('open'); }
+  /* ---------------- 文件编辑器（界面部分来自 termkit 内核） ---------------- */
+  const editor = new TK.FileEditor({
+    modal: '#editorModal', titleEl: '#editorTitle', nameEl: '#editorName',
+    nameInputEl: '#editorNameInput', areaEl: '#editorArea', saveEl: '#editorSave',
+    cancelEl: '#editorCancel', noteEl: '#editorPath', auxEl: '#editorExec',
+    defaultName: 'hello.sh',
+    defaultContent: '#!/bin/bash\n\necho "你好，脚本！"\n',
+    resolve: (p) => {
+      const abs = shell.fs.resolve(shell.cwd, p);
+      if (abs.indexOf(HOME) !== 0 && abs.indexOf('/tmp') !== 0) {
+        return { error: '为了安全，只能在 ~ 或 /tmp 下写文件' };
+      }
+      return { abs: abs };
+    },
+    read: (abs) => ((shell.fs.exists(abs) && !shell.fs.isDir(abs)) ? shell.fs.readFile(abs) : null),
+    write: (abs, content, aux) => {
+      shell.fs.writeFile(abs, content);
+      if (aux) shell.fs.chmod(abs, shell.fs.stat(abs).mode | 0o111);
+    },
+    displayPath: (abs) => shell.shortPath(abs),
+    note: '保存后文件在工作区里，可以直接用 cat 看',
+    onSaved: (abs, aux) => {
+      term.divider('已保存 ' + shell.shortPath(abs) + (aux ? '（并加了执行权限）' : ''));
+      term.print({ text: '跑脚本的话：' + shell.shortPath(abs) +
+        (aux ? '（直接 ./ 运行）' : '（先 chmod +x，或用 bash 运行）'), cls: 'muted' });
+      refresh();
+      term.focus();
+    },
+  });
+  function openEditor(path) { editor.open(path); }
+  function closeEditor() { editor.close(); }
 
   /* ---------------- 速查表 ---------------- */
   const CHEAT = [
@@ -4765,31 +4874,6 @@ button { font-family: inherit; cursor: pointer; }
     showWholeSystem = !showWholeSystem;
     $('#btnShowAll').textContent = showWholeSystem ? '只看家目录' : '显示整个系统';
     renderTree();
-  });
-  $('#editorCancel').addEventListener('click', closeEditor);
-  $('#editorSave').addEventListener('click', () => {
-    const p = editingPath !== null ? editingPath : $('#editorNameInput').value.trim();
-    if (!p) { TK.toast('请填文件名'); return; }
-    const abs = shell.fs.resolve(shell.cwd, p);
-    if (abs.indexOf(HOME) !== 0 && abs.indexOf('/tmp') !== 0) {
-      TK.toast('为了安全，只能在 ~ 或 /tmp 下写文件');
-      return;
-    }
-    try {
-      shell.fs.writeFile(abs, $('#editorArea').value);
-      if ($('#editorExec').checked) shell.fs.chmod(abs, shell.fs.stat(abs).mode | 0o111);
-      shell.observe && shell.observe();
-    } catch (e) {
-      TK.toast('保存失败：' + e.message);
-      return;
-    }
-    closeEditor();
-    term.divider('已保存 ' + shell.shortPath(abs) +
-      ($('#editorExec').checked ? '（并加了执行权限）' : ''));
-    term.print({ text: '文件在工作区里了。跑脚本的话：' + shell.shortPath(abs) +
-      ($('#editorExec').checked ? '（直接 ./ 运行）' : '（先 chmod +x，或用 bash 运行）'), cls: 'muted' });
-    refresh();
-    term.focus();
   });
 
   document.addEventListener('keydown', (e) => {

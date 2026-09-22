@@ -5,7 +5,12 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Git 学习模拟器 · 敲命令、看提交图</title>
 <style>
-/* ===== Git 学习模拟器 · 样式 ===== */
+/* ============================================================
+ * termkit.css —— 通用终端学习页样式内核
+ * 从 git-learn/style.css 提取，去掉 git 专有部分（提交图/三区），
+ * 扩充目录树 / 变量表 / 管道可视化 / 展开过程 等通用面板。
+ * ============================================================ */
+
 :root {
   --bg: #0d1117;
   --panel: #161b22;
@@ -27,28 +32,21 @@
 }
 
 * { box-sizing: border-box; }
-
 html, body {
   margin: 0; padding: 0; height: 100%;
   background: var(--bg); color: var(--text);
-  font-family: var(--sans);
-  font-size: 14px;
-  line-height: 1.6;
+  font-family: var(--sans); font-size: 14px; line-height: 1.6;
 }
-
 button { font-family: inherit; cursor: pointer; }
 
 /* ---------- 顶栏 ---------- */
 .topbar {
-  display: flex; align-items: center; gap: 12px;
-  padding: 10px 16px;
-  background: var(--panel);
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  padding: 10px 16px; background: var(--panel);
   border-bottom: 1px solid var(--border);
-  flex-wrap: wrap;
 }
 .brand { display: flex; align-items: baseline; gap: 10px; margin-right: auto; }
 .brand h1 { font-size: 16px; margin: 0; font-weight: 600; letter-spacing: .3px; }
-.brand .logo { font-size: 18px; }
 .brand .tag { font-size: 12px; color: var(--muted); }
 
 .btn {
@@ -65,6 +63,14 @@ button { font-family: inherit; cursor: pointer; }
 .switch { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); cursor: pointer; user-select: none; }
 .switch input { accent-color: var(--green); }
 
+/* shell 语言切换（bash / fish） */
+.seg { display: flex; border: 1px solid var(--border); border-radius: 6px; overflow: hidden; }
+.seg button {
+  background: var(--panel-2); color: var(--muted); border: none;
+  padding: 5px 12px; font-size: 13px; font-family: var(--mono);
+}
+.seg button.on { background: #1f6feb; color: #fff; }
+
 .progress-pill {
   font-size: 12px; color: var(--muted);
   border: 1px solid var(--border); border-radius: 999px; padding: 3px 10px;
@@ -74,64 +80,119 @@ button { font-family: inherit; cursor: pointer; }
 /* ---------- 布局 ---------- */
 .layout {
   display: grid;
-  grid-template-columns: 300px minmax(360px, 1fr) 430px;
-  gap: 12px;
-  padding: 12px;
-  height: calc(100vh - 53px);
-  align-items: stretch;
+  grid-template-columns: 300px minmax(380px, 1fr) 400px;
+  gap: 12px; padding: 12px;
+  height: calc(100vh - 53px); align-items: stretch;
 }
 .panel {
-  background: var(--panel);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  display: flex; flex-direction: column;
-  min-height: 0; min-width: 0;
-  overflow: hidden;
+  background: var(--panel); border: 1px solid var(--border); border-radius: 10px;
+  display: flex; flex-direction: column; min-height: 0; min-width: 0; overflow: hidden;
 }
 .panel-head {
-  padding: 9px 12px;
-  font-size: 12px; font-weight: 600; letter-spacing: .6px;
+  padding: 9px 12px; font-size: 12px; font-weight: 600; letter-spacing: .6px;
   color: var(--muted); text-transform: uppercase;
   border-bottom: 1px solid var(--border);
   display: flex; align-items: center; gap: 8px;
-  background: var(--panel-2);
-  flex: none;
+  background: var(--panel-2); flex: none;
 }
 .panel-head .right { margin-left: auto; font-weight: 400; text-transform: none; letter-spacing: 0; }
 .panel-body { overflow: auto; padding: 10px 12px; min-height: 0; }
-.panel-body::-webkit-scrollbar, .term-out::-webkit-scrollbar { width: 10px; height: 10px; }
+.panel-body::-webkit-scrollbar, .term-out::-webkit-scrollbar,
+.panel-body::-webkit-scrollbar { width: 10px; height: 10px; }
 .panel-body::-webkit-scrollbar-thumb, .term-out::-webkit-scrollbar-thumb { background: #30363d; border-radius: 6px; }
 .panel-body::-webkit-scrollbar-track, .term-out::-webkit-scrollbar-track { background: transparent; }
+
+/* ---------- 终端 ---------- */
+.term-out {
+  flex: 1; overflow: auto; padding: 12px 14px;
+  font-family: var(--mono); font-size: 12.5px; line-height: 1.65;
+  white-space: pre-wrap; word-break: break-word; background: #0b0e13;
+}
+.term-out .line { min-height: 1.1em; }
+.term-out .plain { color: var(--text); }
+.term-out .err { color: var(--red); }
+.term-out .ok { color: var(--green); }
+.term-out .muted { color: var(--muted); }
+.term-out .dim { color: var(--dim); }
+.term-out .bold { color: var(--text); font-weight: 600; }
+.term-out .green { color: var(--green); }
+.term-out .red { color: var(--red); }
+.term-out .yellow { color: var(--yellow); }
+.term-out .cyan { color: var(--teal); }
+.term-out .blue { color: var(--blue); }
+.term-out .purple { color: var(--purple); }
+.term-out .cmd { color: var(--blue); font-weight: 600; }
+.term-out .hint {
+  color: #b8a45a; background: #d2992212; border-left: 2px solid #d2992266;
+  padding: 2px 8px; display: block; margin: 1px 0;
+}
+.term-out .echo { color: var(--dim); }
+.term-out .divider { color: var(--dim); margin: 6px 0; }
+/* 展开过程 / 管道 的折叠块 */
+.term-out .trace {
+  border-left: 2px solid #1f6feb66; background: #1f6feb10;
+  padding: 3px 9px; margin: 2px 0; display: block;
+}
+.term-out .trace .k { color: var(--purple); }
+.term-out .trace .v { color: var(--teal); }
+
+.term-input-row {
+  display: flex; align-items: center; gap: 8px; flex: none;
+  border-top: 1px solid var(--border); padding: 8px 12px; background: var(--panel-2);
+}
+.term-input-row .prompt { font-family: var(--mono); font-size: 12.5px; white-space: nowrap; }
+.term-input-row .prompt .u { color: var(--green); }
+.term-input-row .prompt .p { color: var(--blue); }
+.term-input-row .prompt .s { color: var(--muted); }
+.term-input-row input {
+  flex: 1; background: transparent; border: none; outline: none;
+  color: var(--text); font-family: var(--mono); font-size: 13px; padding: 2px 0;
+}
+.term-input-row input::placeholder { color: #4b545e; }
+
+.chips { display: flex; gap: 6px; flex-wrap: wrap; padding: 8px 12px; flex: none;
+         border-top: 1px solid var(--border); background: var(--panel); }
+.chips .chip {
+  font-family: var(--mono); font-size: 11.5px;
+  background: var(--panel-3); border: 1px solid var(--border); color: #c9d1d9;
+  border-radius: 999px; padding: 3px 10px;
+}
+.chips .chip:hover { border-color: var(--blue); color: var(--blue); }
 
 /* ---------- 课程列表 ---------- */
 .lesson-item {
   display: block; width: 100%; text-align: left;
   background: transparent; border: 1px solid transparent; border-radius: 8px;
-  padding: 8px 10px; margin-bottom: 4px; color: var(--text);
-  transition: .12s;
+  padding: 7px 10px; margin-bottom: 3px; color: var(--text); transition: .12s;
 }
 .lesson-item:hover { background: var(--panel-2); }
 .lesson-item.active { background: #1f6feb22; border-color: #1f6feb66; }
 .lesson-item .ch { font-size: 11px; color: var(--dim); display: block; }
 .lesson-item .tt { font-size: 13px; font-weight: 500; }
 .lesson-item.done .tt::after { content: " ✓"; color: var(--green); }
+.part-title {
+  font-size: 11px; color: var(--teal); letter-spacing: .8px;
+  margin: 12px 0 5px; padding-left: 2px; font-weight: 600;
+}
+.part-title:first-child { margin-top: 0; }
 
-/* ---------- 章节详情 ---------- */
 .lesson-detail { border-top: 1px solid var(--border); padding: 12px 0 0; margin-top: 10px; }
 .lesson-detail h2 { font-size: 15px; margin: 0 0 2px; }
 .lesson-detail .goal { font-size: 12px; color: var(--teal); margin-bottom: 8px; }
 .lesson-detail p { margin: 0 0 8px; font-size: 12.5px; color: #c9d1d9; }
+.lesson-detail code {
+  font-family: var(--mono); font-size: 12px; background: #ffffff12;
+  padding: 0 4px; border-radius: 4px; color: var(--yellow);
+}
+.lesson-actions { display: flex; gap: 8px; margin: 10px 0 4px; flex-wrap: wrap; }
 .explain { margin-top: 14px; border-top: 1px dashed var(--border); padding-top: 10px; }
 .explain-title { font-size: 11.5px; color: var(--muted); font-weight: 600; letter-spacing: .5px; margin-bottom: 6px; }
-.lesson-actions { display: flex; gap: 8px; margin: 10px 0 4px; flex-wrap: wrap; }
 
-/* ---------- 任务清单 ---------- */
 .tasks { list-style: none; margin: 8px 0 0; padding: 0; }
 .tasks li {
   display: flex; gap: 8px; align-items: flex-start;
   padding: 6px 8px; border-radius: 6px; margin-bottom: 2px;
-  font-size: 13px; color: var(--muted);
-  border: 1px solid transparent;
+  font-size: 13px; color: var(--muted); border: 1px solid transparent;
 }
 .tasks li .box { flex: none; width: 16px; text-align: center; color: var(--dim); }
 .tasks li.ok { color: var(--text); background: #3fb9501a; border-color: #3fb95033; }
@@ -146,53 +207,76 @@ button { font-family: inherit; cursor: pointer; }
   background: #3fb9501a; border: 1px solid #3fb95055; color: var(--green); font-size: 13px;
 }
 
-/* ---------- 终端 ---------- */
-.term-wrap { display: flex; flex-direction: column; height: 100%; min-height: 0; }
-.term-out {
-  flex: 1; overflow: auto; padding: 12px 14px;
-  font-family: var(--mono); font-size: 12.5px; line-height: 1.65;
-  white-space: pre-wrap; word-break: break-word;
-  background: #0b0e13;
+/* ---------- 弹窗 ---------- */
+.modal {
+  position: fixed; inset: 0; background: #000000b3;
+  display: none; align-items: center; justify-content: center; z-index: 50; padding: 24px;
 }
-.term-out .line { min-height: 1.1em; }
-.term-out .err { color: var(--red); }
-.term-out .ok { color: var(--green); }
-.term-out .muted { color: var(--muted); }
-.term-out .bold { color: var(--text); font-weight: 600; }
-.term-out .green { color: var(--green); }
-.term-out .red { color: var(--red); }
-.term-out .yellow { color: var(--yellow); }
-.term-out .cyan { color: var(--teal); }
-.term-out .blue { color: var(--blue); }
-.term-out .cmd { color: var(--blue); font-weight: 600; }
-.term-out .graph { color: var(--purple); }
-.term-out .hint {
-  color: #b8a45a; background: #d2992212; border-left: 2px solid #d2992266;
-  padding: 2px 8px; display: block; margin: 1px 0;
+.modal.open { display: flex; }
+.modal-card {
+  background: var(--panel); border: 1px solid var(--border); border-radius: 12px;
+  width: min(780px, 100%); max-height: 86vh; display: flex; flex-direction: column;
+  box-shadow: 0 16px 48px #00000080;
 }
-.term-out .echo { color: var(--dim); }
-.term-out .echo b { color: var(--green); font-weight: 600; }
-.term-out .divider { color: var(--dim); margin: 6px 0; }
+.modal-card header {
+  display: flex; align-items: center; padding: 12px 16px; border-bottom: 1px solid var(--border);
+}
+.modal-card header h3 { margin: 0; font-size: 15px; }
+.modal-card header .btn { margin-left: auto; }
+.modal-card .content { padding: 14px 16px; overflow: auto; }
+.modal-foot { display: flex; gap: 8px; margin-top: 12px; align-items: center; }
 
-.term-input-row {
-  display: flex; align-items: center; gap: 8px;
-  border-top: 1px solid var(--border); padding: 8px 12px; background: var(--panel-2);
-  flex: none;
+.cheat-group { margin-bottom: 14px; }
+.cheat-group h4 { margin: 0 0 6px; font-size: 12px; color: var(--teal); letter-spacing: .5px; }
+.cheat-row {
+  display: flex; gap: 10px; align-items: baseline; padding: 4px 6px;
+  border-radius: 6px; cursor: pointer; border: 1px solid transparent;
 }
-.term-input-row .prompt { font-family: var(--mono); font-size: 12.5px; color: var(--green); white-space: nowrap; }
-.term-input-row input {
-  flex: 1; background: transparent; border: none; outline: none;
-  color: var(--text); font-family: var(--mono); font-size: 13px; padding: 2px 0;
-}
-.term-input-row input::placeholder { color: #4b545e; }
+.cheat-row:hover { background: var(--panel-2); border-color: var(--border); }
+.cheat-row code { font-family: var(--mono); font-size: 12px; color: var(--blue); flex: none; }
+.cheat-row span { font-size: 12.5px; color: var(--muted); }
+/* 双列对照（bash ↔ fish） */
+.cheat-row.two { display: grid; grid-template-columns: 1fr 1fr 1.1fr; gap: 10px; }
+.cheat-row.two code.fish { color: var(--teal); }
+.cheat-head { display: grid; grid-template-columns: 1fr 1fr 1.1fr; gap: 10px;
+  font-size: 11px; color: var(--dim); padding: 0 6px 5px; letter-spacing: .5px; }
 
-.chips { display: flex; gap: 6px; flex-wrap: wrap; padding: 8px 12px; border-top: 1px solid var(--border); background: var(--panel); flex: none; }
-.chips .chip {
-  font-family: var(--mono); font-size: 11.5px;
-  background: var(--panel-3); border: 1px solid var(--border); color: #c9d1d9;
-  border-radius: 999px; padding: 3px 10px;
+.editor-area {
+  width: 100%; min-height: 200px; resize: vertical;
+  background: #0b0e13; color: var(--text); border: 1px solid var(--border); border-radius: 8px;
+  font-family: var(--mono); font-size: 13px; padding: 10px; line-height: 1.6;
 }
-.chips .chip:hover { border-color: var(--blue); color: var(--blue); }
+.editor-name { font-family: var(--mono); color: var(--teal); font-size: 13px; margin-bottom: 8px; }
+.editor-tip { font-size: 12px; color: var(--muted); }
+
+.toast {
+  position: fixed; left: 50%; bottom: 28px; transform: translateX(-50%) translateY(20px);
+  background: var(--panel-3); border: 1px solid var(--border); color: var(--text);
+  padding: 9px 16px; border-radius: 999px; font-size: 13px; opacity: 0;
+  transition: .25s; pointer-events: none; z-index: 100;
+}
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+.toast.good { border-color: #3fb95088; }
+
+/* ---------- 响应式 ---------- */
+@media (max-width: 1300px) { .layout { grid-template-columns: 260px minmax(320px, 1fr) 340px; } }
+@media (max-width: 1080px) {
+  html, body { height: auto; }
+  .layout { grid-template-columns: 1fr; grid-auto-rows: minmax(300px, auto); height: auto; overflow: auto; }
+  .panel { max-height: 68vh; }
+}
+
+</style>
+<style>
+/* ============================================================
+ * style.css —— Git 学习模拟器 **专有**样式
+ * 通用部分（顶栏/面板/终端/课程/弹窗/Toast 等）来自 web-kit/term.css，
+ * 由 index.html 先引入；这里只放提交图和三区面板。
+ * 两部分由 web-kit/sync.js 保证与内核同源。
+ * ============================================================ */
+
+/* 提示符是本项目特有的绿色整段显示 */
+.term-input-row .prompt { color: var(--green); }
 
 /* ---------- 提交图 ---------- */
 .graph-wrap { border-bottom: 1px solid var(--border); flex: none; }
@@ -239,63 +323,8 @@ svg.graph .node:hover circle { stroke: #fff; stroke-width: 2; }
 .zone-status .branch { font-family: var(--mono); color: var(--teal); }
 .zone-status .warn { color: var(--yellow); }
 
-/* ---------- 弹窗 ---------- */
-.modal {
-  position: fixed; inset: 0; background: #000000b3;
-  display: none; align-items: center; justify-content: center; z-index: 50; padding: 24px;
-}
-.modal.open { display: flex; }
-.modal-card {
-  background: var(--panel); border: 1px solid var(--border); border-radius: 12px;
-  width: min(720px, 100%); max-height: 86vh; display: flex; flex-direction: column;
-  box-shadow: 0 16px 48px #00000080;
-}
-.modal-card header {
-  display: flex; align-items: center; padding: 12px 16px; border-bottom: 1px solid var(--border);
-}
-.modal-card header h3 { margin: 0; font-size: 15px; }
-.modal-card header .btn { margin-left: auto; }
-.modal-card .content { padding: 14px 16px; overflow: auto; }
-.cheat-group { margin-bottom: 14px; }
-.cheat-group h4 { margin: 0 0 6px; font-size: 12px; color: var(--teal); letter-spacing: .5px; }
-.cheat-row {
-  display: flex; gap: 10px; align-items: baseline; padding: 4px 6px; border-radius: 6px;
-  cursor: pointer; border: 1px solid transparent;
-}
-.cheat-row:hover { background: var(--panel-2); border-color: var(--border); }
-.cheat-row code { font-family: var(--mono); font-size: 12px; color: var(--blue); flex: none; min-width: 220px; }
-.cheat-row span { font-size: 12.5px; color: var(--muted); }
-
-.editor-area {
-  width: 100%; min-height: 220px; resize: vertical;
-  background: #0b0e13; color: var(--text); border: 1px solid var(--border); border-radius: 8px;
-  font-family: var(--mono); font-size: 13px; padding: 10px; line-height: 1.6;
-}
-.editor-name { font-family: var(--mono); color: var(--teal); font-size: 13px; margin-bottom: 8px; }
-.modal-foot { display: flex; gap: 8px; margin-top: 12px; }
-
-.toast {
-  position: fixed; left: 50%; bottom: 28px; transform: translateX(-50%) translateY(20px);
-  background: var(--panel-3); border: 1px solid var(--border); color: var(--text);
-  padding: 9px 16px; border-radius: 999px; font-size: 13px; opacity: 0;
-  transition: .25s; pointer-events: none; z-index: 100;
-}
-.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
-.toast.good { border-color: #3fb95088; }
-
-/* ---------- 响应式 ---------- */
-@media (max-width: 1240px) {
-  .layout { grid-template-columns: 260px minmax(320px, 1fr) 360px; }
-}
-@media (max-width: 1080px) {
-  .layout {
-    grid-template-columns: 1fr;
-    grid-auto-rows: minmax(300px, auto);
-    height: auto; overflow: auto;
-  }
-  html, body { height: auto; }
-  .panel { max-height: 70vh; }
-}
+/* 速查表：命令列定宽，说明文字才能对齐成两栏（本项目专有排版） */
+.cheat-row code { min-width: 220px; }
 
 </style>
 </head>
@@ -361,7 +390,7 @@ svg.graph .node:hover circle { stroke: #fff; stroke-width: 2; }
       <button class="chip" data-cmd="help">help</button>
     </div>
     <div class="term-input-row">
-      <span class="prompt">~/project $</span>
+      <span class="prompt" id="prompt">~/project $</span>
       <input id="cmd" placeholder="在这里输入 git 命令，按回车执行" autocomplete="off" spellcheck="false">
     </div>
   </section>
@@ -430,6 +459,528 @@ svg.graph .node:hover circle { stroke: #fff; stroke-width: 2; }
 
 <div class="toast" id="toast"></div>
 
+<script>
+/* ============================================================
+ * termkit.js —— 终端学习页 UI 内核
+ * 从 git-learn/ui.js 提取出的项目无关部分：终端输出与控制、
+ * 命令历史、Tab 补全、一键演示、课程面板与任务判分、速查表、
+ * 弹窗、进度存储、Toast。
+ *
+ * 使用方只需：准备约定的 DOM、提供一个「执行命令」的回调。
+ * ============================================================ */
+(function (global) {
+  'use strict';
+
+  /* ---------------- 基础工具 ---------------- */
+  function qs(sel, root) { return (root || document).querySelector(sel); }
+  function qsa(sel, root) { return Array.prototype.slice.call((root || document).querySelectorAll(sel)); }
+
+  function h(tag, cls, text) {
+    const n = document.createElement(tag);
+    if (cls) n.className = cls;
+    if (text !== undefined && text !== null) n.textContent = text;
+    return n;
+  }
+
+  function esc(s) {
+    return String(s)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  }
+
+  /* 中文字符按 2 个宽度算 */
+  const WIDE = /[\u1100-\u115F\u2E80-\uA4CF\uAC00-\uD7A3\uF900-\uFAFF\uFE30-\uFE6F\uFF00-\uFF60\uFFE0-\uFFE6]/;
+  function dispWidth(s) {
+    let w = 0;
+    for (const ch of String(s)) w += WIDE.test(ch) ? 2 : 1;
+    return w;
+  }
+  function truncate(s, maxUnits) {
+    s = String(s);
+    if (dispWidth(s) <= maxUnits) return s;
+    let out = '', w = 0;
+    for (const ch of s) {
+      const cw = WIDE.test(ch) ? 2 : 1;
+      if (w + cw > maxUnits - 1) break;
+      out += ch; w += cw;
+    }
+    return out + '…';
+  }
+
+  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+  /* 把带 `反引号` 的纯文本渲染成带 <code> 的节点 */
+  function richText(text) {
+    const frag = document.createDocumentFragment();
+    String(text).split(/(`[^`]*`)/).forEach((seg) => {
+      if (/^`[^`]*`$/.test(seg)) frag.appendChild(h('code', null, seg.slice(1, -1)));
+      else if (seg) frag.appendChild(document.createTextNode(seg));
+    });
+    return frag;
+  }
+
+  /* ---------------- Toast ---------------- */
+  let toastEl = null, toastTimer = null;
+  function toast(msg, good) {
+    if (!toastEl) {
+      toastEl = h('div', 'toast');
+      document.body.appendChild(toastEl);
+    }
+    toastEl.textContent = msg;
+    toastEl.className = 'toast show' + (good ? ' good' : '');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => { toastEl.className = 'toast'; }, 2600);
+  }
+
+  /* ---------------- 进度存储 ---------------- */
+  class Progress {
+    constructor(key) {
+      this.key = key;
+      this.data = { done: {} };
+      try {
+        const raw = global.localStorage.getItem(key);
+        if (raw) this.data = JSON.parse(raw) || { done: {} };
+      } catch (e) { /* 隐私模式下可能不可用 */ }
+    }
+    save() {
+      try { global.localStorage.setItem(this.key, JSON.stringify(this.data)); } catch (e) {}
+    }
+    isDone(id) { return !!this.data.done[id]; }
+    markDone(id) { if (!this.data.done[id]) { this.data.done[id] = true; this.save(); return true; } return false; }
+    count(lessons) { return lessons.filter((l) => this.isDone(l.id)).length; }
+    clear() { this.data = { done: {} }; this.save(); }
+  }
+
+  /* ---------------- 终端 ---------------- */
+  class Terminal {
+    /**
+     * @param {object} o
+     *   outEl / inputEl / promptEl : 元素或选择器
+     *   onSubmit(cmd, term)        : 用户回车时调用
+     *   completer(value)           : 返回候选命令数组（可选）
+     *   promptHtml()               : 返回提示符 HTML（可选，动态）
+     *   historyLimit               : 历史条数上限
+     */
+    constructor(o) {
+      this.out = typeof o.outEl === 'string' ? qs(o.outEl) : o.outEl;
+      this.input = typeof o.inputEl === 'string' ? qs(o.inputEl) : o.inputEl;
+      this.promptEl = o.promptEl ? (typeof o.promptEl === 'string' ? qs(o.promptEl) : o.promptEl) : null;
+      this.onSubmit = o.onSubmit || function () {};
+      this.completer = o.completer || null;
+      this.promptHtml = o.promptHtml || null;
+      this.history = [];
+      this.histIdx = 0;
+      this.historyLimit = o.historyLimit || 200;
+      this.busy = false;
+      this._bind();
+      this.updatePrompt();
+    }
+
+    _bind() {
+      const self = this;
+      this.input.addEventListener('keydown', function (e) {
+        if (self.busy) { e.preventDefault(); return; }
+        if (e.key === 'Enter') {
+          const v = self.input.value;
+          if (v.trim()) {
+            self.history.push(v.trim());
+            if (self.history.length > self.historyLimit) self.history.shift();
+            self.histIdx = self.history.length;
+          }
+          self.input.value = '';
+          self.onSubmit(v, self);
+        } else if (e.key === 'ArrowUp') {
+          e.preventDefault();
+          if (!self.history.length) return;
+          self.histIdx = Math.max(0, self.histIdx - 1);
+          self.input.value = self.history[self.histIdx] || '';
+          self._caretEnd();
+        } else if (e.key === 'ArrowDown') {
+          e.preventDefault();
+          if (!self.history.length) return;
+          self.histIdx = Math.min(self.history.length, self.histIdx + 1);
+          self.input.value = self.history[self.histIdx] || '';
+          self._caretEnd();
+        } else if (e.key === 'Tab') {
+          e.preventDefault();
+          self._complete();
+        } else if (e.key === 'l' && e.ctrlKey) {
+          e.preventDefault();
+          self.clear();
+        }
+      });
+    }
+
+    _caretEnd() {
+      const n = this.input.value.length;
+      try { this.input.setSelectionRange(n, n); } catch (e) {}
+    }
+
+    _complete() {
+      if (!this.completer) return;
+      const v = this.input.value;
+      if (!v) { this.printMuted(this.completer('').join('   ')); return; }
+      const hits = this.completer(v);
+      if (!hits || !hits.length) return;
+      if (hits.length === 1) { this.input.value = hits[0]; this._caretEnd(); return; }
+      let common = hits[0];
+      hits.forEach((s) => {
+        let i = 0;
+        while (i < common.length && i < s.length && common[i] === s[i]) i++;
+        common = common.slice(0, i);
+      });
+      if (common.length > v.length) { this.input.value = common; this._caretEnd(); }
+      else this.printMuted(hits.join('   '));
+    }
+
+    setBusy(b) {
+      this.busy = b;
+      this.input.disabled = b;
+      this.input.placeholder = b ? '演示中…' : (this._ph || '');
+    }
+
+    updatePrompt() {
+      if (this.promptEl && this.promptHtml) this.promptEl.innerHTML = this.promptHtml();
+    }
+
+    /* ---- 输出 ---- */
+    print(item) {
+      const div = h('div', 'line');
+      if (item.spans) {
+        item.spans.forEach((s) => {
+          const sp = h('span', s.cls || 'plain', s.text);
+          div.appendChild(sp);
+        });
+      } else {
+        div.className = 'line ' + (item.cls || 'plain');
+        div.textContent = (item.text === '' || item.text === undefined) ? '\u00a0' : item.text;
+      }
+      this.out.appendChild(div);
+      this.scroll();
+      return div;
+    }
+    printText(text, cls) { return this.print({ text: text, cls: cls }); }
+    printMuted(text) { return this.print({ text: text, cls: 'muted' }); }
+    printLines(lines) { (lines || []).forEach((l) => this.print(l)); }
+    /** 打印 {lines, hints} 形式的结果 */
+    printResult(res, showHints) {
+      this.printLines(res.lines || []);
+      if (showHints && res.hints && res.hints.length) {
+        res.hints.forEach((t) => this.print({ text: '提示 · ' + t, cls: 'hint' }));
+      }
+    }
+    echo(cmd, promptHtml) {
+      const div = h('div', 'line echo');
+      const p = h('span', null, '');
+      p.innerHTML = promptHtml || (this.promptEl ? this.promptEl.innerHTML : '') || '$ ';
+      div.appendChild(p);
+      div.appendChild(document.createTextNode(' ' + cmd));
+      this.out.appendChild(div);
+      this.scroll();
+    }
+    divider(text) {
+      const n = Math.max(0, 46 - dispWidth(text));
+      this.print({ text: '── ' + text + ' ' + '─'.repeat(n), cls: 'divider' });
+    }
+    clear() { this.out.innerHTML = ''; }
+    scroll() { this.out.scrollTop = this.out.scrollHeight; }
+    focus() { try { this.input.focus(); } catch (e) {} }
+
+    /** 顺序执行演示命令；run(cmd) 由调用方提供，返回 Promise 或值 */
+    async playDemo(cmds, run, delay) {
+      if (this.busy) return;
+      this.setBusy(true);
+      qsa('[data-demo]').forEach((b) => { b.disabled = true; });
+      this.divider('开始自动演示');
+      for (const c of cmds) {
+        await run(c, this);
+        await sleep(delay || 700);
+      }
+      this.divider('演示结束，轮到你了');
+      this.setBusy(false);
+      qsa('[data-demo]').forEach((b) => { b.disabled = false; });
+      this.focus();
+    }
+  }
+
+  /* ---------------- 课程面板 ---------------- */
+  /**
+   * 约定的 DOM id：
+   *   #lessonList #lessonTitle #lessonGoal #lessonIntro
+   *   #taskList #allDone #progressPill
+   */
+  class LessonPanel {
+    constructor(o) {
+      this.lessons = o.lessons;
+      this.engine = o.engine;                   // 传给 check(e)
+      this.progress = new Progress(o.progressKey || 'termkit-progress');
+      this.current = null;
+      this.onStart = o.onStart || function () {};
+      this.ids = Object.assign({
+        list: '#lessonList', title: '#lessonTitle', goal: '#lessonGoal',
+        intro: '#lessonIntro', tasks: '#taskList', allDone: '#allDone', pill: '#progressPill',
+      }, o.ids || {});
+      this.el = {};
+      Object.keys(this.ids).forEach((k) => { this.el[k] = qs(this.ids[k]); });
+    }
+
+    renderList() {
+      const box = this.el.list;
+      if (!box) return;
+      box.innerHTML = '';
+      let lastPart = null;
+      this.lessons.forEach((l) => {
+        if (l.part && l.part !== lastPart) {
+          lastPart = l.part;
+          box.appendChild(h('div', 'part-title', l.part));
+        }
+        const b = h('button', 'lesson-item' +
+          (this.current && l.id === this.current.id ? ' active' : '') +
+          (this.progress.isDone(l.id) ? ' done' : ''));
+        b.appendChild(h('span', 'ch', l.chapter));
+        b.appendChild(h('span', 'tt', l.title));
+        b.addEventListener('click', () => this.start(l, true));
+        box.appendChild(b);
+      });
+      if (this.el.pill) {
+        this.el.pill.textContent = '进度 ' + this.progress.count(this.lessons) + ' / ' + this.lessons.length + ' 章';
+      }
+    }
+
+    renderDetail() {
+      const l = this.current;
+      if (!l) return;
+      if (this.el.title) this.el.title.textContent = l.chapter + ' · ' + l.title;
+      if (this.el.goal) this.el.goal.textContent = l.goal || '';
+      if (this.el.intro) {
+        this.el.intro.innerHTML = '';
+        (l.intro || []).forEach((p) => {
+          const el = document.createElement('p');
+          el.appendChild(richText(p));
+          this.el.intro.appendChild(el);
+        });
+      }
+      if (this.el.tasks) {
+        this.el.tasks.innerHTML = '';
+        l.tasks.forEach((t, i) => {
+          const li = h('li');
+          li.dataset.idx = i;
+          li.appendChild(h('span', 'box', '☐'));
+          const wrap = h('span', 'txt');
+          wrap.appendChild(richText(t.text));
+          if (t.hint) wrap.appendChild(h('span', 'hint', '▸ ' + t.hint));
+          li.appendChild(wrap);
+          this.el.tasks.appendChild(li);
+        });
+      }
+      if (this.el.allDone) this.el.allDone.style.display = 'none';
+    }
+
+    /** 进入某章：重置沙盒（由调用方在 onStart 里做），刷新界面 */
+    start(lesson, announce) {
+      this.current = lesson;
+      this.onStart(lesson);
+      this.renderDetail();
+      this.renderList();
+      this.evaluate();
+      if (announce) toast('已进入：' + lesson.title);
+    }
+
+    /** 每次命令执行后调用，刷新勾选状态 */
+    evaluate(taskListEl) {
+      const l = this.current;
+      if (!l) return false;
+      const items = (taskListEl || this.el.tasks).children;
+      // 任务清单还没渲染出来时不能判"全部通过"，否则会误报通关并写脏进度
+      if (!items.length) return false;
+      let all = true;
+      let matched = 0;
+      l.tasks.forEach((t, i) => {
+        let ok = false;
+        try { ok = !!t.check(this.engine); } catch (e) { ok = false; }
+        const li = items[i];
+        if (li) {
+          matched++;
+          li.classList.toggle('ok', ok);
+          const box = li.querySelector('.box');
+          if (box) box.textContent = ok ? '☑' : '☐';
+        }
+        if (!ok) all = false;
+      });
+      if (matched < l.tasks.length) return false;
+      if (this.el.allDone) this.el.allDone.style.display = all ? '' : 'none';
+      if (all && this.progress.markDone(l.id)) {
+        this.renderList();
+        toast('✓ 「' + l.title + '」通关！', true);
+      }
+      return all;
+    }
+  }
+
+  /* ---------------- 速查表 ---------------- */
+  /**
+   * groups: [{ title, rows: [[cmd, desc] | [bash, fish, desc]] , two: bool }]
+   * 点击一行把命令填进输入框。
+   */
+  class CheatSheet {
+    constructor(o) {
+      this.bodyEl = typeof o.el === 'string' ? qs(o.el) : o.el;
+      this.modalEl = typeof o.modal === 'string' ? qs(o.modal) : o.modal;
+      this.inputEl = typeof o.input === 'string' ? qs(o.input) : o.input;
+      this.groups = o.groups || [];
+      this.render();
+    }
+    render() {
+      if (!this.bodyEl) return;
+      const box = this.bodyEl;
+      box.innerHTML = '';
+      this.groups.forEach((g) => {
+        const wrap = h('div', 'cheat-group');
+        wrap.appendChild(h('h4', null, g.title));
+        if (g.two) {
+          const head = h('div', 'cheat-head');
+          head.appendChild(h('span', null, 'bash'));
+          head.appendChild(h('span', null, 'fish'));
+          head.appendChild(h('span', null, '说明'));
+          wrap.appendChild(head);
+        }
+        g.rows.forEach((row) => {
+          const isTwo = row.length === 3 && g.two;
+          const r = h('div', 'cheat-row' + (isTwo ? ' two' : ''));
+          const fill = isTwo ? row[1] : row[0];
+          if (isTwo) {
+            r.appendChild(h('code', null, row[0]));
+            r.appendChild(h('code', 'fish', row[1]));
+            r.appendChild(h('span', null, row[2]));
+          } else {
+            r.appendChild(h('code', null, row[0]));
+            r.appendChild(h('span', null, row[1]));
+          }
+          r.addEventListener('click', () => {
+            if (this.modalEl) this.modalEl.classList.remove('open');
+            if (this.inputEl) {
+              this.inputEl.value = fill;
+              this.inputEl.focus();
+              const n = fill.length;
+              try { this.inputEl.setSelectionRange(n, n); } catch (e) {}
+            }
+            toast('已填入输入框：' + fill);
+          });
+          wrap.appendChild(r);
+        });
+        box.appendChild(wrap);
+      });
+    }
+    open() { if (this.modalEl) this.modalEl.classList.add('open'); }
+    close() { if (this.modalEl) this.modalEl.classList.remove('open'); }
+  }
+
+
+  /* ---------------- 文件编辑器 ---------------- */
+  /**
+   * git-learn 与 shell-learn 都要"编辑虚拟文件系统里的文件"，
+   * 界面完全一样，只有"读写落到哪里"不同，所以用回调注入。
+   *
+   * opts: {
+   *   modal, titleEl, nameEl, nameInputEl, areaEl, saveEl, cancelEl, noteEl, auxEl,
+   *   defaultName, defaultContent,
+   *   resolve(path) -> {abs} | {error}    把用户输入解析成绝对路径
+   *   read(abs) -> string | null          null 表示文件不存在（走新建流程）
+   *   write(abs, content, aux)            抛异常表示保存失败
+   *   displayPath(abs) -> string
+   *   onSaved(abs, aux)
+   * }
+   */
+  class FileEditor {
+    constructor(o) {
+      this.o = o;
+      const pick = (k) => (typeof o[k] === 'string' ? qs(o[k]) : o[k]);
+      this.modal = pick('modal');
+      this.titleEl = pick('titleEl');
+      this.nameEl = pick('nameEl');
+      this.nameInput = pick('nameInputEl');
+      this.area = pick('areaEl');
+      this.saveEl = pick('saveEl');
+      this.cancelEl = pick('cancelEl');
+      this.noteEl = pick('noteEl');
+      this.auxEl = pick('auxEl');
+      this.path = null;
+      const self = this;
+      if (this.saveEl) this.saveEl.addEventListener('click', () => self.save());
+      if (this.cancelEl) this.cancelEl.addEventListener('click', () => self.close());
+      if (this.modal) this.modal.addEventListener('click', (e) => { if (e.target === self.modal) self.close(); });
+    }
+
+    _absOf(p) {
+      try {
+        const r = this.o.resolve(p);
+        return (r && r.abs) ? r.abs : null;
+      } catch (e) { return null; }
+    }
+
+    open(path) {
+      this.path = path || null;
+      const abs = this.path ? this._absOf(this.path) : null;
+      let content = null;
+      if (abs) { try { content = this.o.read(abs); } catch (e) { content = null; } }
+      const exists = content !== null && content !== undefined;
+
+      if (this.titleEl) this.titleEl.textContent = exists ? '编辑文件' : '新建文件';
+      if (this.nameEl) {
+        this.nameEl.style.display = this.path ? '' : 'none';
+        this.nameEl.textContent = (this.path && abs) ? (this.o.displayPath ? this.o.displayPath(abs) : abs) : '';
+      }
+      if (this.nameInput) {
+        this.nameInput.style.display = this.path ? 'none' : '';
+        this.nameInput.value = this.o.defaultName || 'new-file.txt';
+      }
+      if (this.area) this.area.value = exists ? content : (this.o.defaultContent || '');
+      if (this.auxEl) this.auxEl.checked = false;
+      if (this.noteEl) this.noteEl.textContent = this.o.note || '';
+      if (this.modal) this.modal.classList.add('open');
+      const target = (this.path && exists) ? this.area : this.nameInput;
+      if (target) setTimeout(() => { try { target.focus(); } catch (e) {} }, 40);
+    }
+
+    close() { if (this.modal) this.modal.classList.remove('open'); }
+
+    save() {
+      const raw = this.path !== null ? this.path : (this.nameInput ? this.nameInput.value.trim() : '');
+      if (!raw) { toast('请填文件名'); return; }
+      const abs = this._absOf(raw);
+      if (!abs) { toast('这个路径不允许写'); return; }
+      const aux = this.auxEl ? !!this.auxEl.checked : false;
+      try {
+        this.o.write(abs, this.area ? this.area.value : '', aux);
+      } catch (e) {
+        toast('保存失败：' + ((e && e.message) ? e.message : e));
+        return;
+      }
+      this.close();
+      if (this.o.onSaved) this.o.onSaved(abs, aux);
+    }
+  }
+
+  /* ---------------- 弹窗助手 ---------------- */
+  const Modal = {
+    open(sel) { const e = typeof sel === 'string' ? qs(sel) : sel; if (e) e.classList.add('open'); },
+    close(sel) { const e = typeof sel === 'string' ? qs(sel) : sel; if (e) e.classList.remove('open'); },
+    bindClose(sel, btnSel) {
+      const e = typeof sel === 'string' ? qs(sel) : sel;
+      if (!e) return;
+      e.addEventListener('click', (ev) => { if (ev.target === e) e.classList.remove('open'); });
+      if (btnSel) qsa(btnSel).forEach((b) => b.addEventListener('click', () => e.classList.remove('open')));
+    },
+  };
+
+  global.TermKit = {
+    qs, qsa, h, esc, dispWidth, truncate, sleep, toast, richText,
+    Progress, Terminal, LessonPanel, CheatSheet, FileEditor, Modal,
+  };
+  if (typeof module !== 'undefined' && module.exports) module.exports = global.TermKit;
+})(typeof window !== 'undefined' ? window : globalThis);
+
+</script>
 <script>
 /* ============================================================
  * Git 学习模拟器 · 引擎
@@ -2463,147 +3014,40 @@ svg.graph .node:hover circle { stroke: #fff; stroke-width: 2; }
 </script>
 <script>
 /* ============================================================
- * Git 学习模拟器 · 界面逻辑
+ * ui.js —— Git 学习模拟器的界面装配
+ *
+ * 通用部分（终端输出与控制、历史、Tab 补全、一键演示、课程面板与
+ * 任务判分、速查表、文件编辑器、进度存储、Toast）全部来自 web-kit
+ * 的内核 termkit.js，本项目只保留 **git 专有**的三块：
+ *   - 提交图（SVG）
+ *   - 工作区 / 暂存区 / 版本库 三区面板
+ *   - 速查表与课程数据
  * ============================================================ */
 (function () {
   'use strict';
 
+  const TK = window.TermKit;
+  const { h, esc, dispWidth, truncate } = TK;
+  const $ = TK.qs;
+
   const engine = new GitEngine();
-  const $ = (s) => document.querySelector(s);
-  const PROGRESS_KEY = 'git-learn-progress-v1';
+  const LESSONS = window.LESSONS || [];
+  const PROMPT = '~/project $';
 
-  let currentLesson = LESSONS[0];
   let hintsOn = true;
-  let demoRunning = false;
-  let demoToken = 0;
-
-  /* ---------------- 进度存储 ---------------- */
-  let progress = { done: {} };
-  try {
-    const raw = localStorage.getItem(PROGRESS_KEY);
-    if (raw) progress = JSON.parse(raw) || { done: {} };
-  } catch (e) { /* 隐私模式下 localStorage 可能不可用 */ }
-  function saveProgress() {
-    try { localStorage.setItem(PROGRESS_KEY, JSON.stringify(progress)); } catch (e) {}
-  }
-
-  /* ---------------- 小工具 ---------------- */
-  function el(tag, cls, text) {
-    const n = document.createElement(tag);
-    if (cls) n.className = cls;
-    if (text !== undefined) n.textContent = text;
-    return n;
-  }
-  function esc(s) {
-    return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
-  }
-  let toastTimer = null;
-  function toast(msg, good) {
-    const t = $('#toast');
-    t.textContent = msg;
-    t.className = 'toast show' + (good ? ' good' : '');
-    clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => { t.className = 'toast'; }, 2600);
-  }
-  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+  let currentLesson = null;
+  let running = false;
 
   /* ============================================================
    *  终端
    * ============================================================ */
-  const termOut = $('#termOut');
-  const input = $('#cmd');
-  const history = [];
-  let histIdx = -1;
-
-  function printItem(item) {
-    const div = el('div', 'line');
-    if (item.spans) {
-      item.spans.forEach((s) => {
-        const sp = el('span', s.cls || 'plain', s.text);
-        div.appendChild(sp);
-      });
-    } else {
-      div.className = 'line ' + (item.cls || 'plain');
-      div.textContent = item.text === '' ? '\u00a0' : item.text;
-    }
-    termOut.appendChild(div);
-  }
-  function printEcho(cmd) {
-    const div = el('div', 'line echo');
-    const p = el('b', null, '~/project $ ');
-    div.appendChild(p);
-    div.appendChild(document.createTextNode(cmd));
-    termOut.appendChild(div);
-  }
-  function divider(text) {
-    printItem({ text: '── ' + text + ' ' + '─'.repeat(Math.max(0, 46 - text.length)), cls: 'divider' });
-  }
-  function scrollBottom() { termOut.scrollTop = termOut.scrollHeight; }
-
-  function execute(cmd, silentEcho) {
-    const line = String(cmd).trim();
-    if (!line) return null;
-    if (/^clear$/i.test(line)) { termOut.innerHTML = ''; refresh(); return null; }
-    if (!silentEcho) printEcho(line);
-    const r = engine.run(line);
-    r.lines.forEach(printItem);
-    if (hintsOn && r.hints.length) r.hints.forEach((h) => printItem({ text: '提示 · ' + h, cls: 'hint' }));
-    scrollBottom();
-    refresh();
-    return r;
-  }
-
-  /* 自动演示 */
-  async function playDemo(cmds) {
-    if (demoRunning) return;
-    demoRunning = true;
-    const my = ++demoToken;
-    toggleDemoButtons(true);
-    divider('开始自动演示');
-    for (const c of cmds) {
-      if (my !== demoToken) break;
-      if (c === '__wipe__') {
-        engine.wipe();
-        printItem({ text: '（演示需要：清空了沙盒，但保留你已完成的记录）', cls: 'muted' });
-        refresh();
-        await sleep(600);
-        continue;
-      }
-      execute(c);
-      await sleep(750);
-    }
-    divider('演示结束，轮到你了');
-    demoRunning = false;
-    toggleDemoButtons(false);
-  }
-  function toggleDemoButtons(running) {
-    document.querySelectorAll('[data-demo]').forEach((b) => { b.disabled = running; });
-  }
-
-  /* 输入框 */
-  input.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') {
-      const v = input.value;
-      if (v.trim()) { history.push(v.trim()); histIdx = history.length; }
-      input.value = '';
-      execute(v);
-    } else if (e.key === 'ArrowUp') {
-      e.preventDefault();
-      if (!history.length) return;
-      histIdx = Math.max(0, histIdx - 1);
-      input.value = history[histIdx] || '';
-    } else if (e.key === 'ArrowDown') {
-      e.preventDefault();
-      if (!history.length) return;
-      histIdx = Math.min(history.length, histIdx + 1);
-      input.value = history[histIdx] || '';
-    } else if (e.key === 'Tab') {
-      e.preventDefault();
-      complete();
-    } else if (e.key === 'l' && e.ctrlKey) {
-      e.preventDefault(); termOut.innerHTML = '';
-    }
+  const term = new TK.Terminal({
+    outEl: '#termOut',
+    inputEl: '#cmd',
+    promptEl: '#prompt',
+    promptHtml: () => PROMPT,
+    completer: complete,
+    onSubmit: (line) => execute(line),
   });
 
   const COMMANDS = [
@@ -2619,51 +3063,22 @@ svg.graph .node:hover circle { stroke: #fff; stroke-width: 2; }
     'git show HEAD', 'git reflog', 'git config user.name ', 'git config user.email ',
     'ls', 'cat ', 'touch ', 'echo "内容" > 文件.txt', 'clear', 'help',
   ];
-  function complete() {
-    const v = input.value;
-    if (!v) { printItem({ text: COMMANDS.join('   '), cls: 'muted' }); scrollBottom(); return; }
-    const hits = COMMANDS.filter((c) => c.startsWith(v));
-    if (hits.length === 1) { input.value = hits[0]; input.focus(); return; }
-    if (hits.length > 1) {
-      const common = hits.reduce((a, b) => {
-        let i = 0; while (i < a.length && i < b.length && a[i] === b[i]) i++;
-        return a.slice(0, i);
-      });
-      if (common.length > v.length) { input.value = common; input.focus(); }
-      else { printItem({ text: hits.join('   '), cls: 'muted' }); scrollBottom(); }
-    }
-  }
+  function complete(v) { return COMMANDS.filter((c) => c.indexOf(v) === 0); }
 
-  document.querySelectorAll('.chips .chip').forEach((c) => {
-    c.addEventListener('click', () => {
-      input.value = c.dataset.cmd || c.textContent;
-      input.focus();
-      const n = input.value.length;
-      input.setSelectionRange(n, n);
-    });
-  });
+  function execute(line, silentEcho) {
+    const cmd = String(line === undefined || line === null ? '' : line).trim();
+    if (!cmd) return null;
+    if (/^clear$/i.test(cmd)) { term.clear(); refresh(); return null; }
+    if (!silentEcho) term.echo(cmd, '<b>' + PROMPT + '</b>');
+    const r = engine.run(cmd);
+    term.printResult(r, hintsOn);
+    refresh();
+    return r;
+  }
 
   /* ============================================================
-   *  提交图
+   *  提交图（git 专有）
    * ============================================================ */
-  /* 中文字符按 2 个宽度算，用来估算 SVG 文本宽度 */
-  function dispWidth(s) {
-    let w = 0;
-    for (const ch of String(s)) w += /[\u1100-\u115F\u2E80-\uA4CF\uAC00-\uD7A3\uF900-\uFAFF\uFE30-\uFE6F\uFF00-\uFF60\uFFE0-\uFFE6]/.test(ch) ? 2 : 1;
-    return w;
-  }
-  function truncate(s, maxUnits) {
-    if (dispWidth(s) <= maxUnits) return s;
-    let out = '';
-    let w = 0;
-    for (const ch of String(s)) {
-      const cw = /[\u1100-\u115F\u2E80-\uA4CF\uAC00-\uD7A3\uF900-\uFAFF\uFE30-\uFE6F\uFF00-\uFF60\uFFE0-\uFFE6]/.test(ch) ? 2 : 1;
-      if (w + cw > maxUnits - 1) break;
-      out += ch; w += cw;
-    }
-    return out + '…';
-  }
-
   function renderGraph() {
     const box = $('#graphScroll');
     const g = engine.buildGraph({ all: true });
@@ -2689,10 +3104,10 @@ svg.graph .node:hover circle { stroke: #fff; stroke-width: 2; }
     });
     const hashX = labelX + maxLabelPx + 8;
     const w = hashX + 54;
-    const h = PADY * 2 + Math.max(0, g.rows.length - 1) * ROW;
+    const hgt = PADY * 2 + Math.max(0, g.rows.length - 1) * ROW;
     const headOid = engine.repo.oid;
 
-    let svg = '<svg class="graph" width="' + w + '" height="' + h + '" viewBox="0 0 ' + w + ' ' + h + '">';
+    let svg = '<svg class="graph" width="' + w + '" height="' + hgt + '" viewBox="0 0 ' + w + ' ' + hgt + '">';
 
     // 先画线，后画圆点
     g.rows.forEach((row, i) => {
@@ -2750,22 +3165,22 @@ svg.graph .node:hover circle { stroke: #fff; stroke-width: 2; }
     const node = e.target.closest('[data-oid]');
     if (node) {
       execute('git show ' + node.dataset.oid.slice(0, 7));
-      input.focus();
+      term.focus();
     }
   });
 
   /* ============================================================
-   *  三区面板（工作区 / 暂存区 / 版本库）
+   *  三区面板（git 专有）
    * ============================================================ */
   function chip(path, kind, editable) {
-    const c = el('div', 'fchip ' + kind);
+    const c = h('div', 'fchip ' + kind);
     c.title = path + '　（点击右侧 ✎ 编辑）';
-    c.appendChild(el('span', 'dot'));
-    c.appendChild(el('span', 'name', path));
+    c.appendChild(h('span', 'dot'));
+    c.appendChild(h('span', 'name', path));
     if (editable) {
-      const b = el('button', 'edit', '✎');
+      const b = h('button', 'edit', '✎');
       b.title = '编辑这个文件';
-      b.addEventListener('click', (ev) => { ev.stopPropagation(); openEditor(path); });
+      b.addEventListener('click', (ev) => { ev.stopPropagation(); editor.open(path); });
       c.appendChild(b);
     }
     return c;
@@ -2780,9 +3195,9 @@ svg.graph .node:hover circle { stroke: #fff; stroke-width: 2; }
     wd.innerHTML = '';
     const wdFiles = Array.from(r.workdir.keys()).sort();
     if (!r.initialized) {
-      wd.appendChild(el('div', 'empty', '（先 git init）'));
+      wd.appendChild(h('div', 'empty', '（先 git init）'));
     } else if (!wdFiles.length) {
-      wd.appendChild(el('div', 'empty', '空文件夹'));
+      wd.appendChild(h('div', 'empty', '空文件夹'));
     } else {
       wdFiles.forEach((p) => {
         let kind = 'clean';
@@ -2798,7 +3213,7 @@ svg.graph .node:hover circle { stroke: #fff; stroke-width: 2; }
     const ix = $('#zoneIndex');
     ix.innerHTML = '';
     const idxFiles = Array.from(r.index.keys()).sort();
-    if (!idxFiles.length) ix.appendChild(el('div', 'empty', '空'));
+    if (!idxFiles.length) ix.appendChild(h('div', 'empty', '空'));
     else idxFiles.forEach((p) => {
       let kind = 'clean';
       if (snap.staged.added.indexOf(p) !== -1) kind = 'add';
@@ -2810,279 +3225,215 @@ svg.graph .node:hover circle { stroke: #fff; stroke-width: 2; }
     const hd = $('#zoneHead');
     hd.innerHTML = '';
     const headFiles = Array.from(snap.head.keys()).sort();
-    if (!engine.repo.oid) hd.appendChild(el('div', 'empty', '还没有提交'));
-    else if (!headFiles.length) hd.appendChild(el('div', 'empty', '空提交'));
+    if (!engine.repo.oid) hd.appendChild(h('div', 'empty', '还没有提交'));
+    else if (!headFiles.length) hd.appendChild(h('div', 'empty', '空提交'));
     else headFiles.forEach((p) => hd.appendChild(chip(p, 'clean', false)));
 
     // ---- 状态栏 ----
     const st = $('#zoneStatus');
     st.innerHTML = '';
     const branchTxt = !r.initialized ? '未初始化' : (snap.branch || 'HEAD 分离');
-    st.appendChild(el('span', 'branch', '⎇ ' + branchTxt));
+    st.appendChild(h('span', 'branch', '⎇ ' + branchTxt));
     const nCommits = r.objects.size;
-    st.appendChild(el('span', null, nCommits + ' 个提交'));
-    if (r.initialized && snap.oid) st.appendChild(el('span', null, '@' + snap.oid.slice(0, 7)));
-    if (snap.merging) st.appendChild(el('span', 'warn', '⚠ 正在合并（有冲突）'));
+    st.appendChild(h('span', null, nCommits + ' 个提交'));
+    if (r.initialized && snap.oid) st.appendChild(h('span', null, '@' + snap.oid.slice(0, 7)));
+    if (snap.merging) st.appendChild(h('span', 'warn', '⚠ 正在合并（有冲突）'));
   }
 
   /* ============================================================
-   *  文件编辑器
+   *  文件编辑器（界面来自内核，读写落在这里）
    * ============================================================ */
-  let editingPath = null;
-  function openEditor(path) {
-    editingPath = path || null;
-    const exists = path !== null && engine.repo.workdir.has(path);
-    $('#editorTitle').textContent = exists ? '编辑文件' : '新建文件';
-    $('#editorName').textContent = path || '（新文件）';
-    $('#editorName').style.display = path ? '' : 'none';
-    $('#editorNameInput').style.display = path ? 'none' : '';
-    if (!path) $('#editorNameInput').value = 'new-file.txt';
-    $('#editorArea').value = exists ? engine.repo.workdir.get(path) : '';
-    $('#editorModal').classList.add('open');
-    setTimeout(() => (exists ? $('#editorArea') : $('#editorNameInput')).focus(), 40);
-  }
-  function closeEditor() { $('#editorModal').classList.remove('open'); }
-
-  $('#editorSave').addEventListener('click', () => {
-    const path = editingPath !== null ? editingPath : $('#editorNameInput').value.trim();
-    if (!path) { toast('请填写文件名'); return; }
-    const norm = GitSim.normalizePath(path);
-    if (norm.error) { toast(norm.error.replace('fatal: ', '')); return; }
-    if (norm.ok === '.') { toast('文件名不合法'); return; }
-    engine.repo.workdir.set(norm.ok, $('#editorArea').value);
-    engine.observe();
-    closeEditor();
-    refresh();
-    toast('已保存到工作区：' + norm.ok + '（还需要 git add）', true);
+  const editor = new TK.FileEditor({
+    modal: '#editorModal', titleEl: '#editorTitle', nameEl: '#editorName',
+    nameInputEl: '#editorNameInput', areaEl: '#editorArea', saveEl: '#editorSave',
+    cancelEl: '#editorCancel',
+    defaultName: 'new-file.txt',
+    defaultContent: '',
+    resolve: (p) => {
+      const norm = window.GitSim.normalizePath(p);
+      if (norm.error) return { error: norm.error.replace('fatal: ', '') };
+      if (norm.ok === '.') return { error: '文件名不合法' };
+      return { abs: norm.ok };
+    },
+    read: (abs) => (engine.repo.workdir.has(abs) ? engine.repo.workdir.get(abs) : null),
+    write: (abs, content) => { engine.repo.workdir.set(abs, content); },
+    displayPath: (abs) => abs,
+    note: '保存后文件在「工作区」，还需要 git add 才会进入暂存区',
+    onSaved: (abs) => {
+      refresh();
+      TK.toast('已保存到工作区：' + abs + '（还需要 git add）', true);
+    },
   });
 
   /* ============================================================
-   *  章节面板
-   * ============================================================ */
-  function renderLessonList() {
-    const box = $('#lessonList');
-    box.innerHTML = '';
-    LESSONS.forEach((l) => {
-      const b = el('button', 'lesson-item' + (l.id === currentLesson.id ? ' active' : '') + (progress.done[l.id] ? ' done' : ''));
-      b.appendChild(el('span', 'ch', l.chapter));
-      b.appendChild(el('span', 'tt', l.title));
-      b.addEventListener('click', () => startLesson(l, true));
-      box.appendChild(b);
-    });
-    const total = LESSONS.length;
-    const done = LESSONS.filter((l) => progress.done[l.id]).length;
-    $('#progressPill').textContent = '进度 ' + done + ' / ' + total + ' 章';
-  }
-
-  function renderLessonDetail() {
-    const l = currentLesson;
-    $('#lessonTitle').textContent = l.chapter + ' · ' + l.title;
-    $('#lessonGoal').textContent = '🎯 ' + l.goal;
-    const intro = $('#lessonIntro');
-    intro.innerHTML = '';
-    l.intro.forEach((p) => intro.appendChild(el('p', null, p)));
-
-    const ul = $('#taskList');
-    ul.innerHTML = '';
-    l.tasks.forEach((t, i) => {
-      const li = el('li');
-      li.dataset.idx = i;
-      li.appendChild(el('span', 'box', '☐'));
-      const wrap = el('span', 'txt');
-      wrap.appendChild(document.createTextNode(t.text));
-      wrap.appendChild(el('span', 'hint', '▸ ' + t.hint));
-      li.appendChild(wrap);
-      ul.appendChild(li);
-    });
-    $('#allDone').style.display = 'none';
-  }
-
-  function evaluateTasks() {
-    if (!currentLesson) return;
-    const items = $('#taskList').children;
-    let all = true;
-    currentLesson.tasks.forEach((t, i) => {
-      let ok = false;
-      try { ok = !!t.check(engine); } catch (e) { ok = false; }
-      const li = items[i];
-      if (!li) return;
-      li.classList.toggle('ok', ok);
-      li.querySelector('.box').textContent = ok ? '☑' : '☐';
-      if (!ok) all = false;
-    });
-    if (all && !progress.done[currentLesson.id]) {
-      progress.done[currentLesson.id] = true;
-      saveProgress();
-      renderLessonList();
-      toast('✓ 「' + currentLesson.title + '」通关！', true);
-    }
-    $('#allDone').style.display = all ? '' : 'none';
-    if (!all && progress.done[currentLesson.id]) {
-      // 沙盒被重置后任务会重新变灰，但进度保留，属于正常现象
-    }
-  }
-
-  function startLesson(l, announce) {
-    currentLesson = l;
-    demoToken++;
-    engine.reset();
-    (l.prepare || []).forEach((c) => engine.run(c));
-    termOut.innerHTML = '';
-    renderLessonDetail();
-    renderLessonList();
-    divider(l.chapter + ' · ' + l.title);
-    printItem({ text: l.goal, cls: 'cyan' });
-    printItem({ text: '', cls: 'plain' });
-    if (l.prepare && l.prepare.length) {
-      printItem({ text: '（本章的沙盒已经替你铺好了：' + l.prepare.length + ' 条命令已自动执行）', cls: 'muted' });
-      printItem({ text: '', cls: 'plain' });
-    }
-    const first = l.tasks[0];
-    printItem({ text: '▸ 你的第一个目标：' + first.text, cls: 'ok' });
-    printItem({ text: '   提示：' + first.hint, cls: 'muted' });
-    printItem({ text: '', cls: 'plain' });
-    printItem({ text: '提示 · 每条命令执行后，我都会用这种黄色便签告诉你刚才发生了什么。', cls: 'hint' });
-    scrollBottom();
-    refresh();
-    if (announce) toast('已进入：' + l.title);
-    input.focus();
-  }
-
-  /* ============================================================
-   *  速查表
+   *  速查表（git 专有数据）
    * ============================================================ */
   const CHEAT = [
-    ['起步', [
+    { title: '起步', rows: [
       ['git init', '把当前文件夹变成 Git 仓库'],
       ['git status', '查看三个区域的状态（最常用）'],
       ['git add <文件> / git add .', '把改动放进暂存区'],
       ['git commit -m "说明"', '把暂存区存成一个版本'],
-    ]],
-    ['查看', [
+    ] },
+    { title: '查看', rows: [
       ['git log --oneline --graph --all', '用图的方式看全部历史'],
       ['git diff', '看未暂存的改动'],
       ['git diff --staged', '看已暂存、待提交的改动'],
       ['git show HEAD', '看某次提交的细节'],
       ['git reflog', '看你每一步操作（救命用）'],
-    ]],
-    ['分支', [
+    ] },
+    { title: '分支', rows: [
       ['git branch', '列出分支'],
       ['git checkout -b <名字>', '新建并切换分支'],
       ['git switch <名字>', '切换分支'],
       ['git merge <分支>', '把某分支合并进当前分支'],
       ['git merge --abort', '放弃这次合并'],
-    ]],
-    ['撤销', [
+    ] },
+    { title: '撤销', rows: [
       ['git restore <文件>', '丢弃某文件未提交的改动'],
       ['git restore --staged <文件>', '把它从暂存区拿出来（改动还在）'],
       ['git reset --soft HEAD~1', '撤销上次提交，改动留在暂存区'],
       ['git reset --hard HEAD', '丢弃所有未提交改动（危险）'],
       ['git revert <提交>', '新增一个提交来抵消旧提交（安全）'],
       ['git stash / git stash pop', '把改动先收起来 / 再取回来'],
-    ]],
-    ['远程', [
+    ] },
+    { title: '远程', rows: [
       ['git remote add origin <网址>', '登记远程仓库'],
       ['git push -u origin main', '推送并建立跟踪'],
       ['git pull', '拉取远程更新并合并'],
       ['git clone <网址>', '把整个仓库复制到本地'],
-    ]],
-    ['本模拟器的额外命令', [
+    ] },
+    { title: '本模拟器的额外命令', rows: [
       ['ls / cat <文件>', '看看当前文件夹里有什么'],
       ['echo "内容" > <文件>', '写一个文件（>> 表示追加）'],
       ['touch <文件>', '新建空文件'],
       ['clear', '清屏'],
-    ]],
+    ] },
   ];
 
-  function renderCheat() {
-    const box = $('#cheatBody');
-    box.innerHTML = '';
-    CHEAT.forEach(([group, rows]) => {
-      const g = el('div', 'cheat-group');
-      g.appendChild(el('h4', null, group));
-      rows.forEach(([cmd, desc]) => {
-        const row = el('div', 'cheat-row');
-        row.appendChild(el('code', null, cmd));
-        row.appendChild(el('span', null, desc));
-        row.addEventListener('click', () => {
-          $('#cheatModal').classList.remove('open');
-          input.value = cmd;
-          input.focus();
-          toast('已填入输入框：' + cmd);
-        });
-        g.appendChild(row);
-      });
-      box.appendChild(g);
-    });
+  /* ============================================================
+   *  课程
+   * ============================================================ */
+  function startLesson(l) {
+    currentLesson = l;
+    engine.reset();
+    (l.prepare || []).forEach((c) => engine.run(c));
+    term.clear();
+    term.divider(l.chapter + ' · ' + l.title);
+    term.print({ text: l.goal, cls: 'cyan' });
+    term.print({ text: '' });
+    if (l.prepare && l.prepare.length) {
+      term.print({ text: '（本章的沙盒已经替你铺好了：' + l.prepare.length + ' 条命令已自动执行）', cls: 'muted' });
+      term.print({ text: '' });
+    }
+    const first = l.tasks[0];
+    term.print({ text: '▸ 你的第一个目标：' + first.text, cls: 'ok' });
+    term.print({ text: '   提示：' + first.hint, cls: 'muted' });
+    term.print({ text: '' });
+    term.print({ text: '提示 · 每条命令执行后，我都会用这种黄色便签告诉你刚才发生了什么。', cls: 'hint' });
+    refresh();
+    term.focus();
+  }
+
+  function refresh() {
+    try { renderGraph(); } catch (e) { console.error(e); }
+    try { renderZones(); } catch (e) { console.error(e); }
+    try { lessonPanel.evaluate(); } catch (e) { console.error(e); }
   }
 
   /* ============================================================
-   *  事件绑定
+   *  装配
    * ============================================================ */
-  $('#btnCheat').addEventListener('click', () => $('#cheatModal').classList.add('open'));
-  $('#cheatClose').addEventListener('click', () => $('#cheatModal').classList.remove('open'));
-  $('#editorCancel').addEventListener('click', closeEditor);
-  $('#btnNewFile').addEventListener('click', () => openEditor(null));
-  $('#btnRestartLesson').addEventListener('click', () => startLesson(currentLesson, true));
-  document.querySelectorAll('[data-demo]').forEach((b) => b.addEventListener('click', () => playDemo(currentLesson.demo || [])));
+  const lessonPanel = new TK.LessonPanel({
+    lessons: LESSONS,
+    engine: engine,
+    progressKey: 'git-learn-progress-v1',
+    onStart: (l) => startLesson(l),
+  });
+
+  const cheat = new TK.CheatSheet({
+    el: '#cheatBody', modal: '#cheatModal', input: '#cmd', groups: CHEAT,
+  });
+
+  $('#btnCheat').addEventListener('click', () => cheat.open());
+  $('#cheatClose').addEventListener('click', () => cheat.close());
+  $('#btnNewFile').addEventListener('click', () => editor.open(null));
+  $('#btnRestartLesson').addEventListener('click', () => { if (currentLesson) startLesson(currentLesson); });
+
+  $('#hintsToggle').addEventListener('change', (e) => {
+    hintsOn = e.target.checked;
+    TK.toast(hintsOn ? '已打开新手解释' : '已关闭新手解释');
+  });
 
   $('#btnWipe').addEventListener('click', () => {
     engine.wipe();
-    divider('已清空沙盒（你完成的章节进度仍然保留）');
+    term.divider('已清空沙盒（你完成的章节进度仍然保留）');
     refresh();
-    toast('沙盒已清空');
+    TK.toast('沙盒已清空');
   });
 
   $('#btnResetAll').addEventListener('click', () => {
     if (!confirm('这会清空沙盒 + 清空所有章节进度，确定吗？')) return;
-    progress = { done: {} };
-    saveProgress();
-    startLesson(LESSONS[0], false);
-    toast('已全部重置');
-  });
-
-  $('#hintsToggle').addEventListener('change', (e) => {
-    hintsOn = e.target.checked;
-    toast(hintsOn ? '已打开新手解释' : '已关闭新手解释');
+    lessonPanel.progress.clear();
+    startLesson(LESSONS[0]);
+    TK.toast('已全部重置');
   });
 
   document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') {
-      $('#cheatModal').classList.remove('open');
-      closeEditor();
-    }
-    if (e.key === '/' && document.activeElement !== input && !/INPUT|TEXTAREA/.test(document.activeElement.tagName)) {
-      e.preventDefault(); input.focus();
+    if (e.key === 'Escape') { cheat.close(); editor.close(); }
+    if (e.key === '/' && !/INPUT|TEXTAREA/.test(document.activeElement.tagName)) {
+      e.preventDefault(); term.focus();
     }
   });
   $('#terminalPanel').addEventListener('click', (e) => {
     if (window.getSelection().toString()) return;
-    if (!e.target.closest('button, a, input')) input.focus();
+    if (!e.target.closest('button, a, input, textarea')) term.focus();
+  });
+  TK.qsa('.chips .chip[data-cmd]').forEach((c) => {
+    c.addEventListener('click', () => {
+      const inp = $('#cmd');
+      inp.value = c.dataset.cmd;
+      inp.focus();
+      const n = inp.value.length;
+      try { inp.setSelectionRange(n, n); } catch (e) {}
+    });
+  });
+  TK.qsa('[data-demo]').forEach((b) => {
+    b.addEventListener('click', () => {
+      if (!currentLesson || running) return;
+      running = true;
+      term.playDemo(currentLesson.demo || [], (cmd) => {
+        if (cmd === '__wipe__') {
+          engine.wipe();
+          term.print({ text: '（演示需要：清空了沙盒，但保留你已完成的记录）', cls: 'muted' });
+          refresh();
+          return;
+        }
+        execute(cmd);
+      }).then(() => { running = false; });
+    });
   });
 
-  /* ============================================================
-   *  刷新 & 启动
-   * ============================================================ */
-  function refresh() {
-    try { renderGraph(); } catch (e) { console.error(e); }
-    try { renderZones(); } catch (e) { console.error(e); }
-    try { evaluateTasks(); } catch (e) { console.error(e); }
-  }
-
-  /* 暴露给自动化测试 / 控制台调试用 */
+  /* 暴露给控制台调试 / 自动化测试 */
   window.GitLearnUI = {
     engine: engine,
     execute: execute,
     refresh: refresh,
     startLesson: startLesson,
+    term: term,
+    editor: editor,
     get lesson() { return currentLesson; },
   };
 
-  renderCheat();
-  startLesson(LESSONS[0], false);
-  printItem({ text: '', cls: 'plain' });
-  printItem({ text: '（想先随便玩玩也可以：左边输入 git init 开始，右边会实时显示提交树。点上方「命令速查表」能查命令。）', cls: 'muted' });
-  scrollBottom();
+  /* 开场 */
+  if (LESSONS.length) {
+    lessonPanel.start(LESSONS[0], false);
+  } else {
+    term.print({ text: '课程数据没有加载成功。', cls: 'err' });
+  }
+  term.print({ text: '', cls: 'plain' });
+  term.print({ text: '（想先随便玩玩也可以：左边输入 git init 开始，右边会实时显示提交树。点上方「命令速查表」能查命令。）', cls: 'muted' });
+  term.scroll();
 })();
 
 </script>

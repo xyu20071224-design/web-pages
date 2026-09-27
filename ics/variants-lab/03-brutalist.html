@@ -961,7 +961,7 @@ const PUZZLES = [
   {
     id: 'bitCount', tbl: 1, rating: 4, maxOps: 40, args: ['x'], mode: 'expr', tests: 'single',
     zh: '数出 <code>x</code> 里 1 的个数（汉明重量）。',
-    ref: x => { let m1 = 0x55 | (0x55 << 8); let m2 = 0x33 | (0x33 << 8); let m4 = 0x0F | (0x0F << 8); let m8 = 0xFF | (0xFF << 16); m1 = m1 | (m1 << 16); m2 = m2 | (m2 << 16); m4 = m4 | (m4 << 16); x = (x & m1) + ((x >> 1) & m1); x = (x & m2) + ((x >> 2) & m2); x = (x & m4) + ((x >> 4) & m4); x = (x + (x >> 8)) & m8; x = (x + (x >> 16)) & 0x3F; return x; }, refSrc: 'int bitCount(int x) {\n  int m1 = 0x55 | (0x55 << 8);\n  int m2 = 0x33 | (0x33 << 8);\n  int m4 = 0x0F | (0x0F << 8);\n  int m8 = 0xFF | (0xFF << 16);\n  m1 = m1 | (m1 << 16);\n  m2 = m2 | (m2 << 16);\n  m4 = m4 | (m4 << 16);\n  x = (x & m1) + ((x >> 1) & m1);\n  x = (x & m2) + ((x >> 2) & m2);\n  x = (x & m4) + ((x >> 4) & m4);\n  x = (x + (x >> 8)) & m8;\n  x = (x + (x >> 16)) & 0x3F;\n  return x;\n}',
+    ref: x => { let m1 = 0x55 | (0x55 << 8); let m2 = 0x33 | (0x33 << 8); let m4 = 0x0F | (0x0F << 8); m1 = m1 | (m1 << 16); m2 = m2 | (m2 << 16); m4 = m4 | (m4 << 16); x = (x & m1) + ((x >> 1) & m1); x = (x & m2) + ((x >> 2) & m2); x = (x & m4) + ((x >> 4) & m4); x = x + (x >> 8); x = x + (x >> 16); return x & 0x3F; }, refSrc: 'int bitCount(int x) {\n  int m1 = 0x55 | (0x55 << 8);\n  int m2 = 0x33 | (0x33 << 8);\n  int m4 = 0x0F | (0x0F << 8);\n  m1 = m1 | (m1 << 16);\n  m2 = m2 | (m2 << 16);\n  m4 = m4 | (m4 << 16);\n  x = (x & m1) + ((x >> 1) & m1);\n  x = (x & m2) + ((x >> 2) & m2);\n  x = (x & m4) + ((x >> 4) & m4);\n  x = x + (x >> 8);\n  x = x + (x >> 16);\n  return x & 0x3F;\n}',
     hints: ['不许用循环，那就要「并行地」数：把相邻位的 1 相加到 2 位一组里。',
             '经典技巧：<code>x = (x &amp; 0x55…) + ((x &gt;&gt; 1) &amp; 0x55…)</code> 把每 2 位的 1 个数装进 2 位；再 <code>x = (x &amp; 0x33…) + ((x &gt;&gt; 2) &amp; 0x33…)</code> 装进 4 位，依此类推。',
             '但常量不能超过 0xFF，所以掩码得自己「造」出来（比如用 <code>~0</code> 和移位拼）。最后注意要 <code>&amp; 0x3F</code> 之类的收尾，第 4 步之后还要再合并一次。'],
@@ -1013,7 +1013,7 @@ const PUZZLES = [
   {
     id: 'satSub', tbl: 2, rating: 4, maxOps: 30, args: ['x', 'y'], mode: 'expr', tests: 'pair',
     zh: '计算 <code>x − y</code>，若溢出则<b>饱和</b>到 <code>TMin</code> 或 <code>TMax</code>。',
-    ref: (x, y) => { let s = x + ~y + 1; let ovf = ((x ^ y) & (x ^ s)) >> 31; let neg = x >> 31; let sat = (neg & (1 << 31)) | (~neg & ~(1 << 31)); return (ovf & sat) | (~ovf & s); }, refSrc: 'int satSub(int x, int y) {\n  int s = x + ~y + 1;\n  int ovf = ((x ^ y) & (x ^ s)) >> 31;\n  int neg = x >> 31;\n  int sat = (neg & (1 << 31)) | (~neg & ~(1 << 31));\n  return (ovf & sat) | (~ovf & s);\n}',
+    ref: (x, y) => { const d = x + ~y + 1; const ovf = ((x ^ y) & (x ^ d)) >> 31; const m = x >> 31; const sat = (1 << 31) + ~m; return (ovf & sat) | (~ovf & d); }, refSrc: 'int satSub(int x, int y) {\n  int d = x + ~y + 1;\n  int ovf = ((x ^ y) & (x ^ d)) >> 31;\n  int m = x >> 31;\n  int sat = (1 << 31) + ~m;\n  return (ovf & sat) | (~ovf & d);\n}',
     hints: ['先判断是否溢出：<code>x − y</code> 相当于 <code>x + (−y)</code>，而 <code>−y</code> 可能本身溢出（y = TMin 时）。',
             '拆开看：<b>正溢出</b>（结果大于 TMax）发生在 x 为正、y 为负时；<b>负溢出</b>发生在 x 为负、y 为正时。',
             '溢出时用掩码选择常数边界（TMax = <code>~(1 &lt;&lt; 31)</code>，TMin = <code>1 &lt;&lt; 31</code>），没溢出就返回差值。可以用 <code>!</code> 把条件变成 0/1 再取负变成全 1 掩码。'],
@@ -1031,7 +1031,7 @@ const PUZZLES = [
   {
     id: 'float_f2i', tbl: 3, rating: 4, maxOps: 30, args: ['uf'], mode: 'body', tests: 'fp',
     zh: '把浮点数 <code>f</code>（参数 <code>uf</code> 的位模式）转成整数，<b>向零截断</b>。若 <code>f</code> 是 NaN 或超出 <code>int</code> 范围，返回 <code>0x80000000</code>。',
-    ref: uf => { const u = uf >>> 0; const sign = u >>> 31; const exp = (u >>> 23) & 0xFF; const frac = u & 0x7FFFFF; const E = exp - 127; const m = frac | 0x800000; let val; if (exp === 0xFF) return TMIN; if (E < 0) return 0; if (E > 30) return TMIN; if (E >= 23) val = i32(m << (E - 23)); else val = i32(m >>> (23 - E)); if (sign) val = i32(-val); return val; }, refSrc: 'int float_f2i(unsigned uf) {\n  int sign = uf >> 31;\n  int exp = (uf >> 23) & 0xFF;\n  int frac = uf & 0x7FFFFF;\n  int E = exp - 127;\n  int m = frac | 0x800000;\n  int val;\n  if (exp == 0xFF) return 0x80000000;\n  if (E < 0) return 0;\n  if (E > 30) return 0x80000000;\n  if (E >= 23) val = m << (E - 23);\n  else val = m >> (23 - E);\n  if (sign) val = -val;\n  return val;\n}',
+    ref: uf => { const u = uf >>> 0; const sign = u >>> 31; const E = ((u >>> 23) & 0xFF) - 127; const m = (u & 0x7FFFFF) | 0x800000; let val; if (E > 30) return TMIN; if (E < 0) return 0; if (E >= 23) val = i32(m << (E - 23)); else val = i32(m >>> (23 - E)); if (sign) val = i32(-val); return val; }, refSrc: 'int float_f2i(unsigned uf) {\n  int sign = uf >> 31;\n  int E = ((uf >> 23) & 0xFF) - 127;\n  int m = (uf & 0x7FFFFF) | 0x800000;\n  int val;\n  if (E > 30) return 0x80000000;\n  if (E < 0) return 0;\n  if (E >= 23) val = m << (E - 23);\n  else val = m >> (23 - E);\n  if (sign) val = -val;\n  return val;\n}',
     hints: ['先拆出三个字段：符号位、8 位指数、23 位尾数。',
             '规格化数的隐含 1 别忘了补上：<code>m = frac | 0x800000</code>，这样 m 是 24 位有效数字的整数形式。',
             '真正要做的移位量是 <code>E − 23</code>：E &gt; 23 时左移，E &lt; 23 时右移（右移自然实现向零截断）。E &lt; 0 说明 |f| &lt; 1，结果为 0。'],

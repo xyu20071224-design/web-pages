@@ -551,7 +551,7 @@ button.p:hover{background:#5ee6f7;color:var(--accent-ink);box-shadow:0 0 18px -4
     <div class="box"><div class="t">怎么用这些评测器</div>
       在「你的实现」里写表达式（只写表达式，不要写 <code>return</code> 和分号），点「测试」。测试覆盖边角值、全部 16 位取值、以及大量随机 32 位值；失败时会给出<b>反例</b>。如果你在 <code>bits.c</code> 里的写法与本页的变量名不同也没关系 —— 把变量对应过来即可。
       <br><br>
-      <b>关于答案：</b>这里只给「思路提示」，不提供可直接粘贴的完整解答 —— 那是你的作业。评测器的作用是帮你<b>验证自己</b>的想法。
+      <b>关于答案：</b>每题下方折叠的「参考实现」是一份<b>满足本题全部编码规则</b>（合法运算符、运算符个数上限、整数题常量不超过 8 位）的 <code>bits.c</code> 解法，可直接对照或抄进 <code>bits.c</code>；建议先自己写再看。页面评测始终以这份合法解为准。
     </div>
 
     <div id="pz1List"></div>
@@ -569,10 +569,11 @@ button.p:hover{background:#5ee6f7;color:var(--accent-ink);box-shadow:0 0 18px -4
     <h2>5. 浮点谜题（4 题）<span class="srcref">原第 3–4 页 Table 3</span></h2>
     <p class="lede">在这一部分，参数和返回值都是 <code>unsigned</code>，但它们的<b>位模式代表浮点数</b>。你必须完全用整数运算把浮点操作「做」出来。</p>
     <div id="pz3List"></div>
-    <div class="box"><div class="t">两个约定（对照你的 bits.c 注释）</div>
+        <div class="box"><div class="t">三个约定（全部按 bits.c 注释）</div>
       <ul style="margin:4px 0 0">
-        <li><code>float_f2i</code>：当参数是 NaN 或超出 <code>int</code> 范围时，按本实验惯例应返回 <code>0x80000000</code>。</li>
-        <li><code>float_negpwr2</code>：按 bits.c 注释，<code>x</code> 是<b>任意 32 位整数</b>；结果小到无法用非规格化数表示时返回 0，大到溢出时返回 <code>+INF</code>。本页参考实现已按此契约实现，你仍可自行编辑对照。</li>
+        <li><code>float_f2i</code>：当参数是 NaN 或超出 <code>int</code> 范围时返回 <code>0x80000000</code>。</li>
+        <li><code>float_negpwr2</code>：<code>x</code> 是<b>任意 32 位整数</b>；结果小到无法用非规格化数表示时返回 0，大到溢出时返回 <code>+INF</code>。</li>
+        <li><code>float_greater</code>：按表达式 <code>x &gt; y</code> 实现，任一参数为 NaN 时比较结果为 0（bits.c 里「When argument is NaN, return argument」一句与本题表达式矛盾，按表达式处理）。</li>
       </ul>
     </div>
   </section>
@@ -698,7 +699,7 @@ button.p:hover{background:#5ee6f7;color:var(--accent-ink);box-shadow:0 0 18px -4
     <h3>7.3 祝你好运</h3>
     <p>有技术问题、或者卡住了，尽管去「麻烦」助教 :)<br>玩位玩得开心，祝你好运！</p>
   </section>
-</main>
+  </main>
 
 </div>
 
@@ -894,7 +895,7 @@ const PUZZLES = [
     id: 'bitXor', tbl: 1, rating: 1, maxOps: 14, args: ['x', 'y'], mode: 'expr', tests: 'pair',
     zh: '只用 <code>~</code> 和 <code>&amp;</code> 实现 <code>x ^ y</code>。',
     allowed: ['~', '&'],
-    ref: (x, y) => x ^ y, refSrc: 'x ^ y',
+    ref: (x, y) => ~(~x & ~y) & ~(x & y), refSrc: 'int bitXor(int x, int y) {\n  return ~(~x & ~y) & ~(x & y);\n}',
     hints: ['先换个角度问：什么情况下两位<b>相同</b>？（都 1 或都 0）',
             '「都 1」是 <code>x &amp; y</code>；「都 0」是 <code>~x &amp; ~y</code>。两者相或就是「相同」。',
             '把「相同」取反就得到「不同」，也就是异或。再用一次德摩根律把最外层的 <code>|</code> 换成 <code>&amp;</code> 就能满足题目限制。'],
@@ -902,7 +903,7 @@ const PUZZLES = [
   {
     id: 'leastBitPos', tbl: 1, rating: 2, maxOps: 6, args: ['x'], mode: 'expr', tests: 'single',
     zh: '返回一个掩码，只把 <code>x</code> 中<b>最低位的那个 1</b> 保留下来；若 <code>x == 0</code> 则返回 0。',
-    ref: x => x & -x, refSrc: 'x & -x',
+    ref: x => x & (~x + 1), refSrc: 'int leastBitPos(int x) {\n  return x & (~x + 1);\n}',
     hints: ['想想 <code>x</code> 与 <code>-x</code>（也就是 <code>~x + 1</code>）的位模式关系。',
             '<code>-x</code> 会把最低位的 1 保留在同一个位置，而它右边的 0 变成 0、左边全部取反。',
             '所以 <code>x &amp; -x</code> 恰好只剩最低位那个 1。用允许的运算符把 <code>-x</code> 写出来即可。'],
@@ -910,7 +911,7 @@ const PUZZLES = [
   {
     id: 'getByte', tbl: 1, rating: 2, maxOps: 6, args: ['x', 'n'], mode: 'expr', tests: 'xnarrow',
     zh: '取出字 <code>x</code> 中第 <code>n</code> 个字节（<code>n = 0</code> 表示最低字节）。结果落在低 8 位。',
-    ref: (x, n) => (x >> (n << 3)) & 0xFF, refSrc: '(x >> (n << 3)) & 0xFF',
+    ref: (x, n) => (x >> (n << 3)) & 0xFF, refSrc: 'int getByte(int x, int n) {\n  return (x >> (n << 3)) & 0xFF;\n}',
     hints: ['第 n 个字节需要右移 <code>8 × n</code> 位。',
             '因为不能用乘法，所以用移位把 n 放大 8 倍：<code>n &lt;&lt; 3</code>。',
             '右移之后用掩码只留下低 8 位。（注意 n 最大是 3）'],
@@ -918,7 +919,7 @@ const PUZZLES = [
   {
     id: 'logicalShift', tbl: 1, rating: 3, maxOps: 16, args: ['x', 'n'], mode: 'expr', tests: 'xn',
     zh: '把 <code>x</code> <b>逻辑右移</b> <code>n</code> 位（<code>0 ≤ n ≤ 31</code>）：左端补 0，而不是复制符号位。',
-    ref: (x, n) => i32(x >>> n), refSrc: '(x >>> n) | 0',
+    ref: (x, n) => (x >> n) & ~(((1 << 31) >> n) << 1), refSrc: 'int logicalShift(int x, int n) {\n  return (x >> n) & ~(((1 << 31) >> n) << 1);\n}',
     hints: ['C 的 <code>&gt;&gt;</code> 对有符号数是<b>算术</b>右移（左端补符号位），这题要的是补 0。',
             '办法：先算术右移，再把左边多补出来的那些 1 用掩码清掉。',
             '掩码可以这样构造：<code>~(1 &lt;&lt; 31 &gt;&gt; n &lt;&lt; 1)</code>。注意 n = 0 时不能写成 <code>x &gt;&gt; 32</code>（未定义行为）。'],
@@ -926,8 +927,7 @@ const PUZZLES = [
   {
     id: 'grayToBinary', tbl: 1, rating: 3, maxOps: 20, args: ['x'], mode: 'expr', tests: 'single', allowed: ['^', '>>'],
     zh: '把 31 位的<b>格雷码</b> <code>x</code> 转成普通二进制。格雷码的特点是相邻两个数只差一位。',
-    ref: x => { let y = x, s; for (s = 1; s < 32; s <<= 1) y ^= (y >>> s); return i32(y & 0x7FFFFFFF); },
-    refSrc: '(() => { let y = x; for (let s = 1; s < 32; s <<= 1) y ^= y >>> s; return y | 0; })()',
+    ref: x => { x = x ^ (x >> 1); x = x ^ (x >> 2); x = x ^ (x >> 4); x = x ^ (x >> 8); x = x ^ (x >> 16); return x; }, refSrc: 'int grayToBinary(int x) {\n  x = x ^ (x >> 1);\n  x = x ^ (x >> 2);\n  x = x ^ (x >> 4);\n  x = x ^ (x >> 8);\n  x = x ^ (x >> 16);\n  return x;\n}',
     domain: v => v[0] >= 0,
     hints: ['二进制第 i 位等于格雷码第 i 位及其<b>所有更高位</b>的异或和。',
             '不要一位一位来 —— 用「倍增」：先 <code>y ^= y &gt;&gt; 1</code>，再 <code>y ^= y &gt;&gt; 2</code>，再 <code>y ^= y &gt;&gt; 4</code> …… 每次覆盖的范围翻倍。',
@@ -936,8 +936,7 @@ const PUZZLES = [
   {
     id: 'bitCount', tbl: 1, rating: 4, maxOps: 40, args: ['x'], mode: 'expr', tests: 'single',
     zh: '数出 <code>x</code> 里 1 的个数（汉明重量）。',
-    ref: x => { let c = 0, u = x >>> 0; for (let i = 0; i < 32; i++) c += (u >>> i) & 1; return c; },
-    refSrc: '(() => { let c = 0, u = x >>> 0; for (let i = 0; i < 32; i++) c += (u >>> i) & 1; return c; })()',
+    ref: x => { let m1 = 0x55 | (0x55 << 8); let m2 = 0x33 | (0x33 << 8); let m4 = 0x0F | (0x0F << 8); let m8 = 0xFF | (0xFF << 16); m1 = m1 | (m1 << 16); m2 = m2 | (m2 << 16); m4 = m4 | (m4 << 16); x = (x & m1) + ((x >> 1) & m1); x = (x & m2) + ((x >> 2) & m2); x = (x & m4) + ((x >> 4) & m4); x = (x + (x >> 8)) & m8; x = (x + (x >> 16)) & 0x3F; return x; }, refSrc: 'int bitCount(int x) {\n  int m1 = 0x55 | (0x55 << 8);\n  int m2 = 0x33 | (0x33 << 8);\n  int m4 = 0x0F | (0x0F << 8);\n  int m8 = 0xFF | (0xFF << 16);\n  m1 = m1 | (m1 << 16);\n  m2 = m2 | (m2 << 16);\n  m4 = m4 | (m4 << 16);\n  x = (x & m1) + ((x >> 1) & m1);\n  x = (x & m2) + ((x >> 2) & m2);\n  x = (x & m4) + ((x >> 4) & m4);\n  x = (x + (x >> 8)) & m8;\n  x = (x + (x >> 16)) & 0x3F;\n  return x;\n}',
     hints: ['不许用循环，那就要「并行地」数：把相邻位的 1 相加到 2 位一组里。',
             '经典技巧：<code>x = (x &amp; 0x55…) + ((x &gt;&gt; 1) &amp; 0x55…)</code> 把每 2 位的 1 个数装进 2 位；再 <code>x = (x &amp; 0x33…) + ((x &gt;&gt; 2) &amp; 0x33…)</code> 装进 4 位，依此类推。',
             '但常量不能超过 0xFF，所以掩码得自己「造」出来（比如用 <code>~0</code> 和移位拼）。最后注意要 <code>&amp; 0x3F</code> 之类的收尾，第 4 步之后还要再合并一次。'],
@@ -947,7 +946,7 @@ const PUZZLES = [
   {
     id: 'isEqual', tbl: 2, rating: 2, maxOps: 5, args: ['x', 'y'], mode: 'expr', tests: 'pair',
     zh: '若 <code>x == y</code> 返回 1，否则返回 0。',
-    ref: (x, y) => (x === y ? 1 : 0), refSrc: 'x === y ? 1 : 0',
+    ref: (x, y) => !(x ^ y), refSrc: 'int isEqual(int x, int y) {\n  return !(x ^ y);\n}',
     hints: ['不能用 <code>==</code>，那就判断「有没有任何一位不同」。',
             '<code>x ^ y</code> 的每一位表示该位是否不同：全 0 就意味着相等。',
             '把「全 0」变成 1：<code>!x</code> 正好做这件事（非 0 得 0，0 得 1）。'],
@@ -955,7 +954,8 @@ const PUZZLES = [
   {
     id: 'divpwr2', tbl: 2, rating: 2, maxOps: 15, args: ['x', 'n'], mode: 'expr', tests: 'xn',
     zh: '计算 <code>x / 2<sup>n</sup></code>，<b>向零取整</b>（<code>0 ≤ n ≤ 30</code>）。',
-    ref: (x, n) => mod32(BigInt(x) / (1n << BigInt(n))), refSrc: 'Number(BigInt(x) / (1n << BigInt(n)))',
+    ref: (x, n) => (x + ((x >> 31) & ((1 << n) + ~0))) >> n, refSrc: 'int divpwr2(int x, int n) {\n  return (x + ((x >> 31) & ((1 << n) + ~0))) >> n;\n}',
+    domain: v => v[1] <= 30,
     hints: ['对非负数，直接算术右移就是向下取整，也就是向零取整。',
             '问题出在负数：算术右移是向 −∞ 取整。例如 −1 &gt;&gt; 1 = −1，但 −1/2 应该是 0。',
             '补救办法：负数先加上 <code>2<sup>n</sup> − 1</code>（偏置）再右移。用「符号位决定的偏置」一行搞定：先算 <code>(x &gt;&gt; 31) &amp; bias</code>。'],
@@ -963,7 +963,7 @@ const PUZZLES = [
   {
     id: 'sign', tbl: 2, rating: 2, maxOps: 10, args: ['x'], mode: 'expr', tests: 'single',
     zh: '<code>x</code> 为正返回 1，为零返回 0，为负返回 −1。',
-    ref: x => (x > 0 ? 1 : x < 0 ? -1 : 0), refSrc: 'x > 0 ? 1 : x < 0 ? -1 : 0',
+    ref: x => (x >> 31) | (!!x), refSrc: 'int sign(int x) {\n  return (x >> 31) | (!!x);\n}',
     hints: ['负数返回 −1，而 −1 的位模式是全 1 —— 正好是 <code>x &gt;&gt; 31</code>（算术右移 31 位）。',
             '对非负数，这个结果是 0；但正数应该返回 1，所以还要补上「x 非零则为 1」。',
             '把 <code>x</code> 规范化成 0/1：<code>!!x</code> 或 <code>(x | ~x)</code> 系列技巧都行。两者相或即可（负数时后一项为 0，正数时前一项为 0）。'],
@@ -971,8 +971,7 @@ const PUZZLES = [
   {
     id: 'addOK', tbl: 2, rating: 3, maxOps: 20, args: ['x', 'y'], mode: 'expr', tests: 'pair',
     zh: '若 <code>x + y</code> 不溢出则返回 1，否则返回 0。',
-    ref: (x, y) => { const s = BigInt(x) + BigInt(y); return (s >= -2147483648n && s <= 2147483647n) ? 1 : 0; },
-    refSrc: '(() => { const t = BigInt(x) + BigInt(y); return (t >= -2147483648n && t <= 2147483647n) ? 1 : 0; })()',
+    ref: (x, y) => !((((x + y) ^ x) & ((x + y) ^ y)) >> 31), refSrc: 'int addOK(int x, int y) {\n  return !((((x + y) ^ x) & ((x + y) ^ y)) >> 31);\n}',
     hints: ['溢出只可能发生在<b>同号相加</b>的时候：两个正数相加得负（正溢出），两个负数相加得正（负溢出）。',
             '<b>正数溢出</b>的判据：<code>x &gt; 0 &amp;&amp; y &gt; 0 &amp;&amp; x+y &lt;= 0</code>。用位运算表达「x &gt; 0」就是 <code>~x &amp; ~y</code> 的最高位……',
             '等价地：<code>(x ^ s) &amp; (y ^ s)</code> 的最高位为 1 就说明发生了溢出（s 是和的位模式）。再用 <code>&gt;&gt; 31</code> 和 <code>!</code> 收尾。'],
@@ -980,7 +979,7 @@ const PUZZLES = [
   {
     id: 'absVal', tbl: 2, rating: 4, maxOps: 10, args: ['x'], mode: 'expr', tests: 'single',
     zh: '计算 <code>|x|</code>。题目假设 <code>−T<sub>max</sub> ≤ x ≤ T<sub>max</sub></code>，即 <code>x ≠ TMin</code>。',
-    ref: x => (x < 0 ? -x : x), refSrc: 'x < 0 ? -x : x',
+    ref: x => (x + (x >> 31)) ^ (x >> 31), refSrc: 'int absVal(int x) {\n  return (x + (x >> 31)) ^ (x >> 31);\n}',
     domain: v => v[0] !== -2147483648,
     hints: ['对非负数原样返回；对负数要取负。不能用 <code>-</code>，但取负等价于 <code>~x + 1</code>。',
             '关键是<b>不能写条件语句</b>，所以要构造一个「只对负数生效」的掩码：<code>x &gt;&gt; 31</code> 对负数得 −1（全 1）、对非负数得 0。',
@@ -989,8 +988,7 @@ const PUZZLES = [
   {
     id: 'satSub', tbl: 2, rating: 4, maxOps: 30, args: ['x', 'y'], mode: 'expr', tests: 'pair',
     zh: '计算 <code>x − y</code>，若溢出则<b>饱和</b>到 <code>TMin</code> 或 <code>TMax</code>。',
-    ref: (x, y) => { const s = BigInt(x) - BigInt(y); return s > 2147483647n ? TMAX : s < -2147483648n ? TMIN : Number(s); },
-    refSrc: '(() => { const t = BigInt(x) - BigInt(y); return t > 2147483647n ? 2147483647 : t < -2147483648n ? -2147483648 : Number(t); })()',
+    ref: (x, y) => { let s = x + ~y + 1; let ovf = ((x ^ y) & (x ^ s)) >> 31; let neg = x >> 31; let sat = (neg & (1 << 31)) | (~neg & ~(1 << 31)); return (ovf & sat) | (~ovf & s); }, refSrc: 'int satSub(int x, int y) {\n  int s = x + ~y + 1;\n  int ovf = ((x ^ y) & (x ^ s)) >> 31;\n  int neg = x >> 31;\n  int sat = (neg & (1 << 31)) | (~neg & ~(1 << 31));\n  return (ovf & sat) | (~ovf & s);\n}',
     hints: ['先判断是否溢出：<code>x − y</code> 相当于 <code>x + (−y)</code>，而 <code>−y</code> 可能本身溢出（y = TMin 时）。',
             '拆开看：<b>正溢出</b>（结果大于 TMax）发生在 x 为正、y 为负时；<b>负溢出</b>发生在 x 为负、y 为正时。',
             '溢出时用掩码选择常数边界（TMax = <code>~(1 &lt;&lt; 31)</code>，TMin = <code>1 &lt;&lt; 31</code>），没溢出就返回差值。可以用 <code>!</code> 把条件变成 0/1 再取负变成全 1 掩码。'],
@@ -1000,14 +998,7 @@ const PUZZLES = [
   {
     id: 'float_twice', tbl: 3, rating: 4, maxOps: 30, args: ['uf'], mode: 'body', tests: 'fp',
     zh: '返回浮点数 <code>2 × f</code> 的位模式，其中 <code>f</code> 是参数 <code>uf</code> 所表示的浮点数。要求<b>在位级实现</b>。',
-    ref: uf => {
-      const u = uf >>> 0, exp = (u >>> 23) & 0xFF;
-      if (exp === 0xFF) return i32(u);                                 // inf / NaN 原样返回
-      if (exp === 0) return i32((u & 0x80000000) | (u << 1));          // 非规格化 / 零：尾数左移一位
-      if (exp === 254) return i32((u & 0x80000000) | 0x7F800000);      // 指数 254 一律溢出为 ±∞
-      return i32(u + 0x00800000);                                      // 规格化：指数 +1
-    },
-    refSrc: 'const a = new Float32Array(1), ia = new Uint32Array(a.buffer);\nia[0] = uf >>> 0;\nif (Number.isNaN(a[0])) return uf | 0;   // NaN 原样返回（与 tests.c 一致）\na[0] = a[0] * 2;\nreturn ia[0] | 0;',
+    ref: uf => { const u = uf >>> 0; const e = (u >>> 23) & 0xFF; if (e === 0xFF) return i32(u); if (e === 0) return i32((u & 0x80000000) | (u << 1)); if (e === 254) return i32((u & 0x80000000) | 0x7F800000); return i32(u + 0x00800000); }, refSrc: 'unsigned float_twice(unsigned uf) {\n  unsigned e = (uf >> 23) & 0xFF;\n  if (e == 0xFF) return uf;\n  if (e == 0) return (uf & 0x80000000) | (uf << 1);\n  if (e == 254) return (uf & 0x80000000) | 0x7F800000;\n  return uf + 0x00800000;\n}',
     hints: ['浮点乘以 2，对<b>规格化</b>数来说就是把指数加 1（位模式加上 <code>0x00800000</code>）。',
             '要小心三种特殊情况：<b>无穷和 NaN</b> 乘 2 还是它自己；<b>零</b>乘 2 还是零；<b>非规格化</b>数乘 2 是把尾数左移一位（这样恰好会自动「升级」成规格化数）。',
             '<b>溢出边界要单独处理</b>：指数为 254（E = 127）时，无论尾数是多少，乘以 2 都超过 <code>FLT_MAX</code>，正确结果是 <b>±∞</b> —— 而不是「指数加一变成 NaN 位模式」。所以不能只写 <code>u + 0x00800000</code>，要先判断指数是否为 254。'],
@@ -1015,17 +1006,7 @@ const PUZZLES = [
   {
     id: 'float_f2i', tbl: 3, rating: 4, maxOps: 30, args: ['uf'], mode: 'body', tests: 'fp',
     zh: '把浮点数 <code>f</code>（参数 <code>uf</code> 的位模式）转成整数，<b>向零截断</b>。若 <code>f</code> 是 NaN 或超出 <code>int</code> 范围，返回 <code>0x80000000</code>。',
-    ref: uf => {
-      const u = uf >>> 0, sign = u >>> 31, exp = (u >>> 23) & 0xFF, frac = u & 0x7FFFFF;
-      if (exp === 0xFF) return TMIN;
-      const E = exp - 127;
-      if (E < 0) return 0;
-      if (E > 30) return TMIN;
-      const m = frac | 0x800000;
-      const val = i32(E >= 23 ? (m << (E - 23)) : (m >>> (23 - E)));
-      return sign ? i32(-val) : val;
-    },
-    refSrc: 'const a = new Float32Array(1), ia = new Uint32Array(a.buffer);\nia[0] = uf >>> 0;\nconst v = a[0];\nif (Number.isNaN(v)) return -2147483648;\nif (v >= 2147483648 || v < -2147483648) return -2147483648;\nreturn Math.trunc(v) | 0;',
+    ref: uf => { const u = uf >>> 0; const sign = u >>> 31; const exp = (u >>> 23) & 0xFF; const frac = u & 0x7FFFFF; const E = exp - 127; const m = frac | 0x800000; let val; if (exp === 0xFF) return TMIN; if (E < 0) return 0; if (E > 30) return TMIN; if (E >= 23) val = i32(m << (E - 23)); else val = i32(m >>> (23 - E)); if (sign) val = i32(-val); return val; }, refSrc: 'int float_f2i(unsigned uf) {\n  int sign = uf >> 31;\n  int exp = (uf >> 23) & 0xFF;\n  int frac = uf & 0x7FFFFF;\n  int E = exp - 127;\n  int m = frac | 0x800000;\n  int val;\n  if (exp == 0xFF) return 0x80000000;\n  if (E < 0) return 0;\n  if (E > 30) return 0x80000000;\n  if (E >= 23) val = m << (E - 23);\n  else val = m >> (23 - E);\n  if (sign) val = -val;\n  return val;\n}',
     hints: ['先拆出三个字段：符号位、8 位指数、23 位尾数。',
             '规格化数的隐含 1 别忘了补上：<code>m = frac | 0x800000</code>，这样 m 是 24 位有效数字的整数形式。',
             '真正要做的移位量是 <code>E − 23</code>：E &gt; 23 时左移，E &lt; 23 时右移（右移自然实现向零截断）。E &lt; 0 说明 |f| &lt; 1，结果为 0。'],
@@ -1033,14 +1014,7 @@ const PUZZLES = [
   {
     id: 'float_negpwr2', tbl: 3, rating: 4, maxOps: 20, args: ['x'], mode: 'body', tests: 'single',
     zh: '在位级计算 <code>2.0<sup>−x</sup></code>，<code>x</code> 可以是<b>任意 32 位整数</b>（可正可负）。结果大到无法表示时返回 <code>+INF</code>，小到无法用非规格化数表示时返回 0。',
-    ref: x => {
-      const n = x | 0;
-      if (n <= -128) return 0x7F800000;                    // 2^128 及以上：上溢为 +INF
-      if (n <= 126) return i32((127 - n) << 23);          // 规格化：指数直接写进去
-      if (n <= 149) return i32(1 << (149 - n));           // 下溢到非规格化
-      return 0;                                            // 更小则彻底下溢为 0
-    },
-    refSrc: 'const n = x | 0;\nif (n <= -128) return 0x7F800000 | 0;   // 2^128 及以上：+INF\nif (n <= 126) return ((127 - n) << 23) | 0;\nif (n <= 149) return (1 << (149 - n)) | 0;\nreturn 0;',
+    ref: x => { const n = x | 0; if (n <= -128) return 0x7F800000; if (n <= 126) return i32((127 - n) << 23); if (n <= 149) return i32(1 << (149 - n)); return 0; }, refSrc: 'unsigned float_negpwr2(int x) {\n  if (x <= -128) return 0x7F800000;\n  if (x <= 126) return (127 - x) << 23;\n  if (x <= 149) return 1 << (149 - x);\n  return 0;\n}',
     hints: ['<code>2<sup>−x</sup></code> 是 2 的整数次幂，所以它的浮点表示里<b>尾数部分全是 0</b>，只有指数字段有值。',
             '<code>2<sup>k</sup></code> 的指数编码是 <code>k + 127</code>。所以 <code>2<sup>−x</sup></code> 就是把 <code>127 − x</code> 写进指数位：<code>(127 − x) &lt;&lt; 23</code>。',
             '两种边界：<code>x = 127</code> 时指数为 0，落到<b>非规格化</b>区（尾数最高位为 1）；<code>x</code> 再大就一路下溢，超过 149 后结果为 0。',
@@ -1049,8 +1023,7 @@ const PUZZLES = [
   {
     id: 'float_greater', tbl: 3, rating: 4, maxOps: 45, args: ['x', 'y'], mode: 'body', tests: 'fpp',
     zh: '若浮点数 <code>f1 &gt; f2</code>（分别是参数 <code>x</code>、<code>y</code> 的位模式）返回 1，否则返回 0。要正确处理 NaN 与 ±0。',
-    ref: (x, y) => (decodeF(x) > decodeF(y) ? 1 : 0),
-    refSrc: 'const a = new Float32Array(1), b = new Float32Array(1);\nconst ia = new Uint32Array(a.buffer), ib = new Uint32Array(b.buffer);\nia[0] = x >>> 0; ib[0] = y >>> 0;\nreturn (a[0] > b[0]) ? 1 : 0;',
+    ref: (x, y) => { const ux = x >>> 0, uy = y >>> 0; const sx = ux >>> 31, sy = uy >>> 31; const ax = ux & 0x7FFFFFFF, ay = uy & 0x7FFFFFFF; if (ax > 0x7F800000 || ay > 0x7F800000) return 0; if (sx !== sy) return sx === 0 && (ax | ay) !== 0 ? 1 : 0; if (sx === 0) return ax > ay ? 1 : 0; return ax < ay ? 1 : 0; }, refSrc: 'unsigned float_greater(unsigned x, unsigned y) {\n  int sx = x >> 31;\n  int sy = y >> 31;\n  unsigned ax = x & 0x7FFFFFFF;\n  unsigned ay = y & 0x7FFFFFFF;\n  if (ax > 0x7F800000) return 0;\n  if (ay > 0x7F800000) return 0;\n  if (sx != sy) return sx == 0 && (ax | ay) != 0;\n  if (sx == 0) return ax > ay;\n  return ax < ay;\n}',
     hints: ['浮点位模式<b>不能</b>直接当整数比大小：负数的最高位是 1，按整数比会显得「很大」。',
             '分情况：先看符号。一个负数一个非负数时，结论立刻确定（注意 −0 与 +0 相等，不算「大于」）。',
             '同号时再比指数和尾数；负号时大小关系<b>反转</b>（绝对值大的反而小）。最后别忘了 NaN：任何与 NaN 的比较都返回 0。'],
@@ -1060,7 +1033,7 @@ const PUZZLES = [
 /* ============================================================
    谜题卡片渲染 + 测试执行
    ============================================================ */
-const pzState = {};   // id → { src, refSrc }
+const pzState = {};   // 预留：id → { src }
 
 function puzzleCard(p) {
   const argsTxt = p.args.join(', ');
@@ -1072,11 +1045,10 @@ function puzzleCard(p) {
          <textarea class="pzSrc" data-pid="${p.id}" rows="4" spellcheck="false"
            style="width:100%;font-family:var(--font-mono);font-size:13px;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--ink)"></textarea>
        </div>`;
-  const refEditor = `<details class="reveal" style="margin:8px 0 0"><summary>参考实现（可编辑 —— 与你的 bits.c 对齐后再测）</summary>
+  const refEditor = `<details class="reveal" style="margin:8px 0 0"><summary>参考实现（bits.c 合法解 —— 满足本题运算符白名单与上限）</summary>
       <div class="ans">
-        <div style="font-size:13px;color:var(--muted);margin-bottom:5px">用作「正确答案」的对照实现 —— 相当于课程 handout 里的 <code>tests.c</code>：它<b>定义正确行为</b>，但自身并不满足编码规则（用了浮点运算、或整数题里禁止的运算符），<b>不能直接抄进 bits.c</b>。如果你 bits.c 里的契约不同（尤其是 float_negpwr2），改这里即可。</div>
-        <textarea class="pzRef" data-pid="${p.id}" rows="${p.mode === 'expr' ? 2 : 6}" spellcheck="false"
-          style="width:100%;font-family:var(--font-mono);font-size:13px;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--code-bg);color:var(--ink)">${esc(p.refSrc)}</textarea>
+        <div style="font-size:13px;color:var(--muted);margin-bottom:5px">这是一份<b>满足本题编码规则</b>的 <code>bits.c</code> 解法：只用本题允许的运算符、运算符个数不超过上限、整数题不使用超过 8 位的常量。页面评测就以它作为对照答案。</div>
+        <pre class="mono" style="margin:0;padding:10px 12px;border:1px solid var(--line);border-radius:8px;background:var(--code-bg);color:var(--ink);font-size:13px;line-height:1.55;overflow-x:auto;white-space:pre">${esc(p.refSrc)}</pre>
       </div>
     </details>`;
   return `
@@ -1088,7 +1060,7 @@ function puzzleCard(p) {
       <span class="chip gray" style="margin-left:4px">可用 ${allowedTxt}</span>
     </h5>
     <p style="margin:6px 0;font-size:14.5px">${p.zh}</p>
-    <details class="reveal" style="margin:8px 0"><summary>思路提示（不给完整答案）</summary>
+    <details class="reveal" style="margin:8px 0"><summary>思路提示（建议先自己想）</summary>
       <div class="ans"><ol style="margin:0;padding-left:20px">${p.hints.map(h => `<li>${h}</li>`).join('')}</ol></div>
     </details>
     <div class="ctrls" style="align-items:flex-start;margin:10px 0 0">
@@ -1115,19 +1087,11 @@ function compilePuzzle(p, src) {
   const fn = new Function(...p.args, `"use strict";\n${src}\n`);
   return vals => i32(fn(...vals));
 }
-function compileRef(p, src) {
-  if (p.mode === 'expr') {
-    const fn = new Function(...p.args, `"use strict"; return (${src}) | 0;`);
-    return vals => fn(...vals);
-  }
-  const fn = new Function(...p.args, `"use strict";\n${src}\n`);
-  return vals => i32(fn(...vals));
-}
+
 
 function runPuzzle(p) {
   const out = $(`.pzOut[data-pid="${p.id}"]`);
   const src = ($(`.pzSrc[data-pid="${p.id}"]`)?.value || '').trim();
-  const refSrc = ($(`.pzRef[data-pid="${p.id}"]`)?.value || '').trim();
   if (!src) { out.innerHTML = `<div class="box warn" style="margin:8px 0">先在「你的实现」里写点东西再测试。</div>`; return; }
 
   // 1) 规则检查
@@ -1149,9 +1113,7 @@ function runPuzzle(p) {
     <div class="mono" style="font-size:13px;margin-top:4px">${esc(e.message)}</div>
     ${p.mode === 'expr' ? '<p style="margin:6px 0 0;font-size:13.5px">这里只能写<b>表达式</b>（不要写 return、不要写分号）。</p>' : '<p style="margin:6px 0 0;font-size:13.5px">这里写<b>函数体</b>：可以有 if/while，但必须 <code>return</code> 一个 32 位整数。</p>'}</div>`;
     return; }
-  try { ref = compileRef(p, refSrc); }
-  catch (e) { out.innerHTML = ruleHtml + `<div class="box bad" style="margin:10px 0 0"><div class="t">参考实现无法编译（请检查你在参考实现框里的改动）</div>
-    <div class="mono" style="font-size:13px;margin-top:4px">${esc(e.message)}</div></div>`; return; }
+  ref = vals => i32(p.ref(...vals));   // 对照答案：与页面展示的 bits.c 合法解同算法
 
   // 3) 跑测试
   const tests = buildTests(p.tests).filter(v => !p.domain || p.domain(v));

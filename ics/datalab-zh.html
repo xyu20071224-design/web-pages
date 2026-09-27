@@ -376,10 +376,10 @@
     <h2>5. 浮点谜题（4 题）<span class="srcref">原第 3–4 页 Table 3</span></h2>
     <p class="lede">在这一部分，参数和返回值都是 <code>unsigned</code>，但它们的<b>位模式代表浮点数</b>。你必须完全用整数运算把浮点操作「做」出来。</p>
     <div id="pz3List"></div>
-    <div class="box"><div class="t">两个约定（务必对照你的 bits.c 确认）</div>
+    <div class="box"><div class="t">两个约定（对照你的 bits.c 注释）</div>
       <ul style="margin:4px 0 0">
         <li><code>float_f2i</code>：当参数是 NaN 或超出 <code>int</code> 范围时，按本实验惯例应返回 <code>0x80000000</code>。</li>
-        <li><code>float_negpwr2</code>：手册只写了「Compute 2.0^(-x) at the bit level」，<b>具体契约以 bits.c 注释为准</b>。本页先按「x 是 0 ≤ n ≤ 127 的整数，返回 2^(-n) 的浮点位模式」实现，并把参考实现做成<b>可编辑</b>的 —— 你可以把它改成 bits.c 里的定义再测。</li>
+        <li><code>float_negpwr2</code>：按 bits.c 注释，<code>x</code> 是<b>任意 32 位整数</b>；结果小到无法用非规格化数表示时返回 0，大到溢出时返回 <code>+INF</code>。本页参考实现已按此契约实现，你仍可自行编辑对照。</li>
       </ul>
     </div>
   </section>
@@ -697,7 +697,7 @@ function buildTests(kind, seed = 20260915) {
 const PUZZLES = [
   /* ---------- Table 1：位运算 ---------- */
   {
-    id: 'bitXor', tbl: 1, rating: 1, maxOps: 8, args: ['x', 'y'], mode: 'expr', tests: 'pair',
+    id: 'bitXor', tbl: 1, rating: 1, maxOps: 14, args: ['x', 'y'], mode: 'expr', tests: 'pair',
     zh: '只用 <code>~</code> 和 <code>&amp;</code> 实现 <code>x ^ y</code>。',
     allowed: ['~', '&'],
     ref: (x, y) => x ^ y, refSrc: 'x ^ y',
@@ -707,7 +707,7 @@ const PUZZLES = [
   },
   {
     id: 'leastBitPos', tbl: 1, rating: 2, maxOps: 6, args: ['x'], mode: 'expr', tests: 'single',
-    zh: '返回一个掩码，只把 <code>x</code> 中<b>最低位的那个 1</b> 保留下来。',
+    zh: '返回一个掩码，只把 <code>x</code> 中<b>最低位的那个 1</b> 保留下来；若 <code>x == 0</code> 则返回 0。',
     ref: x => x & -x, refSrc: 'x & -x',
     hints: ['想想 <code>x</code> 与 <code>-x</code>（也就是 <code>~x + 1</code>）的位模式关系。',
             '<code>-x</code> 会把最低位的 1 保留在同一个位置，而它右边的 0 变成 0、左边全部取反。',
@@ -730,7 +730,7 @@ const PUZZLES = [
             '掩码可以这样构造：<code>~(1 &lt;&lt; 31 &gt;&gt; n &lt;&lt; 1)</code>。注意 n = 0 时不能写成 <code>x &gt;&gt; 32</code>（未定义行为）。'],
   },
   {
-    id: 'grayToBinary', tbl: 1, rating: 3, maxOps: 20, args: ['x'], mode: 'expr', tests: 'single',
+    id: 'grayToBinary', tbl: 1, rating: 3, maxOps: 20, args: ['x'], mode: 'expr', tests: 'single', allowed: ['^', '>>'],
     zh: '把 31 位的<b>格雷码</b> <code>x</code> 转成普通二进制。格雷码的特点是相邻两个数只差一位。',
     ref: x => { let y = x, s; for (s = 1; s < 32; s <<= 1) y ^= (y >>> s); return i32(y & 0x7FFFFFFF); },
     refSrc: '(() => { let y = x; for (let s = 1; s < 32; s <<= 1) y ^= y >>> s; return y | 0; })()',
@@ -804,25 +804,25 @@ const PUZZLES = [
 
   /* ---------- Table 3：浮点 ---------- */
   {
-    id: 'float_twice', tbl: 3, rating: 4, maxOps: 30, args: ['x'], mode: 'body', tests: 'fp',
-    zh: '返回浮点数 <code>2 × f</code> 的位模式，其中 <code>f</code> 是参数 <code>x</code> 所表示的浮点数。要求<b>在位级实现</b>。',
-    ref: x => {
-      const u = x >>> 0, exp = (u >>> 23) & 0xFF;
+    id: 'float_twice', tbl: 3, rating: 4, maxOps: 30, args: ['uf'], mode: 'body', tests: 'fp',
+    zh: '返回浮点数 <code>2 × f</code> 的位模式，其中 <code>f</code> 是参数 <code>uf</code> 所表示的浮点数。要求<b>在位级实现</b>。',
+    ref: uf => {
+      const u = uf >>> 0, exp = (u >>> 23) & 0xFF;
       if (exp === 0xFF) return i32(u);                                 // inf / NaN 原样返回
       if (exp === 0) return i32((u & 0x80000000) | (u << 1));          // 非规格化 / 零：尾数左移一位
       if (exp === 254) return i32((u & 0x80000000) | 0x7F800000);      // 指数 254 一律溢出为 ±∞
       return i32(u + 0x00800000);                                      // 规格化：指数 +1
     },
-    refSrc: 'const a = new Float32Array(1), ia = new Uint32Array(a.buffer);\nia[0] = x >>> 0;\nif (Number.isNaN(a[0])) return x | 0;   // NaN 原样返回（与 tests.c 一致）\na[0] = a[0] * 2;\nreturn ia[0] | 0;',
+    refSrc: 'const a = new Float32Array(1), ia = new Uint32Array(a.buffer);\nia[0] = uf >>> 0;\nif (Number.isNaN(a[0])) return uf | 0;   // NaN 原样返回（与 tests.c 一致）\na[0] = a[0] * 2;\nreturn ia[0] | 0;',
     hints: ['浮点乘以 2，对<b>规格化</b>数来说就是把指数加 1（位模式加上 <code>0x00800000</code>）。',
             '要小心三种特殊情况：<b>无穷和 NaN</b> 乘 2 还是它自己；<b>零</b>乘 2 还是零；<b>非规格化</b>数乘 2 是把尾数左移一位（这样恰好会自动「升级」成规格化数）。',
             '<b>溢出边界要单独处理</b>：指数为 254（E = 127）时，无论尾数是多少，乘以 2 都超过 <code>FLT_MAX</code>，正确结果是 <b>±∞</b> —— 而不是「指数加一变成 NaN 位模式」。所以不能只写 <code>u + 0x00800000</code>，要先判断指数是否为 254。'],
   },
   {
-    id: 'float_f2i', tbl: 3, rating: 4, maxOps: 30, args: ['x'], mode: 'body', tests: 'fp',
-    zh: '把浮点数 <code>f</code>（参数 <code>x</code> 的位模式）转成整数，<b>向零截断</b>。若 <code>f</code> 是 NaN 或超出 <code>int</code> 范围，返回 <code>0x80000000</code>。',
-    ref: x => {
-      const u = x >>> 0, sign = u >>> 31, exp = (u >>> 23) & 0xFF, frac = u & 0x7FFFFF;
+    id: 'float_f2i', tbl: 3, rating: 4, maxOps: 30, args: ['uf'], mode: 'body', tests: 'fp',
+    zh: '把浮点数 <code>f</code>（参数 <code>uf</code> 的位模式）转成整数，<b>向零截断</b>。若 <code>f</code> 是 NaN 或超出 <code>int</code> 范围，返回 <code>0x80000000</code>。',
+    ref: uf => {
+      const u = uf >>> 0, sign = u >>> 31, exp = (u >>> 23) & 0xFF, frac = u & 0x7FFFFF;
       if (exp === 0xFF) return TMIN;
       const E = exp - 127;
       if (E < 0) return 0;
@@ -831,25 +831,26 @@ const PUZZLES = [
       const val = i32(E >= 23 ? (m << (E - 23)) : (m >>> (23 - E)));
       return sign ? i32(-val) : val;
     },
-    refSrc: 'const a = new Float32Array(1), ia = new Uint32Array(a.buffer);\nia[0] = x >>> 0;\nconst v = a[0];\nif (Number.isNaN(v)) return -2147483648;\nif (v >= 2147483648 || v < -2147483648) return -2147483648;\nreturn Math.trunc(v) | 0;',
+    refSrc: 'const a = new Float32Array(1), ia = new Uint32Array(a.buffer);\nia[0] = uf >>> 0;\nconst v = a[0];\nif (Number.isNaN(v)) return -2147483648;\nif (v >= 2147483648 || v < -2147483648) return -2147483648;\nreturn Math.trunc(v) | 0;',
     hints: ['先拆出三个字段：符号位、8 位指数、23 位尾数。',
             '规格化数的隐含 1 别忘了补上：<code>m = frac | 0x800000</code>，这样 m 是 24 位有效数字的整数形式。',
             '真正要做的移位量是 <code>E − 23</code>：E &gt; 23 时左移，E &lt; 23 时右移（右移自然实现向零截断）。E &lt; 0 说明 |f| &lt; 1，结果为 0。'],
   },
   {
     id: 'float_negpwr2', tbl: 3, rating: 4, maxOps: 20, args: ['x'], mode: 'body', tests: 'single',
-    zh: '在位级计算 <code>2.0<sup>−x</sup></code>。<span style="color:var(--warn)">本页采用「x 是 0 ≤ n ≤ 127 的整数」这一解读，请以你的 <code>bits.c</code> 注释为准，并可自行修改下面的参考实现。</span>',
+    zh: '在位级计算 <code>2.0<sup>−x</sup></code>，<code>x</code> 可以是<b>任意 32 位整数</b>（可正可负）。结果大到无法表示时返回 <code>+INF</code>，小到无法用非规格化数表示时返回 0。',
     ref: x => {
-      const n = x >>> 0;
-      if (n <= 126) return i32((127 - n) << 23);        // 规格化：指数直接写进去
-      if (n <= 149) return i32(1 << (149 - n));         // 下溢到非规格化
-      return 0;                                          // 更小则彻底下溢为 0
+      const n = x | 0;
+      if (n <= -128) return 0x7F800000;                    // 2^128 及以上：上溢为 +INF
+      if (n <= 126) return i32((127 - n) << 23);          // 规格化：指数直接写进去
+      if (n <= 149) return i32(1 << (149 - n));           // 下溢到非规格化
+      return 0;                                            // 更小则彻底下溢为 0
     },
-    refSrc: 'const n = x >>> 0;\nif (n <= 126) return ((127 - n) << 23) | 0;\nif (n <= 149) return (1 << (149 - n)) | 0;\nreturn 0;',
-    domain: v => v[0] >= 0 && v[0] <= 160,
-    hints: ['<code>2<sup>−n</sup></code> 是 2 的整数次幂，所以它的浮点表示里<b>尾数部分全是 0</b>，只有指数字段有值。',
-            '<code>2<sup>k</sup></code> 的指数编码是 <code>k + 127</code>。所以 <code>2<sup>−n</sup></code> 就是把 <code>127 − n</code> 写进指数位：<code>(127 − n) &lt;&lt; 23</code>。',
-            '两种边界：<code>n = 127</code> 时指数为 0，落到<b>非规格化</b>区（尾数最高位为 1）；<code>n</code> 再大就一路下溢，超过 149 后结果为 0。'],
+    refSrc: 'const n = x | 0;\nif (n <= -128) return 0x7F800000 | 0;   // 2^128 及以上：+INF\nif (n <= 126) return ((127 - n) << 23) | 0;\nif (n <= 149) return (1 << (149 - n)) | 0;\nreturn 0;',
+    hints: ['<code>2<sup>−x</sup></code> 是 2 的整数次幂，所以它的浮点表示里<b>尾数部分全是 0</b>，只有指数字段有值。',
+            '<code>2<sup>k</sup></code> 的指数编码是 <code>k + 127</code>。所以 <code>2<sup>−x</sup></code> 就是把 <code>127 − x</code> 写进指数位：<code>(127 − x) &lt;&lt; 23</code>。',
+            '两种边界：<code>x = 127</code> 时指数为 0，落到<b>非规格化</b>区（尾数最高位为 1）；<code>x</code> 再大就一路下溢，超过 149 后结果为 0。',
+            '别忘了 <code>x</code> 可以是负数：此时 <code>2<sup>−x</sup></code> 是 2 的正幂，<code>x ≤ −128</code> 时超过 <code>FLT_MAX</code>，要返回 <code>+INF</code>（<code>0x7F800000</code>）。'],
   },
   {
     id: 'float_greater', tbl: 3, rating: 4, maxOps: 45, args: ['x', 'y'], mode: 'body', tests: 'fpp',

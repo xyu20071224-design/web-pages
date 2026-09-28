@@ -1,0 +1,3117 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-style="terminal" data-deck="ics11">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>处理器体系结构 III：流水线（PIPE） · 交互式课件（中文）（深色终端版）</title>
+<style>
+/* ==========================================================================
+   base.css —— 结构基础样式（所有风格共用）
+   只使用 CSS 变量，不含任何具体配色；由各主题覆盖变量与少量结构规则。
+   ========================================================================== */
+
+:root{
+  /* 颜色（每个主题必须覆盖） */
+  --bg:#f6f7f9; --card:#fff; --ink:#15181d; --muted:#697586; --line:#e4e7ec;
+  --accent:#2563eb; --accent-ink:#fff; --accent-soft:#eaf1ff;
+  --sign:#e5484d; --exp:#0b7fd4; --frac:#18915a; --warn:#b45309;
+  --sign-bg:#fdecec; --sign-fg:#a3262b; --sign-bd:#f6cdcf;
+  --exp-bg:#e8f2fd;  --exp-fg:#0a5f9e;  --exp-bd:#c7ddf5;
+  --frac-bg:#e9f7ef; --frac-fg:#116b43; --frac-bd:#c8e8d5;
+  --ok-bg:#f2fbf6; --ok-bd:#9ed3b4; --bad-bg:#fff5f5; --bad-bd:#f1b5b8;
+  --warn-bg:#fffbeb; --gray-bg:#eef1f5; --gray-fg:#5b6472;
+  --paper-soft:#fcfdfe; --code-bg:#f1f3f7; --code-bd:#e6e9ef;
+  --tbl-head:#f7f9fc; --tbl-hover:#fafbfd;
+  --sel-bg:#eef1f5;
+
+  /* 字体 */
+  --font-sans:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",system-ui,sans-serif;
+  --font-mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+  --font-display:var(--font-sans);
+  --tracking-title:normal;
+
+  /* 形状 */
+  --radius:12px; --radius-sm:8px; --radius-pill:99px;
+  --border-w:1px; --shadow:0 1px 2px rgba(16,24,40,.06),0 1px 3px rgba(16,24,40,.1);
+  --shadow-card:none;
+  --card-border:var(--border-w) solid var(--line);
+
+  /* 布局 */
+  --page-max:1180px; --nav-w:236px; --gap:26px; --sec-pad:26px 28px;
+  --nav-sticky-top:64px; --anchor-offset:70px;
+  --font-size:16px; --line-height:1.75;
+}
+
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font-sans);
+  font-size:var(--font-size);line-height:var(--line-height);-webkit-font-smoothing:antialiased}
+img{max-width:100%}
+
+/* ---------- 顶栏 ---------- */
+.topbar{position:sticky;top:0;z-index:50;background:var(--card);border-bottom:1px solid var(--line)}
+.topbar-in{max-width:var(--page-max);margin:0 auto;padding:10px 22px;display:flex;align-items:center;gap:14px}
+.brand{font-weight:700;letter-spacing:var(--tracking-title);font-family:var(--font-display)}
+.brand small{font-weight:500;color:var(--muted);margin-left:8px;font-size:12.5px}
+.progress{margin-left:auto;display:flex;align-items:center;gap:10px;font-size:12.5px;color:var(--muted)}
+.progress .bar{width:150px;height:6px;border-radius:var(--radius-pill);background:var(--line);overflow:hidden}
+.progress .bar>i{display:block;height:100%;width:0;background:var(--accent);transition:width .25s}
+
+/* ---------- 主体布局 ---------- */
+.layout{max-width:var(--page-max);margin:0 auto;padding:22px;display:grid;
+  grid-template-columns:var(--nav-w) minmax(0,1fr);gap:var(--gap)}
+main{min-width:0}
+/* 长 URL / 长标识符没有断行点，会把容器整个撑破（窄屏尤其明显）。
+   只作用于文本容器；表格故意不加，让它走 .tbl-wrap 的横向滚动。 */
+main p,main li,main dd,main dt,main h2,main h3,main h4,main h5,
+main .box,main .card,main .readout,main .puzzle,main .step{overflow-wrap:anywhere}
+
+/* ---------- 目录 ---------- */
+nav.toc{position:sticky;top:var(--nav-sticky-top);align-self:start;max-height:calc(100vh - 84px);overflow:auto;padding-right:4px}
+nav.toc h4{margin:0 0 8px;font-size:12px;letter-spacing:.12em;color:var(--muted);text-transform:uppercase;font-weight:600}
+nav.toc a{display:block;padding:7px 11px;border-radius:var(--radius-sm);color:var(--ink);opacity:.78;
+  text-decoration:none;font-size:14.5px;border-left:2.5px solid transparent}
+nav.toc a:hover{background:var(--sel-bg);opacity:1}
+nav.toc a.active{background:var(--accent-soft);color:var(--accent);border-left-color:var(--accent);font-weight:600;opacity:1}
+nav.toc a .n{display:inline-block;min-width:20px;color:var(--muted);font-size:12.5px;font-variant-numeric:tabular-nums}
+nav.toc a.active .n{color:var(--accent)}
+nav.toc .sub{padding-left:26px;font-size:13.5px;opacity:.7}
+
+/* ---------- 章节 ---------- */
+section{background:var(--card);border:var(--card-border);border-radius:var(--radius);
+  padding:var(--sec-pad);margin-bottom:22px;box-shadow:var(--shadow);scroll-margin-top:var(--anchor-offset)}
+section>h2{margin:0 0 6px;font-size:25px;letter-spacing:-.01em;font-family:var(--font-display)}
+section>.lede{color:var(--muted);margin:0 0 20px;font-size:14.5px}
+h3{font-size:18.5px;margin:26px 0 10px;padding-left:11px;border-left:3.5px solid var(--accent);font-family:var(--font-display)}
+h4{font-size:16px;margin:18px 0 8px;font-family:var(--font-display)}
+h5{font-size:15px;font-family:var(--font-display)}
+p{margin:10px 0}
+ul,ol{margin:10px 0;padding-left:22px}
+li{margin:5px 0}
+code{font-family:var(--font-mono);font-size:.89em;background:var(--code-bg);border:1px solid var(--code-bd);border-radius:5px;padding:1px 5px}
+.mono{font-family:var(--font-mono)}
+a{color:var(--accent)}
+hr{border:0;border-top:1px dashed var(--line);margin:24px 0}
+.srcref{font-size:11.5px;color:var(--muted);font-weight:500;font-family:var(--font-sans);margin-left:8px;vertical-align:middle;white-space:nowrap;opacity:.75}
+.en{color:var(--muted);font-size:.92em}
+
+/* ---------- 栅格与卡片 ---------- */
+.grid{display:grid;gap:14px}
+.g2{grid-template-columns:repeat(2,minmax(0,1fr))}
+.g3{grid-template-columns:repeat(3,minmax(0,1fr))}
+/* 窄屏单列：必须用 minmax(0,1fr)。写成 1fr 时轨道最小宽度是 auto，
+   单元格里只要有长代码行（<pre>）就撑破容器，整页横向溢出。 */
+@media(max-width:820px){.g2,.g3{grid-template-columns:minmax(0,1fr)}}
+.card{border:var(--card-border);border-radius:var(--radius-sm);padding:15px 17px;background:var(--paper-soft);box-shadow:var(--shadow-card)}
+.card h5{margin:0 0 7px}
+.card.pad0{padding:0;overflow:hidden}
+
+/* ---------- 提示框 ---------- */
+.box{border:1px solid var(--line);border-left:4px solid var(--accent);background:var(--accent-soft);
+  border-radius:var(--radius-sm);padding:12px 16px;margin:14px 0}
+.box.warn{border-left-color:var(--warn);background:var(--warn-bg)}
+.box.bad{border-left-color:var(--sign);background:var(--bad-bg)}
+.box.ok{border-left-color:var(--frac);background:var(--ok-bg)}
+.box .t{font-weight:650;font-size:14.5px;margin-bottom:2px}
+
+/* ---------- 公式 ---------- */
+.formula{font-family:var(--font-mono);background:var(--paper-soft);border:1px solid var(--line);
+  border-radius:var(--radius-sm);padding:14px 17px;margin:14px 0;font-size:16.5px;text-align:center;overflow-x:auto}
+.formula.big{font-size:20px}
+
+/* ---------- 表格 ---------- */
+table.tbl{width:100%;border-collapse:collapse;font-size:14.5px;margin:14px 0}
+table.tbl th,table.tbl td{border:1px solid var(--line);padding:8px 11px;text-align:left;vertical-align:top}
+table.tbl th{background:var(--tbl-head);font-weight:650;font-size:13.5px;white-space:nowrap}
+table.tbl td.mono,table.tbl th.mono{font-family:var(--font-mono);font-size:13.5px}
+table.tbl tr:hover td{background:var(--tbl-hover)}
+/* 当前行高亮：interactive 表格用它标出「正在看的那一行」。
+   注意 --tbl-hover 是悬停色，深色皮肤下故意比底色亮，所以 hl 用同一套变量。 */
+table.tbl tr.hl td{background:var(--sel-bg)}
+.tbl-wrap{overflow-x:auto}
+
+/* ---------- 位串控件 ---------- */
+.fw{display:flex;flex-wrap:wrap;gap:8px 18px;align-items:flex-start;margin:4px 0 2px;min-width:0}
+.fgrp{min-width:0}
+.fcap{font-size:12px;color:var(--muted);margin-bottom:4px;font-weight:600}
+.fcap b{font-family:var(--font-mono);font-size:12.5px}
+.bits{display:flex;flex-wrap:wrap;gap:2px;font-family:var(--font-mono);margin:4px 0}
+.bits .b{width:25px;height:33px;display:flex;align-items:center;justify-content:center;
+  border-radius:6px;font-size:15px;cursor:pointer;user-select:none;border:1px solid transparent;
+  transition:transform .06s,background .12s;font-weight:600}
+.bits .b:hover{transform:translateY(-2px)}
+.bits .b.s{background:var(--sign-bg);color:var(--sign-fg);border-color:var(--sign-bd)}
+.bits .b.e{background:var(--exp-bg);color:var(--exp-fg);border-color:var(--exp-bd)}
+.bits .b.f{background:var(--frac-bg);color:var(--frac-fg);border-color:var(--frac-bd)}
+.bits .b.sel{outline:2px solid var(--ink);outline-offset:1px}
+.bits.sm .b{width:19px;height:26px;font-size:12px;border-radius:4px}
+.fgrp .bits{flex-wrap:wrap;max-width:100%;gap:2px}
+.fgrp.ge .bits{max-width:300px}
+
+/* ---------- 读数表 ---------- */
+.readout{display:grid;grid-template-columns:auto 1fr;gap:4px 16px;font-size:14.5px;margin:12px 0}
+.readout dt{color:var(--muted);font-weight:600;font-family:var(--font-mono);font-size:13.5px;padding-top:2px}
+.readout dd{margin:0;font-family:var(--font-mono)}
+
+/* ---------- 小标签 ---------- */
+.chip{display:inline-block;font-size:12.5px;padding:2px 9px;border-radius:var(--radius-pill);
+  background:var(--accent-soft);color:var(--accent);font-weight:600}
+.chip.ok{background:var(--frac-bg);color:var(--frac-fg)}
+.chip.bad{background:var(--sign-bg);color:var(--sign-fg)}
+.chip.warn{background:var(--warn-bg);color:var(--warn)}
+.chip.gray{background:var(--gray-bg);color:var(--gray-fg)}
+.kbd{font-family:var(--font-mono);font-size:13px;background:var(--code-bg);border:1px solid var(--code-bd);
+  border-bottom-width:2px;border-radius:6px;padding:1px 7px}
+
+/* ---------- 控件 ---------- */
+.ctrls{display:flex;flex-wrap:wrap;gap:9px;align-items:center;margin:12px 0}
+label.fld{display:inline-flex;align-items:center;gap:7px;font-size:14px;color:var(--ink);max-width:100%;flex-wrap:wrap;min-width:0}
+label.fld select,label.fld input{min-width:0;max-width:100%}
+input[type=text],input[type=number],select{font-family:var(--font-mono);font-size:14px;padding:6px 10px;
+  border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--card);color:var(--ink)}
+input[type=text]:focus,input[type=number]:focus,select:focus{outline:2px solid var(--accent-soft);border-color:var(--accent)}
+button{font-family:var(--font-sans);font-size:14px;font-weight:600;padding:7px 15px;border-radius:var(--radius-sm);
+  border:1px solid var(--line);background:var(--card);color:var(--ink);cursor:pointer}
+button:hover{background:var(--sel-bg)}
+button.p{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+button.sm{padding:4px 10px;font-size:13px}
+button.pill{border-radius:var(--radius-pill)}
+/* 按钮组默认不换行：项一多就会把 .ctrls 撑破。允许它缩到容器宽度并横向滚动。 */
+.seg{display:inline-flex;max-width:100%;border:1px solid var(--line);
+  border-radius:var(--radius-sm);overflow-x:auto;overflow-y:hidden}
+.seg button{border:0;border-radius:0;border-right:1px solid var(--line);padding:6px 13px}
+.seg button:last-child{border-right:0}
+.seg button.on{background:var(--accent);color:var(--accent-ink)}
+
+/* ---------- 分步演示 ---------- */
+/* .steps 是 .step 的包裹层（skill 词汇表里列了但一直没定义）——
+   仅给一点上下留白，步骤块自己的边距由 .step 负责。 */
+.steps{margin:12px 0}
+.step{border:1px solid var(--line);border-radius:var(--radius-sm);padding:11px 15px;margin:9px 0;
+  background:var(--paper-soft);opacity:.42;transition:opacity .2s}
+.step.on{opacity:1;background:var(--card)}
+.step .h{font-size:13px;font-weight:700;color:var(--accent);letter-spacing:.02em;margin-bottom:3px}
+.step .m{font-family:var(--font-mono);font-size:14.5px;overflow-x:auto}
+.step .e{font-size:13.5px;color:var(--muted);margin-top:3px}
+
+/* ---------- 折叠与答案 ---------- */
+.reveal{border:1px solid var(--line);border-radius:var(--radius-sm);padding:11px 15px;margin:8px 0;background:var(--paper-soft)}
+.reveal summary{cursor:pointer;font-weight:600;font-size:14.5px}
+.reveal[open]{background:var(--card)}
+.ans{margin-top:8px;padding-top:8px;border-top:1px dashed var(--line);font-size:14.5px}
+
+/* ---------- 判断题 ---------- */
+.puzzle{border:1px solid var(--line);border-radius:var(--radius-sm);padding:12px 15px;margin:9px 0;
+  display:flex;gap:13px;align-items:flex-start;background:var(--paper-soft)}
+.puzzle .q{font-family:var(--font-mono);font-size:15px;flex:1;min-width:0;overflow-x:auto;white-space:nowrap}
+.puzzle .q small{font-family:var(--font-sans);color:var(--muted);display:block;white-space:normal}
+.puzzle .btns{display:flex;gap:6px;flex-shrink:0}
+.puzzle.correct{border-color:var(--ok-bd);background:var(--ok-bg)}
+.puzzle.wrong{border-color:var(--bad-bd);background:var(--bad-bg)}
+.puzzle .exp{margin-top:9px;padding-top:9px;border-top:1px dashed var(--line);font-size:14.5px;
+  display:none;white-space:normal;font-family:var(--font-sans)}
+.puzzle.done .exp{display:block}
+.puzzle .exp .verdict{font-weight:700}
+
+/* ---------- 分布图 ---------- */
+.tick{stroke:#94a3b8;stroke-width:1.4}
+.tick.dn{stroke:var(--exp)}
+.tick.nm{stroke:var(--frac)}
+.ticklabel{font-size:9.5px;fill:var(--muted);font-family:var(--font-mono)}
+.axisline{stroke:var(--line);stroke-width:1.2}
+.axislabel{font-size:11px;fill:var(--muted)}
+
+/* ---------- 页脚 / 回到顶部 ---------- */
+.footer{max-width:var(--page-max);margin:0 auto;padding:8px 22px 40px;color:var(--muted);font-size:13px}
+.totop{position:fixed;right:22px;bottom:22px;z-index:40;box-shadow:var(--shadow);display:none}
+
+/* ---------- 响应式 ---------- */
+@media(max-width:960px){
+  .layout{grid-template-columns:1fr;padding:16px}
+  nav.toc{position:static;max-height:none;display:flex;flex-wrap:wrap;gap:6px;
+    background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:10px}
+  nav.toc h4{width:100%;margin-bottom:2px}
+  nav.toc a{border-left:0;padding:5px 10px;font-size:13px}
+  nav.toc .sub{display:none}
+  section{padding:20px 17px}
+}
+@media print{
+  nav.toc,.topbar,.totop{display:none}
+  .layout{display:block}
+  section{break-inside:avoid;box-shadow:none}
+}
+
+/* ==========================================================================
+   风格 B · 深色终端（Dark IDE / Terminal）
+   深灰底 · 霓虹强调色 · 等宽标题 · 左侧编号导轨 · 寄存器风格的位视图
+   ========================================================================== */
+
+:root{
+  --bg:#0b0f14; --card:#121821; --ink:#d8e2ee; --muted:#7c8b9e; --line:#202b38;
+  --accent:#22d3ee; --accent-ink:#04191e; --accent-soft:#0e2b34;
+  --sign:#ff5c57; --exp:#4cc2ff; --frac:#3ddc84; --warn:#ffb454;
+  --sign-bg:#2a1517; --sign-fg:#ff8a86; --sign-bd:#48211f;
+  --exp-bg:#0c2432;  --exp-fg:#7ad3ff;  --exp-bd:#123c52;
+  --frac-bg:#0d2a1c; --frac-fg:#6ee7a5; --frac-bd:#14452c;
+  --ok-bg:#0d2a1c; --ok-bd:#1d5c39; --bad-bg:#2a1517; --bad-bd:#5a2724;
+  --warn-bg:#2a2113; --gray-bg:#18202b; --gray-fg:#8fa0b4;
+  --paper-soft:#0e141c; --code-bg:#0a1017; --code-bd:#1d2836;
+  --tbl-head:#151d27; --tbl-hover:#141c26;
+  --sel-bg:#1a2431;
+
+  --font-sans:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",system-ui,sans-serif;
+  --font-mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+  --font-display:var(--font-mono);
+  --tracking-title:-.01em;
+
+  --radius:8px; --radius-sm:6px; --radius-pill:99px;
+  --border-w:1px;
+  --shadow:0 1px 0 rgba(0,0,0,.4),0 8px 24px -12px rgba(0,0,0,.6);
+  --shadow-card:none;
+  --card-border:1px solid var(--line);
+
+  --page-max:1240px; --nav-w:186px; --gap:22px;
+  --sec-pad:22px 24px; --nav-sticky-top:76px; --anchor-offset:80px;
+  --font-size:15.5px; --line-height:1.72;
+}
+
+body{background:
+  radial-gradient(1100px 520px at 12% -8%, rgba(34,211,238,.10), transparent 60%),
+  radial-gradient(900px 460px at 96% 4%, rgba(61,220,132,.07), transparent 62%),
+  var(--bg)}
+
+/* ---------- 顶栏：终端窗口标题条 ---------- */
+.topbar{background:rgba(13,18,25,.9);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+.topbar-in{padding:11px 22px;gap:12px}
+.brand{font-family:var(--font-mono);font-weight:600;font-size:15px}
+.brand::before{content:"● ● ●";color:#3b4a5a;letter-spacing:2px;margin-right:14px;font-size:11px;vertical-align:1px}
+.brand small{font-family:var(--font-mono);color:var(--muted);font-size:11.5px}
+.progress{font-family:var(--font-mono);font-size:11.5px;letter-spacing:.04em}
+.progress .bar{width:130px;height:5px;border-radius:var(--radius-pill);background:#18212c}
+.progress .bar>i{background:linear-gradient(90deg,#22d3ee,#3ddc84);box-shadow:0 0 10px rgba(34,211,238,.7)}
+
+/* ---------- 目录：编号导轨 ---------- */
+nav.toc a{font-family:var(--font-mono);font-size:13px;border-left:2px solid transparent;border-radius:0 6px 6px 0;
+  color:var(--muted)}
+nav.toc a:hover{color:var(--ink);background:var(--sel-bg)}
+nav.toc a.active{background:var(--accent-soft);color:var(--accent);border-left-color:var(--accent);
+  box-shadow:inset 0 0 24px -12px var(--accent)}
+nav.toc a .n{color:#4a5a6d;font-size:11.5px}
+nav.toc h4{font-family:var(--font-mono);font-size:10.5px;letter-spacing:.16em;color:#5b6b7e}
+
+/* ---------- 章节：面板 ---------- */
+section{box-shadow:var(--shadow);position:relative;overflow:hidden}
+section::before{content:"";position:absolute;inset:0 auto 0 0;width:2px;
+  background:linear-gradient(180deg,var(--accent),transparent 55%);opacity:.5}
+section>h2{font-family:var(--font-mono);font-size:22px;font-weight:600}
+section>h2::before{content:"❯ ";color:var(--accent)}
+section>.lede{font-family:var(--font-mono);font-size:13px;color:var(--muted)}
+h3{font-family:var(--font-mono);font-size:17px;border-left:3px solid var(--accent);letter-spacing:-.01em}
+h4,h5{font-family:var(--font-mono)}
+
+code{background:var(--code-bg);border-color:var(--code-bd);color:#8ee7f5}
+
+/* ---------- 卡片 / 盒 ---------- */
+.card{border-radius:var(--radius-sm);background:var(--paper-soft)}
+.box{border-radius:var(--radius-sm);border-left-width:3px;background:rgba(34,211,238,.05)}
+.box.warn{background:rgba(255,180,84,.06)}
+.box.bad{background:rgba(255,92,87,.06)}
+.box.ok{background:rgba(61,220,132,.06)}
+.box .t{font-family:var(--font-mono);font-size:13.5px}
+
+.formula{background:var(--code-bg);border-color:var(--code-bd);color:#a9ecf7;
+  box-shadow:inset 0 0 40px -20px rgba(34,211,238,.6)}
+
+/* ---------- 表格 ---------- */
+table.tbl th{background:var(--tbl-head);color:var(--muted);font-family:var(--font-mono);
+  font-size:12.5px;text-transform:uppercase;letter-spacing:.05em}
+table.tbl th,table.tbl td{border-color:var(--line)}
+table.tbl tbody tr:nth-child(even) td{background:rgba(255,255,255,.012)}
+
+/* ---------- 位视图：寄存器样式 ---------- */
+.fw{gap:10px 22px;padding:12px 14px;border:1px solid var(--line);border-radius:var(--radius-sm);
+  background:var(--code-bg)}
+.fcap{font-family:var(--font-mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase}
+.bits .b{width:26px;height:32px;border-radius:4px;font-family:var(--font-mono);font-weight:700;
+  border-width:1px;border-style:solid}
+.bits .b.s{background:var(--sign-bg);color:var(--sign-fg);border-color:var(--sign-bd);text-shadow:0 0 8px rgba(255,92,87,.5)}
+.bits .b.e{background:var(--exp-bg);color:var(--exp-fg);border-color:var(--exp-bd);text-shadow:0 0 8px rgba(76,194,255,.45)}
+.bits .b.f{background:var(--frac-bg);color:var(--frac-fg);border-color:var(--frac-bd);text-shadow:0 0 8px rgba(61,220,132,.4)}
+.bits .b:hover{transform:translateY(-2px);box-shadow:0 4px 14px -6px currentColor}
+.bits .b.sel{outline:2px solid var(--accent);outline-offset:1px}
+
+.readout dt{color:#6b7c91}
+.readout dd{color:var(--ink)}
+
+/* ---------- 控件：终端命令风 ---------- */
+input[type=text],input[type=number],select{background:var(--code-bg);border-color:var(--code-bd);color:var(--ink);
+  font-family:var(--font-mono)}
+input:focus,select:focus{border-color:var(--accent);outline:none;box-shadow:0 0 0 2px rgba(34,211,238,.18)}
+button{background:#161f2a;border-color:var(--line);color:var(--ink);font-family:var(--font-mono);font-size:13px}
+button:hover{border-color:var(--accent);color:var(--accent)}
+button.p{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);font-weight:700}
+button.p:hover{background:#5ee6f7;color:var(--accent-ink);box-shadow:0 0 18px -4px var(--accent)}
+.chip{font-family:var(--font-mono);font-size:11.5px;border-radius:4px}
+.seg{border-color:var(--line)}
+.seg button.on{background:var(--accent-soft);color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
+
+/* ---------- 分步演示：终端输出 ---------- */
+.step{border-radius:var(--radius-sm);background:var(--code-bg);border-color:var(--code-bd)}
+.step.on{border-color:#26374a;box-shadow:inset 0 0 30px -22px var(--accent)}
+.step .h{font-family:var(--font-mono);color:var(--accent);letter-spacing:.03em;font-size:12px}
+.step .h::before{content:"$ ";opacity:.7}
+
+/* ---------- 判断题 / 折叠 ---------- */
+.puzzle{background:var(--paper-soft);border-radius:var(--radius-sm)}
+.puzzle .q{color:#a9ecf7}
+.puzzle.correct{border-color:var(--ok-bd);background:rgba(61,220,132,.05)}
+.puzzle.wrong{border-color:var(--bad-bd);background:rgba(255,92,87,.05)}
+.reveal{background:var(--paper-soft)}
+
+.totop{background:#161f2a;border-color:var(--line);color:var(--accent);font-family:var(--font-mono)}
+.tick{stroke:#41556b}
+.axisline{stroke:#2a3949}
+
+@media(max-width:960px){
+  .brand::before{display:none}
+  .layout{padding:14px}
+  nav.toc{border-radius:var(--radius-sm)}
+}
+
+
+/* ---------- 风格切换条（构建时注入，各主题通用） ---------- */
+.stylebar{max-width:var(--page-max);margin:0 auto;padding:14px 22px 0;display:flex;gap:8px;
+  flex-wrap:wrap;align-items:center;font-size:12.5px;color:var(--muted)}
+.stylebar>span{font-weight:600}
+.stylebar a{text-decoration:none;padding:4px 11px;border:1px solid var(--line);border-radius:var(--radius-pill);
+  color:var(--muted);background:var(--card);font-weight:600}
+.stylebar a:hover{border-color:var(--accent);color:var(--accent)}
+.stylebar a.cur{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.stylebar>span{flex:0 0 auto}
+@media(max-width:960px){.stylebar{padding:12px 16px 0}}
+/* 25 讲之后药丸很多：窄屏折行会吃掉大半屏，改成单行横滑 */
+@media(max-width:820px){.stylebar{flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;
+  scrollbar-width:thin}.stylebar a{flex:0 0 auto;font-size:12px;padding:4px 10px}}
+
+</style>
+</head>
+<body>
+
+<header class="topbar"><div class="topbar-in">
+  <div class="brand">处理器体系结构 III：流水线（PIPE） Processor Architecture III: PIPE: Pipelined Implementation<small>《计算机系统导论》第 11 讲 · 深色终端版</small></div>
+  <div class="progress"><span id="pgText">学习进度 0%</span><span class="bar"><i id="pgBar"></i></span></div>
+</div></header>
+
+<div class="stylebar">
+  <span>风格：</span>
+  <a href="../ics11-zh.html">清爽蓝（原版）</a>
+  <a href="01-academic.html">学术讲义</a>
+  <a href="03-brutalist.html">新粗野</a>
+  <a href="04-glass.html">柔和玻璃</a>
+  <a href="index.html">◧ 全部预览</a>
+  <span style="opacity:.5">|</span>
+  <a href="../variants-ics01/index.html">↗ 第 1 讲 · 课程概述</a>
+  <a href="../variants-bits/index.html">↗ 第 2 讲 · 位、字节与整数</a>
+  <a href="../variants/index.html">↗ 第 3 讲 · 浮点数</a>
+  <a href="../variants-ics04/index.html">↗ 第 4 讲 · 机器级编程 I：基础</a>
+  <a href="../variants-ics05/index.html">↗ 第 5 讲 · 机器级编程 II：控制</a>
+  <a href="../variants-ics06/index.html">↗ 第 6 讲 · 机器级编程 III：过程</a>
+  <a href="../variants-ics07/index.html">↗ 第 7 讲 · 机器级编程 IV：数据</a>
+  <a href="../variants-ics08/index.html">↗ 第 8 讲 · 机器级编程 V：高级</a>
+  <a href="../variants-ics09/index.html">↗ 第 9 讲 · 处理器体系结构：ISA 与逻辑</a>
+  <a href="../variants-ics10/index.html">↗ 第 10 讲 · 处理器体系结构：顺序实现</a>
+  <a href="../variants-ics12/index.html">↗ 第 12 讲 · 存储层次结构</a>
+  <a href="../variants-ics13/index.html">↗ 第 13 讲 · 缓存存储器</a>
+  <a href="../variants-ics14/index.html">↗ 第 14 讲 · 代码优化</a>
+  <a href="../variants-ics15/index.html">↗ 第 15 讲 · 链接</a>
+  <a href="../variants-ics16/index.html">↗ 第 16 讲 · 异常控制流 I</a>
+  <a href="../variants-ics17/index.html">↗ 第 17 讲 · 异常控制流 II</a>
+  <a href="../variants-ics18/index.html">↗ 第 18 讲 · 系统级 I/O</a>
+  <a href="../variants-ics19/index.html">↗ 第 19 讲 · 虚拟内存 I</a>
+  <a href="../variants-ics20/index.html">↗ 第 20 讲 · 虚拟内存 II</a>
+  <a href="../variants-ics21/index.html">↗ 第 21 讲 · 动态内存分配</a>
+  <a href="../variants-ics22/index.html">↗ 第 22 讲 · 网络基础</a>
+  <a href="../variants-ics23/index.html">↗ 第 23 讲 · 网络编程</a>
+  <a href="../variants-ics24/index.html">↗ 第 24 讲 · 并发编程</a>
+  <a href="../variants-ics25/index.html">↗ 第 25 讲 · 同步</a>
+  <a href="../variants-lab/index.html">↗ Data Lab 实验</a>
+</div>
+
+<div class="layout">
+
+<nav class="toc">
+  <h4>目录</h4>
+  <a href="#s0"><span class="n">0</span>课程导览</a>
+  <a href="#s1"><span class="n">1</span>流水线原理与吞吐率</a>
+  <a href="#s2"><span class="n">2</span>从 SEQ 到 PIPE</a>
+  <a href="#s3"><span class="n">3</span>取指与 PC 预测</a>
+  <a href="#s4"><span class="n">4</span>数据冒险与停顿</a>
+  <a href="#s5"><span class="n">5</span>数据转发</a>
+  <a href="#s6"><span class="n">6</span>加载/使用冒险</a>
+  <a href="#s7"><span class="n">7</span>控制冒险 I：分支</a>
+  <a href="#s8"><span class="n">8</span>控制冒险 II：ret 与控制组合</a>
+  <a href="#s9"><span class="n">9</span>总结、模拟器与测验</a>
+</nav>
+
+<main>
+<!-- ================= 0 ================= -->
+  <section id="s0">
+    <h2>课程导览<span class="srcref">原第 1–2 页</span></h2>
+    <p class="lede">北京大学《计算机系统导论》第 11 讲：处理器体系结构 III —— <b>PIPE：流水线实现（Pipelined Implementation）</b>。上一讲用 SEQ 把 Y86-64 指令集变成一台会跑的机器：<b>一个时钟周期执行一整条指令</b>，六个阶段串成一条长链，时钟必须慢到等最长的路径稳定。这一讲把这条链<b>切成五级</b>，每一级配一组流水线寄存器，让每个硬件单元每个周期都在干活 —— 代价是必须解决<b>数据冒险</b>与<b>控制冒险</b>。</p>
+
+    <div class="grid g3">
+      <div class="card"><h5>本讲提纲<span class="srcref">原第 2 页</span></h5>
+        <ol style="margin:0;padding-left:20px;font-size:14.5px">
+          <li>流水线的一般原理：目标与困难</li>
+          <li>改造 SEQ：重排、插入流水线寄存器</li>
+          <li>数据冒险与控制冒险带来的问题</li>
+          <li>用停顿（stall）与气泡（bubble）拖延</li>
+          <li>用转发（forwarding）抄近路</li>
+          <li>加载/使用冒险、分支预测失败、<code>ret</code> 三种特殊情况</li>
+          <li>流水线控制信号的完整推导与一个隐蔽的 bug</li>
+        </ol>
+      </div>
+      <div class="card"><h5>一句话核心</h5>
+        <p style="margin:0;font-size:14.5px">流水线把「一条指令走完六个阶段」变成「五条指令各占一级、每拍一起前进」。吞吐率上去了，但<b>指令之间开始互相干扰</b>：后面的指令要读前一条还没写回的值（数据冒险），取指阶段还不知道该取哪一条（控制冒险）。整讲剩下的篇幅都在回答：<b>什么时候停下等（stall）、什么时候插一条空指令（bubble）、什么时候直接抄近路（forward）</b>。</p>
+      </div>
+      <div class="card"><h5>和上一讲的衔接</h5>
+        <p style="margin:0;font-size:14.5px">本讲把第 10 讲的 SEQ 硬件图改造成 PIPE：<b>组合逻辑几乎不动</b>（ALU、寄存器堆、内存、控制块全部沿用），改动集中在三处 —— 插入五组流水线寄存器、给寄存器堆加反馈通路（转发）、加一块流水线控制逻辑（停顿与气泡）。SEQ 的六阶段在这里合并成五级：<b>写回与 PC 更新合进同一拍</b>。</p>
+      </div>
+    </div>
+
+    <h3>0.1 原页码导航</h3>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>主题</th><th>原课件页码</th><th>要回答的问题</th></tr>
+      <tr><td><b>流水线原理</b></td><td class="mono">3–9</td><td>洗车为什么能流水、300 ps 的算例怎么算出 3.12 与 8.33 GIPS、非均匀分段与寄存器开销为什么限制加速。</td></tr>
+      <tr><td><b>从 SEQ 到 PIPE</b></td><td class="mono">10–19</td><td>数据依赖长什么样、SEQ+ 为什么把 PC 阶段提到最前、五组流水线寄存器各保存什么、<code>D_valA</code> 与 <code>d_valA</code> 差在哪。</td></tr>
+      <tr><td><b>取指与 PC 预测</b></td><td class="mono">20–23</td><td>取指阶段凭什么猜下一条指令的地址？猜错了从哪里把正确的 PC 找回来？</td></tr>
+      <tr><td><b>数据冒险与停顿</b></td><td class="mono">24–34</td><td>需要几条 <code>nop</code> 才够？停顿条件怎么写？流水线寄存器有哪三种更新模式？</td></tr>
+      <tr><td><b>数据转发</b></td><td class="mono">35–41</td><td>值还在流水线里没写回时怎么给后面的指令用？多个来源同时命中时谁优先？</td></tr>
+      <tr><td><b>加载/使用冒险</b></td><td class="mono">42–45</td><td>内存读出的值连转发都来不及，怎么办？</td></tr>
+      <tr><td><b>控制冒险（分支）</b></td><td class="mono">46–51</td><td>预测为跳转、实际没跳时，多取的两条指令怎么取消？</td></tr>
+      <tr><td><b>控制冒险（ret）与控制组合</b></td><td class="mono">52–66</td><td><code>ret</code> 要等到写回才知道回哪里；两种特殊情况同时发生（组合 A/B）时谁优先？</td></tr>
+      <tr><td><b>总结</b></td><td class="mono">67–68</td><td>两个部分的总结页：写了什么、还差什么。</td></tr>
+    </table></div>
+
+    <div class="box"><div class="t">本页使用说明</div>
+      标有 <span class="chip gray">可交互</span> 的地方都能点击或输入，所有计算都在浏览器里实时完成。<a href="#s9">第 9 节的 PIPE 模拟器</a>最值得反复玩：它真的在页面里执行一段 Y86-64 程序，把每一拍的取指、译码、执行、访存、写回与停顿/气泡全部摊开。页面里所有「会判对错」的东西（冒险检测条件、转发选择、控制信号、模拟器的状态演化）都已用独立参考实现逐项交叉验证（0 项不一致）。
+    </div>
+  </section>
+
+  <!-- ================= 1 ================= -->
+  <section id="s1">
+    <h2>1. 流水线原理与吞吐率<span class="srcref">原第 3–9 页</span></h2>
+    <p class="lede">流水线的全部智慧可以先用一个洗车场的例子讲清楚，再用一个 300 ps 的组合逻辑算例量化。课件用七页回答两个问题：<b>流水线能快多少</b>（吞吐率）、<b>为什么不能无限快</b>（非均匀延迟与寄存器开销）。</p>
+
+    <h3>1.1 洗车场：三种做法<span class="srcref">原第 3 页</span></h3>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>做法</th><th>过程</th><th>同时处理几辆车</th></tr>
+      <tr><td><b>顺序（Sequential）</b></td><td>一辆车从擦洗、冲水到吹干，全流程走完才轮到下一辆</td><td class="mono">1</td></tr>
+      <tr><td><b>并行（Parallel）</b></td><td>多套设备同时开工，每套仍然从头做到尾</td><td class="mono">设备套数</td></tr>
+      <tr><td><b>流水线（Pipelined）</b></td><td>把过程拆成若干<b>互相独立的阶段</b>（擦洗 → 冲水 → 吹干），车按顺序依次穿过各阶段</td><td class="mono">阶段数</td></tr>
+    </table></div>
+    <div class="box ok"><div class="t">课件原话的三条「Idea」</div>
+      <ul style="margin:6px 0 0">
+        <li>把过程拆成<b>互相独立的阶段</b>；</li>
+        <li>让对象<b>按顺序穿过</b>这些阶段；</li>
+        <li>于是<b>任意时刻都有多个对象在被处理</b>。</li>
+      </ul>
+    </div>
+
+    <h3>1.2 算例：300 ps 的组合逻辑<span class="srcref">原第 4–5 页</span></h3>
+    <p>课件把一台机器的组合逻辑画成一条 <code>300 ps</code> 的延迟链，后面接一个需要 <code>20 ps</code> 装载的寄存器。不流水线时，时钟周期必须 ≥ 320 ps：</p>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>方案</th><th>时钟周期</th><th>单条操作延迟</th><th>吞吐率</th></tr>
+      <tr><td><b>未流水线</b><span class="srcref">原第 4 页</span></td><td class="mono">300 + 20 = 320 ps</td><td class="mono">320 ps</td><td class="mono">3.12 GIPS</td></tr>
+      <tr><td><b>3 级流水线</b><span class="srcref">原第 5 页</span></td><td class="mono">100 + 20 = 120 ps</td><td class="mono">360 ps（变长）</td><td class="mono">8.33 GIPS</td></tr>
+    </table></div>
+    <p>关键在最后一行：<b>把组合逻辑切成三段各 100 ps 之后，新操作每 120 ps 就能开始一个</b>（不必等前一个走完），但单条操作走完全程反而变慢到 360 ps —— <b>吞吐率换来的是单条延迟</b>。</p>
+    <p style="font-size:13.5px;color:var(--muted)">关于 3.12 这个数：1 / 320 ps = 3.125 GIPS，课件第 4 页印的是 <b>3.12</b>（截断），本页的现算结果显示为 <b>3.13</b>（四舍五入到两位小数）—— 差别只在末位取整，结论不变。另外三个数 8.33（第 5 页）、5.88（第 8 页）、14.29（第 9 页）与现算结果一致。</p>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：流水线性能计算器 —— 改段数与每段延迟，现算周期、延迟、吞吐与加速比</span>
+        <label class="fld">各段组合延迟（ps，逗号分隔） <input type="text" id="pfSegs" value="100,100,100" size="18" spellcheck="false"></label>
+        <label class="fld">寄存器开销（ps） <input type="text" id="pfReg" value="20" size="5" spellcheck="false"></label>
+        <button class="p" id="pfGo">计算</button>
+        <button class="sm" data-pf="300;20">原第 4 页：单段 300 ps</button>
+        <button class="sm" data-pf="100,100,100;20">原第 5 页：3 级</button>
+        <button class="sm" data-pf="50,150,100;20">原第 8 页：非均匀 50/150/100</button>
+        <button class="sm" data-pf="50,50,50,50,50,50;20">原第 9 页：6 级</button>
+      </div>
+      <div id="pfOut"></div>
+    </div>
+
+    <h3>1.3 时空图：OP1、OP2、OP3 怎么叠起来<span class="srcref">原第 6–7 页</span></h3>
+    <p>课件第 6 页把两种做法的时空图并排放：未流水线时 <code>OP1</code> 走完 A B C 才能开始 <code>OP2</code>；3 级流水线时三条操作各占一级、交错前进。下面这张图是现算出来的 —— 改段数和操作数即可：</p>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：时空图 —— 段数与操作数可变，上方是周期刻度</span>
+        <label class="fld">段数 <input type="text" id="pgK" value="3" size="3" spellcheck="false"></label>
+        <label class="fld">操作数 <input type="text" id="pgN" value="4" size="3" spellcheck="false"></label>
+        <button class="p" id="pgGo">重画</button>
+        <button class="sm" data-pg="3;3">原第 6 页：3 段 3 条</button>
+        <button class="sm" data-pg="5;6">五级流水线：5 段 6 条</button>
+      </div>
+      <div id="pgOut"></div>
+    </div>
+
+    <div class="box"><div class="t">两条容易混的曲线</div>
+      <b>吞吐率</b>（每秒完成几条）只取决于<b>最慢的那一级</b>：周期 = 最慢段延迟 + 寄存器开销，吞吐 = 1 / 周期。<b>单条延迟</b>反而随级数增加：级数 × 周期。所以「流水线让程序更快」说的是前者；某一条指令自己反而变慢了（多穿了几个寄存器）。算完后回看上表：3 级流水线的延迟从 320 ps 涨到 360 ps，吞吐却从 3.12 涨到 8.33 GIPS。
+    </div>
+
+    <h3>1.4 两个限制<span class="srcref">原第 8–9 页</span></h3>
+    <div class="grid g2">
+      <div class="card"><h5>限制一：非均匀延迟<span class="srcref">原第 8 页</span></h5>
+        <p style="margin:0;font-size:14.5px">把组合逻辑切成 <code>50 / 150 / 100 ps</code> 三段后，<b>吞吐率被最慢的一段拖住</b>：周期 = 150 + 20 = 170 ps（原课件实算值 <span class="mono">5.88 GIPS</span>），另外两段大部分时间在空转。课件原话：<b>很难把系统切成均衡的几段</b>。</p>
+      </div>
+      <div class="card"><h5>限制二：寄存器开销<span class="srcref">原第 9 页</span></h5>
+        <p style="margin:0;font-size:14.5px">段越细，装载寄存器那 20 ps 的占比越高。课件给的三档：<b>1 级 6.25% · 3 级 16.67% · 6 级 28.57%</b>；6 级 50 ps 时周期 70 ps、延迟 420 ps、吞吐 <span class="mono">14.29 GIPS</span>。现代处理器的高频正是靠<b>很深的流水线</b>换来的 —— 代价就是下表最后一列越来越大。</p>
+      </div>
+    </div>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：寄存器开销曲线 —— 同一份组合逻辑切成 k 段，逐段加深深度的收益与代价</span>
+        <label class="fld">组合逻辑总延迟（ps） <input type="text" id="ovSeg" value="300" size="5" spellcheck="false"></label>
+        <label class="fld">寄存器开销（ps） <input type="text" id="ovReg" value="20" size="5" spellcheck="false"></label>
+        <button class="p" id="ovGo">重算</button>
+        <button class="sm" data-ov="300;20">原第 9 页：300 / 20</button>
+        <button class="sm" data-ov="300;20;6">原第 4 页：单段 300 ps（k=1）</button>
+      </div>
+      <div id="ovOut"></div>
+    </div>
+
+    <div class="box warn"><div class="t">数字自己算一遍</div>
+      课件第 9 页的百分比是「寄存器开销占周期的比例」：<code>20 / 320 = 6.25%</code>（1 级）、<code>20 / 120 = 16.67%</code>（3 级）、<code>20 / 70 = 28.57%</code>（6 级）。三档都对得上，但请注意第 4 页 1 级时是 300 ps 一段（周期 320 ps），第 9 页 1 级时是 300 ps 总量（同样 320 ps）—— 恰好一致，因为 6 × 50 = 300。
+    </div>
+  </section>
+
+  <!-- ================= 2 ================= -->
+  <section id="s2">
+    <h2>2. 从 SEQ 到 PIPE：流水线寄存器与命名<span class="srcref">原第 10–19 页</span></h2>
+    <p class="lede">把 SEQ 改成 PIPE 的动作很小：<b>硬件块一个不加</b>，只是把组合逻辑切成五级、在中间插五组寄存器、把 PC 阶段挪到最前面。这一节先看清楚流水线会带来什么麻烦，再认识这五组寄存器和一套信号命名法。</p>
+
+    <h3>2.1 数据依赖与数据冒险<span class="srcref">原第 10–12 页</span></h3>
+    <p>课件先讲「为什么不能简单地把阶段错开」：如果每条操作都依赖<b>前一条的结果</b>（课件第 10 页的三条 OP 首尾相接），那么流水线各级之间就没法重叠 —— 每 3 拍才能开始一条，等于没流水。</p>
+    <div class="formula" style="text-align:left">
+      <div>1&nbsp;&nbsp;irmovq $50, %rax&nbsp;&nbsp;&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)">/* %rax ← 50 */</span></div>
+      <div>2&nbsp;&nbsp;addq&nbsp;&nbsp;%rax , %rbx&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)">/* 要读第 1 条刚写的 %rax */</span></div>
+      <div>3&nbsp;&nbsp;mrmovq 100(%rbx), %rdx&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)">/* 要读第 2 条刚写的 %rbx */</span></div>
+    </div>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>课件用词</th><th>含义</th><th>页码</th></tr>
+      <tr><td><b>数据依赖</b> Data Dependency</td><td>一条指令的结果被后一条指令当作操作数 —— 在流水线里表现为<b>结果还没绕回来</b>，第 11 页原话：「流水线改变了系统的行为」</td><td class="mono">10–11</td></tr>
+      <tr><td><b>读后写</b> RAW（Read-After-Write）</td><td>前一条写寄存器、后一条读同一个寄存器。课件强调这是<b>真实程序里非常常见</b>的模式</td><td class="mono">12</td></tr>
+      <tr><td>两条要求</td><td>① 结果必须<b>正确</b>；② 性能损失要<b>尽可能小</b></td><td class="mono">12</td></tr>
+    </table></div>
+
+    <h3>2.2 SEQ+：把 PC 阶段提到最前面<span class="srcref">原第 13–14 页</span></h3>
+    <p>SEQ 把「更新 PC」放在最后一个阶段（因为它要用这一条指令算出的 <code>valC / valM / valP</code>）。流水线要求<b>每条指令在进入流水线时就知道自己的 PC</b>，所以 SEQ+ 把这段逻辑挪到最前面：<b>PC 不再存在寄存器里</b>，而是由「上一条指令留下的一批信息」现算出来 —— 页面上体现为 <code>Select PC</code> 与 <code>Predict PC</code> 两个灰色块。</p>
+    <div class="box ok"><div class="t">这一步是 PC 预测的伏笔</div>
+      PC 阶段从末尾挪到开头之后，它<b>只能看到上一条指令取指阶段得到的信息</b>（<code>valC</code> / <code>valP</code>），看不到执行结果 —— 于是「下一条 PC 是什么」只能猜。第 3 节整节都在处理这个猜测。
+    </div>
+
+    <h3>2.3 五组流水线寄存器<span class="srcref">原第 15–17 页</span></h3>
+    <p>插入流水线寄存器之后，阶段从六个变成五个（写回与 PC 更新合并在同一拍，PC 的选择被提到取指级）：<b>Fetch → Decode → Execute → Memory → Write Back</b>。每两个阶段之间有一组寄存器，保存上一级算出的中间值：</p>
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：流水线寄存器漫游 —— 点一级，看它保存哪些字段、这一级算什么</span>
+        <span style="font-size:13px;color:var(--muted)">（字段清单取自原第 15、17 页硬件图）</span>
+      </div>
+      <div id="prOut"></div>
+    </div>
+
+    <h3>2.4 信号命名约定<span class="srcref">原第 18 页</span></h3>
+    <p>五级流水线里同一个字段会在多处出现，课件用两个字母大小写区分，本讲后面所有 HCL 都按这套读：</p>
+    <div class="formula" style="text-align:left">
+      <div>S_Field&nbsp;&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)">/* 存放在阶段 S 的流水线寄存器里的字段值（大写 S、字段首字母大写）*/</span></div>
+      <div>s_Field&nbsp;&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)">/* 在阶段 S 里现算出来的字段值（小写）*/</span></div>
+    </div>
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：命名判别器 —— 点一个信号名，看它是「哪一级的寄存器值」还是「哪一级现算出来的」</span>
+        <button class="sm" id="sigReset">清空</button>
+      </div>
+      <div id="sigOut"></div>
+    </div>
+
+    <h3>2.5 四条反馈路径<span class="srcref">原第 19 页</span></h3>
+    <p>流水线里绝大多数线是「从下往上」（低级 → 高级）单向前进的，只有四条线是<b>往回走</b>的反馈路径 —— 它们正是所有冒险处理的物理基础：</p>
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：反馈路径 —— 点一条，看它从哪一级回到哪一级、服务哪条指令</span>
+      </div>
+      <div id="fbOut"></div>
+    </div>
+    <div class="box"><div class="t">前向路径不能跳级</div>
+      <p style="margin:4px 0 0">课件第 17 页特别提醒：值只能<b>一级一级往前传</b>，不能跳过某一级 —— 例如 <code>valC</code> 必须穿过 <code>D</code> 级才能到执行级用它。所以反馈路径只有四条：预测 PC、分支信息、返回点、寄存器更新，其余都靠流水线寄存器接力。</p>
+    </div>
+  </section>
+
+  <!-- ================= 3 ================= -->
+  <section id="s3">
+    <h2>3. 取指与 PC 预测<span class="srcref">原第 20–23 页</span></h2>
+    <p class="lede">五级流水线里最难的一拍是第一拍：<b>取指阶段必须在同一个周期里决定「下一条取哪里」</b>，可此时这条指令还在译码、执行结果还远没有。课件的答案是：按指令类型猜，并且为猜错留一条恢复通路。</p>
+
+    <h3>3.1 为什么要猜<span class="srcref">原第 20 页</span></h3>
+    <ul>
+      <li>当前指令的取指阶段一结束，就要开始取下一条 —— <b>没有足够时间可靠地判断下一条是谁</b>（要等译码、甚至执行）。</li>
+      <li>于是课件给出两条：<b>猜哪条指令会跟在后面</b>；<b>猜错了要能恢复</b>。</li>
+    </ul>
+
+    <h3>3.2 本讲使用的预测策略<span class="srcref">原第 21 页</span></h3>
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：预测策略 —— 选一类指令，看取指级猜什么、可靠不可靠</span>
+        <label class="fld">指令类型
+          <select id="ppSel">
+            <option value="alu">普通指令（不改变控制流）：OPq / irmovq / rmmovq / mrmovq / cmovXX / pushq / popq / nop / halt</option>
+            <option value="call">call 与无条件跳转 jmp</option>
+            <option value="jcc">条件跳转 jXX（除 jmp 外）</option>
+            <option value="ret">ret</option>
+          </select>
+        </label>
+        <label class="fld">条件跳转命中率（%） <input type="text" id="ppRate" value="60" size="5" spellcheck="false"></label>
+        <button class="p" id="ppGo">看看</button>
+      </div>
+      <div id="ppOut"></div>
+    </div>
+
+    <h3>3.3 猜错了去哪里取回正确的 PC<span class="srcref">原第 22 页</span></h3>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>情况</th><th>什么时候知道猜错</th><th>正确的 PC 从哪里来</th></tr>
+      <tr><td><b>跳转预测错</b></td><td>条件标志（branch condition flag）在这条指令到达<b>访存阶段</b>时才知道</td><td>顺延地址（fall-through PC）来自 <code>valA</code> —— 即 <code>M_valA</code>（译码级对跳转指令把 <code>valA</code> 设成 <code>valP</code>）</td></tr>
+      <tr><td><b>返回指令 ret</b></td><td>返回地址要等 <code>ret</code> 走到<b>写回阶段</b>才从内存读到</td><td><code>W_valM</code></td></tr>
+    </table></div>
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：恢复通路 —— 选一种猜错，看取指级下一个周期被谁接管</span>
+        <div class="seg" id="phSeg">
+          <button class="on" data-ph="jcc">条件跳转预测错</button>
+          <button data-ph="ret">ret</button>
+          <button data-ph="ok">预测正确</button>
+        </div>
+      </div>
+      <div id="phOut"></div>
+    </div>
+
+    <h3>3.4 五级流水线跑起来的样子<span class="srcref">原第 23 页</span></h3>
+    <p>课件第 23 页给出 <code>demo-basic.ys</code>：五条互不干扰的指令，第 5 拍时 <code>I1</code> 在写回、<code>I2</code> 在访存、<code>I3</code> 在执行、<code>I4</code> 在译码、<code>I5</code> 在取指 —— <b>五级同时满载</b>，这就是流水线的理想画面。用页面的 PIPE 模拟器（<a href="#s9">第 9 节</a>）可以逐拍按出这张图。</p>
+    <div class="formula" style="text-align:left">
+      <div># demo-basic.ys&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)">周期 1&nbsp; 2&nbsp; 3&nbsp; 4&nbsp; 5</span></div>
+      <div>irmovq $1,%rax&nbsp;&nbsp;#I1&nbsp;&nbsp;F&nbsp; D&nbsp; E&nbsp; M&nbsp; W</div>
+      <div>irmovq $2,%rcx&nbsp;&nbsp;#I2&nbsp;&nbsp;&nbsp;&nbsp; F&nbsp; D&nbsp; E&nbsp; M&nbsp; W</div>
+      <div>irmovq $3,%rdx&nbsp;&nbsp;#I3&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; F&nbsp; D&nbsp; E&nbsp; M&nbsp; W</div>
+      <div>irmovq $4,%rbx&nbsp;&nbsp;#I4&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; F&nbsp; D&nbsp; E&nbsp; M&nbsp; W</div>
+      <div>halt&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;#I5&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; F&nbsp; D&nbsp; E&nbsp; M&nbsp; W</div>
+    </div>
+    <div class="box"><div class="t">成功的关键：没有依赖</div>
+      这五条指令彼此不读对方的寄存器，所以流水线可以一路畅通。一旦出现第 2 节那种 RAW 依赖，<b>「每拍一条」就保不住了</b> —— 第 4 节先讲最笨也最稳的办法：停下等。
+    </div>
+  </section>
+
+  <!-- ================= 4 ================= -->
+  <section id="s4">
+    <h2>4. 数据冒险与停顿<span class="srcref">原第 24–34 页</span></h2>
+    <p class="lede">课件用同一段小程序（<code>demo-h0.ys</code> 及其变体）在四页里插 0、1、2、3 个 <code>nop</code>，一笔一笔画出「值还没写回就被读到」的错误。然后给出硬件解法：<b>检测停顿条件，让译码级原地不动、取指级跟着不动、执行级插一条气泡</b>。</p>
+
+    <h3>4.1 几条 nop 才够<span class="srcref">原第 24–27 页</span></h3>
+    <div class="formula" style="text-align:left">
+      <div># demo-h0.ys（不插 nop 的版本）</div>
+      <div>0x000: irmovq $10,%rdx&nbsp;&nbsp;&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)"># %rdx ← 10</span></div>
+      <div>0x00a: irmovq $3,%rax&nbsp;&nbsp;&nbsp;&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)"># %rax ← 3</span></div>
+      <div>0x014: addq %rdx,%rax&nbsp;&nbsp;&nbsp;&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)"># %rax ← %rax + %rdx</span></div>
+      <div>0x016: halt</div>
+    </div>
+    <p>课件四页的结论（每一页都标了 <b>Error</b> 或正确值）：</p>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>版本</th><th>原页码</th><th>关键那一拍</th><th>结果</th></tr>
+      <tr><td>0 个 nop</td><td class="mono">24</td><td>第 4 拍：<code>addq</code> 在译码级读到 <code>valA ← R[%rdx] = 0</code>、<code>valB ← R[%rax] = 0</code></td><td><b>Error</b>（两个操作数都是旧值）</td></tr>
+      <tr><td>1 个 nop</td><td class="mono">25</td><td>第 5 拍：<code>W: R[%rdx] ← 10</code>，但同拍的译码读到的仍是 <code>0</code></td><td><b>Error</b></td></tr>
+      <tr><td>2 个 nop</td><td class="mono">26</td><td>第 6 拍：<code>valA ← R[%rdx] = 10</code> 已经正确，<code>valB ← R[%rax] = 0</code> 仍错</td><td><b>Error</b></td></tr>
+      <tr><td>3 个 nop</td><td class="mono">27</td><td>第 7 拍：<code>valA = 10</code>、<code>valB = 3</code> 全对</td><td>正确</td></tr>
+    </table></div>
+    <p>下面这个组件把四页合成一个实验：<b>nop 数可调</b>，页面里的流水线引擎真的把程序跑一遍，并检查译码级有没有读到还没写回的值：</p>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：nop 填充实验室 —— 改 nop 数、开关转发，看结果对不对</span>
+        <div class="seg" id="nopSeg">
+          <button data-nop="0">0 个 nop</button>
+          <button data-nop="1">1 个</button>
+          <button class="on" data-nop="2">2 个</button>
+          <button data-nop="3">3 个</button>
+          <button data-nop="4">4 个</button>
+        </div>
+        <div class="seg" id="nopFwdSeg">
+          <button data-nopf="0" class="on">朴素流水线（无转发）</button>
+          <button data-nopf="1">带转发</button>
+        </div>
+      </div>
+      <div id="nopOut"></div>
+    </div>
+
+    <h3>4.2 停下来的两种办法<span class="srcref">原第 28 页</span></h3>
+    <ul>
+      <li>如果一条指令<b>跟得太近</b>（前一条要写它要读的寄存器），就<b>把它慢下来</b>；</li>
+      <li>让这条指令<b>停在译码级</b>（hold in decode）；</li>
+      <li>同时<b>动态地往执行级注入一条 <code>nop</code></b> —— 也就是气泡（bubble）。</li>
+    </ul>
+
+    <h3>4.3 停顿条件<span class="srcref">原第 29–30 页</span></h3>
+    <p>把「译码级要读谁」和「后面几级要写谁」放在一起比：</p>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>比什么</th><th>来自</th></tr>
+      <tr><td>源寄存器 <b><code>srcA</code> / <code>srcB</code></b></td><td>当前停在<b>译码级</b>的那条指令</td></tr>
+      <tr><td>目的寄存器 <b><code>dstE</code> / <code>dstM</code></b></td><td>处在<b>执行级、访存级、写回级</b>的那三条指令</td></tr>
+    </table></div>
+    <div class="box warn"><div class="t">特例：寄存器号 15（0xF）永不触发停顿</div>
+      <code>0xF</code> 表示<b>没有寄存器操作数</b>（RNONE），也用来表示<b>条件传送失败</b>（<code>cmovXX</code> 条件不成立时目的寄存器被设成 <code>0xF</code>）。比较时要把 <code>0xF</code> 排除，否则会「等一个根本不存在的写」。
+    </div>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：停顿条件检测器 —— 选两边寄存器，看停不停、为什么</span>
+        <label class="fld">译码级 srcA <select id="stSrcA"></select></label>
+        <label class="fld">译码级 srcB <select id="stSrcB"></select></label>
+        <label class="fld">执行级 dstE <select id="stDstE"></select></label>
+        <label class="fld">访存级 dstE <select id="stDstME"></select></label>
+        <label class="fld">访存级 dstM <select id="stDstMM"></select></label>
+        <label class="fld">写回级 dstE <select id="stDstWE"></select></label>
+        <label class="fld">写回级 dstM <select id="stDstWM"></select></label>
+      </div>
+      <div id="stOut"></div>
+    </div>
+    <p style="margin-top:14px">课件第 30 页给的就是一次真实比对 —— 第 6 拍时写回级是 <code>W_dstE = %rax</code>、<code>W_valE = 3</code>，而译码级正等着 <code>srcA = %rdx</code>、<code>srcB = %rax</code>：<code>srcB</code> 命中 <code>W_dstE</code>，<b>停顿</b>。</p>
+
+    <h3>4.4 停顿时各自动作<span class="srcref">原第 31–33 页</span></h3>
+    <div class="grid g3">
+      <div class="card"><h5>落后的指令</h5><p style="margin:0;font-size:14px">滞留在<b>译码级</b>不动 —— 页面上表现为同一个 <code>D</code> 格子连占几拍（课件第 31 页的 <code>0x014: addq</code> 就占了 <code>D D D D</code> 四拍）。</p></div>
+      <div class="card"><h5>后面的指令</h5><p style="margin:0;font-size:14px"><b>留在取指级</b>，同一个 <code>F</code> 格子也连占几拍 —— 反正它也不能越过前面那条指令。</p></div>
+      <div class="card"><h5>执行的空档</h5><p style="margin:0;font-size:14px">往<b>执行级注入气泡</b>（课件原话：<b>像动态生成的 <code>nop</code></b>），气泡继续往前流经后面的级。</p></div>
+    </div>
+    <p>实现方式是把「流水线寄存器该怎么更新」做成一组模式信号（课件第 33 页）：<b>组合逻辑检测出停顿条件 → 设置模式信号 → 下一个时钟沿按模式更新</b>。</p>
+
+    <h3>4.5 流水线寄存器的三种更新模式<span class="srcref">原第 34 页</span></h3>
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：流水线寄存器模式 —— 拨动 stall / bubble 两个信号</span>
+        <div class="seg" id="rmStallSeg">
+          <button data-rm="stall:0" class="on">stall = 0</button>
+          <button data-rm="stall:1">stall = 1</button>
+        </div>
+        <div class="seg" id="rmBubSeg">
+          <button data-rm="bubble:0" class="on">bubble = 0</button>
+          <button data-rm="bubble:1">bubble = 1</button>
+        </div>
+      </div>
+      <div id="rmOut"></div>
+    </div>
+  </section>
+
+  <!-- ================= 5 ================= -->
+  <section id="s5">
+    <h2>5. 数据转发<span class="srcref">原第 35–41 页</span></h2>
+    <p class="lede">停顿能保证正确，但代价太大 —— 课件第 26 页那个例子要停 3 拍才等得到值。真正有用的观察是：<b>值在执行级或访存级就已经算出来了</b>，只是还没写回寄存器堆。那就别等写回，<b>直接把值从产生它的那一级送进译码级</b> —— 这就是转发（forwarding / bypassing）。</p>
+
+    <h3>5.1 朴素流水线错在哪<span class="srcref">原第 35 页</span></h3>
+    <ul>
+      <li>寄存器直到<b>写回阶段结束</b>才被写入；</li>
+      <li>而源操作数在<b>译码阶段</b>就从寄存器堆读走了 —— 读的时候值必须已经在寄存器堆里；</li>
+      <li>观察：值其实在<b>执行或访存阶段</b>就已经产生；</li>
+      <li>技巧：把值<b>直接从产生它的指令传给译码阶段</b>，只要在译码阶段结束前到达即可。</li>
+    </ul>
+
+    <h3>5.2 两个课件例题<span class="srcref">原第 36、38 页</span></h3>
+    <div class="grid g2">
+      <div class="card"><h5>例一：从写回级转发<span class="srcref">原第 36 页</span></h5>
+        <p style="margin:0;font-size:14px">程序 <code>demo-h2.ys</code>（2 个 nop），第 6 拍：写回级上是 <code>W_dstE = %rax</code>、<code>W_valE = 3</code>；译码级上的 <code>addq</code> 正要读 <code>%rax</code> —— 直接把它当 <code>valB</code> 送过去：<code>valB ← W_valE = 3</code>。<b>2 个 nop 就够了，不用停 3 拍。</b></p>
+      </div>
+      <div class="card"><h5>例二：从执行级与访存级转发<span class="srcref">原第 38 页</span></h5>
+        <p style="margin:0;font-size:14px">程序 <code>demo-h0.ys</code>（一个 nop 都不插），第 4 拍：<code>%rdx</code> 的值是 ALU <b>上一个周期</b>算出的，现在停在访存级 → 从访存级转发当 <code>valA</code>（<code>M_valE = 10</code>）；<code>%rax</code> 的值 ALU <b>本周期</b>刚算出，还在执行级 → 从执行级转发当 <code>valB</code>（<code>e_valE = 3</code>）。<b>同一拍里两个来源同时工作。</b></p>
+      </div>
+    </div>
+
+    <h3>5.3 旁路来源<span class="srcref">原第 37 页</span></h3>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>来源</th><th>能提供什么</th><th>对应字段</th></tr>
+      <tr><td><b>执行级</b></td><td>ALU 刚算出的值</td><td class="mono">e_valE</td></tr>
+      <tr><td><b>访存级</b></td><td>ALU 结果 + 内存读出的值</td><td class="mono">M_valE · m_valM</td></tr>
+      <tr><td><b>写回级</b></td><td>ALU 结果 + 内存读出的值</td><td class="mono">W_valE · W_valM</td></tr>
+      <tr><td><b>寄存器堆</b></td><td>兜底：谁都没写就把读到的原值送出去</td><td class="mono">d_rvalA · d_rvalB</td></tr>
+    </table></div>
+    <p>译码级的转发逻辑要为 <code>valA</code> 与 <code>valB</code> <b>各做一次多路选择</b>：正常情况下取寄存器堆的输出，命中更晚的流水线级就取那一级的值。</p>
+
+    <h3>5.4 多个来源同时命中：谁的优先<span class="srcref">原第 39 页</span></h3>
+    <div class="formula" style="text-align:left">
+      <div># demo-priority.ys&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)">第 5 拍时：</span></div>
+      <div>0x000: irmovq $1, %rax&nbsp;&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)">写回级 W：R[%rax] ← 1</span></div>
+      <div>0x00a: irmovq $2, %rax&nbsp;&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)">访存级 M：R[%rax] ← 2</span></div>
+      <div>0x014: irmovq $3, %rax&nbsp;&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)">执行级 E：R[%rax] ← 3</span></div>
+      <div>0x01e: rrmovq %rax, %rdx&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)">译码级 D：valA ← ?</span></div>
+      <div>0x020: halt</div>
+    </div>
+    <p>三个来源同时写着 <code>%rax</code>。课件给出的原则是<b>匹配串行语义</b>：按顺序执行的话，<code>rrmovq</code> 读到的是最后一条写的值，也就是<b>最年轻的那个写者</b> —— 停在执行级的那条指令，所以 <code>valA = 3</code>。优先级因此是 <b>执行级 &gt; 访存级 &gt; 写回级 &gt; 寄存器堆</b>。</p>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：优先级实验 —— 逐拍看三个来源各是多少、译码级选了谁</span>
+        <div class="seg" id="prioSeg"></div>
+        <button class="sm" id="prioDemo">课件例：demo-priority.ys</button>
+      </div>
+      <div id="prioOut"></div>
+    </div>
+
+    <h3>5.5 实现：<code>d_valA</code> 的 HCL<span class="srcref">原第 40–41 页</span></h3>
+    <p>硬件上要加两样东西：从 E、M、W 三级回到译码级的<b>额外反馈路径</b>，以及译码级里<b>从多个来源选 valA / valB 的逻辑块</b>。课件第 41 页把 <code>d_valA</code> 的六条 case 写全（顺序即优先级）：</p>
+    <div class="formula" style="text-align:left">
+      <div>int d_valA = [</div>
+      <div>&nbsp;&nbsp;D_icode in { ICALL, IJXX } : D_valP;&nbsp;&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)">/* 用递增后的 PC（给 call/跳转存返回地址用）*/</span></div>
+      <div>&nbsp;&nbsp;d_srcA == e_dstE : e_valE;&nbsp;&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)">/* 从执行级转发 valE */</span></div>
+      <div>&nbsp;&nbsp;d_srcA == M_dstM : m_valM;&nbsp;&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)">/* 从访存级转发 valM */</span></div>
+      <div>&nbsp;&nbsp;d_srcA == M_dstE : M_valE;&nbsp;&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)">/* 从访存级转发 valE */</span></div>
+      <div>&nbsp;&nbsp;d_srcA == W_dstM : W_valM;&nbsp;&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)">/* 从写回级转发 valM */</span></div>
+      <div>&nbsp;&nbsp;d_srcA == W_dstE : W_valE;&nbsp;&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)">/* 从写回级转发 valE */</span></div>
+      <div>&nbsp;&nbsp;1&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;: d_rvalA;&nbsp;&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)">/* 兜底：用寄存器堆读出的值 */</span></div>
+      <div>];</div>
+    </div>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：d_valA 求值器 —— 填各级寄存器号与值，看 HCL 命中哪一行</span>
+        <label class="fld">D_icode <select id="fwIc"></select></label>
+        <label class="fld">d_srcA <select id="fwSrc"></select></label>
+        <label class="fld">e_dstE <select id="fwE"></select></label>
+        <label class="fld">e_valE <input type="text" id="fwEV" value="3" size="7" spellcheck="false"></label>
+        <label class="fld">M_dstM <select id="fwMM"></select></label>
+        <label class="fld">m_valM <input type="text" id="fwMV" value="0x0e" size="7" spellcheck="false"></label>
+        <label class="fld">M_dstE <select id="fwME"></select></label>
+        <label class="fld">M_valE <input type="text" id="fwMEV" value="10" size="7" spellcheck="false"></label>
+        <label class="fld">W_dstM <select id="fwWM"></select></label>
+        <label class="fld">W_valM <input type="text" id="fwWMV" value="0x52" size="7" spellcheck="false"></label>
+        <label class="fld">W_dstE <select id="fwWE"></select></label>
+        <label class="fld">W_valE <input type="text" id="fwWEV" value="1" size="7" spellcheck="false"></label>
+        <label class="fld">d_rvalA <input type="text" id="fwRV" value="0" size="7" spellcheck="false"></label>
+        <label class="fld">D_valP <input type="text" id="fwP" value="0x013" size="8" spellcheck="false"></label>
+        <button class="p" id="fwGo">求值</button>
+        <button class="sm" data-fw="ic=call">call 例（用 D_valP）</button>
+        <button class="sm" data-fw="ic=op;src=0;e=0;ev=3">例一（写回级转发）</button>
+        <button class="sm" data-fw="ic=op;src=2;me=2;mev=10;e=0;ev=3">例二（两处同时命中）</button>
+      </div>
+      <div id="fwOut"></div>
+    </div>
+  </section>
+
+  <!-- ================= 6 ================= -->
+  <section id="s6">
+    <h2>6. 加载/使用冒险<span class="srcref">原第 42–45 页</span></h2>
+    <p class="lede">转发解决不了所有情况：<b>如果值来自内存（load），它在执行级才算出地址、访存级才拿到数据</b> —— 而译码级需要在<b>本拍结束前</b>拿到它。差一拍，只能停。</p>
+
+    <h3>6.1 转发的极限<span class="srcref">原第 42 页</span></h3>
+    <div class="formula" style="text-align:left">
+      <div>使用级需要在<b>第 7 拍译码结束前</b>拿到值 &nbsp;✗&nbsp; 而 load 的结果要到<b>第 8 拍访存级</b>才从内存读出来</div>
+    </div>
+    <p>课件把这种「上一条从内存读、下一条马上用它」的组合叫 <b>load-use dependency（加载/使用依赖）</b>。</p>
+
+    <h3>6.2 办法：停一拍再转发<span class="srcref">原第 42–43 页</span></h3>
+    <ul>
+      <li>把使用那条指令<b>停一个周期</b>；</li>
+      <li>然后它就可以<b>从访存级把 load 的结果转发过来</b>（<code>m_valM</code>）。</li>
+    </ul>
+    <p>课件第 42、43 页把<code>demo-luh.ys</code>里 <code>addq</code>（Use）在译码级的那两拍并排画了出来：</p>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>拍</th><th>译码级（addq）读到</th><th>结果</th></tr>
+      <tr><td><b>第 7 拍</b>（不处理）<span class="srcref">原第 42 页</span></td>
+          <td class="mono">valA ← M_valE = 10 ✓　valB ← R[%rax] = 0 ✗</td><td><b>Error</b>：load 的值还在执行级，转发也来不及</td></tr>
+      <tr><td><b>第 7 拍停住、第 8 拍再读</b><span class="srcref">原第 43 页</span></td>
+          <td class="mono">valA ← W_valE = 10 ✓　valB ← m_valM = 3 ✓</td><td>正确：load 走到访存级，<code>m_valM</code> 可以转发</td></tr>
+    </table></div>
+
+    <h3>6.3 检测条件<span class="srcref">原第 44 页</span></h3>
+    <div class="formula" style="text-align:left">
+      <div>Load/Use Hazard&nbsp;&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)">触发条件</span></div>
+      <div>&nbsp;&nbsp;E_icode in { IMRMOVQ, IPOPQ } &nbsp;&amp;&amp;</div>
+      <div>&nbsp;&nbsp;E_dstM in { d_srcA, d_srcB }</div>
+    </div>
+    <p>两个条件缺一不可：<b>执行级上是一条从内存读数的指令</b>（<code>mrmovq</code> 或 <code>popq</code>），<b>并且</b>它要写的那个寄存器正是译码级要读的（<code>E_dstM</code> 属于 <code>{d_srcA, d_srcB}</code>）。这是整讲唯一一种「转发也无能为力」的数据冒险。</p>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：加载/使用冒险检测器</span>
+        <label class="fld">执行级指令 E_icode <select id="luIc"></select></label>
+        <label class="fld">E_dstM <select id="luDst"></select></label>
+        <label class="fld">译码级 d_srcA <select id="luA"></select></label>
+        <label class="fld">译码级 d_srcB <select id="luB"></select></label>
+      </div>
+      <div id="luOut"></div>
+    </div>
+
+    <h3>6.4 控制：停取指、停译码、执行级插气泡<span class="srcref">原第 45 页</span></h3>
+    <p>课件的 <code>demo-luh.ys</code> 一次演全（注意清单里 <code>0x01e</code> 与 <code>0x032</code> 两处把 <code>%rbx</code> 写成了 <code>%ebx</code>，见本节末尾的勘误）：</p>
+    <div class="formula" style="text-align:left">
+      <div># demo-luh.ys</div>
+      <div>0x000: irmovq $128,%rdx&nbsp;&nbsp;&nbsp;&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)"># 建一个地址</span></div>
+      <div>0x00a: irmovq $3,%rcx</div>
+      <div>0x014: rmmovq %rcx, 0(%rdx)&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)"># M[128] ← 3</span></div>
+      <div>0x01e: irmovq $10,%rbx</div>
+      <div>0x028: mrmovq 0(%rdx),%rax&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)"># Load %rax</span></div>
+      <div>0x032: addq %rbx,%rax&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)"># Use %rax</span></div>
+      <div>0x034: halt</div>
+    </div>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：加载/使用冒险追踪 —— 点周期看五级内容，停住的那一拍会标出来</span>
+        <div class="seg" id="luhSeg"></div>
+        <button class="sm" id="luhDemo">课件例：demo-luh.ys</button>
+        <button class="sm" id="luhFix">把 %ebx 改成 %rbx 再跑一遍</button>
+      </div>
+      <div id="luhOut"></div>
+    </div>
+
+    <div class="box warn"><div class="t">勘误：第 45 页清单里的 %ebx 应为 %rbx</div>
+      原课件第 45 页的 <code>demo-luh.ys</code> 在 <code>0x01e</code> 与 <code>0x032</code> 两行写作 <code>%ebx</code>。Y86-64 的 15 个程序寄存器是 <code>%rax %rcx %rdx %rbx %rsp %rbp %rsi %rdi %r8…%r14</code>（上一讲给出的完整表），<b>没有 <code>%ebx</code> 这个名字</b>；同页其它寄存器都带 <code>r</code> 前缀。本页按 <code>%rbx</code> 呈现，两种写法在本页实验里结果相同（只换名字、不换编号）。
+    </div>
+  </section>
+
+  <!-- ================= 7 ================= -->
+  <section id="s7">
+    <h2>7. 控制冒险 I：分支预测失败<span class="srcref">原第 46–51 页</span></h2>
+    <p class="lede">数据冒险解决之后，剩下的麻烦都来自「取指猜错了」：<b>已经取进来、甚至已经算完的两条指令，必须被取消</b>。课件先用一个分支例子把错误执行摆出来，再给出取消的办法 —— 代价是 2 个周期。</p>
+
+    <h3>7.1 例子程序<span class="srcref">原第 46–47 页</span></h3>
+    <div class="formula" style="text-align:left">
+      <div># demo-j.ys</div>
+      <div>0x000:&nbsp;&nbsp;&nbsp;&nbsp;xorq %rax,%rax</div>
+      <div>0x002:&nbsp;&nbsp;&nbsp;&nbsp;jne t&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)"># Not taken（ZF=1，实际不跳）</span></div>
+      <div>0x00b:&nbsp;&nbsp;&nbsp;&nbsp;irmovq $1, %rax&nbsp;&nbsp;&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)"># Fall through（顺延，应当执行）</span></div>
+      <div>0x015:&nbsp;&nbsp;&nbsp;&nbsp;nop</div>
+      <div>0x016:&nbsp;&nbsp;&nbsp;&nbsp;nop</div>
+      <div>0x017:&nbsp;&nbsp;&nbsp;&nbsp;nop</div>
+      <div>0x018:&nbsp;&nbsp;&nbsp;&nbsp;halt</div>
+      <div>0x019: t: irmovq $3, %rdx&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)"># Target（不该执行）</span></div>
+      <div>0x023:&nbsp;&nbsp;&nbsp;&nbsp;irmovq $4, %rcx&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)"># Should not execute</span></div>
+      <div>0x02d:&nbsp;&nbsp;&nbsp;&nbsp;irmovq $5, %rdx&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)"># Should not execute</span></div>
+    </div>
+    <p>按第 3 节的策略，条件跳转一律预测为<b>跳</b>，所以取指级会去 <code>0x019</code> 取两条；而实际上 <code>xorq %rax,%rax</code> 把 ZF 置 1，<code>jne</code> 不成立 —— 这两条是错的。</p>
+
+    <div class="box warn"><div class="t">勘误：第 47 页「只应执行前 8 条指令」应为 7 条</div>
+      原课件第 47 页的清单底部写「Should only execute first 8 instructions」，但按同一页给出的地址逐条数：<code>0x000 xorq</code>、<code>0x002 jne</code>、<code>0x00b irmovq</code>、<code>0x015/0x016/0x017 nop</code>、<code>0x018 halt</code> —— 一共 <b>7 条</b>。第 8 行 <code>0x019</code> 是分支目标，正是同页标着 <code># Target</code>、第 49/51 页追踪图里被取消成气泡的那一条。本页按 7 条呈现。
+    </div>
+    <div class="box warn"><div class="t">第 49、51 页的追踪图用的是另一版程序</div>
+      第 49、51 页那幅追踪图（<code>0x016: irmovq $2,%rdx # Target</code>、<code>0x020: irmovq $3,%rbx # Target+1</code>、<code>jne target</code>）与实际清单（第 47 页：目标在 <code>0x019</code>、<code>jne t</code>、目标处是 <code>$3,%rdx</code> 与 <code>$4,%rcx</code>）不是同一版程序 —— 目标地址 <code>0x016</code> 意味着 <code>jne</code> 与目标之间只有 1 个 <code>nop</code>，而清单里有 3 个。两版画的<b>结构完全一样</b>（预测为跳转 → 目标处取两条 → 检测到未跳 → 两条被气泡取代），本页的追踪统一按第 47 页清单现算。
+    </div>
+
+    <h3>7.2 错误地执行了两条指令<span class="srcref">原第 48 页</span></h3>
+    <p>课件第 48 页把第 5 拍的五级内容摊开：<b>访存级</b>是那条 <code>jne</code>（<code>M_Cnd = 0</code>，知道自己跳错了），而<b>执行级</b>上是错取来的 <code>irmovq $3,%rdx</code>（<code>valE = 3</code>、<code>dstE = %rdx</code>）、<b>译码级</b>上是错取来的 <code>irmovq $4,%rcx</code>（<code>valC = 4</code>、<code>dstE = %rcx</code>）、<b>取指级</b>已经拿到正确的顺延指令 <code>irmovq $1,%rax</code>（<code>valC = 1</code>、<code>rB = %rax</code>）。</p>
+    <p>把「取消」开关关掉跑一遍，就能看到课件说的「Incorrectly execute two instructions at branch target」：<code>%rdx</code> 会被写成 3、<code>%rcx</code> 会被写成 4 —— 程序结果错了。</p>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：分支预测失败追踪 —— 开关「取消」，点周期看五级内容</span>
+        <div class="seg" id="bmCanSeg">
+          <button data-bm="cancel:1" class="on">取消错取的指令</button>
+          <button data-bm="cancel:0">不取消（第 48 页的样子）</button>
+        </div>
+        <div class="seg" id="bmSeg"></div>
+        <button class="sm" id="bmDemo">课件例：demo-j.ys</button>
+      </div>
+      <div id="bmOut"></div>
+    </div>
+
+    <h3>7.3 处理与检测<span class="srcref">原第 49–51 页</span></h3>
+    <ul>
+      <li><b>预测为跳转</b>：在目标处取两条指令（继续按预测往下走）；</li>
+      <li><b>检测到未跳时取消</b>：在<b>执行阶段</b>就能看出分支不成立，<b>下一个周期</b>把执行级与译码级的内容换成气泡；</li>
+      <li>此时错误指令<b>还没有产生任何副作用</b>（没写寄存器、没写内存），所以取消是安全的。</li>
+    </ul>
+    <div class="formula" style="text-align:left">
+      <div>Mispredicted Branch&nbsp;&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)">触发条件</span></div>
+      <div>&nbsp;&nbsp;E_icode == IJXX &amp;&amp; !e_Cnd</div>
+    </div>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>条件</th><th>F</th><th>D</th><th>E</th><th>M</th><th>W</th></tr>
+      <tr><td>分支预测错<span class="srcref">原第 51 页</span></td><td>normal</td><td><b>bubble</b></td><td><b>bubble</b></td><td>normal</td><td>normal</td></tr>
+    </table></div>
+    <div class="box ok"><div class="t">2 个周期白扔</div>
+      预测错的分支每发生一次就浪费 <b>2 个时钟周期</b>（<a href="#s9">第 9 节总结页</a>的原话：Two clock cycles wasted）。而且注意 <b>F 级不 stall</b>：取指级照常前进，因为 PC 选择逻辑在同一拍就已经把顺延地址送进来了 —— 这也是「取消」能只用 2 拍的原因。
+    </div>
+  </section>
+
+  <!-- ================= 8 ================= -->
+  <section id="s8">
+    <h2>8. 控制冒险 II：ret 与流水线控制<span class="srcref">原第 52–66 页</span></h2>
+    <p class="lede">分支还能猜（条件跳转 60% 命中），<code>ret</code> 连猜都猜不了 —— 返回地址在栈上，要等 <code>ret</code> 自己走到写回阶段才读得到。课件的方案是：<b>取指级干脆停住等</b>。这一节最后还把三种特殊情况<b>同时发生</b>的两个组合挖出来，其中组合 B 藏着第一版控制逻辑的一个隐蔽 bug。</p>
+
+    <h3>8.1 ret 的例子程序<span class="srcref">原第 53 页</span></h3>
+    <div class="formula" style="text-align:left">
+      <div># demo-retb.ys</div>
+      <div>0x000:&nbsp;&nbsp;&nbsp;irmovq Stack,%rsp&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)"># 初始化栈指针（Stack = 0x100）</span></div>
+      <div>0x00a:&nbsp;&nbsp;&nbsp;call p&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)"># 过程调用：把 0x013 压栈</span></div>
+      <div>0x013:&nbsp;&nbsp;&nbsp;irmovq $5,%rsi&nbsp;&nbsp;&nbsp;&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)"># Return point（返回点）</span></div>
+      <div>0x01d:&nbsp;&nbsp;&nbsp;halt</div>
+      <div>0x020: .pos 0x20</div>
+      <div>0x020: p: irmovq $-1,%rdi&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)"># 过程体</span></div>
+      <div>0x02a:&nbsp;&nbsp;&nbsp;ret</div>
+      <div>0x02b:&nbsp;&nbsp;&nbsp;irmovq $1,%rax&nbsp;&nbsp;&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)"># Should not be executed</span></div>
+      <div>0x035:&nbsp;&nbsp;&nbsp;irmovq $2,%rcx&nbsp;&nbsp;&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)"># Should not be executed</span></div>
+      <div>0x03f:&nbsp;&nbsp;&nbsp;irmovq $3,%rdx&nbsp;&nbsp;&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)"># Should not be executed</span></div>
+      <div>0x049:&nbsp;&nbsp;&nbsp;irmovq $4,%rbx&nbsp;&nbsp;&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)"># Should not be executed</span></div>
+      <div>0x100: Stack:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)"># 栈区</span></div>
+    </div>
+    <p>地址自检：<code>call</code> 占 9 字节（<code>0x00a + 9 = 0x013</code> ✓）、<code>irmovq</code> 占 10 字节（<code>0x013 + 10 = 0x01d</code> ✓，<code>0x020 + 10 = 0x02a</code> ✓，<code>0x02a</code> 是 <code>ret</code>）。这几条算式本节末尾的勘误会用到。</p>
+
+    <h3>8.2 不处理会怎样<span class="srcref">原第 54 页</span></h3>
+    <p>课件第 54 页用一幅「Oops」图说明：如果 <code>ret</code> 也按「顺延」预测，取指级会继续取 <code>ret</code> 后面的三条指令，它们会照常走完流水线、照常写寄存器 —— <b>错误地多执行 3 条指令</b>。</p>
+    <div class="box warn"><div class="t">勘误：第 54 页图里的地址与栈返回值对不上</div>
+      那一页画的是另一个程序（<code># demo-ret</code>：<code>ret</code> 在 <code>0x033</code>，后面跟着 <code>0x034/0x03e/0x048</code> 三条 <code>Oops</code>，顺延点是 <code>0x052</code>）—— 本讲的清单里<b>没有</b>这个 <code>demo-ret.ys</code>。更明显的是图里底部的流水线寄存器快照写着 <code>W: valM = 0x0e</code>，而同一个程序自己的「Return」行却标在 <code>0x052</code>：返回地址应该是 <code>0x052</code>，不是 <code>0x0e</code>（<code>0x0e</code> 是更早一版程序留下的残迹）。本页只取这一页的<b>结论</b>（不处理 ret 会多执行 3 条指令），追踪按第 53 页的 <code>demo-retb.ys</code> 现算。
+    </div>
+
+    <h3>8.3 正确处理：停下等它走到写回<span class="srcref">原第 55–57 页</span></h3>
+    <ul>
+      <li><code>ret</code> 穿过流水线时，<b>取指级停住</b> —— 返回地址还没从栈里读出来，取什么都是错的；</li>
+      <li>停在译码级、执行级、访存级的那几拍里，<b>往译码级注入气泡</b>；</li>
+      <li>等 <code>ret</code> 走到<b>写回阶段</b>，<code>W_valM</code> 就是返回地址，停顿解除，取指级从返回点继续。</li>
+    </ul>
+    <div class="formula" style="text-align:left">
+      <div>Processing ret&nbsp;&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)">触发条件</span></div>
+      <div>&nbsp;&nbsp;IRET in { D_icode, E_icode, M_icode }</div>
+    </div>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>条件</th><th>F</th><th>D</th><th>E</th><th>M</th><th>W</th></tr>
+      <tr><td>处理 ret<span class="srcref">原第 57 页</span></td><td><b>stall</b></td><td><b>bubble</b></td><td>normal</td><td>normal</td><td>normal</td></tr>
+    </table></div>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：ret 追踪 —— 点周期看五级内容；停住与气泡的轨迹一目了然</span>
+        <div class="seg" id="retSeg"></div>
+        <button class="sm" id="retDemo">课件例：demo-retb.ys</button>
+        <button class="sm" id="retNewer">同一程序，但把 ret 标在被算出的地址上（0x02a）</button>
+      </div>
+      <div id="retOut"></div>
+    </div>
+
+    <div class="box warn"><div class="t">勘误：第 55、57 页追踪图里 <code>ret</code> 与返回点的地址</div>
+      两页的追踪图都写 <code>0x026: ret</code>，第 57 页还把返回点写成 <code>0x014: irmovq $5,%rsi # Return</code>。按第 53 页同一份清单：<code>p: irmovq $-1,%rdi</code> 在 <code>0x020</code>、长 10 字节，所以 <code>ret</code> 在 <b><code>0x02a</code></b>；返回点是 <code>call</code> 的下一条，即 <b><code>0x013</code></b>（<code>0x00a + 9</code>）。本页追踪按 <code>0x02a</code> / <code>0x013</code> 呈现（<code>ret</code> 自身的地址不影响行为，只有返回点 <code>0x013</code> 会被压进栈、再从栈里取回）。
+    </div>
+    <div class="box ok"><div class="t">3 个周期白扔</div>
+      <code>ret</code> 每执行一次就浪费 <b>3 个时钟周期</b>（第 68 页：Three clock cycles wasted）。如果还想更快，就得在取指级加返回地址栈（return-address stack）去猜 <code>ret</code> 的地址 —— 课件没有展开，本页也不展开。
+    </div>
+
+    <h3>8.4 三种特殊情况与两个控制组合<span class="srcref">原第 58 页</span></h3>
+    <p>三种特殊情况的检测条件与动作合起来就是流水线控制逻辑的全部：</p>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>条件</th><th>触发</th><th>F</th><th>D</th><th>E</th><th>M</th><th>W</th></tr>
+      <tr><td><b>处理 ret</b></td><td class="mono">IRET in { D_icode, E_icode, M_icode }</td><td>stall</td><td>bubble</td><td>normal</td><td>normal</td><td>normal</td></tr>
+      <tr><td><b>加载/使用冒险</b></td><td class="mono">E_icode in {IMRMOVQ, IPOPQ} &amp;&amp; E_dstM in {d_srcA, d_srcB}</td><td>stall</td><td>stall</td><td>bubble</td><td>normal</td><td>normal</td></tr>
+      <tr><td><b>分支预测错</b></td><td class="mono">E_icode == IJXX &amp;&amp; !e_Cnd</td><td>normal</td><td>bubble</td><td>bubble</td><td>normal</td><td>normal</td></tr>
+    </table></div>
+    <p>它们会<b>在同一个时钟周期里同时成立</b>。课件给出两个组合（第 62 页）：</p>
+    <div class="grid g2">
+      <div class="card"><h5>组合 A</h5><p style="margin:0;font-size:14px"><b>未跳的分支 + 分支目标处的 <code>ret</code></b>：执行级是预测错的 <code>jXX</code>，而译码级正是错取来的那条 <code>ret</code>。</p></div>
+      <div class="card"><h5>组合 B</h5><p style="margin:0;font-size:14px"><b>一条从内存读进 <code>%rsp</code> 的指令 + 紧跟一条 <code>ret</code></b>：执行级是 <code>mrmovq</code>/<code>popq</code>，译码级是 <code>ret</code>，而它的源操作数是 <code>%rsp</code>。</p></div>
+    </div>
+
+    <h3>8.5 控制逻辑：四个布尔量<span class="srcref">原第 59–60 页</span></h3>
+    <p>组合逻辑在每个周期算出四个控制信号，动作发生在<b>下一个周期开始</b>：</p>
+    <div class="formula" style="text-align:left">
+      <div>bool F_stall =</div>
+      <div>&nbsp;&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)"># Conditions for a load/use hazard</span></div>
+      <div>&nbsp;&nbsp;E_icode in { IMRMOVQ, IPOPQ } &amp;&amp; E_dstM in { d_srcA, d_srcB } ||</div>
+      <div>&nbsp;&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)"># Stalling at fetch while ret passes through pipeline</span></div>
+      <div>&nbsp;&nbsp;IRET in { D_icode, E_icode, M_icode };</div>
+      <div></div>
+      <div>bool D_stall =&nbsp;&nbsp;E_icode in { IMRMOVQ, IPOPQ } &amp;&amp; E_dstM in { d_srcA, d_srcB };</div>
+      <div></div>
+      <div>bool D_bubble =&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)">/* 修正前 */</span></div>
+      <div>&nbsp;&nbsp;(E_icode == IJXX &amp;&amp; !e_Cnd) ||</div>
+      <div>&nbsp;&nbsp;IRET in { D_icode, E_icode, M_icode };</div>
+      <div></div>
+      <div>bool E_bubble =</div>
+      <div>&nbsp;&nbsp;(E_icode == IJXX &amp;&amp; !e_Cnd) ||</div>
+      <div>&nbsp;&nbsp;E_icode in { IMRMOVQ, IPOPQ } &amp;&amp; E_dstM in { d_srcA, d_srcB };</div>
+    </div>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：控制信号生成器 —— 选场景，看四个信号与五个寄存器的动作</span>
+        <label class="fld">场景
+          <select id="ctlSel"></select>
+        </label>
+        <button class="p" id="ctlGo">生成</button>
+      </div>
+      <div id="ctlOut"></div>
+    </div>
+
+    <h3>8.6 组合 A 与组合 B：谁优先<span class="srcref">原第 61–66 页</span></h3>
+    <p><b>组合 A</b>（第 63 页）按「分支预测错」处理即可：<code>F</code> 因为 <code>ret</code> 而 stall，<code>D</code>（<code>ret</code> 自己）与 <code>E</code>（预测错的 <code>jXX</code>）都插气泡 —— 反正 PC 选择逻辑下一拍会用 <code>M_valA</code> 把顺延地址接上。动作合起来是 <b>stall / bubble / bubble / normal / normal</b>。</p>
+    <p><b>组合 B</b>（第 64 页）就麻烦了：加载/使用冒险要求 <code>D_stall</code>，处理 <code>ret</code> 要求 <code>D_bubble</code> —— <b>同一个流水线寄存器既要停住又要插气泡</b>。第一版控制逻辑会真的同时发出这两个信号，课件原话：<b>处理器会把它报成流水线错误（pipeline error）</b>。</p>
+    <p>修正办法（第 65–66 页）：<b>加载/使用冒险优先</b>，<code>ret</code> 在译码级多留一个周期。于是 <code>D_bubble</code> 要加上「且不是加载/使用冒险」这一条否定条件：</p>
+    <div class="formula" style="text-align:left">
+      <div>bool D_bubble =&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)">/* 修正后：把 ret 的情形与加载/使用冒险分开 */</span></div>
+      <div>&nbsp;&nbsp;(E_icode == IJXX &amp;&amp; !e_Cnd) ||</div>
+      <div>&nbsp;&nbsp;IRET in { D_icode, E_icode, M_icode }</div>
+      <div>&nbsp;&nbsp;&amp;&amp; !(E_icode in { IMRMOVQ, IPOPQ } &amp;&amp; E_dstM in { d_srcA, d_srcB });</div>
+    </div>
+    <div class="box ok"><div class="t">为什么这一条非加不可</div>
+      组合 B 出现的条件很窄（<code>%rsp</code> 刚从内存读出来、紧接着一条 <code>ret</code>），但它真的会发生 —— 第 68 页原话：<b>第一版有一个隐蔽的 bug，只在很不寻常的指令组合下才出现</b>。这正是「组合必须仔细分析」的实例。
+    </div>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：修正前后对比 —— 选组合，看五个寄存器收到什么动作</span>
+        <div class="seg" id="cmpSeg">
+          <button class="on" data-cmp="B">组合 B</button>
+          <button data-cmp="A">组合 A</button>
+          <button data-cmp="lu">只有加载/使用冒险</button>
+          <button data-cmp="ret">只有 ret</button>
+        </div>
+        <div class="seg" id="cmpVerSeg">
+          <button class="on" data-ver="0">初始版控制逻辑</button>
+          <button data-ver="1">修正后</button>
+        </div>
+      </div>
+      <div id="cmpOut"></div>
+    </div>
+  </section>
+
+  <!-- ================= 9 ================= -->
+  <section id="s9">
+    <h2>9. 总结、模拟器与测验<span class="srcref">原第 67–68 页</span></h2>
+    <p class="lede">课件用两页收尾，而且是<b>两部分</b>的总结：第 67 页叫「Pipeline Part 1」，第 68 页叫「Pipeline Part 2」。前者停在「问题」，后者给出「修好了」。两页合起来就是这一讲的完整地图。</p>
+
+    <h3>9.1 两部分总结<span class="srcref">原第 67–68 页</span></h3>
+    <div class="grid g2">
+      <div class="card"><h5>Part 1：概念与局限<span class="srcref">原第 67 页</span></h5>
+        <ul style="margin:0;font-size:14.5px">
+          <li><b>概念</b>：把指令执行切成 5 个阶段，让指令流水式地穿过；</li>
+          <li><b>局限</b>：指令跟得太近时处理不了依赖 —— <b>数据依赖</b>（一条写寄存器、后面读它）与<b>控制依赖</b>（指令以流水线没预测对的方式改变 PC：分支预测错与返回）；</li>
+          <li>课件写「<b>修好它，下次课做</b>」—— 但同一份 PDF 的第 68 页就是修法，两页是不同批次讲义的遗留。</li>
+        </ul>
+      </div>
+      <div class="card"><h5>Part 2：修法与代价<span class="srcref">原第 68 页</span></h5>
+        <ul style="margin:0;font-size:14.5px">
+          <li><b>数据冒险</b>：大多由<b>转发</b>处理，<b>没有性能损失</b>；加载/使用冒险要停<b>1 个周期</b>；</li>
+          <li><b>控制冒险</b>：检测到分支预测错就<b>取消指令</b>，浪费 <b>2 个周期</b>；<code>ret</code> 穿过流水线时<b>停住取指级</b>，浪费 <b>3 个周期</b>；</li>
+          <li><b>控制组合</b>：必须仔细分析 —— <b>第一版有隐蔽 bug，只在罕见的指令组合下出现</b>。</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>冒险</th><th>硬件代价</th><th>每发生一次的周期损失</th><th>原页码</th></tr>
+      <tr><td>寄存器数据依赖（RAW）</td><td>转发通路 + 译码级多路选择</td><td class="mono">0</td><td class="mono">35–41</td></tr>
+      <tr><td>加载/使用依赖</td><td>停顿检测（E_icode/E_dstM vs d_srcA/d_srcB）</td><td class="mono">1</td><td class="mono">42–45</td></tr>
+      <tr><td>分支预测错</td><td>取消逻辑（D、E 插气泡）</td><td class="mono">2</td><td class="mono">46–51</td></tr>
+      <tr><td><code>ret</code></td><td>取指级停顿 + 译码级气泡</td><td class="mono">3</td><td class="mono">52–57</td></tr>
+    </table></div>
+
+    <h3>9.2 亲手跑一台 PIPE<span class="srcref">综合原第 15–66 页</span></h3>
+    <p>下面这台模拟器实现了本讲的全部硬件：五级流水线、四组流水线寄存器（F/D/E/M/W）、转发（含优先级）、加载/使用停顿、分支预测失败取消、<code>ret</code> 停顿，以及修正后的 <code>D_bubble</code>。写几行 Y86-64 汇编 → 汇编成字节放进内存 → 每按一次「时钟上升」前进一拍，右侧同时画出流水线图。</p>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：PIPE 模拟器 —— 汇编、逐拍执行、看五级内容与流水线图</span>
+        <button class="p" id="psAsm">汇编并复位</button>
+        <button class="p" id="psStep">时钟上升 · 一拍</button>
+        <button class="sm" id="psAuto">自动运行</button>
+        <button class="sm" id="psStop">停止</button>
+        <button class="sm" id="psRunAll">一次跑完</button>
+        <button class="sm" data-ps="basic">课件例：demo-basic</button>
+        <button class="sm" data-ps="nop">课件例：demo-h0（无 nop）</button>
+        <button class="sm" data-ps="luh">课件例：demo-luh</button>
+        <button class="sm" data-ps="branch">课件例：demo-j</button>
+        <button class="sm" data-ps="ret">课件例：demo-retb</button>
+        <button class="sm" data-ps="prio">课件例：demo-priority</button>
+      </div>
+      <label class="fld" style="display:block;margin:4px 0 10px">程序（支持 halt/nop/ret、rrmovq/cmovXX、irmovq、rmmovq、mrmovq、OPq、jXX、call、pushq、popq、标签与 # 注释）
+        <textarea id="psSrc" rows="9" spellcheck="false" style="width:100%;font-family:var(--font-mono);font-size:13.5px;margin-top:6px"></textarea>
+      </label>
+      <div id="psStat"></div>
+      <div id="psStage"></div>
+      <div id="psDiag"></div>
+      <div id="psRegs"></div>
+    </div>
+
+    <div class="box"><div class="t">模拟器怎么对应硬件</div>
+      「时钟上升 · 一拍」= 组合逻辑对当前状态求值（取指、译码转发、ALU 与条件码、访存地址与数据、写回端口、PC 选择、四个控制信号）+ 把结果写进流水线寄存器与状态元件。流水线图里的每一格都是现算的：<b>同一个 <code>D</code> 连着出现两拍就是 stall，白格 <code>bubble</code> 就是被注入的气泡</b>。
+    </div>
+
+    <h3>9.3 三道判断题<span class="srcref">易错点</span></h3>
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：判断题 —— 点「真」「假」立即判定</span>
+        <button class="sm" id="pzReset">重来</button>
+      </div>
+      <div id="pzOut"></div>
+    </div>
+
+    <h3>9.4 测验<span class="srcref">10 题</span></h3>
+    <p>每道题选完立刻判分并给出解析。答错不要紧 —— 解析里写清了依据在本讲的哪一节。</p>
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：本讲测验</span>
+        <button class="sm" id="qzReset">重来</button>
+      </div>
+      <div id="qzOut"></div>
+    </div>
+  </section>
+</main>
+
+</div>
+
+<div class="footer">
+  本页由原课件 PDF 翻译整理而成 · 数值计算与可视化均为页面内实时计算 · 可对照原课件页码阅读。
+</div>
+<button class="totop" id="toTop">↑ 顶部</button>
+
+<script>
+"use strict";
+/* ============================================================
+   处理器体系结构 III：流水线（PIPE）· 交互式课件 —— 全部逻辑
+   约定：所有计算在页面内实时完成；无效输入必须给出提示而不是抛错。
+   超过 32 位的整数一律用 BigInt（Y86-64 是 64 位机器）。
+   BigInt 与 Number 不能混算：字节/下标记数一律显式 Number(...) / BigInt(...)。
+
+   顶层以 function 声明的
+     y86Encode / y86DecodeBytes / y86Assemble / condEval / opAlu /
+     seqRunProg / pipeEval / pipeRun
+   是判分基准，由 tools/verify_ics11.js 与独立参考实现（Python）逐项比对。
+   ============================================================ */
+
+const $  = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const badBox = msg => `<div class="box bad"><div class="t">输入无效</div>${esc(msg)}</div>`;
+const kvAttr = str => {
+  const out = {};
+  String(str).split(';').forEach(part => {
+    const i = part.indexOf('=');
+    if (i > 0) out[part.slice(0, i).trim()] = part.slice(i + 1).trim();
+  });
+  return out;
+};
+
+/* ---------- 64 位整数工具 ---------- */
+function u64(v) { const b = BigInt(v); return ((b % (1n << 64n)) + (1n << 64n)) % (1n << 64n); }
+function i64(v) { const b = u64(v); return b >= (1n << 63n) ? b - (1n << 64n) : b; }
+const hex64 = v => '0x' + u64(v).toString(16).toUpperCase().padStart(16, '0');
+const hex64t = v => '0x' + u64(v).toString(16).toUpperCase();
+const hexByte = v => (Number(v) & 0xff).toString(16).toUpperCase().padStart(2, '0');
+const fmtNum = v => u64(v).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+const fmtI64 = v => {
+  const s = i64(v);
+  return (s < 0n ? '−' : '') + (s < 0n ? (-s).toString() : s.toString()).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+};
+
+/** 解析用户输入：0x… / 0b… / 十进制 / 负号 / 下划线分隔 → BigInt（64 位补码视角）或 null */
+function parseNum(str) {
+  const t = String(str).trim().replace(/[_,\s]/g, '');
+  if (!t) return null;
+  const neg = t.startsWith('-') || t.startsWith('−');
+  const body = neg ? t.slice(1) : (t.startsWith('+') ? t.slice(1) : t);
+  try {
+    let v = null;
+    if (/^0[xX][0-9a-fA-F]+$/.test(body)) v = BigInt(body);
+    else if (/^0[bB][01]+$/.test(body))   v = BigInt(body);
+    else if (/^[0-9]+$/.test(body))       v = BigInt(body);
+    if (v === null) return null;
+    return u64(neg ? -v : v);
+  } catch (e) { return null; }
+}
+
+/* ============================================================
+   Y86-64 指令集（第 9 讲给出的编码，本讲原样使用）
+   ============================================================ */
+const REG_NAMES = ['%rax', '%rcx', '%rdx', '%rbx', '%rsp', '%rbp', '%rsi', '%rdi',
+                   '%r8', '%r9', '%r10', '%r11', '%r12', '%r13', '%r14'];
+const RNONE = 0xF, RRSP = 4;
+const regName = id => (id >= 0 && id <= 14) ? REG_NAMES[id] : (id === 15 ? 'RNONE' : '?');
+const J_FN  = ['jmp', 'jle', 'jl', 'je', 'jne', 'jge', 'jg'];
+const C_FN  = ['rrmovq', 'cmovle', 'cmovl', 'cmove', 'cmovne', 'cmovge', 'cmovg'];
+const OP_FN = ['addq', 'subq', 'andq', 'xorq'];
+const IC_INFO = {
+  0x0: { mn: 'halt',   regids: false, valc: false },
+  0x1: { mn: 'nop',    regids: false, valc: false },
+  0x2: { mn: 'cmovXX', regids: true,  valc: false, family: 'c' },
+  0x3: { mn: 'irmovq', regids: true,  valc: true,  raFixed: true },
+  0x4: { mn: 'rmmovq', regids: true,  valc: true },
+  0x5: { mn: 'mrmovq', regids: true,  valc: true },
+  0x6: { mn: 'OPq',    regids: true,  valc: false, family: 'o' },
+  0x7: { mn: 'jXX',    regids: false, valc: true,  family: 'j' },
+  0x8: { mn: 'call',   regids: false, valc: true },
+  0x9: { mn: 'ret',    regids: false, valc: false },
+  0xA: { mn: 'pushq',  regids: true,  valc: false, rbFixed: true },
+  0xB: { mn: 'popq',   regids: true,  valc: false, rbFixed: true },
+};
+const IC_VALID = Object.keys(IC_INFO).map(Number);
+const VALID_SET = new Set(IC_VALID);
+const NEED_REGIDS_SET = new Set([0x2, 0x6, 0xA, 0xB, 0x3, 0x4, 0x5]);
+const NEED_VALC_SET   = new Set([0x3, 0x4, 0x5, 0x7, 0x8]);
+const icLen = ic => 1 + (NEED_REGIDS_SET.has(ic) ? 1 : 0) + (NEED_VALC_SET.has(ic) ? 8 : 0);
+const familyFns = fam => fam === 'j' ? J_FN : fam === 'c' ? C_FN : fam === 'o' ? OP_FN : null;
+const ifunName = (ic, ifun) => {
+  const info = IC_INFO[ic];
+  if (!info || !info.family) return String(ifun);
+  const fns = familyFns(info.family);
+  return (ifun >= 0 && ifun < fns.length) ? fns[ifun] : `fn=${ifun}`;
+};
+const icLabel = ic => (IC_INFO[ic] ? IC_INFO[ic].mn : '非法');
+const NOP = 0x1, HALT = 0x0, CALL = 0x8, RET = 0x9, JXX = 0x7, RRMOVQ = 0x2,
+      IRMOVQ = 0x3, RMMOVQ = 0x4, MRMOVQ = 0x5, OPQ = 0x6, PUSHQ = 0xA, POPQ = 0xB;
+
+/** 助记符 → icode；认不出返回 null */
+function mnToIcode(mn) {
+  const families = [['c', C_FN, 0x2], ['j', J_FN, 0x7], ['o', OP_FN, 0x6]];
+  for (const [fam, fns, ic] of families) if (fns.includes(mn)) return ic;
+  const k = IC_VALID.find(k => !IC_INFO[k].family && IC_INFO[k].mn === mn);
+  return k === undefined ? null : k;
+}
+
+/** 编码一条指令 → 字节数组（ra/rb 为 0–15，valC 为 BigInt） */
+function y86Encode(mn, ra, rb, valC) {
+  if (mn === 'cmovXX' || mn === 'jXX' || mn === 'OPq') return null;
+  const icode = mnToIcode(mn);
+  if (icode === null) return null;
+  const info = IC_INFO[icode];
+  const fns = info.family ? familyFns(info.family) : null;
+  const ifun = fns ? fns.indexOf(mn) : 0;
+  const out = [ (icode << 4) | (ifun & 0xF) ];
+  if (info.regids) out.push(((ra & 0xF) << 4) | (rb & 0xF));
+  if (info.valc) {
+    const v = u64(valC === undefined || valC === null ? 0n : valC);
+    for (let j = 0; j < 8; j++) out.push(Number((v >> BigInt(8 * j)) & 0xffn));
+  }
+  return out;
+}
+
+/** 解码字节串（从 pc 起）→ 拆分结果 */
+function y86DecodeBytes(bytes, pc) {
+  const b = Array.from(bytes, x => Number(x) & 0xff);
+  const p = u64(pc === undefined ? 0n : pc);
+  if (b.length < 1) return { truncated: true };
+  const icode = b[0] >> 4, ifun = b[0] & 0xF;
+  const valid = VALID_SET.has(icode);
+  const needRegids = NEED_REGIDS_SET.has(icode);
+  const needValc = NEED_VALC_SET.has(icode);
+  const len = icLen(icode);
+  const truncated = b.length < len;
+  let rA = 0xF, rB = 0xF, valC = 0n;
+  if (needRegids && b.length >= 2) { rA = b[1] >> 4; rB = b[1] & 0xF; }
+  if (needValc) {
+    const vcBase = needRegids ? 2 : 1;
+    for (let j = 0; j < 8; j++) valC |= BigInt(b[vcBase + j] || 0) << BigInt(8 * j);
+    valC = u64(valC);
+  }
+  return { truncated, icode, ifun, needRegids, needValc, rA, rB, valC,
+           len, valid, valP: u64(p + BigInt(len)) };
+}
+
+/** 迷你汇编器：逐行解析（标签、.pos 对齐指令、# 注释、寄存器/立即数/位移语法），两遍扫描 */
+function y86Assemble(src) {
+  const lines = String(src).split('\n');
+  const labels = {};
+  const items = [];
+  const ERR = (ln, msg) => ({ ok: false, bytes: null, labels, listing: [], error: { line: ln + 1, msg } });
+  let addr = 0n;
+  for (let ln = 0; ln < lines.length; ln++) {
+    let s = lines[ln].replace(/#.*$/, '').trim();
+    while (true) {
+      const m = /^([A-Za-z_][A-Za-z0-9_]*)\s*:\s*(.*)$/.exec(s);
+      if (!m) break;
+      if (labels[m[1]] !== undefined) return ERR(ln, `标签 ${m[1]} 重复定义`);
+      labels[m[1]] = addr;
+      s = m[2].trim();
+    }
+    if (!s) continue;
+    const d = /^\.pos\s+(\S+)$/.exec(s);      /* 与课件清单一致的 .pos 对齐指令 */
+    if (d) {
+      const v = parseNum(d[1]);
+      if (v === null) return ERR(ln, `认不出 .pos 的地址「${d[1]}」`);
+      if (v < addr) return ERR(ln, `.pos 只能往前对齐（当前地址 ${hex64t(addr)}）`);
+      items.push({ ln, text: s, addr, directive: 'pos', target: v });
+      addr = v;
+      continue;
+    }
+    if (s.startsWith('.')) return ERR(ln, `认不出伪指令「${s}」`);
+    items.push({ ln, text: s, addr });
+    const st = seqInstrSize(s);
+    if (st === null) return ERR(ln, `认不出这条指令：${s}`);
+    addr += BigInt(st);
+  }
+  const bytes = [];
+  const listing = [];
+  for (const it of items) {
+    if (it.directive === 'pos') {
+      while (BigInt(bytes.length) < it.target) bytes.push(0);   /* 与 yas 一致：用 0 填充 */
+      continue;
+    }
+    const enc = seqEncodeLine(it.text, labels);
+    if (enc.error) return ERR(it.ln, enc.error);
+    const start = bytes.length;
+    for (const b of enc.bytes) bytes.push(b);
+    listing.push({ addr: it.addr, bytes: enc.bytes.slice(), text: it.text, size: enc.bytes.length, start });
+  }
+  return { ok: true, bytes, labels, listing, error: null };
+}
+
+function seqInstrSize(s) {
+  const m = /^([A-Za-z]+)/.exec(s);
+  if (!m) return null;
+  const mn = m[1].toLowerCase();
+  const families = [['c', C_FN, 0x2], ['j', J_FN, 0x7], ['o', OP_FN, 0x6]];
+  for (const [fam, fns, ic] of families) if (fns.includes(mn)) return icLen(ic);
+  const plain = { halt: 0x0, nop: 0x1, irmovq: 0x3, rmmovq: 0x4, mrmovq: 0x5, call: 0x8, ret: 0x9, pushq: 0xA, popq: 0xB };
+  return plain[mn] === undefined ? null : icLen(plain[mn]);
+}
+
+function seqEncodeLine(s, labels) {
+  const m = /^([A-Za-z]+)\s*(.*)$/.exec(s);
+  const mn = m[1].toLowerCase();
+  const rest = m[2].trim();
+  const regId = tok => REG_NAMES.indexOf(String(tok).trim().toLowerCase());
+  const wantReg = tok => {
+    const i = regId(tok);
+    if (i < 0) return { error: `需要寄存器名，得到「${tok}」` };
+    return { v: i };
+  };
+  const wantVal = tok => {
+    if (tok === undefined || tok === '') return { error: '缺少数值' };
+    const v = parseNum(tok);
+    if (v === null) return { error: `认不出数值「${tok}」（支持 0x… / 十进制 / 负数）` };
+    return { v };
+  };
+  const wantDest = tok => {
+    if (tok === undefined || tok === '') return { error: '缺少目标（标签或地址）' };
+    if (labels[tok] !== undefined) return { v: labels[tok] };
+    if (/^[A-Za-z_][A-Za-z0-9_]*$/.test(tok)) return { error: `标签「${tok}」没有定义` };
+    const v = parseNum(tok);
+    if (v === null) return { error: `认不出目标「${tok}」` };
+    return { v };
+  };
+  let bytes = null;
+  switch (mn) {
+    case 'halt': case 'nop': case 'ret':
+      if (rest) return { error: `${mn} 不带操作数` };
+      bytes = y86Encode(mn, 0, 0, 0n); break;
+    case 'rrmovq': case 'cmovle': case 'cmovl': case 'cmove': case 'cmovne': case 'cmovge': case 'cmovg':
+    case 'addq': case 'subq': case 'andq': case 'xorq': {
+      const ps = splitArgs(rest);
+      if (ps.length !== 2) return { error: `${mn} 需要两个寄存器操作数：${mn} rA, rB` };
+      const a = wantReg(ps[0]), b = wantReg(ps[1]);
+      if (a.error) return { error: a.error };
+      if (b.error) return { error: b.error };
+      bytes = y86Encode(mn, a.v, b.v, 0n); break;
+    }
+    case 'irmovq': {
+      const ps = splitArgs(rest);
+      if (ps.length !== 2) return { error: 'irmovq 需要两个操作数：irmovq $V, rB' };
+      const imm = ps[0].trim();
+      const raw = imm.startsWith('$') ? imm.slice(1) : imm;
+      /* 立即数可以是数值，也可以是标签（课件第 53 页就写了 irmovq Stack,%rsp） */
+      const v = (labels[raw] !== undefined) ? { v: labels[raw] } : wantVal(raw);
+      if (v.error) return { error: v.error };
+      const b = wantReg(ps[1]);
+      if (b.error) return { error: b.error };
+      bytes = y86Encode(mn, 0xF, b.v, v.v); break;
+    }
+    case 'rmmovq': {
+      const ps = splitArgs(rest);
+      if (ps.length !== 2) return { error: 'rmmovq 需要：rmmovq rA, D(rB)' };
+      const a = wantReg(ps[0]);
+      if (a.error) return { error: a.error };
+      const mm = /^([^(]*)\(\s*([^)]*)\s*\)$/.exec(ps[1].trim());
+      if (!mm) return { error: `第二个操作数应是 D(rB) 形式，得到「${ps[1]}」` };
+      const d = wantVal(mm[1].trim() === '' ? '0' : mm[1].trim());
+      if (d.error) return { error: d.error };
+      const b = wantReg(mm[2]);
+      if (b.error) return { error: b.error };
+      bytes = y86Encode(mn, a.v, b.v, d.v); break;
+    }
+    case 'mrmovq': {
+      const ps = splitArgs(rest);
+      if (ps.length !== 2) return { error: 'mrmovq 需要：mrmovq D(rB), rA' };
+      const mm = /^([^(]*)\(\s*([^)]*)\s*\)$/.exec(ps[0].trim());
+      if (!mm) return { error: `第一个操作数应是 D(rB) 形式，得到「${ps[0]}」` };
+      const d = wantVal(mm[1].trim() === '' ? '0' : mm[1].trim());
+      if (d.error) return { error: d.error };
+      const b = wantReg(mm[2]);
+      if (b.error) return { error: b.error };
+      const a = wantReg(ps[1]);
+      if (a.error) return { error: a.error };
+      bytes = y86Encode(mn, a.v, b.v, d.v); break;
+    }
+    case 'jmp': case 'jle': case 'jl': case 'je': case 'jne': case 'jge': case 'jg':
+    case 'call': {
+      const d = wantDest(rest);
+      if (d.error) return { error: d.error };
+      bytes = y86Encode(mn, 0, 0, d.v); break;
+    }
+    case 'pushq': case 'popq': {
+      const a = wantReg(rest);
+      if (a.error) return { error: a.error };
+      bytes = y86Encode(mn, a.v, 0xF, 0n); break;
+    }
+    default:
+      return { error: `认不出助记符「${mn}」` };
+  }
+  return { bytes };
+}
+
+function splitArgs(s) {
+  const out = []; let depth = 0, cur = '';
+  for (const ch of String(s)) {
+    if (ch === '(') depth++;
+    if (ch === ')') depth--;
+    if (ch === ',' && depth === 0) { out.push(cur.trim()); cur = ''; }
+    else cur += ch;
+  }
+  if (cur.trim() !== '') out.push(cur.trim());
+  return out;
+}
+
+/* ============================================================
+   cond 块与 ALU（第 8 节 / 原第 21 讲给出，本讲原样使用）
+   ============================================================ */
+function condEval(cc, ifun) {
+  const { zf, sf, of } = cc;
+  switch (ifun) {
+    case 0: return true;
+    case 1: return (sf !== of) || zf;
+    case 2: return sf !== of;
+    case 3: return zf;
+    case 4: return !zf;
+    case 5: return sf === of;
+    case 6: return sf === of && !zf;
+    default: return false;
+  }
+}
+
+/** ALU：valE = valB OP valA；同时给出标志位 */
+function opAlu(fn, valB, valA) {
+  const a = u64(valA), b = u64(valB);
+  let valE;
+  switch (fn) {
+    case 1: valE = u64(b - a); break;
+    case 2: valE = u64(b & a); break;
+    case 3: valE = u64(b ^ a); break;
+    default: valE = u64(b + a); break;
+  }
+  let of = false;
+  const sa = i64(a), sb = i64(b), sr = i64(valE);
+  if (fn === 0) of = (sa < 0n) === (sb < 0n) && (sr < 0n) !== (sa < 0n);
+  else if (fn === 1) of = (sa < 0n) !== (sb < 0n) && (sr < 0n) !== (sb < 0n);
+  return { valE, zf: valE === 0n, sf: valE >= (1n << 63n), of };
+}
+
+/* ============================================================
+   各阶段信号（HCL 的 JS 版）
+   ============================================================ */
+/** 译码级：从寄存器里的 icode/rA/rB 得到四个端口地址 */
+function hclDecode(icode, rA, rB) {
+  const inSet = set => set.has(icode);
+  const srcA = inSet(new Set([0x2, 0x4, 0x6, 0xA])) ? rA
+             : inSet(new Set([0xB, 0x9])) ? RRSP : RNONE;
+  const srcB = inSet(new Set([0x6, 0x4, 0x5])) ? rB
+             : inSet(new Set([0xB, 0x9, 0x8, 0xA])) ? RRSP : RNONE;
+  const dstE = inSet(new Set([0x2, 0x3, 0x6])) ? rB
+             : inSet(new Set([0xA, 0xB, 0x8, 0x9])) ? RRSP : RNONE;
+  const dstM = inSet(new Set([0x5, 0xB])) ? rA : RNONE;
+  return { srcA, srcB, dstE, dstM };
+}
+
+/** 执行级：ALU 输入选择 + 函数 + 条件传送目的地址 */
+function hclExecute(icode, ifun, valA, valB, valC) {
+  const aluA = (icode === 0x2 || icode === 0x6) ? { sel: 'valA', v: valA }
+             : (icode === 0x3 || icode === 0x4 || icode === 0x5) ? { sel: 'valC', v: valC }
+             : (icode === 0x8 || icode === 0xA) ? { sel: '-8', v: u64(-8n) }
+             : (icode === 0x9 || icode === 0xB) ? { sel: '8', v: 8n }
+             : { sel: '0', v: 0n };
+  const aluB = (icode === 0x2) ? { sel: '0', v: 0n }
+             : (icode === 0x6 || icode === 0x4 || icode === 0x5 ||
+                icode === 0x8 || icode === 0xA || icode === 0x9 || icode === 0xB) ? { sel: 'valB', v: valB }
+             : { sel: '0', v: 0n };
+  const alufun = icode === 0x6 ? (ifun <= 3 ? ifun : 0) : 0;
+  const noAlu = (icode === 0x0 || icode === 0x1 || icode === 0x7);
+  const flags = noAlu ? null : opAlu(alufun, aluB.v, aluA.v);
+  return { aluA, aluB, alufun, noAlu, valE: flags ? flags.valE : 0n, flags, setCC: icode === 0x6 };
+}
+
+/** 访存级：地址与数据从哪来。callData：call 要写的返回地址（SEQ 用 valP；
+ *  PIPE 里译码级对 call/跳转把 d_valA 取成 D_valP，所以传 M.valA 即可） */
+function hclMem(icode, valE, valA, callData) {
+  const addr = (icode === 0x4 || icode === 0xA || icode === 0x8 || icode === 0x5) ? valE
+             : (icode === 0xB || icode === 0x9) ? valA : null;
+  const read  = (icode === 0x5 || icode === 0xB || icode === 0x9);
+  const write = (icode === 0x4 || icode === 0xA || icode === 0x8);
+  const data = (icode === 0x4 || icode === 0xA) ? valA : (icode === 0x8 ? callData : null);
+  return { addr, read, write, data };
+}
+
+/* ---------- 内存工具 ---------- */
+function newMem(size) { return new Uint8Array(size); }
+function memRead64(mem, addr) {
+  const a = u64(addr);
+  if (a + 8n > BigInt(mem.length)) return null;
+  let v = 0n;
+  for (let j = 0; j < 8; j++) v |= BigInt(mem[Number(a) + j]) << BigInt(8 * j);
+  return u64(v);
+}
+function memWrite64(mem, addr, val) {
+  const a = Number(u64(addr)), v = u64(val);
+  for (let j = 0; j < 8; j++) mem[a + j] = Number((v >> BigInt(8 * j)) & 0xffn);
+}
+
+/* ============================================================
+   判分基准 A：SEQ 参照实现（统计「一条指令一拍」花多少拍）
+   ============================================================ */
+/** 逐条指令执行（等价于 SEQ 的一个周期），返回 { stat, next } */
+function seqOneStep(st, bytes) {
+  const memSize = BigInt(st.mem.length);
+  const pc = u64(st.pc);
+  const imemError = pc + 10n > memSize;
+  let icode = NOP, ifun = 0, rA = RNONE, rB = RNONE, valC = 0n, len = 1, valP = u64(pc + 1n);
+  if (!imemError) {
+    const b0 = st.mem[Number(pc)];
+    icode = b0 >> 4; ifun = b0 & 0xF;
+    len = icLen(icode); valP = u64(pc + BigInt(len));
+    if (NEED_REGIDS_SET.has(icode)) { const b1 = st.mem[Number(u64(pc + 1n))]; rA = b1 >> 4; rB = b1 & 0xF; }
+    if (NEED_VALC_SET.has(icode)) {
+      const base = pc + (NEED_REGIDS_SET.has(icode) ? 2n : 1n);
+      for (let j = 0; j < 8; j++) valC |= BigInt(st.mem[Number(u64(base + BigInt(j)))]) << BigInt(8 * j);
+      valC = u64(valC);
+    }
+  }
+  const valid = VALID_SET.has(icode);
+  const dec = hclDecode(icode, rA, rB);
+  const valA = dec.srcA === RNONE ? 0n : u64(st.regs[dec.srcA]);
+  const valB = dec.srcB === RNONE ? 0n : u64(st.regs[dec.srcB]);
+  const ex = hclExecute(icode, ifun, valA, valB, valC);
+  const cc = { zf: st.zf, sf: st.sf, of: st.of };
+  const cnd = (icode === RRMOVQ || icode === JXX) ? condEval(cc, ifun) : false;
+  const dstE = icode === RRMOVQ ? (cnd ? rB : RNONE) : dec.dstE;
+  const mm = hclMem(icode, ex.valE, valA, valP);
+  const base = icode === CALL ? valC : (icode === JXX && cnd) ? valC
+             : icode === RET ? null : valP;
+  let dmemError = false, valM = 0n;
+  if (mm.addr !== null && (mm.read || mm.write)) {
+    if (i64(mm.addr) < 0n || mm.addr + 8n > memSize) dmemError = true;
+    else if (mm.read) valM = memRead64(st.mem, mm.addr);
+  }
+  const stat = imemError ? 'SADR' : dmemError ? 'SADR' : !valid ? 'SINS'
+             : icode === HALT ? 'SHLT' : 'SAOK';
+  const regs = st.regs.slice();
+  const mem = st.mem.slice();
+  let cc2 = { zf: st.zf, sf: st.sf, of: st.of };
+  if (stat === 'SAOK') {
+    if (ex.setCC) cc2 = { zf: ex.flags.zf, sf: ex.flags.sf, of: ex.flags.of };
+    if (dstE !== RNONE) regs[dstE] = ex.valE;
+    if (dec.dstM !== RNONE) regs[dec.dstM] = valM;
+    if (mm.write) memWrite64(mem, mm.addr, mm.data);
+  }
+  const newPc = stat === 'SAOK'
+    ? (icode === CALL || (icode === JXX && cnd)) ? valC
+      : icode === RET ? valM : valP
+    : valP;
+  return { stat, pc, icode, ifun, next: { pc: u64(newPc), zf: cc2.zf, sf: cc2.sf, of: cc2.of, regs, mem } };
+}
+
+/** SEQ 跑完一段程序：一条指令一拍（含 halt） */
+function seqRunProg(prog, maxSteps) {
+  const mem = newMem(1024);
+  prog.bytes.forEach((b, i) => { mem[i] = b & 0xff; });
+  let st = { pc: 0n, zf: true, sf: false, of: false, regs: new Array(16).fill(0n), mem };
+  let stat = 'SAOK', cycles = 0;
+  const lim = maxSteps || 400;
+  while (cycles < lim) {
+    const r = seqOneStep(st, prog.bytes);
+    cycles++;
+    st = r.next;
+    stat = r.stat;
+    if (stat !== 'SAOK') break;
+  }
+  return { cycles, stat, regs: st.regs, mem: st.mem };
+}
+
+/* ============================================================
+   判分基准 B：PIPE 五级流水线引擎
+   寄存器与课件第 15、17 页硬件图逐字段对应：
+     D: stat icode ifun rA rB valC valP
+     E: stat icode ifun valC valA valB dstE dstM srcA srcB
+     M: stat icode Cnd valE valA dstE dstM
+     W: stat icode valE valM dstE dstM
+   F 寄存器只存一个 predPC（SEQ+ 把 PC 提到了最前面）。
+   tag 是给页面画流水线图用的记号（指令实例编号；气泡为负号）。
+   ============================================================ */
+function pipeBubble(tag) {
+  return { tag: tag === undefined ? -1 : tag, icode: NOP, ifun: 0,
+           rA: RNONE, rB: RNONE, valC: 0n, valP: 0n,
+           srcA: RNONE, srcB: RNONE, dstE: RNONE, dstM: RNONE,
+           valA: 0n, valB: 0n, valE: 0n, valM: 0n, Cnd: false, stat: 'SAOK' };
+}
+const clone = r => ({ tag: r.tag, icode: r.icode, ifun: r.ifun, rA: r.rA, rB: r.rB,
+                      valC: r.valC, valP: r.valP, srcA: r.srcA, srcB: r.srcB,
+                      dstE: r.dstE, dstM: r.dstM, valA: r.valA, valB: r.valB,
+                      valE: r.valE, Cnd: r.Cnd, stat: r.stat });
+
+function pipeInit(prog, opts) {
+  const mem = newMem(1024);
+  prog.bytes.forEach((b, i) => { mem[i] = b & 0xff; });
+  const o = Object.assign({ forwarding: true, cancel: true, fixDbubble: true }, opts || {});
+  return {
+    prog, opts: o, mem, regs: new Array(16).fill(0n),
+    cc: { zf: true, sf: false, of: false },
+    F: { predPC: 0n, tag: 1 },
+    D: pipeBubble(null), E: pipeBubble(null), M: pipeBubble(null), W: pipeBubble(null),
+    cycle: 0, stat: 'SAOK', tags: new Map(),
+    nextTag: 2, stopped: false, stalled: 0,
+  };
+}
+
+/** 一个周期的组合逻辑求值（不落地）：返回 { snap, next } */
+function pipeEval(st) {
+  const memSize = BigInt(st.mem.length);
+  const regs = st.regs, o = st.opts;
+  const D = st.D, E = st.E, M = st.M, W = st.W;
+
+  /* ---------- 取指级：PC 选择 + 读指令 ---------- */
+  const fpcWhy = (M.icode === JXX && !M.Cnd) ? { why: 'mispred', v: M.valA }
+               : (W.icode === RET) ? { why: 'ret', v: W.valM }
+               : { why: 'pred', v: st.F.predPC };
+  const fpc = u64(fpcWhy.v);
+  const imemError = fpc + 10n > memSize;
+  let ficode = NOP, fifun = 0, frA = RNONE, frB = RNONE, fvalC = 0n, flen = 1;
+  if (!imemError) {
+    const b0 = st.mem[Number(fpc)];
+    ficode = b0 >> 4; fifun = b0 & 0xF;
+    flen = icLen(ficode);
+    if (NEED_REGIDS_SET.has(ficode)) { const b1 = st.mem[Number(u64(fpc + 1n))]; frA = b1 >> 4; frB = b1 & 0xF; }
+    if (NEED_VALC_SET.has(ficode)) {
+      const base = fpc + (NEED_REGIDS_SET.has(ficode) ? 2n : 1n);
+      for (let j = 0; j < 8; j++) fvalC |= BigInt(st.mem[Number(u64(base + BigInt(j)))]) << BigInt(8 * j);
+      fvalC = u64(fvalC);
+    }
+  }
+  const fvalid = VALID_SET.has(ficode);
+  const fvalP = u64(fpc + BigInt(flen));
+  const fstat = imemError ? 'SADR' : !fvalid ? 'SINS' : ficode === HALT ? 'SHLT' : 'SAOK';
+  /* 课件第 32 页：imem_error 时 icode 按 nop 处理；非法 icode 本页同样按 nop 走数据通路，只保留 Stat */
+  const ficodeD = (imemError || !fvalid) ? NOP : ficode;
+  const fpredPC = (ficodeD === JXX || ficodeD === CALL) ? fvalC : fvalP;
+
+  /* ---------- 执行级：ALU 与条件 ---------- */
+  const ex = hclExecute(E.icode, E.ifun, E.valA, E.valB, E.valC);
+  const ccIn = ex.setCC ? { zf: ex.flags.zf, sf: ex.flags.sf, of: ex.flags.of } : st.cc;
+  const eCnd = (E.icode === RRMOVQ || E.icode === JXX) ? condEval(ccIn, E.ifun) : false;
+  const eDstE = (E.icode === RRMOVQ && !eCnd) ? RNONE : E.dstE;
+
+  /* ---------- 访存级 ---------- */
+  const mh = hclMem(M.icode, M.valE, M.valA, M.valA);
+  let dmemError = false, mValM = 0n;
+  if (mh.addr !== null && (mh.read || mh.write)) {
+    if (i64(mh.addr) < 0n || mh.addr + 8n > memSize) dmemError = true;
+    else if (mh.read) mValM = memRead64(st.mem, mh.addr);
+  }
+  const mStat = dmemError ? 'SADR' : M.stat;
+
+  /* ---------- 译码级：端口地址 + 转发 ---------- */
+  const dec = hclDecode(D.icode, D.rA, D.rB);
+  const rvalA = dec.srcA === RNONE ? 0n : u64(regs[dec.srcA]);
+  const rvalB = dec.srcB === RNONE ? 0n : u64(regs[dec.srcB]);
+  const fw = o.forwarding;
+  const dvalA = (D.icode === CALL || D.icode === JXX) ? u64(D.valP)
+             : (fw && dec.srcA === eDstE) ? u64(ex.valE)
+             : (fw && dec.srcA === M.dstM) ? u64(mValM)
+             : (fw && dec.srcA === M.dstE) ? u64(M.valE)
+             : (fw && dec.srcA === W.dstM) ? u64(W.valM)
+             : (fw && dec.srcA === W.dstE) ? u64(W.valE)
+             : rvalA;
+  const dvalB = (fw && dec.srcB === eDstE) ? u64(ex.valE)
+             : (fw && dec.srcB === M.dstM) ? u64(mValM)
+             : (fw && dec.srcB === M.dstE) ? u64(M.valE)
+             : (fw && dec.srcB === W.dstM) ? u64(W.valM)
+             : (fw && dec.srcB === W.dstE) ? u64(W.valE)
+             : rvalB;
+  const fwA = (D.icode === CALL || D.icode === JXX) ? 'D_valP'
+            : (fw && dec.srcA === eDstE) ? 'e_valE'
+            : (fw && dec.srcA === M.dstM) ? 'm_valM'
+            : (fw && dec.srcA === M.dstE) ? 'M_valE'
+            : (fw && dec.srcA === W.dstM) ? 'W_valM'
+            : (fw && dec.srcA === W.dstE) ? 'W_valE' : 'd_rvalA';
+  const fwB = (fw && dec.srcB === eDstE) ? 'e_valE'
+            : (fw && dec.srcB === M.dstM) ? 'm_valM'
+            : (fw && dec.srcB === M.dstE) ? 'M_valE'
+            : (fw && dec.srcB === W.dstM) ? 'W_valM'
+            : (fw && dec.srcB === W.dstE) ? 'W_valE' : 'd_rvalB';
+
+  /* ---------- 流水线控制（原第 58–66 页） ---------- */
+  const loadUse = (E.icode === MRMOVQ || E.icode === POPQ) && E.dstM !== RNONE &&
+                  (E.dstM === dec.srcA || E.dstM === dec.srcB);
+  const retIn = (D.icode === RET || E.icode === RET || M.icode === RET);
+  const mispredDetected = (E.icode === JXX && !eCnd);
+  const mispred = mispredDetected && o.cancel;
+  const F_stall = loadUse || retIn;
+  const D_stall = loadUse;
+  const D_bubble = mispred || (retIn && (o.fixDbubble ? !loadUse : true));
+  const E_bubble = mispred || loadUse;
+
+  /* ---------- 下一个周期的寄存器内容 ---------- */
+  /* F 寄存器里的 tag 标识「本拍取的那条指令」；停顿时不更新，于是同一个 tag 连占两拍 */
+  const ftag = st.F.tag;
+  const ntag = st.nextTag;
+  /* 气泡的编号：同一拍最多注入两个（D 与 E），用周期号派生，保证重复求值也稳定 */
+  const bubD = -(st.cycle * 10 + 1), bubE = -(st.cycle * 10 + 2);
+  const nextF = F_stall ? { predPC: st.F.predPC, tag: st.F.tag } : { predPC: fpredPC, tag: ntag };
+  const nextTag = F_stall ? st.nextTag : st.nextTag + 1;
+  const nextD = D_stall ? clone(st.D)
+              : D_bubble ? pipeBubble(bubD)
+              : { tag: ftag, icode: ficodeD, ifun: fifun, rA: frA, rB: frB, valC: fvalC, valP: fvalP,
+                  srcA: RNONE, srcB: RNONE, dstE: RNONE, dstM: RNONE, valA: 0n, valB: 0n,
+                  valE: 0n, Cnd: false, stat: fstat };
+  const nextE = E_bubble ? pipeBubble(bubE)
+              : { tag: D.tag, icode: D.icode, ifun: D.ifun, valC: D.valC, valA: dvalA, valB: dvalB,
+                  dstE: dec.dstE, dstM: dec.dstM, srcA: dec.srcA, srcB: dec.srcB,
+                  rA: RNONE, rB: RNONE, valP: 0n, valE: 0n, Cnd: false, stat: D.stat === undefined ? 'SAOK' : D.stat };
+  const nextM = { tag: E.tag, icode: E.icode, ifun: E.ifun, Cnd: eCnd, valE: ex.valE, valA: E.valA,
+                  dstE: eDstE, dstM: E.dstM, rA: RNONE, rB: RNONE, valC: 0n, valP: 0n,
+                  srcA: RNONE, srcB: RNONE, valB: 0n, stat: E.stat === undefined ? 'SAOK' : E.stat };
+  const nextW = { tag: M.tag, icode: M.icode, ifun: 0, valE: M.valE, valM: mValM,
+                  dstE: M.dstE, dstM: M.dstM, rA: RNONE, rB: RNONE, valC: 0n, valP: 0n,
+                  srcA: RNONE, srcB: RNONE, valA: M.valA, valB: 0n, Cnd: M.Cnd, stat: mStat };
+
+  /* ---------- 时钟沿：寄存器堆、CC、内存 ---------- */
+  const regs2 = regs.slice();
+  const writes = [];
+  if (W.stat === 'SAOK') {
+    if (W.dstE !== RNONE) { regs2[W.dstE] = u64(W.valE); writes.push({ r: W.dstE, v: u64(W.valE), port: 'E' }); }
+    if (W.dstM !== RNONE) { regs2[W.dstM] = u64(W.valM); writes.push({ r: W.dstM, v: u64(W.valM), port: 'M' }); }
+  }
+  const mem2 = st.mem;
+  let memWrote = null;
+  let memNext = mem2;
+  if (M.stat === 'SAOK' && mh.write && !dmemError) {
+    const m2 = st.mem.slice();
+    memWrite64(m2, mh.addr, mh.data);
+    memWrote = { addr: u64(mh.addr), val: u64(mh.data) };
+    memNext = m2;
+  }
+  const cc2 = ex.setCC && E.stat === 'SAOK'
+    ? { zf: ex.flags.zf, sf: ex.flags.sf, of: ex.flags.of } : st.cc;
+
+  const snap = {
+    cycle: st.cycle + 1,
+    fpc: { v: fpc, why: fpcWhy.why },
+    f: { tag: ftag, imemError, icode: ficode, ifun: fifun, rA: frA, rB: frB, valC: fvalC,
+         valP: fvalP, len: flen, valid: fvalid, stat: fstat, predPC: fpredPC },
+    d: { reg: D, dec, rvalA, rvalB, dvalA, dvalB, fwA, fwB },
+    e: { reg: E, ex, eCnd, eDstE, ccIn },
+    m: { reg: M, mh, mValM, dmemError, stat: mStat },
+    w: { reg: W, writes },
+    ctl: { loadUse, retIn, mispredDetected, mispred, F_stall, D_stall, D_bubble, E_bubble },
+    edges: { regs: regs2, cc: cc2, mem: memNext, memWrote },
+  };
+  const next = {
+    prog: st.prog, opts: o, mem: snap.edges.mem, regs: regs2, cc: cc2,
+    F: nextF, D: nextD, E: nextE, M: nextM, W: nextW,
+    cycle: st.cycle + 1, stat: nextW.stat !== 'SAOK' ? nextW.stat : 'SAOK',
+    tags: st.tags, nextTag: nextTag,
+    stopped: nextW.stat !== 'SAOK',
+    stalled: st.stalled + (F_stall ? 1 : 0),
+  };
+  return { snap, next };
+}
+
+/** 跑完一段程序：返回 { ok, prog, trace, rows, final, cycles, stat, error } */
+function pipeRun(src, opts, maxCycles) {
+  const prog = y86Assemble(src);
+  if (!prog.ok) return { ok: false, error: prog.error, opts };
+  if (prog.bytes.length === 0) return { ok: false, error: { line: 0, msg: '程序是空的' }, opts };
+  if (prog.bytes.length > 1000) return { ok: false, error: { line: 0, msg: '程序超过内存（1024 字节上限）' }, opts };
+  let st = pipeInit(prog, opts);
+  const trace = [];
+  const lim = maxCycles || 200;
+  while (st.cycle < lim) {
+    const ev = pipeEval(st);
+    trace.push(ev.snap);
+    if (ev.snap.f.tag !== null && ev.snap.f.tag > 0) st.tags.set(ev.snap.f.tag, ev.snap.fpc.v);
+    st = ev.next;
+    if (st.stopped) break;
+  }
+  const rows = pipeRows(trace, prog);
+  return { ok: true, prog, trace, rows, final: st, cycles: st.cycle, stat: st.W.stat,
+           seq: seqRunProg(prog), opts: st.opts };
+}
+
+/** 把逐拍轨迹整理成「每条指令一行」的流水线图数据。
+ *  onlyProgram=true 时丢掉「程序之外的内存字节」被当成指令取进来的那些行
+ *  （程序后面全是 0，会被当成 halt），让图与课件一致。 */
+function pipeRows(trace, prog, onlyProgram) {
+  const labelOf = pc => {
+    const it = prog.listing.find(l => l.addr === u64(pc));
+    return it ? it.text : null;
+  };
+  const addrOf = new Map();
+  for (const s of trace) if (s.f.tag !== null && s.f.tag > 0) addrOf.set(s.f.tag, s.fpc.v);
+  const rows = new Map();
+  const put = (tag, cycle, letter) => {
+    if (tag === null || tag === undefined) return;
+    let r = rows.get(tag);
+    if (!r) {
+      const pc = tag < 0 ? null : addrOf.get(tag);
+      r = { tag, bubble: tag < 0, addr: pc === null || pc === undefined ? null : u64(pc),
+            label: tag < 0 ? 'bubble' : (pc === undefined ? '（未命名）' : (labelOf(pc) || '（未命名）')),
+            cells: {} };
+      rows.set(tag, r);
+    }
+    r.cells[cycle] = (r.cells[cycle] || '') + letter;
+  };
+  for (const s of trace) {
+    put(s.f.tag, s.cycle, 'F');
+    put(s.d.reg.tag, s.cycle, 'D');
+    put(s.e.reg.tag, s.cycle, 'E');
+    put(s.m.reg.tag, s.cycle, 'M');
+    put(s.w.reg.tag, s.cycle, 'W');
+  }
+  let list = Array.from(rows.values());
+  if (onlyProgram) list = list.filter(r => r.bubble || prog.listing.some(l => l.addr === r.addr));
+  list.sort((a, b) => {
+    const ca = Math.min.apply(null, Object.keys(a.cells).map(Number));
+    const cb = Math.min.apply(null, Object.keys(b.cells).map(Number));
+    return ca - cb || (a.bubble ? 1 : -1);
+  });
+  return list;
+}
+
+/* ---------- 渲染工具 ---------- */
+function cellsRow(cells, sm) {
+  return '<div class="bits' + (sm ? ' sm' : '') + '">' + cells.map(c => {
+    if (c === null) return '<span class="b" style="width:22px;background:transparent;color:var(--muted)">·</span>';
+    const ttl = c.title ? ` title="${esc(c.title)}"` : '';
+    return `<span class="b${c.cls ? ' ' + c.cls : ''}${c.sel ? ' sel' : ''}" style="width:22px${c.dim ? ';opacity:.45' : ''}"${ttl}>${c.t}</span>`;
+  }).join('') + '</div>';
+}
+function statChip(stat) {
+  const map = { SAOK: ['ok', 'SAOK · 正常'], SHLT: ['gray', 'SHLT · 停机'], SADR: ['bad', 'SADR · 地址异常'], SINS: ['bad', 'SINS · 非法指令'] };
+  const m = map[stat] || ['warn', stat];
+  return `<span class="chip ${m[0]}">${m[1]}</span>`;
+}
+const ccStr = cc => `${cc.zf ? 1 : 0}${cc.sf ? 1 : 0}${cc.of ? 1 : 0}`;
+const stageCellCls = { F: 'e', D: 'f', E: 's', M: 'e', W: 'f' };
+
+/* ============================================================
+   课件例题程序（原第 23、24–27、36、38、39、45、47、53 页）
+   ============================================================ */
+const DEMO_BASIC = ['irmovq $1,%rax   # I1', 'irmovq $2,%rcx   # I2', 'irmovq $3,%rdx   # I3',
+                    'irmovq $4,%rbx   # I4', 'halt             # I5'].join('\n');
+const DEMO_H0 = ['irmovq $10,%rdx', 'irmovq $3,%rax', 'addq %rdx,%rax', 'halt'].join('\n');
+const hDemoNop = k => ['irmovq $10,%rdx', 'irmovq $3,%rax'].concat(new Array(k).fill('nop')).concat(['addq %rdx,%rax', 'halt']).join('\n');
+const DEMO_LUH = ['irmovq $128,%rdx', 'irmovq $3,%rcx', 'rmmovq %rcx, 0(%rdx)', 'irmovq $10,%rbx',
+                  'mrmovq 0(%rdx),%rax', 'addq %rbx,%rax', 'halt'].join('\n');
+const DEMO_J = ['xorq %rax,%rax', 'jne t  # Not taken', 'irmovq $1, %rax  # Fall through',
+                'nop', 'nop', 'nop', 'halt', 't:', 'irmovq $3, %rdx  # Target',
+                'irmovq $4, %rcx  # Should not execute', 'irmovq $5, %rdx  # Should not execute'].join('\n');
+const DEMO_RETB = ['irmovq Stack,%rsp  # Intialize stack pointer', 'call p  # Procedure call',
+                   'irmovq $5,%rsi  # Return point', 'halt', '.pos 0x20', 'p:',
+                   'irmovq $-1,%rdi  # procedure', 'ret', 'irmovq $1,%rax  # Should not be executed',
+                   'irmovq $2,%rcx  # Should not be executed', 'irmovq $3,%rdx  # Should not be executed',
+                   'irmovq $4,%rbx  # Should not be executed', '.pos 0x100', 'Stack:  # Stack pointer'].join('\n');
+const DEMO_PRIO = ['irmovq $1, %rax', 'irmovq $2, %rax', 'irmovq $3, %rax', 'rrmovq %rax, %rdx', 'halt'].join('\n');
+const DEMO_COMBB = ['irmovq Stack,%rsp', 'irmovq $Halt,%rax', 'irmovq $0x110,%rdx',
+                    'rmmovq %rax,0(%rdx)', 'irmovq $0x110,%rcx', 'rmmovq %rcx,0(%rsp)',
+                    'popq %rsp  # 从内存读到 %rsp', 'ret  # 紧跟 ret —— 组合 B',
+                    'Halt: halt', '.pos 0x100', 'Stack:'].join('\n');
+
+/* ============================================================
+   渲染工具：流水线图与单拍详情
+   ============================================================ */
+const STAGE_CHIP = { F: 'chip', D: 'chip gray', E: 'chip', M: 'chip gray', W: 'chip ok' };
+const fpcWhyText = why => why === 'mispred' ? '分支预测错的恢复：M_valA（顺延地址）'
+                       : why === 'ret' ? 'ret 走到写回级：W_valM（返回地址）'
+                       : 'F_predPC（预测值）';
+
+function stageChips(letters) {
+  return String(letters).split('').map(L =>
+    `<span class="${STAGE_CHIP[L] || 'chip warn'}" style="padding:1px 6px;font-size:11.5px;margin-right:2px">${L}</span>`).join('');
+}
+
+/** 流水线图：行 = 指令（或 bubble），列 = 周期 */
+function pipeMatrixHtml(rows, opts) {
+  const o = opts || {};
+  let maxCycle = 0;
+  for (const r of rows) for (const c of Object.keys(r.cells)) maxCycle = Math.max(maxCycle, Number(c));
+  maxCycle = Math.min(maxCycle, o.limit || 16);
+  const head = '<tr><th>指令 / 周期</th>' +
+    Array.from({ length: maxCycle }, (_, i) => `<th style="text-align:center;padding:4px 4px">${i + 1}</th>`).join('') + '</tr>';
+  const body = rows.map(r => {
+    const tds = Array.from({ length: maxCycle }, (_, i) => {
+      const c = i + 1, letters = r.cells[c] || '';
+      const hl = o.markCls ? o.markCls(r, c) : '';
+      return `<td style="text-align:center;padding:3px 4px"${hl ? ` class="${hl}"` : ''}>` +
+             (letters ? stageChips(letters) : '<span style="color:var(--line)">·</span>') + '</td>';
+    }).join('');
+    const label = r.bubble ? '<span class="chip warn">bubble</span>'
+      : `<span class="mono" style="font-size:12px;color:var(--muted)">${hex64t(r.addr)}</span> ${esc(r.label)}`;
+    return `<tr><td style="white-space:nowrap;font-size:12.5px">${label}</td>${tds}</tr>`;
+  }).join('');
+  return `<div class="tbl-wrap"><table class="tbl">${head}${body}</table></div>`;
+}
+
+/** 单拍的五级内容（组合逻辑这一拍看到的东西） */
+function cycleDetailHtml(s, opts) {
+  const o = opts || {};
+  const f = s.f, D = s.d.reg, E = s.e.reg, M = s.m.reg, W = s.w.reg;
+  const row = (stage, icode, fields, note) => `<tr><td><b>${stage}</b></td>
+      <td class="mono" style="font-size:12.5px">${fields}</td>
+      <td style="font-size:12.5px;color:var(--muted)">${note || ''}</td></tr>`;
+  const bub = r => r.tag === null || r.tag < 0;   /* null = 初始空寄存器 */
+  const rows = [
+    row('F 取指', f.icode,
+      `f_pc = ${hex64t(s.fpc.v)} · icode = ${hexByte(f.icode)}${f.imemError ? '（imem_error）' : `（${icLabel(f.icode)}）`}` +
+      (f.rA !== RNONE || f.rB !== RNONE ? ` · rA = ${regName(f.rA)} · rB = ${regName(f.rB)}` : '') +
+      (f.valC !== 0n ? ` · valC = ${hex64t(f.valC)}` : '') + ` · valP = ${hex64t(f.valP)}`,
+      `这个 PC 来自<b>${fpcWhyText(s.fpc.why)}</b>；下一拍默认取 ${hex64t(f.predPC)}`),
+    row('D 译码', D.icode, bub(D) ? '（气泡）'
+      : `icode = ${hexByte(D.icode)}（${icLabel(D.icode)}） · rA = ${regName(D.rA)} · rB = ${regName(D.rB)} · valC = ${hex64t(D.valC)} · valP = ${hex64t(D.valP)}<br>` +
+        `srcA = ${s.d.dec.srcA === RNONE ? 'RNONE' : regName(s.d.dec.srcA)} · srcB = ${s.d.dec.srcB === RNONE ? 'RNONE' : regName(s.d.dec.srcB)} · ` +
+        `dstE = ${s.d.dec.dstE === RNONE ? 'RNONE' : regName(s.d.dec.dstE)} · dstM = ${s.d.dec.dstM === RNONE ? 'RNONE' : regName(s.d.dec.dstM)}<br>` +
+        `valA ← ${hex64t(s.d.dvalA)}（${s.d.fwA}） · valB ← ${hex64t(s.d.dvalB)}（${s.d.fwB}）`,
+      bub(D) ? '' : `从寄存器堆读到 ${hex64t(s.d.rvalA)} / ${hex64t(s.d.rvalB)}；转发在这两个值上做多路选择`),
+    row('E 执行', E.icode, bub(E) ? '（气泡）'
+      : `icode = ${hexByte(E.icode)}（${icLabel(E.icode)}） · valC = ${hex64t(E.valC)} · valA = ${hex64t(E.valA)} · valB = ${hex64t(E.valB)}<br>` +
+        (s.e.ex.noAlu ? '这一级不经过 ALU<br>' : `aluA = ${s.e.ex.aluA.sel} = ${hex64t(s.e.ex.aluA.v)} · aluB = ${s.e.ex.aluB.sel} = ${hex64t(s.e.ex.aluB.v)} · ` +
+          `valE = ${hex64t(s.e.ex.valE)}<br>`) +
+        `Cnd = <b>${s.e.eCnd ? 1 : 0}</b> · e_dstE = ${s.e.eDstE === RNONE ? 'RNONE' : regName(s.e.eDstE)}` +
+        (s.e.ex.setCC ? ` · <b>Set CC → ${ccStr({ zf: s.e.ex.flags.zf, sf: s.e.ex.flags.sf, of: s.e.ex.flags.of })}</b>` : ''),
+      bub(E) ? '' : `条件码输入：${s.e.ex.setCC ? '本条指令算出的新标志' : 'CC 寄存器 ' + ccStr(s.e.ccIn)}`),
+    row('M 访存', M.icode, bub(M) ? '（气泡）'
+      : `icode = ${hexByte(M.icode)}（${icLabel(M.icode)}） · Cnd = <b>${M.Cnd ? 1 : 0}</b> · valE = ${hex64t(M.valE)} · valA = ${hex64t(M.valA)}<br>` +
+        `dstE = ${M.dstE === RNONE ? 'RNONE' : regName(M.dstE)} · dstM = ${M.dstM === RNONE ? 'RNONE' : regName(M.dstM)} · ` +
+        (!s.m.mh.read && !s.m.mh.write ? '不访存'
+          : `${s.m.mh.read ? '读 ' : '写 '}M<sub>8</sub>[${hex64t(s.m.mh.addr)}]` + (s.m.mh.write ? ` ← ${hex64t(s.m.mh.data)}` : '') + (s.m.dmemError ? '（dmem_error）' : '')) +
+        (s.m.mh.read && !s.m.dmemError ? ` · valM = ${hex64t(s.m.mValM)}` : ''),
+      M.icode === JXX ? 'M_Cnd 就是分支条件的结论 —— 取指级下一拍据此改 PC' : ''),
+    row('W 写回', W.icode, bub(W) ? '（气泡）'
+      : `icode = ${hexByte(W.icode)}（${icLabel(W.icode)}） · valE = ${hex64t(W.valE)} · valM = ${hex64t(W.valM)}<br>` +
+        `dstE = ${W.dstE === RNONE ? 'RNONE' : regName(W.dstE)} · dstM = ${W.dstM === RNONE ? 'RNONE' : regName(W.dstM)}`,
+      s.w.writes.length ? `时钟沿写入：${s.w.writes.map(x => `${regName(x.r)} ← ${hex64t(x.v)}`).join('、')}` : '时钟沿不写寄存器'),
+  ];
+  const ctl = s.ctl, act = [];
+  if (ctl.loadUse) act.push('<b>加载/使用冒险</b>：F stall、D stall、E bubble');
+  if (ctl.mispredDetected) act.push(`<b>分支预测错</b>：D bubble、E bubble${ctl.mispred ? '' : '（本次演示选择「不取消」）'}`);
+  if (ctl.retIn) act.push('<b>ret 在流水线里</b>：F stall、D bubble');
+  const sigHtml = o.noSignals ? '' : `<div class="box" style="margin-bottom:0"><div class="t">这一拍的控制信号（组合逻辑算出来的）</div>
+    <span class="mono" style="font-size:12.5px">F_stall = ${ctl.F_stall ? 1 : 0} · D_stall = ${ctl.D_stall ? 1 : 0} ·
+    D_bubble = ${ctl.D_bubble ? 1 : 0} · E_bubble = ${ctl.E_bubble ? 1 : 0}</span>
+    <br>${act.length ? act.join('；') : '没有特殊情况 —— 五个寄存器都按 normal 更新。'}</div>`;
+  return `<div class="tbl-wrap"><table class="tbl">
+    <tr><th style="width:84px">级</th><th>组合逻辑看到的内容</th><th>说明</th></tr>
+    ${rows.join('')}</table></div>${sigHtml}`;
+}
+
+/** 取某条指令（按地址，第 which 次出现）的 tag */
+function tagOf(res, addr, which) {
+  const seen = [];
+  for (const s of res.trace) {
+    if (s.f.tag > 0 && s.fpc.v === u64(addr) && !seen.includes(s.f.tag)) seen.push(s.f.tag);
+  }
+  return seen[which || 0];
+}
+
+/* ============================================================
+   1.1 流水线性能计算器
+   ============================================================ */
+function parseSegList(str) {
+  const parts = String(str).split(/[,，\s]+/).filter(Boolean);
+  if (!parts.length || parts.length > 12) return null;
+  const out = [];
+  for (const p of parts) {
+    const v = Number(p);
+    if (!isFinite(v) || v <= 0 || v > 100000) return null;
+    out.push(v);
+  }
+  return out;
+}
+function renderPf() {
+  const segs = parseSegList($('#pfSegs').value);
+  const regRaw = Number($('#pfReg').value);
+  if (!segs) { $('#pfOut').innerHTML = badBox('各段延迟请给 1–12 个正数，用逗号分隔，例如 100,100,100。'); return; }
+  if (!isFinite(regRaw) || regRaw < 0 || regRaw > 100000) { $('#pfOut').innerHTML = badBox('寄存器开销请给一个非负数（ps）。'); return; }
+  const total = segs.reduce((a, b) => a + b, 0);
+  const maxSeg = Math.max.apply(null, segs);
+  const cyc = maxSeg + regRaw;
+  const cycNo = total + regRaw;
+  const gips = k => (1000 / k).toFixed(2);
+  const rows = segs.map((sg, i) => {
+    const idle = (cyc - sg - regRaw) / cyc;
+    return `<tr><td>第 ${i + 1} 段</td><td class="mono">${sg} ps</td>
+      <td class="mono">${(idle * 100).toFixed(1)}%${sg === maxSeg ? '　<b>← 最慢段，决定周期</b>' : ''}</td>
+      <td><span class="chip" style="width:${Math.max(2, Math.round((1 - idle) * 120))}px;padding:0;height:9px;display:inline-block"></span></td></tr>`;
+  }).join('');
+  $('#pfOut').innerHTML = `
+    <div class="readout">
+      <dt>段数 k</dt><dd>${segs.length}</dd>
+      <dt>组合逻辑总延迟</dt><dd class="mono">${total} ps</dd>
+      <dt>流水线时钟周期</dt><dd class="mono">${maxSeg}（最慢段） + ${regRaw}（寄存器） = <b>${cyc} ps</b></dd>
+      <dt>未流水线时钟周期</dt><dd class="mono">${total} + ${regRaw} = ${cycNo} ps</dd>
+      <dt>吞吐率</dt><dd class="mono"><b>${gips(cyc)} GIPS</b>　未流水线 ${gips(cycNo)} GIPS ⇒ 加速 <b>${(cycNo / cyc).toFixed(2)}×</b></dd>
+      <dt>单条操作延迟</dt><dd class="mono">${segs.length} × ${cyc} = ${segs.length * cyc} ps（未流水线 ${cycNo} ps）</dd>
+      <dt>寄存器开销占比</dt><dd class="mono">${regRaw} / ${cyc} = <b>${(regRaw / cyc * 100).toFixed(2)}%</b></dd>
+    </div>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>阶段</th><th>组合延迟</th><th>空闲比例（相对 ${cyc} ps 周期）</th><th>利用率</th></tr>${rows}</table></div>
+    <div class="box ok" style="margin-bottom:0"><div class="t">读法</div>
+      吞吐率只由<b>最慢的一段 + 寄存器开销</b>决定：${maxSeg} + ${regRaw} = ${cyc} ps → ${gips(cyc)} GIPS；
+      单条延迟反而变成 ${segs.length * cyc} ps，比不流水线的 ${cycNo} ps ${segs.length * cyc > cycNo ? '<b>更长</b>' : '更短'}。
+      段与段越不均衡，空闲比例越高 —— 这正是课件第 8 页说的「很难切成均衡的几段」。</div>`;
+}
+
+/* ============================================================
+   1.3 时空图（SVG）
+   ============================================================ */
+function renderPg() {
+  const k = Number($('#pgK').value), n = Number($('#pgN').value);
+  if (!Number.isInteger(k) || k < 2 || k > 8) { $('#pgOut').innerHTML = badBox('段数请给 2–8 之间的整数。'); return; }
+  if (!Number.isInteger(n) || n < 1 || n > 12) { $('#pgOut').innerHTML = badBox('操作数请给 1–12 之间的整数。'); return; }
+  const cw = 54, ch = 30, padL = 76, padT = 30, gap = 3;
+  const cols = n + k - 1;
+  const W = padL + cols * cw + 12, H = padT + n * (ch + gap) + 40;
+  const fills = ['var(--accent-soft)', 'var(--exp-bg)', 'var(--frac-bg)', 'var(--sign-bg)', 'var(--gray-bg)'];
+  let g = '';
+  for (let c = 0; c < cols; c++) {
+    g += `<text class="ticklabel" x="${padL + c * cw + cw / 2}" y="${padT - 9}" text-anchor="middle">${c + 1}</text>`;
+  }
+  for (let i = 0; i < n; i++) {
+    const y = padT + i * (ch + gap);
+    g += `<text class="ticklabel" x="${padL - 8}" y="${y + ch / 2 + 4}" text-anchor="end">OP${i + 1}</text>`;
+    for (let j = 0; j < k; j++) {
+      const c = i + j;
+      g += `<rect x="${padL + c * cw + 1}" y="${y}" width="${cw - 2}" height="${ch}" rx="4"
+              fill="${fills[j % fills.length]}" stroke="var(--line)"></rect>
+        <text x="${padL + c * cw + cw / 2}" y="${y + ch / 2 + 4}" text-anchor="middle"
+          style="font-family:var(--font-mono);font-size:12px;fill:var(--ink)">阶段 ${'ABCDEFGH'[j]}</text>`;
+    }
+  }
+  const lastY = padT + n * (ch + gap) + 14;
+  g += `<text class="ticklabel" x="${padL + (k - 1) * cw + cw / 2}" y="${lastY}" text-anchor="middle">第 1 条走完</text>`;
+  g += `<text class="ticklabel" x="${padL + (cols - 1) * cw + cw / 2}" y="${lastY}" text-anchor="middle">最后一条走完</text>`;
+  $('#pgOut').innerHTML = `
+    <div class="tbl-wrap"><svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img"
+      aria-label="流水线时空图：${k} 段 ${n} 条操作">${g}
+      <line class="axisline" x1="${padL}" y1="${padT - 2}" x2="${padL + cols * cw}" y2="${padT - 2}"></line></svg></div>
+    <div class="readout" style="margin-bottom:0">
+      <dt>总周期数</dt><dd class="mono">${cols}　= ${k} + ${n} − 1（第一条 ${k} 拍走完，之后每拍完成一条）</dd>
+      <dt>理想吞吐</dt><dd class="mono">稳态下每拍 1 条 ⇒ 加速上限 <b>${k}×</b>；这里 ${n} 条用了 ${cols} 拍，平均 ${(n * k / cols).toFixed(2)}×（没填满的阶段拖了后腿）</dd>
+      <dt>同时在处理</dt><dd class="mono">最多 ${k} 条（第 ${k} 拍起）</dd>
+    </div>`;
+}
+
+/* ============================================================
+   1.4 寄存器开销曲线
+   ============================================================ */
+function renderOv() {
+  const total = Number($('#ovSeg').value), reg = Number($('#ovReg').value);
+  if (!isFinite(total) || total <= 0 || total > 100000) { $('#ovOut').innerHTML = badBox('组合逻辑总延迟请给正数（ps）。'); return; }
+  if (!isFinite(reg) || reg < 0 || reg > 100000) { $('#ovOut').innerHTML = badBox('寄存器开销请给非负数（ps）。'); return; }
+  const rows = [];
+  for (let k = 1; k <= 12; k++) {
+    const seg = total / k, cyc = seg + reg;
+    rows.push({ k, seg, cyc, gips: 1000 / cyc, lat: k * cyc, ov: reg / cyc });
+  }
+  const base = rows[0].gips, top = rows[rows.length - 1].gips;
+  const html = rows.map(r => `<tr${[1, 3, 6].includes(r.k) ? ' class="hl"' : ''}>
+    <td class="mono">${r.k}</td><td class="mono">${r.seg.toFixed(1)}</td><td class="mono">${r.cyc.toFixed(1)}</td>
+    <td class="mono">${r.lat.toFixed(0)}</td><td class="mono">${r.gips.toFixed(2)}</td>
+    <td class="mono">${(r.gips / base).toFixed(2)}×</td>
+    <td class="mono">${(r.ov * 100).toFixed(2)}%</td>
+    <td><span class="chip" style="width:${Math.max(2, Math.round(r.gips / top * 110))}px;padding:0;height:9px;display:inline-block"></span></td></tr>`).join('');
+  const k6 = rows[5];
+  $('#ovOut').innerHTML = `
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>段数 k</th><th>每段组合</th><th>周期</th><th>单条延迟</th><th>吞吐 GIPS</th><th>相对 k=1</th><th>寄存器开销占比</th><th></th></tr>
+      ${html}</table></div>
+    <div class="box ok" style="margin-bottom:0"><div class="t">对着课件第 9 页读</div>
+      取总延迟 ${total} ps、寄存器开销 ${reg} ps：<b>k=1 → ${(rows[0].ov * 100).toFixed(2)}%</b>、
+      <b>k=3 → ${(rows[2].ov * 100).toFixed(2)}%</b>、<b>k=6 → ${(rows[5].ov * 100).toFixed(2)}%</b> —— 与课件写的
+      6.25% / 16.67% / 28.57% 一致（课件用的就是 300 ps 总延迟）。k=6 时周期 ${k6.cyc.toFixed(0)} ps、单条延迟 ${k6.lat.toFixed(0)} ps、
+      吞吐 ${k6.gips.toFixed(2)} GIPS，正是第 9 页那行「Delay = 420 ps, Throughput = 14.29 GIPS」。</div>`;
+}
+
+/* ============================================================
+   2.4 信号命名判别器
+   ============================================================ */
+const SIG_DEFS = [
+  ['F_predPC', 'F', '存', 'F 流水线寄存器里保存的预测 PC —— 下一拍取指默认用的地址'],
+  ['D_icode', 'D', '存', 'D 寄存器里的指令码（取指级刚读出来的）'],
+  ['D_valP', 'D', '存', 'D 寄存器里的「顺序下一条 PC」'],
+  ['D_valC', 'D', '存', 'D 寄存器里的常数字（irmovq 的立即数、跳转目标、位移）'],
+  ['d_srcA', 'D', '算', '译码级现算出来的读端口 A 地址（由 D_icode 与 D_rA 决定）'],
+  ['d_rvalA', 'D', '算', '译码级从寄存器堆读出的 valA 原值（没有转发命中时用它兜底）'],
+  ['d_valA', 'D', '算', '译码级最终的 valA —— 转发逻辑在寄存器堆与 E/M/W 之间选出来的'],
+  ['E_icode', 'E', '存', 'E 寄存器里的指令码'],
+  ['E_valC', 'E', '存', 'E 寄存器里的常数字'],
+  ['e_valE', 'E', '算', '执行级 ALU 刚算出来的值（同一拍就能被译码级转发走）'],
+  ['e_dstE', 'E', '算', '执行级最终的目的端口地址（cmovXX 条件不成立时被改成 0xF）'],
+  ['e_Cnd', 'E', '算', '执行级算出的条件标志 —— 分支预测错的检测就用它'],
+  ['M_Cnd', 'M', '存', 'M 寄存器里的条件标志（执行级算完存下来的），取指级用它恢复 PC'],
+  ['M_valA', 'M', '存', 'M 寄存器里的 valA —— 跳转指令的顺延地址（fall-through PC）'],
+  ['M_valE', 'M', '存', 'M 寄存器里的 ALU 结果'],
+  ['m_valM', 'M', '算', '访存级本拍从内存读出的值'],
+  ['m_stat', 'M', '算', '访存级算出的指令状态（dmem_error 时变成 SADR）'],
+  ['W_valE', 'W', '存', 'W 寄存器里的 ALU 结果（马上要写回寄存器堆）'],
+  ['W_valM', 'W', '存', 'W 寄存器里的内存读出值 —— ret 的返回地址就是它'],
+  ['w_stat', 'W', '存', '写回级带过来的指令状态'],
+  ['F_stall', 'F', '算', '控制逻辑现算的 F 寄存器模式信号（停住取指级）'],
+  ['E_bubble', 'E', '算', '控制逻辑现算的 E 寄存器模式信号（往执行级插气泡）'],
+];
+let sigSel = null;
+function renderSig() {
+  const btns = SIG_DEFS.map(x => `<button class="sm${sigSel === x[0] ? ' p' : ''}" data-sig="${x[0]}">${x[0]}</button>`).join('');
+  let detail = '<div class="box" style="margin-bottom:0">点上面任意一个信号名，看它是「寄存下来的值」还是「本拍现算的」。</div>';
+  if (sigSel) {
+    const x = SIG_DEFS.find(y => y[0] === sigSel);
+    const isReg = x[2] === '存';
+    detail = `<div class="box ${isReg ? '' : 'ok'}" style="margin-bottom:0"><div class="t">${x[0]}</div>
+      <b>${x[1]} 级</b> · <b>${isReg ? '流水线寄存器里保存的字段（字母大写）' : '该级现算出来的信号（字母小写）'}</b><br>
+      ${esc(x[3])}<br>
+      <span style="color:var(--muted)">记法：<code>${isReg ? x[0].split('_')[0] + '_Field' : 's_Field'}</code> —— 大写 <code>S</code> 表示「存在阶段 S 的流水线寄存器里」，小写 <code>s</code> 表示「在阶段 S 现算」。同一拍里现算的值（如 <code>e_valE</code>）能立刻被译码级转发走，而 <code>M_valE</code> 是上一拍存下来的 ALU 结果。</span></div>`;
+  }
+  $('#sigOut').innerHTML = `<div class="ctrls" style="margin:2px 0">${btns}</div>${detail}`;
+}
+
+/* ============================================================
+   2.3 流水线寄存器漫游
+   ============================================================ */
+const PR_DEFS = {
+  F: { name: 'F 寄存器（取指 → 译码）', hold: 'predPC —— 预测的下一条 PC',
+       save: '只保存一个 <code>predPC</code>（PC 阶段被提到了最前面，见 SEQ+）',
+       job: '按 Select PC 选出的地址从指令内存连读 10 字节并切开：<code>icode/ifun</code>、<code>rA/rB</code>、<code>valC</code>，算出 <code>valP</code>、Instr valid、Need regids、Need valC，以及下一条的预测 PC。' },
+  D: { name: 'D 寄存器（译码 → 执行）', hold: 'stat · icode · ifun · rA · rB · valC · valP',
+       save: '只保存「指令原始字段」—— <b>不保存</b>译码算出的端口地址',
+       job: '读出 <code>valA/valB</code>（含转发），算出 <code>srcA/srcB</code>、<code>dstE/dstM</code> 四个端口地址，连同 valA/valB 一起交给执行级。' },
+  E: { name: 'E 寄存器（执行 → 访存）', hold: 'stat · icode · ifun · valC · valA · valB · dstE · dstM · srcA · srcB',
+       save: '译码级算出来的端口地址与两个操作数（valE 与 Cnd 还没算出来）',
+       job: 'ALU 用 <code>aluA/aluB/alufun</code> 算 <code>valE</code>；OPq 顺带置条件码；cmovXX/jXX 由 cond 块算出 <code>Cnd</code>，并把失败的条件传送目的地址改成 <code>0xF</code>。' },
+  M: { name: 'M 寄存器（访存 → 写回）', hold: 'stat · icode · Cnd · valE · valA · dstE · dstM',
+       save: 'ALU 结果、条件标志 <code>Cnd</code>，以及 <code>valA</code>（跳转的顺延地址 / call 的返回地址）',
+       job: '按 <code>mem_addr / mem_read / mem_write</code> 读或写数据内存，产出 <code>valM</code>；<code>dmem_error</code> 会把 stat 变成 SADR。' },
+  W: { name: 'W 寄存器（写回 → 时钟沿）', hold: 'stat · icode · valE · valM · dstE · dstM',
+       save: '两个端口要写的值与地址',
+       job: '在时钟沿把 <code>valE</code> 写进寄存器堆的 E 端口、<code>valM</code> 写进 M 端口；ret 走到这里时 <code>W_valM</code> 就是返回地址，取指级据此恢复 PC。' },
+};
+let prSel = 'D';
+function renderPr() {
+  const btns = ['F', 'D', 'E', 'M', 'W'].map(k => `<button class="sm${prSel === k ? ' p' : ''}" data-pr="${k}">${k} 寄存器</button>`).join('');
+  const d = PR_DEFS[prSel];
+  $('#prOut').innerHTML = `<div class="ctrls" style="margin:2px 0">${btns}</div>
+    <div class="box" style="margin-bottom:0"><div class="t">${esc(d.name)}</div>
+      <b>保存的字段</b>：<span class="mono">${esc(d.hold)}</span><br>
+      <b>要点</b>：${d.save}<br>
+      <b>这一级算什么</b>：${d.job}</div>`;
+}
+
+/* ============================================================
+   2.5 四条反馈路径
+   ============================================================ */
+const FB_DEFS = [
+  ['预测 PC', '取指级的 <code>Select PC</code> 块把候选地址送回 PC 与指令内存',
+   '<code>F_predPC</code>（默认预测）、<code>M_valA</code>（跳转预测错时改回顺延地址）、<code>W_valM</code>（ret 走到写回级时取回返回地址）'],
+  ['分支信息', '执行级算出的 <code>Cnd</code> 随流水线寄存器一路传下去',
+   '它保存「这次跳转跳了没有」的结论：指令字里没有这个信息，只能靠执行结果回填 —— 取指级要等到访存级（<code>M_Cnd</code>）才用得上'],
+  ['返回点', '内存 → 写回级读出返回地址，再回到取指级',
+   '<code>W_valM</code>：ret 要等到写回级才知道回哪里 —— 这就是 ret 要停 3 拍的原因'],
+  ['寄存器更新', '写回级的两个值与地址送回寄存器堆写端口，同时也送回译码级做转发',
+   '<code>W_valE / W_valM → dstE / dstM</code>：正常路径写寄存器堆；反馈路径让译码级<b>同拍</b>就能拿到它'],
+];
+let fbSel = null;
+function renderFb() {
+  const btns = FB_DEFS.map(f => `<button class="sm${fbSel === f[0] ? ' p' : ''}" data-fb="${f[0]}">${f[0]}</button>`).join('');
+  let detail = '<div class="box" style="margin-bottom:0">点一条反馈路径（课件第 19 页的四条）。</div>';
+  if (fbSel) {
+    const f = FB_DEFS.find(x => x[0] === fbSel);
+    detail = `<div class="box ok" style="margin-bottom:0"><div class="t">${esc(f[0])}</div>
+      ${f[1]}<br><b>信号</b>：<span class="mono">${f[2]}</span></div>`;
+  }
+  $('#fbOut').innerHTML = `<div class="ctrls" style="margin:2px 0">${btns}</div>${detail}`;
+}
+
+/* ============================================================
+   3.2 PC 预测策略
+   ============================================================ */
+const PP_DEFS = {
+  alu: { pred: 'valP（顺序下一条）', ok: true, note: '不改变控制流的指令（OPq / irmovq / rmmovq / mrmovq / cmovXX / pushq / popq / nop / halt）后面一定跟着顺序下一条 —— 预测永远可靠（Always reliable）。' },
+  call: { pred: 'valC（目标地址）', ok: true, note: 'call 与无条件跳转 jmp 一定会去目标地址 —— 永远可靠。' },
+  jcc: { pred: 'valC（目标地址）', ok: false, note: '条件跳转只有真的跳了才对：课件给的典型命中率是 <b>60%</b>，也就是约 40% 的情况要取消两条指令（浪费 2 拍）。' },
+  ret: { pred: '不预测（默认回到 F_predPC）', ok: false, note: '返回地址在栈上，编译期完全不知道 —— 本讲的策略是「不猜」：停住取指级，等 ret 走到写回级用 <code>W_valM</code> 取回。' },
+};
+function renderPp() {
+  const raw = $('#ppSel').value;
+  const key = PP_DEFS[raw] ? raw : 'alu';
+  const d = PP_DEFS[key];
+  let extra = '';
+  if (key === 'jcc') {
+    const rate = Number($('#ppRate').value);
+    if (!isFinite(rate) || rate < 0 || rate > 100) { $('#ppOut').innerHTML = badBox('命中率请给 0–100 之间的数。'); return; }
+    const miss = 100 - rate;
+    extra = `<div class="readout" style="margin-bottom:0">
+      <dt>命中率 p</dt><dd class="mono">${rate}%</dd>
+      <dt>每次分支平均浪费</dt><dd class="mono">(1 − p) × 2 = <b>${((miss / 100) * 2).toFixed(3)} 个周期</b></dd>
+      <dt>100 条分支</dt><dd class="mono">预测错 ${miss.toFixed(0)} 次 ⇒ 白扔 ${(miss * 2).toFixed(0)} 个周期</dd>
+      <dt>课件取值</dt><dd class="mono">p = 60% ⇒ 每次平均浪费 0.8 个周期</dd></div>`;
+  }
+  $('#ppOut').innerHTML = `<div class="box ${d.ok ? 'ok' : 'warn'}" style="margin-bottom:0">
+    <div class="t">预测：${esc(d.pred)}　${d.ok ? '<span class="chip ok">永远可靠</span>' : '<span class="chip warn">可能猜错</span>'}</div>
+    ${d.note}</div>${extra}`;
+}
+
+/* ============================================================
+   3.3 预测错的恢复通路
+   ============================================================ */
+let phSel = 'jcc';
+function renderPh() {
+  const map = {
+    jcc: { t: '条件跳转预测为「跳」，结果没跳', when: '这条 jXX 走到<b>访存阶段</b>时（M_Cnd 出来了）',
+      from: '顺延地址（fall-through PC）来自 <code>valA</code> —— 也就是 <code>M_valA</code>。译码级对 jXX/call 会把 valA 取成 valP，所以这个地址一路被带到访存级。',
+      act: '取指级下一拍就按 M_valA 取正确指令（F 不用 stall）；同时执行级与译码级里的两条错指令被气泡取代 —— 共浪费 2 拍。' },
+    ret: { t: 'ret：不知道返回地址', when: 'ret 走到<b>写回阶段</b>时（内存读出的返回地址进了 W 寄存器）',
+      from: '返回地址来自 <code>W_valM</code>。',
+      act: 'ret 穿过 D/E/M 的每一拍取指级都 <b>stall</b>（F_stall = 1），译码级每拍插一个气泡；等 ret 到 W，PC 选择逻辑切到 W_valM，取指级从返回点继续 —— 共浪费 3 拍。' },
+    ok: { t: '预测正确（不改变控制流的指令 / call / 无条件跳转）', when: '不需要恢复',
+      from: '取指级下一拍继续用 <code>F_predPC</code>。',
+      act: '什么都不用做 —— 这也是为什么这三类指令的预测「永远可靠」。' },
+  };
+  const d = map[phSel];
+  $('#phOut').innerHTML = `<div class="box ${phSel === 'ok' ? 'ok' : 'warn'}" style="margin-bottom:0">
+    <div class="t">${d.t}</div>
+    <b>什么时候知道</b>：${d.when}<br><b>正确的 PC 从哪来</b>：${d.from}<br><b>取指级动作</b>：${d.act}</div>`;
+}
+
+/* ============================================================
+   4.1 nop 填充实验室
+   ============================================================ */
+let nopCount = 2, nopFwd = false;
+function renderNop() {
+  const src = hDemoNop(nopCount);
+  const res = pipeRun(src, { forwarding: nopFwd });
+  if (!res.ok) { $('#nopOut').innerHTML = badBox('内部程序出错：' + res.error.msg); return; }
+  const seq = res.seq;
+  const pe = res.final.regs[0], se = seq.regs[0];
+  const addqAddr = 0x14n + BigInt(nopCount);   /* nop 占 1 字节 */
+  const tag = tagOf(res, addqAddr);
+  const dSnaps = res.trace.filter(s => s.d.reg.tag === tag);
+  const detail = dSnaps.map(s => `<div class="step on"><div class="h">第 ${s.cycle} 拍 · addq 在译码级</div>
+      <div class="m">valA ← R[%rdx] = ${hex64t(s.d.rvalA)} · valB ← R[%rax] = ${hex64t(s.d.rvalB)}${nopFwd
+        ? `　→ 转发后 valA = ${hex64t(s.d.dvalA)}（${s.d.fwA}）、valB = ${hex64t(s.d.dvalB)}（${s.d.fwB}）` : ''}</div>
+      <div class="e">${(() => {
+        if (nopFwd) return '转发让译码级同拍就拿到流水线里的新值。';
+        const stale = [];
+        if (s.d.rvalA !== 10n) stale.push('%rdx 还没写回（读到 ' + hex64t(s.d.rvalA) + '，应为 10）');
+        if (s.d.rvalB !== 3n) stale.push('%rax 还没写回（读到 ' + hex64t(s.d.rvalB) + '，应为 3）');
+        return stale.length ? '还没写回：' + stale.join('、') + ' —— 这就是课件第 24–27 页的 Error。'
+                            : '顺延已经够远：两条 irmovq 都写回了，读到的都是新值。';
+      })()}</div></div>`).join('');
+  const ok = pe === se;
+  const rows = pipeRows(res.trace, res.prog, true);
+  const addqRow = rows.find(r => r.addr === addqAddr);
+  $('#nopOut').innerHTML = `
+    <div class="readout">
+      <dt>程序</dt><dd class="mono" style="font-size:12.5px">irmovq $10,%rdx ／ irmovq $3,%rax ／ ${nopCount} 个 nop ／ ${hex64t(addqAddr)}: addq %rdx,%rax ／ halt</dd>
+      <dt>流水线跑出来</dt><dd class="mono">%rax = ${hex64t(pe)}</dd>
+      <dt>顺序语义应为</dt><dd class="mono">%rax = ${hex64t(se)}（0xA + 0x3 = 0xD）</dd>
+      <dt>判定</dt><dd>${ok ? '<span class="chip ok">一致 —— addq 读到了正确的值</span>'
+        : '<span class="chip bad">不一致 —— 译码级读到了还没写回的值</span>'}</dd>
+      <dt>周期数</dt><dd class="mono">PIPE ${res.cycles} 拍（取指级停 ${res.final.stalled} 次） · SEQ ${seq.cycles} 拍</dd>
+    </div>
+    ${addqRow ? `<div class="fcap" style="margin-top:8px">addq 在流水线里的位置（某一级连着出现两拍 = 停了一拍）</div>${pipeMatrixHtml([addqRow], {})}` : ''}
+    ${detail}
+    <div class="box ${ok ? 'ok' : 'bad'}" style="margin-bottom:0"><div class="t">${ok ? '够了' : '不够'}</div>
+      ${nopFwd ? '带转发时值不必等写回 —— 只要它已经在 E/M/W 里就能转发，所以一个 nop 都不需要（课件第 35–38 页就是这么修的）。'
+        : (ok ? '朴素流水线必须等前一条真正写回寄存器堆，所以要把 nop 插够（课件第 27 页：3 个 nop 才够）。'
+              : '朴素流水线里译码级读寄存器堆时前一条还没写回 —— 这就是课件第 24–26 页画的 Error。再多插几个 nop 试试，或者打开转发。')}</div>`;
+}
+
+/* ============================================================
+   4.3 停顿条件检测器（通用数据依赖版，原第 29–30 页）
+   ============================================================ */
+function regOptions(cur) {
+  return ['<option value="15">RNONE（0xF）</option>'].concat(
+    REG_NAMES.map((n, i) => `<option value="${i}"${cur === i ? ' selected' : ''}>${n}</option>`)).join('');
+}
+function renderSt() {
+  const g = id => Number($('#' + id).value);
+  const srcA = g('stSrcA'), srcB = g('stSrcB');
+  const dst = [['执行级 dstE', g('stDstE')], ['访存级 dstE', g('stDstME')], ['访存级 dstM', g('stDstMM')],
+               ['写回级 dstE', g('stDstWE')], ['写回级 dstM', g('stDstWM')]];
+  const hit = (src, label) => {
+    if (src === RNONE) return { hit: false, why: `${label} = RNONE（0xF）—— 课件第 29 页的特例：寄存器号 15 表示「没有寄存器操作数」（或条件传送失败），不触发停顿。` };
+    const m = dst.find(d => d[1] === src);
+    return m ? { hit: true, why: `${label} = ${regName(src)} 命中<b>${m[0]}</b> —— 那条指令还没写回这个寄存器。` }
+             : { hit: false, why: `${label} = ${regName(src)}：E/M/W 三级的目的寄存器都不是它，不用停。` };
+  };
+  const a = hit(srcA, 'srcA'), b = hit(srcB, 'srcB');
+  const stall = a.hit || b.hit;
+  const list = dst.map(d => `${d[0]} = ${d[1] === RNONE ? 'RNONE' : regName(d[1])}`).join(' · ');
+  $('#stOut').innerHTML = `
+    <div class="readout" style="margin-bottom:6px">
+      <dt>译码级要读</dt><dd class="mono">srcA = ${srcA === RNONE ? 'RNONE' : regName(srcA)} · srcB = ${srcB === RNONE ? 'RNONE' : regName(srcB)}</dd>
+      <dt>后面三级要写</dt><dd class="mono" style="font-size:12.5px">${list}</dd>
+      <dt>结论</dt><dd>${stall ? '<span class="chip bad">停顿（D_stall = 1）</span>' : '<span class="chip ok">不停顿（D_stall = 0）</span>'}</dd>
+    </div>
+    <div class="box ${stall ? 'bad' : 'ok'}" style="margin-bottom:0">
+      <div class="t">逐项判断</div>${a.why}<br>${b.why}
+      <div style="margin-top:6px">停顿时三件事同时发生：<b>译码级 hold 住</b>（同一个 D 格子连占两拍）、<b>取指级跟着 hold</b>（指令停在 F）、<b>执行级插气泡</b>（bubble）—— 课件第 28、32 页。</div></div>`;
+}
+
+/* ============================================================
+   4.5 流水线寄存器模式
+   ============================================================ */
+let rmStall = 0, rmBubble = 0;
+function renderRm() {
+  const s = rmStall, b = rmBubble;
+  const name = (s === 0 && b === 0) ? 'Normal（正常加载）' : (s === 1 && b === 0) ? 'Stall（保持旧值）'
+             : (s === 0 && b === 1) ? 'Bubble（注入 nop）' : '非法组合（stall = 1 且 bubble = 1）';
+  const cls = (s === 1 && b === 1) ? 'bad' : (s === 0 && b === 0) ? '' : 'ok';
+  const beh = (s === 0 && b === 0) ? '输出 ← 本拍输入的新值。'
+            : (s === 1 && b === 0) ? '输出 ← 上一拍的值（x）：这条指令被按在原地，下一拍再看能不能往前走。'
+            : (s === 0 && b === 1) ? '输出 ← 一条 nop（气泡）：这条指令被丢掉，空出来的那一级继续往前走。'
+            : '同一个流水线寄存器既要用旧值、又要插 nop —— 硬件做不到。课件第 64 页说处理器会把它报成 <b>pipeline error</b>：这正是控制组合 B 那个 bug。';
+  $('#rmOut').innerHTML = `
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>模式</th><th>stall</th><th>bubble</th><th>下一个时钟沿之后</th></tr>
+      <tr${s === 0 && b === 0 ? ' class="hl"' : ''}><td>Normal</td><td class="mono">0</td><td class="mono">0</td><td class="mono">输出 ← 输入（新指令）</td></tr>
+      <tr${s === 1 && b === 0 ? ' class="hl"' : ''}><td>Stall</td><td class="mono">1</td><td class="mono">0</td><td class="mono">输出 ← 输出（保持旧值）</td></tr>
+      <tr${s === 0 && b === 1 ? ' class="hl"' : ''}><td>Bubble</td><td class="mono">0</td><td class="mono">1</td><td class="mono">输出 ← nop（气泡）</td></tr>
+      <tr${s === 1 && b === 1 ? ' class="hl"' : ''}><td>（不可能）</td><td class="mono">1</td><td class="mono">1</td><td class="mono">— 冲突</td></tr>
+    </table></div>
+    <div class="box ${cls}" style="margin-bottom:0"><div class="t">当前：${name}</div>${beh}</div>`;
+}
+
+/* ============================================================
+   5.4 转发优先级实验
+   ============================================================ */
+let prioCur = 5, prioTrace = null;
+function renderPrio() {
+  if (!prioTrace) prioTrace = pipeRun(DEMO_PRIO);
+  const res = prioTrace;
+  if (!res.ok) { $('#prioOut').innerHTML = badBox('内部程序出错：' + res.error.msg); return; }
+  const maxC = res.cycles;
+  if (prioCur > maxC) prioCur = maxC;
+  const s = res.trace[prioCur - 1];
+  const srcs = [
+    ['执行级 e_dstE', s.e.eDstE, s.e.ex.valE, 'e_valE'],
+    ['访存级 M_dstE', s.m.reg.dstE, s.m.reg.valE, 'M_valE'],
+    ['访存级 M_dstM', s.m.reg.dstM, s.m.valM, 'm_valM'],
+    ['写回级 W_dstE', s.w.reg.dstE, s.w.reg.valE, 'W_valE'],
+    ['写回级 W_dstM', s.w.reg.dstM, s.w.reg.valM, 'W_valM'],
+  ];
+  const dSrcA = s.d.dec.srcA;
+  const hitList = srcs.filter(x => x[1] === dSrcA && dSrcA !== RNONE);
+  const rows = srcs.map(x => {
+    const match = x[1] === dSrcA && dSrcA !== RNONE;
+    return `<tr${match ? ' class="hl"' : ''}><td>${x[0]}</td>
+      <td class="mono">${x[1] === RNONE ? 'RNONE' : regName(x[1])}</td>
+      <td class="mono">${hex64t(x[2] === undefined || x[2] === null ? 0n : x[2])}</td>
+      <td class="mono">${x[3]}</td>
+      <td>${match ? '<span class="chip ok">命中</span>' : '<span class="chip gray">不命中</span>'}</td></tr>`;
+  }).join('');
+  $('#prioOut').innerHTML = `
+    <div class="readout">
+      <dt>第 ${prioCur} 拍 · 译码级指令</dt><dd class="mono">${esc(icLabel(s.d.reg.icode))}
+        · d_srcA = ${dSrcA === RNONE ? 'RNONE' : regName(dSrcA)}</dd>
+      <dt>三个来源</dt><dd>${hitList.length ? hitList.map(x => x[0]).join('、') + ' 都在写同一个寄存器' : '没有来源命中'}</dd>
+      <dt>选中的值</dt><dd class="mono"><b>valA = ${hex64t(s.d.dvalA)}</b>　（来自 ${s.d.fwA}）</dd>
+      <dt>为什么</dt><dd>${hitList.length > 1 ? `按优先级 <b>执行级 &gt; 访存级 &gt; 写回级</b>，选最年轻的那个写者 —— 与顺序执行时读到的值一致。`
+        : hitList.length === 1 ? '只有一个来源命中，直接用它的值。' : '没有命中，用寄存器堆读出的原值。'}</dd>
+    </div>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>来源</th><th>目的寄存器</th><th>值</th><th>信号名</th><th></th></tr>${rows}</table></div>
+    <div class="box ok" style="margin-bottom:0"><div class="t">课件第 39 页的答案</div>
+      第 5 拍时 W/M/E 三级分别写着 <code>R[%rax] ← 1 / 2 / 3</code>，<code>rrmovq %rax,%rdx</code> 正在译码 ——
+      顺序语义下它应该读到 <b>3</b>（最后一条 irmovq 的值），所以优先级要让执行级赢。本页选中 <b>${hex64t(s.d.dvalA)}</b>${s.d.dvalA === 3n ? ' —— 与课件一致。' : '。'}</div>`;
+}
+
+/* ============================================================
+   5.5 d_valA 求值器（HCL 逐条命中）
+   ============================================================ */
+const FW_ICODES = [[OPQ, 'OPq'], [CALL, 'call'], [JXX, 'jXX'], [RRMOVQ, 'rrmovq/cmovXX'],
+                   [MRMOVQ, 'mrmovq'], [POPQ, 'popq'], [RET, 'ret'], [IRMOVQ, 'irmovq'], [HALT, 'halt/nop']];
+function renderFw() {
+  const g = id => Number($('#' + id).value);
+  const numOf = id => { const v = parseNum($('#' + id).value); return v === null ? null : v; };
+  const icode = Number($('#fwIc').value);
+  const srcA = g('fwSrc'), eDstE = g('fwE'), MDstM = g('fwMM'), MDstE = g('fwME'), WDstM = g('fwWM'), WDstE = g('fwWE');
+  const vals = { fwEV: numOf('fwEV'), fwMV: numOf('fwMV'), fwMEV: numOf('fwMEV'), fwWMV: numOf('fwWMV'), fwWEV: numOf('fwWEV'), fwRV: numOf('fwRV'), fwP: numOf('fwP') };
+  for (const k of Object.keys(vals)) {
+    if (vals[k] === null) { $('#fwOut').innerHTML = badBox('数值格请填 0x… / 十进制 / 负数。'); return; }
+  }
+  const nm = id => id === RNONE ? 'RNONE' : regName(id);
+  const cases = [
+    { cond: icode === CALL || icode === JXX, txt: `D_icode in { ICALL, IJXX } → 用 D_valP`, val: vals.fwP, expr: 'D_valP' },
+    { cond: srcA === eDstE, txt: `d_srcA == e_dstE → 从执行级转发 e_valE`, val: vals.fwEV, expr: 'e_valE' },
+    { cond: srcA === MDstM, txt: `d_srcA == M_dstM → 从访存级转发 m_valM`, val: vals.fwMV, expr: 'm_valM' },
+    { cond: srcA === MDstE, txt: `d_srcA == M_dstE → 从访存级转发 M_valE`, val: vals.fwMEV, expr: 'M_valE' },
+    { cond: srcA === WDstM, txt: `d_srcA == W_dstM → 从写回级转发 W_valM`, val: vals.fwWMV, expr: 'W_valM' },
+    { cond: srcA === WDstE, txt: `d_srcA == W_dstE → 从写回级转发 W_valE`, val: vals.fwWEV, expr: 'W_valE' },
+    { cond: true, txt: `1 → 兜底：用寄存器堆读出的 d_rvalA`, val: vals.fwRV, expr: 'd_rvalA' },
+  ];
+  let done = false;
+  const rows = cases.map(c => {
+    const take = c.cond && !done;
+    if (take) done = true;
+    return `<tr${take ? ' class="hl"' : ''}><td class="mono" style="font-size:12.5px">${esc(c.txt)}</td>
+      <td>${take ? '<span class="chip ok">命中</span>' : c.cond ? '<span class="chip gray">不会走到这</span>' : '<span class="chip gray">不成立</span>'}</td>
+      <td class="mono">${hex64t(c.val)}</td></tr>`;
+  }).join('');
+  const picked = cases.find(c => c.cond);
+  const rnoneNote = (srcA === RNONE && (eDstE === RNONE || MDstM === RNONE || MDstE === RNONE || WDstM === RNONE || WDstE === RNONE))
+    ? `<div class="box warn" style="margin-bottom:0"><div class="t">注意：两边都是 RNONE 时比较「相等」</div>
+       硬件写的是 <code>d_srcA == e_dstE</code> 这种寄存器号比较，<b>不排除 0xF</b>。当 d_srcA 与某个 dstE 都是 RNONE（0xF）时这一条也会成立。
+       不过 srcA = RNONE 表示<b>这条指令根本不读寄存器</b>（或条件传送失败），valA 用不到 —— 所以这个「假命中」不影响结果，只有<b>停顿条件</b>才必须显式排除 0xF。</div>` : '';
+  $('#fwOut').innerHTML = `
+    <div class="readout">
+      <dt>d_srcA</dt><dd class="mono">${nm(srcA)}</dd>
+      <dt>命中</dt><dd class="mono"><b>${esc(picked.expr)}</b> = ${hex64t(picked.val)}</dd>
+      <dt>最终 valA</dt><dd class="mono"><b>${hex64t(picked.val)}</b></dd>
+    </div>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>HCL 里的 case（按顺序）</th><th>判定</th><th>值</th></tr>${rows}</table></div>${rnoneNote}`;
+}
+
+/* ============================================================
+   6.3 加载/使用冒险检测器
+   ============================================================ */
+function renderLu() {
+  const icode = Number($('#luIc').value);
+  const dstM = Number($('#luDst').value), srcA = Number($('#luA').value), srcB = Number($('#luB').value);
+  const isLoad = icode === MRMOVQ || icode === POPQ;
+  const matchA = dstM !== RNONE && dstM === srcA;
+  const matchB = dstM !== RNONE && dstM === srcB;
+  const hazard = isLoad && (matchA || matchB);
+  const nm = v => v === RNONE ? 'RNONE（0xF）' : regName(v);
+  $('#luOut').innerHTML = `
+    <div class="readout">
+      <dt>条件一</dt><dd class="mono">E_icode in { IMRMOVQ, IPOPQ } → ${isLoad ? '<b>成立</b>' : '不成立'}（当前 ${icLabel(icode)}）</dd>
+      <dt>条件二</dt><dd class="mono">E_dstM in { d_srcA, d_srcB } → ${(matchA || matchB) ? '<b>成立</b>' : '不成立'}
+        （E_dstM = ${nm(dstM)}${matchA ? ' = d_srcA' : ''}${matchB ? ' = d_srcB' : ''}）</dd>
+      <dt>结论</dt><dd>${hazard ? '<span class="chip bad">加载/使用冒险（停 1 拍）</span>' : '<span class="chip ok">无冒险</span>'}</dd>
+    </div>
+    <div class="box ${hazard ? 'bad' : 'ok'}" style="margin-bottom:0">
+      <div class="t">${hazard ? '动作：F stall、D stall、E bubble' : 'F / D / E 都按 normal 更新'}</div>
+      ${hazard ? '停一拍之后，值从访存级转发过来（<code>m_valM</code>）—— 这也是唯一一种<b>转发救不了</b>的数据冒险：值在访存级才从内存出来，而译码级要在本拍结束前拿到。'
+        : '条件一是为了让「从内存读数的指令」排在最前面；如果 E_dstM = RNONE（0xF，不写寄存器），按课件第 29 页的特例也<b>不停顿</b>。'}
+    </div>`;
+}
+
+/* ============================================================
+   6.4 加载/使用冒险追踪
+   ============================================================ */
+let luhCur = 8, luhRes = null, luhShowFix = false;
+function renderLuh() {
+  if (!luhRes) luhRes = pipeRun(DEMO_LUH);
+  const res = luhRes;
+  if (!res.ok) { $('#luhOut').innerHTML = badBox('内部程序出错：' + res.error.msg); return; }
+  const maxC = res.cycles;
+  if (luhCur > maxC) luhCur = maxC;
+  const rows = pipeRows(res.trace, res.prog, true);
+  const stallCycles = res.trace.filter(s => s.ctl.loadUse).map(s => s.cycle);
+  const s = res.trace[luhCur - 1];
+  const fixNote = luhShowFix ? `<div class="box warn" style="margin-bottom:0"><div class="t">勘误：课件第 45 页清单里的 %ebx</div>
+    原课件写的是 <code>0x01e: irmovq $10,<b>%ebx</b></code> 与 <code>0x032: addq <b>%ebx</b>,%rax</code>；
+    Y86-64 没有 <code>%ebx</code> 这个寄存器名（只有 <code>%rbx</code>）。本页按 <code>%rbx</code> 跑 —— 只改名字不改编号，追踪结果一样。
+    下面的流水线图与数值与实际能跑的程序一致。</div>` : '';
+  $('#luhOut').innerHTML = `
+    <div class="readout">
+      <dt>总周期</dt><dd class="mono">${res.cycles} 拍（SEQ 需要 ${res.seq.cycles} 拍）</dd>
+      <dt>检测到冒险</dt><dd class="mono">第 ${stallCycles.join('、')} 拍（<code>E_icode in {IMRMOVQ, IPOPQ} && E_dstM in {d_srcA, d_srcB}</code>）</dd>
+      <dt>动作</dt><dd>F stall、D stall、E bubble —— 译码级多留 1 拍、取指级跟着停 1 拍</dd>
+      <dt>结果</dt><dd class="mono">%rax = ${hex64t(res.final.regs[0])}　（与顺序执行 ${hex64t(res.seq.regs[0])} ${res.final.regs[0] === res.seq.regs[0] ? '一致 ✓' : '不一致 ✗'}）</dd>
+    </div>
+    <div class="fcap" style="margin-top:8px">整段程序的流水线图（程序外的字节不画）</div>
+    ${pipeMatrixHtml(rows, { markCls: (r, c) => stallCycles.includes(c) ? 'hl' : '' })}
+    <div class="fcap" style="margin-top:10px">第 ${luhCur} 拍的五级内容</div>
+    ${cycleDetailHtml(s)}
+    ${fixNote}`;
+  const seg = $('#luhSeg');
+  seg.innerHTML = Array.from({ length: maxC }, (_, i) => `<button class="${luhCur === i + 1 ? 'on' : ''}" data-luhcy="${i + 1}">${i + 1}</button>`).join('');
+  seg.style.flexWrap = 'wrap';
+}
+
+/* ============================================================
+   7.2 分支预测失败追踪
+   ============================================================ */
+let bmCur = 5, bmCancel = 1, bmRes = null;
+function renderBm() {
+  if (!bmRes || bmRes._cancel !== bmCancel) {
+    bmRes = pipeRun(DEMO_J, { cancel: !!bmCancel });
+    bmRes._cancel = bmCancel;
+  }
+  const res = bmRes;
+  if (!res.ok) { $('#bmOut').innerHTML = badBox('内部程序出错：' + res.error.msg); return; }
+  const maxC = res.cycles;
+  if (bmCur > maxC) bmCur = maxC;
+  const rows = pipeRows(res.trace, res.prog, true);
+  const det = res.trace.filter(s => s.ctl.mispredDetected).map(s => s.cycle);
+  const s = res.trace[bmCur - 1];
+  const okRdx = res.final.regs[2] === res.seq.regs[2];
+  $('#bmOut').innerHTML = `
+    <div class="readout">
+      <dt>总周期</dt><dd class="mono">${res.cycles} 拍（SEQ 只需 ${res.seq.cycles} 拍 ⇒ 多花 ${res.cycles - res.seq.cycles} 拍，其中预测错占 2 拍）</dd>
+      <dt>检测到预测错</dt><dd class="mono">第 ${det.join('、')} 拍（<code>E_icode == IJXX &amp;&amp; !e_Cnd</code>，第 50 页的条件）</dd>
+      <dt>取指级恢复</dt><dd class="mono">第 ${det.map(c => c + 1).join('、')} 拍按 M_valA = ${hex64t(0xbn)} 取顺延指令（第 22、48 页）</dd>
+      <dt>结果</dt><dd class="mono">%rdx = ${hex64t(res.final.regs[2])}（顺序执行 ${hex64t(res.seq.regs[2])}）·
+        %rcx = ${hex64t(res.final.regs[1])}（顺序执行 ${hex64t(res.seq.regs[1])}）
+        ${bmCancel ? (okRdx ? '<span class="chip ok">与顺序执行一致</span>' : '<span class="chip bad">不一致</span>')
+                   : '<span class="chip bad">目标处的两条指令真的写进了 %rdx / %rcx</span>'}</dd>
+    </div>
+    <div class="fcap" style="margin-top:8px">流水线图（${bmCancel ? '取消错取的指令' : '不取消'}）</div>
+    ${pipeMatrixHtml(rows, { markCls: (r, c) => det.includes(c) ? 'hl' : '' })}
+    <div class="fcap" style="margin-top:10px">第 ${bmCur} 拍的五级内容${det.includes(bmCur) ? '（这一拍检测到预测错）' : ''}</div>
+    ${cycleDetailHtml(s)}
+    <div class="box ${bmCancel ? 'ok' : 'bad'}" style="margin-bottom:0"><div class="t">${bmCancel ? '取消之后：结果对了，代价是 2 拍' : '不取消：结果错了'}</div>
+      ${bmCancel
+        ? '第 5 拍时译码级与执行级里的两条错指令被气泡取代（第 49、51 页）。注意取指级<b>没有 stall</b> —— PC 选择逻辑同拍就把顺延地址 M_valA 送进了指令内存。'
+        : '这正是课件第 48 页的草图：执行级与译码级里的 <code>irmovq $3,%rdx</code> / <code>irmovq $4,%rcx</code> 一路走到写回，把 %rdx 写成 3、%rcx 写成 4。切回「取消」看正确做法。'}</div>`;
+  const seg = $('#bmSeg');
+  seg.innerHTML = Array.from({ length: maxC }, (_, i) => `<button class="${bmCur === i + 1 ? 'on' : ''}" data-bmcy="${i + 1}">${i + 1}</button>`).join('');
+  seg.style.flexWrap = 'wrap';
+}
+
+/* ============================================================
+   8.3 ret 追踪
+   ============================================================ */
+let retCur = 9, retRes = null, retNote = false;
+function renderRet() {
+  if (!retRes) retRes = pipeRun(DEMO_RETB);
+  const res = retRes;
+  if (!res.ok) { $('#retOut').innerHTML = badBox('程序出错：' + res.error.msg); return; }
+  const maxC = res.cycles;
+  if (retCur > maxC) retCur = maxC;
+  const rows = pipeRows(res.trace, res.prog, true);
+  const retCycles = res.trace.filter(s => s.ctl.retIn).map(s => s.cycle);
+  const s = res.trace[retCur - 1];
+  const note = retNote ? `<div class="box warn" style="margin-bottom:0"><div class="t">勘误：课件第 55、57 页追踪图里的地址</div>
+    两页都写 <code>0x026: ret</code>，第 57 页还把返回点写成 <code>0x014</code>。按第 53 页同一份清单：
+    <code>p: irmovq $-1,%rdi</code> 在 <code>0x20</code>、占 10 字节 ⇒ <code>ret</code> 在 <b>0x2a</b>；
+    返回点是 <code>call</code> 的下一条 ⇒ <code>0x0a + 9 = </code><b>0x13</b>。
+    本页追踪按清单地址现算（<code>ret</code> 自己的地址不影响行为，只有 <code>0x13</code> 会被压栈/取回）。</div>` : '';
+  $('#retOut').innerHTML = `
+    <div class="readout">
+      <dt>总周期</dt><dd class="mono">${res.cycles} 拍（SEQ ${res.seq.cycles} 拍 ⇒ 多花 ${res.cycles - res.seq.cycles} 拍）</dd>
+      <dt>ret 在流水线里</dt><dd class="mono">第 ${retCycles.join('、')} 拍（D/E/M 三级任一有 ret ⇒ F_stall、D_bubble）</dd>
+      <dt>返回点</dt><dd class="mono">压栈的是 ${hex64t(res.prog.labels.p || 0n)} 之前的 <code>call</code> 的下一条 = ${hex64t(0x13n)}；
+        取回时用 W_valM</dd>
+      <dt>结果</dt><dd class="mono">%rsi = ${hex64t(res.final.regs[6])}（顺序执行 ${hex64t(res.seq.regs[6])}）
+        ${res.final.regs.every((v, i) => v === res.seq.regs[i]) ? '<span class="chip ok">与顺序执行一致</span>' : '<span class="chip bad">不一致</span>'}</dd>
+    </div>
+    <div class="fcap" style="margin-top:8px">流水线图：ret 停住取指级、往译码级插三个气泡</div>
+    ${pipeMatrixHtml(rows, { markCls: (r, c) => retCycles.includes(c) ? 'hl' : '' })}
+    <div class="fcap" style="margin-top:10px">第 ${retCur} 拍的五级内容</div>
+    ${cycleDetailHtml(s)}
+    ${note}`;
+  const seg = $('#retSeg');
+  seg.innerHTML = Array.from({ length: maxC }, (_, i) => `<button class="${retCur === i + 1 ? 'on' : ''}" data-retcy="${i + 1}">${i + 1}</button>`).join('');
+  seg.style.flexWrap = 'wrap';
+}
+
+/* ============================================================
+   8.5 / 8.6 流水线控制逻辑
+   ============================================================ */
+function ctlSignals(inp, ver) {
+  const loadUse = !!inp.loadUse, retIn = !!inp.retIn, mispred = !!inp.mispred;
+  const F_stall = loadUse || retIn;
+  const D_stall = loadUse;
+  const D_bubble = mispred || (retIn && (ver ? !loadUse : true));
+  const E_bubble = mispred || loadUse;
+  return { loadUse, retIn, mispred, F_stall, D_stall, D_bubble, E_bubble };
+}
+function actionRow(sig) {
+  const cell = (stall, bubble) => (stall && bubble) ? '<span class="chip bad">冲突</span>'
+    : bubble ? '<span class="chip warn">bubble</span>' : stall ? '<span class="chip gray">stall</span>' : 'normal';
+  return [cell(sig.F_stall, false), cell(sig.D_stall, sig.D_bubble), cell(false, sig.E_bubble), 'normal', 'normal'];
+}
+const CTL_SCENES = [
+  ['ret', '只有 ret（IRET in {D,E,M}）', { retIn: true }],
+  ['lu', '只有加载/使用冒险', { loadUse: true }],
+  ['mp', '只有分支预测错', { mispred: true }],
+  ['A', '组合 A：预测错的分支 + 目标处的 ret', { mispred: true, retIn: true }],
+  ['B', '组合 B：从内存读到 %rsp 的指令 + ret', { loadUse: true, retIn: true }],
+  ['none', '都没有（普通一拍）', {}],
+];
+function ctlTableHtml(sig, ver) {
+  const act = actionRow(sig);
+  return `<div class="tbl-wrap"><table class="tbl">
+    <tr><th>信号</th><th>值</th><th>含义</th></tr>
+    <tr><td class="mono">load/use</td><td class="mono">${sig.loadUse ? 1 : 0}</td><td style="font-size:13px">E_icode in {IMRMOVQ, IPOPQ} &amp;&amp; E_dstM in {d_srcA, d_srcB}</td></tr>
+    <tr><td class="mono">ret 在流水线</td><td class="mono">${sig.retIn ? 1 : 0}</td><td style="font-size:13px">IRET in { D_icode, E_icode, M_icode }</td></tr>
+    <tr><td class="mono">分支预测错</td><td class="mono">${sig.mispred ? 1 : 0}</td><td style="font-size:13px">E_icode == IJXX &amp;&amp; !e_Cnd</td></tr>
+    <tr><td class="mono">F_stall</td><td class="mono"><b>${sig.F_stall ? 1 : 0}</b></td><td style="font-size:13px">load/use || ret</td></tr>
+    <tr><td class="mono">D_stall</td><td class="mono"><b>${sig.D_stall ? 1 : 0}</b></td><td style="font-size:13px">load/use</td></tr>
+    <tr><td class="mono">D_bubble</td><td class="mono"><b>${sig.D_bubble ? 1 : 0}</b></td><td style="font-size:13px">分支预测错 ||（ret${ver ? ' && !load/use' : ''}）${ver ? '' : ' —— 初始版少了 !load/use 这一半'}</td></tr>
+    <tr><td class="mono">E_bubble</td><td class="mono"><b>${sig.E_bubble ? 1 : 0}</b></td><td style="font-size:13px">分支预测错 || load/use</td></tr>
+  </table></div>
+  <div class="tbl-wrap"><table class="tbl">
+    <tr><th>动作（下一个周期）</th><th>F</th><th>D</th><th>E</th><th>M</th><th>W</th></tr>
+    <tr>${act.map(a => `<td>${a}</td>`).join('')}</tr>
+  </table></div>`;
+}
+function renderCtl() {
+  const key = $('#ctlSel').value;
+  const sc = CTL_SCENES.find(x => x[0] === key) || CTL_SCENES[0];
+  const fixed = ctlSignals(sc[2], true);
+  $('#ctlOut').innerHTML = `<div class="fcap">场景：${esc(sc[1])}（修正后的控制逻辑）</div>
+    ${ctlTableHtml(fixed, true)}
+    <div class="box ok" style="margin-bottom:0"><div class="t">读法</div>
+      两处「或」很容易同时成立：<b>F_stall</b> 由加载/使用冒险或 ret 引起；<b>D_stall</b> 只由加载/使用冒险引起；
+      <b>D_bubble / E_bubble</b> 由分支预测错或 ret（D_bubble）与预测错或加载/使用（E_bubble）引起。
+      如果 D 寄存器同时收到 stall 与 bubble，就是课件第 64 页说的 pipeline error —— 见下面第 8.6 节的对比。</div>`;
+}
+let cmpKey = 'B', cmpVer = 0;
+function renderCmp() {
+  const sc = CTL_SCENES.find(x => x[0] === cmpKey) || CTL_SCENES[0];
+  const sig = ctlSignals(sc[2], !!cmpVer);
+  const err = sig.D_stall && sig.D_bubble;
+  const notes = {
+    A: '组合 A（第 63 页）：按「分支预测错」处理即可 —— F 因为 ret 而 stall，D（那条 ret）与 E（预测错的 jXX）都插气泡；反正 PC 选择逻辑下一拍会用 M_valA 接上顺延地址。动作合起来是 <b>stall / bubble / bubble / normal / normal</b>。',
+    B: '组合 B（第 64–65 页）：加载/使用冒险要求 D_stall，处理 ret 要求 D_bubble —— 初始版会同时发出这两个信号（处理器报 <b>pipeline error</b>）。修正办法是让<b>加载/使用冒险优先</b>：D_bubble 加上「且不是加载/使用冒险」这一条，于是 ret 在译码级多留一拍，动作变成 <b>stall / stall / bubble / normal / normal</b>。',
+    lu: '只有加载/使用冒险：F stall、D stall、E bubble —— 译码级等一拍，值随后从访存级转发过来。',
+    ret: '只有 ret：F stall、D bubble —— ret 穿过 D/E/M 的每一拍都停住取指级，并往译码级插气泡。',
+    mp: '只有分支预测错：D bubble、E bubble —— 取指级不停（PC 已经修正），错取的两条被气泡取代。',
+    none: '什么都没有：五个寄存器都按 normal 加载新值 —— 流水线最理想的形态。',
+  };
+  $('#cmpOut').innerHTML = `<div class="fcap">场景：${esc(sc[1])} · 控制逻辑版本：${cmpVer ? '修正后' : '初始版（第 60 页）'}</div>
+    ${ctlTableHtml(sig, !!cmpVer)}
+    ${err ? `<div class="box bad" style="margin-bottom:0"><div class="t">D 寄存器同时被要求 stall 与 bubble</div>
+        同一个流水线寄存器不可能既保持旧值又插入 nop —— 课件第 64 页原话：<b>处理器会把它报成 pipeline error</b>。
+        切到「修正后」看它怎么被修掉。</div>` : ''}
+    <div class="box ${err ? 'warn' : 'ok'}" style="margin-bottom:0"><div class="t">说明</div>${notes[cmpKey]}</div>`;
+}
+
+/* ============================================================
+   9.2 PIPE 模拟器
+   ============================================================ */
+const PS = { res: null, cur: 0, timer: null };
+function psAssemble(srcText) {
+  clearInterval(PS.timer);
+  const res = pipeRun(srcText || $('#psSrc').value);
+  PS.res = res;
+  PS.cur = res.ok ? 1 : 0;
+  renderPs();
+}
+function renderPs() {
+  const res = PS.res;
+  if (!res) return;
+  if (!res.ok) {
+    $('#psStat').innerHTML = badBox(`第 ${res.error.line} 行：${res.error.msg}`);
+    $('#psStage').innerHTML = ''; $('#psDiag').innerHTML = ''; $('#psRegs').innerHTML = '';
+    return;
+  }
+  const maxC = res.cycles;
+  if (PS.cur < 1) PS.cur = 1;
+  if (PS.cur > maxC) PS.cur = maxC;
+  const s = res.trace[PS.cur - 1];
+  const lineOf = pc => { const it = res.prog.listing.find(l => l.addr === u64(pc)); return it ? it.text : '（程序之外的内存字节）'; };
+  $('#psStat').innerHTML = `
+    <div class="readout" style="margin-top:2px">
+      <dt>第几拍 / 共几拍</dt><dd><b>${PS.cur}</b> / ${maxC}　（顺序执行需要 ${res.seq.cycles} 拍）</dd>
+      <dt>这一拍取的指令</dt><dd class="mono">${hex64t(s.fpc.v)}${s.fpc.why === 'pred' ? '' : '（' + fpcWhyText(s.fpc.why) + '）'}
+        <span style="color:var(--muted)">${esc(lineOf(s.fpc.v))}</span></dd>
+      <dt>流水线状态</dt><dd>${statChip(PS.cur === maxC ? res.stat : 'SAOK')}　
+        <span style="color:var(--muted)">（Stat 是这条指令走到访存/写回级时的状态）</span></dd>
+      <dt>已停拍数</dt><dd class="mono">${res.trace.slice(0, PS.cur).filter(x => x.ctl.F_stall).length} 次 F_stall ·
+        ${res.trace.slice(0, PS.cur).reduce((n, x) => n + (x.ctl.E_bubble ? 1 : 0) + (x.ctl.D_bubble ? 1 : 0), 0)} 个气泡</dd>
+    </div>`;
+  $('#psStage').innerHTML = `<div class="fcap" style="margin-top:8px">第 ${PS.cur} 拍的五级内容</div>` + cycleDetailHtml(s);
+  const rows = pipeRows(res.trace.slice(0, PS.cur), res.prog, true);
+  $('#psDiag').innerHTML = `<div class="fcap" style="margin-top:10px">流水线图（画到第 ${PS.cur} 拍；同一级连着两拍 = 停了一拍，bubble = 气泡）</div>` +
+    pipeMatrixHtml(rows, { markCls: (r, c) => c === PS.cur ? 'hl' : '' });
+  const regs = s.edges.regs, writes = s.w.writes;
+  const regCells = regs.map((v, i) => {
+    const w = writes.find(x => x.r === i);
+    return `<div class="fgrp" style="min-width:88px${w ? '' : ';opacity:.82'}">
+      <div class="fcap" style="margin-bottom:1px">${REG_NAMES[i]}${w ? ' ←' : ''}</div>
+      <div class="mono" style="font-size:12.5px;${w ? 'font-weight:700' : ''}">${hex64t(v)}</div></div>`;
+  }).join('');
+  const memWrote = s.edges.memWrote;
+  const touched = [];
+  res.trace.slice(0, PS.cur).forEach(x => { if (x.edges.memWrote) touched.push(Number(x.edges.memWrote.addr)); });
+  const memRow = touched.length ? touched.slice(-4).map(a => {
+    const v = memRead64(s.edges.mem, BigInt(a));
+    return `<div class="fgrp" style="min-width:120px"><div class="fcap" style="margin-bottom:1px">M[${hex64t(BigInt(a))}]</div>
+      <div class="mono" style="font-size:12.5px">${v === null ? '—' : hex64t(v)}</div></div>`;
+  }).join('') : '<span style="color:var(--muted)">（这一段还没有内存写入）</span>';
+  $('#psRegs').innerHTML = `<div class="fcap" style="margin-top:10px">第 ${PS.cur} 拍结束时的寄存器堆（← = 这一拍刚写入）· CC = ${ccStr(s.edges.cc)}</div>
+    <div class="fw" style="gap:6px 12px">${regCells}</div>
+    <div class="fcap" style="margin-top:8px">程序写过的内存字${memWrote ? '（最近一次：M[' + hex64t(memWrote.addr) + '] ← ' + hex64t(memWrote.val) + '）' : ''}</div>
+    <div class="fw" style="gap:6px 12px">${memRow}</div>
+    <div class="box" style="margin:12px 0 0"><div class="t">这套模拟器实现了什么</div>
+      五级 F/D/E/M/W、四组流水线寄存器（字段与第 2.3 节逐项对应）、转发与优先级（第 5 节）、加载/使用停顿（第 6 节）、
+      分支预测失败取消（第 7 节）、ret 停顿与修正后的 D_bubble（第 8 节）。内存 1024 字节、16 个寄存器（初值 0，CC = 100）；
+      程序之后的内存是 0，所以取指越过程序末尾时读到的是 halt。
+      <b>非法 icode 与地址越界</b>：本页按「按 nop 走数据通路、把 Stat 记成 SINS / SADR」处理（课件只讲到 Stat，没有展开异常）。</div>`;
+}
+
+/* ============================================================
+   9.3 判断题
+   ============================================================ */
+const PUZ = [
+  { q: '转发能让加载/使用冒险也不损失周期。', a: false,
+    e: '转发只能把「已经在流水线里」的值抄近路送过去。<code>mrmovq</code> 的值要到访存级才从内存读出来，而译码级要在本拍结束前拿到 —— 差一拍，只能停（停 1 个周期，然后再从访存级转发）。' },
+  { q: '流水线寄存器 <code>D</code> 同时收到 stall = 1 与 bubble = 1 时，硬件会保持旧值。', a: false,
+    e: '这两个信号是互斥的：stall 要求保持旧值，bubble 要求插入 nop，同一个寄存器做不到两件事。课件第 64 页说处理器会把它报成 <b>pipeline error</b> —— 这正是控制组合 B 的 bug。' },
+  { q: '<code>ret</code> 每执行一次浪费 3 个时钟周期，而分支预测错浪费 2 个。', a: true,
+    e: '课件第 68 页总结页的原话：分支预测错「Two clock cycles wasted」、<code>ret</code>「Three clock cycles wasted」。' },
+];
+
+/* ============================================================
+   9.4 测验
+   ============================================================ */
+const QUIZ = [
+  { q: '未流水线时组合逻辑 300 ps、寄存器 20 ps，时钟周期至少是？', o: ['300 ps', '320 ps', '360 ps', '120 ps'], a: 1,
+    w: '时钟周期必须容纳「组合逻辑 + 装载寄存器」= 300 + 20 = 320 ps，对应 3.12 GIPS。把它切成三段各 100 ps 之后，周期降到 120 ps（8.33 GIPS），但单条延迟变成 360 ps。见 1.2 节。' },
+  { q: '流水线切到 k 段后，吞吐率由什么决定？', o: ['组合逻辑总延迟', '最慢的那一段 + 寄存器开销', '平均段延迟', '寄存器数量'], a: 1,
+    w: '周期 = max(各段延迟) + 寄存器开销；吞吐率 = 1 / 周期。课件第 8 页的非均匀例子（50/150/100）就是被 150 ps 那段拖住的。见 1.2、1.4 节。' },
+  { q: '<code>D_valA</code> 与 <code>d_valA</code> 的区别是？', o: ['前者是 D 寄存器里保存的字段值，后者是 D 级现算出来的', '前者是 32 位、后者是 64 位', '没有区别', '前者来自内存、后者来自 ALU'], a: 0,
+    w: '课件第 18 页的命名约定：<code>S_Field</code> 是存放在阶段 S 流水线寄存器里的字段值，<code>s_Field</code> 是在阶段 S 里现算出来的值。见 2.4 节。' },
+  { q: '本讲对条件跳转 <code>jXX</code> 的预测策略是？', o: ['预测不跳（用 valP）', '预测跳（用 valC），通常 60% 正确', '查历史表决定', '不预测，停住等'], a: 1,
+    w: '课件第 21 页：条件跳转预测下一条 PC 为 valC（目标地址），只有跳了才对，典型命中率 60%。<code>ret</code> 才是「不预测、停住等」。见 3.2 节。' },
+  { q: '跳转预测错时，顺延地址（fall-through PC）从哪个信号取回？', o: ['W_valM', 'M_valA', 'e_valE', 'F_predPC'], a: 1,
+    w: '课件第 22 页：跳转的条件标志在访存阶段才知道，顺延地址来自 valA（即 M_valA）；翻译级对 jXX/call 会把 valA 取成 valP。返回地址才是 W_valM。见 3.3 节。' },
+  { q: '<code>demo-h0.ys</code>（0 个 nop、不转发）里 <code>addq</code> 在译码级读到的是？', o: ['%rdx = 10、%rax = 3', '%rdx = 0、%rax = 0', '%rdx = 10、%rax = 0', '随机值'], a: 1,
+    w: '课件第 24 页第 4 拍：两条 irmovq 一个在访存级、一个在执行级，都还没写回，所以译码级从寄存器堆读到的是初值 0 —— 这就是 Error。要 3 个 nop 才等得到（第 27 页）。见 4.1 节。' },
+  { q: '寄存器号 <code>0xF</code>（RNONE）在停顿判断里为什么要排除？', o: ['它表示「没有寄存器操作数」，比较会误判', '它是 %rsp 的别名', '它代表 32 位寄存器', '不需要排除'], a: 0,
+    w: '课件第 29 页的特例：15（0xF）表示没有寄存器操作数、或条件传送失败被改写的目的地址 —— 不能因为两边都是 0xF 就停一拍。见 4.3 节。' },
+  { q: '转发逻辑里多个来源同时命中同一个源寄存器时，谁优先？', o: ['写回级 > 访存级 > 执行级', '执行级 > 访存级 > 写回级', '寄存器堆优先', '随机'], a: 1,
+    w: '为匹配串行语义，要选<b>最年轻的那个写者</b>：执行级 > 访存级 > 写回级 > 寄存器堆。课件第 39 页的例子 valA 取 3（执行级的值）。见 5.4 节。' },
+  { q: '加载/使用冒险的检测条件包含哪两条？', o: ['E_icode in {IMRMOVQ, IPOPQ} 与 E_dstM in {d_srcA, d_srcB}', 'M_icode == IJXX 与 !M_Cnd', 'IRET in {D,E,M}', 'D_icode == ICALL 与 W_icode == IRET'], a: 0,
+    w: '课件第 44 页原话：<code>E_icode in { IMRMOVQ, IPOPQ } &amp;&amp; E_dstM in { d_srcA, d_srcB }</code>。选项 B 是分支预测错，C 是 ret。见 6.3 节。' },
+  { q: '控制组合 B（从内存读到 %rsp 的指令 + ret）的修正办法是？', o: ['让 ret 优先', '让加载/使用冒险优先，D_bubble 加上「且不是加载/使用冒险」', '把 ret 拆成两条指令', '停整个流水线'], a: 1,
+    w: '课件第 65–66 页：加载/使用冒险优先，ret 在译码级多留一个周期；<code>D_bubble</code> 末尾补上 <code>&amp;&amp; !(E_icode in {IMRMOVQ, IPOPQ} &amp;&amp; E_dstM in {d_srcA,d_srcB})</code>。见 8.6 节。' },
+  { q: '<code>ret</code> 的返回地址在什么时候可用？', o: ['取指级一读就知道', '译码级（读寄存器堆时）', '写回级（W_valM）', '执行级（e_valE）'], a: 2,
+    w: '返回地址在栈上：ret 要到访存级才把它从内存读出来，写回级时它进了 W 寄存器（W_valM），取指级这时才能继续 —— 这也是 ret 要停 3 拍的原因。见 8.3 节。' },
+];
+let qzState = QUIZ.map(() => null), pzState = PUZ.map(() => null);
+function renderQuiz() {
+  const answered = qzState.filter(v => v !== null).length;
+  const right = QUIZ.filter((q, i) => qzState[i] === q.a).length;
+  const list = QUIZ.map((q, i) => {
+    const sel = qzState[i];
+    const cls = sel === null ? '' : sel === q.a ? ' correct done' : ' wrong done';
+    return `<div class="puzzle${cls}" style="flex-direction:column;align-items:stretch">
+      <div class="q" style="white-space:normal"><b>${i + 1}.</b> ${q.q}</div>
+      <div style="display:flex;flex-wrap:wrap;gap:7px;margin-top:8px">
+        ${q.o.map((o, j) => `<button class="sm" data-qzo="${i}:${j}"
+          style="${sel === null ? '' : j === q.a ? 'border-color:var(--ok-bd);background:var(--ok-bg)'
+            : j === sel ? 'border-color:var(--bad-bd);background:var(--bad-bg)' : 'opacity:.6'}">
+          ${'ABCD'[j]}. ${o}</button>`).join('')}
+      </div>
+      <div class="exp"><span class="verdict">${sel === null ? '' : sel === q.a ? '✓ 正确' : '✗ 错误'}</span>
+        &nbsp;正确答案：<b>${'ABCD'[q.a]}. ${q.o[q.a]}</b><br>${q.w}</div>
+    </div>`;
+  }).join('');
+  const score = answered === 0 ? '' : `<div class="box ${right === QUIZ.length ? 'ok' : right >= QUIZ.length / 2 ? 'warn' : 'bad'}" style="margin-bottom:0">
+    <div class="t">已答 ${answered} / ${QUIZ.length} 题，答对 ${right} 题</div>
+    ${answered === QUIZ.length
+      ? (right === QUIZ.length ? '全对 —— 从吞吐率到三个冒险都拿下了。' : '错题上方已标出正确答案与依据，回对应小节再看一遍即可。')
+      : '继续答题，每题都会立即给出解析。'}</div>`;
+  $('#qzOut').innerHTML = list + score;
+}
+function renderPuzzles() {
+  const list = PUZ.map((p, i) => {
+    const sel = pzState[i];
+    const cls = sel === null ? '' : sel === p.a ? ' correct done' : ' wrong done';
+    return `<div class="puzzle${cls}">
+      <div class="q">${p.q}<small>点「真」「假」立即判定</small></div>
+      <div class="btns">
+        <button class="sm" data-pz="${i}:1">真</button>
+        <button class="sm" data-pz="${i}:0">假</button>
+      </div>
+      <div class="exp"><span class="verdict">${sel === null ? '' : sel === p.a ? '✓ 正确' : '✗ 错误'}</span>
+        &nbsp;原课件：${p.a ? '真' : '假'}。<br>${p.e}</div>
+    </div>`;
+  }).join('');
+  $('#pzOut').innerHTML = list;
+}
+
+/* ============================================================
+   初始化
+   ============================================================ */
+function initAll() {
+  /* --- 1.1 性能计算器 --- */
+  function doPf() { renderPf(); }
+  $('#pfGo').addEventListener('click', doPf);
+  ['#pfSegs', '#pfReg'].forEach(id => $(id).addEventListener('keydown', e => { if (e.key === 'Enter') doPf(); }));
+  $$('[data-pf]').forEach(b => b.addEventListener('click', () => {
+    const [segs, reg] = b.dataset.pf.split(';');
+    $('#pfSegs').value = segs; $('#pfReg').value = reg; doPf();
+  }));
+  doPf();
+
+  /* --- 1.3 时空图 --- */
+  function doPg() { renderPg(); }
+  $('#pgGo').addEventListener('click', doPg);
+  ['#pgK', '#pgN'].forEach(id => $(id).addEventListener('keydown', e => { if (e.key === 'Enter') doPg(); }));
+  $$('[data-pg]').forEach(b => b.addEventListener('click', () => {
+    const [k, n] = b.dataset.pg.split(';');
+    $('#pgK').value = k; $('#pgN').value = n; doPg();
+  }));
+  doPg();
+
+  /* --- 1.4 寄存器开销 --- */
+  function doOv() { renderOv(); }
+  $('#ovGo').addEventListener('click', doOv);
+  ['#ovSeg', '#ovReg'].forEach(id => $(id).addEventListener('keydown', e => { if (e.key === 'Enter') doOv(); }));
+  $$('[data-ov]').forEach(b => b.addEventListener('click', () => {
+    const [seg, reg] = b.dataset.ov.split(';');
+    $('#ovSeg').value = seg; $('#ovReg').value = reg; doOv();
+  }));
+  doOv();
+
+  /* --- 2.3 / 2.4 / 2.5 点选类 --- */
+  document.addEventListener('click', e => {
+    const t = e.target.closest('[data-sig],[data-pr],[data-fb],[data-pz],[data-qzo],[data-luhcy],[data-bmcy],[data-retcy],[data-ph],[data-rm],[data-nop],[data-nopf],[data-bm],[data-cmp],[data-ver]');
+    if (!t) return;
+    if (t.dataset.sig !== undefined) { sigSel = sigSel === t.dataset.sig ? null : t.dataset.sig; renderSig(); return; }
+    if (t.dataset.pr !== undefined) { prSel = t.dataset.pr; renderPr(); return; }
+    if (t.dataset.fb !== undefined) { fbSel = fbSel === t.dataset.fb ? null : t.dataset.fb; renderFb(); return; }
+    if (t.dataset.pz !== undefined) {
+      const [i, v] = t.dataset.pz.split(':').map(Number);
+      if (pzState[i] === null) { pzState[i] = !!v; renderPuzzles(); }
+      return;
+    }
+    if (t.dataset.qzo !== undefined) {
+      const [i, j] = t.dataset.qzo.split(':').map(Number);
+      if (qzState[i] === null) { qzState[i] = j; renderQuiz(); }
+      return;
+    }
+    if (t.dataset.luhcy !== undefined) { luhCur = Number(t.dataset.luhcy); renderLuh(); return; }
+    if (t.dataset.bmcy !== undefined) { bmCur = Number(t.dataset.bmcy); renderBm(); return; }
+    if (t.dataset.retcy !== undefined) { retCur = Number(t.dataset.retcy); renderRet(); return; }
+    if (t.dataset.ver !== undefined) {
+      cmpVer = Number(t.dataset.ver);
+      $$('#cmpVerSeg button').forEach(x => x.classList.toggle('on', x === t));
+      renderCmp(); return;
+    }
+    if (t.dataset.cmp !== undefined) {
+      cmpKey = t.dataset.cmp;
+      $$('#cmpSeg button').forEach(x => x.classList.toggle('on', x === t));
+      renderCmp(); return;
+    }
+  });
+  $('#sigReset').addEventListener('click', () => { sigSel = null; renderSig(); });
+
+  /* --- 2.5 场景 select 类 --- */
+  function initSelects() {
+    $('#ppSel').addEventListener('change', renderPp);
+    $('#ppGo').addEventListener('click', renderPp);
+    $('#ppRate').addEventListener('keydown', e => { if (e.key === 'Enter') renderPp(); });
+    $('#stSrcA').innerHTML = regOptions(2); $('#stSrcB').innerHTML = regOptions(0);
+    $('#stDstE').innerHTML = regOptions(0); $('#stDstME').innerHTML = regOptions(15);
+    $('#stDstMM').innerHTML = regOptions(15); $('#stDstWE').innerHTML = regOptions(15);
+    $('#stDstWM').innerHTML = regOptions(15);
+    ['#stSrcA', '#stSrcB', '#stDstE', '#stDstME', '#stDstMM', '#stDstWE', '#stDstWM'].forEach(id =>
+      $(id).addEventListener('change', renderSt));
+    $('#luIc').innerHTML = IC_VALID.map(ic => `<option value="${ic}"${ic === MRMOVQ ? ' selected' : ''}>${hexByte(ic)} · ${icLabel(ic)}</option>`).join('');
+    $('#luDst').innerHTML = regOptions(0); $('#luA').innerHTML = regOptions(0); $('#luB').innerHTML = regOptions(15);
+    ['#luIc', '#luDst', '#luA', '#luB'].forEach(id => $(id).addEventListener('change', renderLu));
+    $('#fwIc').innerHTML = FW_ICODES.map(([ic, nm]) => `<option value="${ic}">${nm}（${hexByte(ic)}）</option>`).join('');
+    /* 默认值 = 课件第 38 页的例二：d_srcA = %rdx，命中访存级的 M_valE = 10 */
+    $('#fwSrc').innerHTML = regOptions(2);
+    ['fwE', 'fwMM', 'fwWM', 'fwWE'].forEach(id => { $('#' + id).innerHTML = regOptions(15); });
+    $('#fwME').innerHTML = regOptions(2);
+    $('#ctlSel').innerHTML = CTL_SCENES.map(sc => `<option value="${sc[0]}">${sc[1]}</option>`).join('');
+    ['#ctlSel'].forEach(id => $(id).addEventListener('change', renderCtl));
+    $('#ctlGo').addEventListener('click', renderCtl);
+  }
+  initSelects();
+
+  /* --- 3.3 恢复通路 / 4.1 nop / 4.5 寄存器模式 --- */
+  $$('#phSeg button').forEach(b => b.addEventListener('click', () => {
+    $$('#phSeg button').forEach(x => x.classList.remove('on'));
+    b.classList.add('on'); phSel = b.dataset.ph; renderPh();
+  }));
+  $$('#nopSeg button').forEach(b => b.addEventListener('click', () => {
+    $$('#nopSeg button').forEach(x => x.classList.remove('on'));
+    b.classList.add('on'); nopCount = Number(b.dataset.nop); renderNop();
+  }));
+  $$('#nopFwdSeg button').forEach(b => b.addEventListener('click', () => {
+    $$('#nopFwdSeg button').forEach(x => x.classList.remove('on'));
+    b.classList.add('on'); nopFwd = b.dataset.nopf === '1'; renderNop();
+  }));
+  $$('#rmStallSeg button').forEach(b => b.addEventListener('click', () => {
+    $$('#rmStallSeg button').forEach(x => x.classList.remove('on'));
+    b.classList.add('on'); rmStall = Number(b.dataset.rm.split(':')[1]); renderRm();
+  }));
+  $$('#rmBubSeg button').forEach(b => b.addEventListener('click', () => {
+    $$('#rmBubSeg button').forEach(x => x.classList.remove('on'));
+    b.classList.add('on'); rmBubble = Number(b.dataset.rm.split(':')[1]); renderRm();
+  }));
+
+  /* --- 5.4 优先级 / 5.5 d_valA --- */
+  $('#prioDemo').addEventListener('click', () => { prioTrace = pipeRun(DEMO_PRIO); prioCur = 5; renderPrio(); });
+  function doFw() { renderFw(); }
+  $('#fwGo').addEventListener('click', doFw);
+  ['#fwEV', '#fwMV', '#fwMEV', '#fwWMV', '#fwWEV', '#fwRV', '#fwP'].forEach(id =>
+    $(id).addEventListener('keydown', e => { if (e.key === 'Enter') doFw(); }));
+  $$('#fwOut, #fwIc, #fwSrc, #fwE, #fwMM, #fwME, #fwWM, #fwWE').forEach(el => el.addEventListener('change', doFw));
+
+  /* --- 6.4 / 7.2 / 8.3 追踪类 --- */
+  $('#luhDemo').addEventListener('click', () => { luhRes = pipeRun(DEMO_LUH); luhCur = 8; luhShowFix = false; renderLuh(); });
+  $('#luhFix').addEventListener('click', () => { luhShowFix = !luhShowFix; renderLuh(); });
+  $('#bmDemo').addEventListener('click', () => { bmRes = null; bmCur = 5; renderBm(); });
+  $$('#bmCanSeg button').forEach(b => b.addEventListener('click', () => {
+    $$('#bmCanSeg button').forEach(x => x.classList.remove('on'));
+    b.classList.add('on'); bmCancel = Number(b.dataset.bm.split(':')[1]); bmRes = null; renderBm();
+  }));
+  $('#retDemo').addEventListener('click', () => { retRes = pipeRun(DEMO_RETB); retCur = 9; renderRet(); });
+  $('#retNewer').addEventListener('click', () => { retNote = !retNote; renderRet(); });
+
+  /* --- 9.2 模拟器 --- */
+  $('#psSrc').value = DEMO_BASIC;
+  $('#psAsm').addEventListener('click', () => psAssemble());
+  $('#psStep').addEventListener('click', () => {
+    if (!PS.res || !PS.res.ok) { psAssemble(); return; }
+    if (PS.cur < PS.res.cycles) { PS.cur++; renderPs(); }
+  });
+  $('#psRunAll').addEventListener('click', () => {
+    if (!PS.res || !PS.res.ok) { psAssemble(); return; }
+    PS.cur = PS.res.cycles; renderPs();
+  });
+  $('#psAuto').addEventListener('click', () => {
+    clearInterval(PS.timer);
+    PS.timer = setInterval(() => {
+      if (!PS.res || !PS.res.ok) { clearInterval(PS.timer); return; }
+      if (PS.cur >= PS.res.cycles) { clearInterval(PS.timer); return; }
+      PS.cur++; renderPs();
+    }, 700);
+  });
+  $('#psStop').addEventListener('click', () => clearInterval(PS.timer));
+  $$('[data-ps]').forEach(b => b.addEventListener('click', () => {
+    const k = b.dataset.ps;
+    const prog = k === 'basic' ? DEMO_BASIC : k === 'nop' ? DEMO_H0 : k === 'luh' ? DEMO_LUH
+               : k === 'branch' ? DEMO_J : k === 'ret' ? DEMO_RETB : DEMO_PRIO;
+    $('#psSrc').value = prog;
+    psAssemble(prog);
+  }));
+
+  /* --- 9.3 / 9.4 题目 --- */
+  $('#pzReset').addEventListener('click', () => { pzState = PUZ.map(() => null); renderPuzzles(); });
+  $('#qzReset').addEventListener('click', () => { qzState = QUIZ.map(() => null); renderQuiz(); });
+
+  /* --- 首屏全部渲染一遍 --- */
+  renderSig(); renderPr(); renderFb();
+  renderPp(); renderPh();
+  renderNop(); renderSt(); renderRm();
+  renderPrio(); renderFw();
+  renderLu(); renderLuh();
+  renderBm(); renderRet();
+  renderCtl(); renderCmp();
+  psAssemble(DEMO_BASIC);
+  renderPuzzles(); renderQuiz();
+}
+
+document.addEventListener('DOMContentLoaded', initAll);
+</script>
+</body>
+</html>

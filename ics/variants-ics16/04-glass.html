@@ -1,0 +1,3097 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-style="glass" data-deck="ics16">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>异常控制流：异常与进程 · 交互式课件（中文）（柔和玻璃版）</title>
+<style>
+/* ==========================================================================
+   base.css —— 结构基础样式（所有风格共用）
+   只使用 CSS 变量，不含任何具体配色；由各主题覆盖变量与少量结构规则。
+   ========================================================================== */
+
+:root{
+  /* 颜色（每个主题必须覆盖） */
+  --bg:#f6f7f9; --card:#fff; --ink:#15181d; --muted:#697586; --line:#e4e7ec;
+  --accent:#2563eb; --accent-ink:#fff; --accent-soft:#eaf1ff;
+  --sign:#e5484d; --exp:#0b7fd4; --frac:#18915a; --warn:#b45309;
+  --sign-bg:#fdecec; --sign-fg:#a3262b; --sign-bd:#f6cdcf;
+  --exp-bg:#e8f2fd;  --exp-fg:#0a5f9e;  --exp-bd:#c7ddf5;
+  --frac-bg:#e9f7ef; --frac-fg:#116b43; --frac-bd:#c8e8d5;
+  --ok-bg:#f2fbf6; --ok-bd:#9ed3b4; --bad-bg:#fff5f5; --bad-bd:#f1b5b8;
+  --warn-bg:#fffbeb; --gray-bg:#eef1f5; --gray-fg:#5b6472;
+  --paper-soft:#fcfdfe; --code-bg:#f1f3f7; --code-bd:#e6e9ef;
+  --tbl-head:#f7f9fc; --tbl-hover:#fafbfd;
+  --sel-bg:#eef1f5;
+
+  /* 字体 */
+  --font-sans:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",system-ui,sans-serif;
+  --font-mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+  --font-display:var(--font-sans);
+  --tracking-title:normal;
+
+  /* 形状 */
+  --radius:12px; --radius-sm:8px; --radius-pill:99px;
+  --border-w:1px; --shadow:0 1px 2px rgba(16,24,40,.06),0 1px 3px rgba(16,24,40,.1);
+  --shadow-card:none;
+  --card-border:var(--border-w) solid var(--line);
+
+  /* 布局 */
+  --page-max:1180px; --nav-w:236px; --gap:26px; --sec-pad:26px 28px;
+  --nav-sticky-top:64px; --anchor-offset:70px;
+  --font-size:16px; --line-height:1.75;
+}
+
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font-sans);
+  font-size:var(--font-size);line-height:var(--line-height);-webkit-font-smoothing:antialiased}
+img{max-width:100%}
+
+/* ---------- 顶栏 ---------- */
+.topbar{position:sticky;top:0;z-index:50;background:var(--card);border-bottom:1px solid var(--line)}
+.topbar-in{max-width:var(--page-max);margin:0 auto;padding:10px 22px;display:flex;align-items:center;gap:14px}
+.brand{font-weight:700;letter-spacing:var(--tracking-title);font-family:var(--font-display)}
+.brand small{font-weight:500;color:var(--muted);margin-left:8px;font-size:12.5px}
+.progress{margin-left:auto;display:flex;align-items:center;gap:10px;font-size:12.5px;color:var(--muted)}
+.progress .bar{width:150px;height:6px;border-radius:var(--radius-pill);background:var(--line);overflow:hidden}
+.progress .bar>i{display:block;height:100%;width:0;background:var(--accent);transition:width .25s}
+
+/* ---------- 主体布局 ---------- */
+.layout{max-width:var(--page-max);margin:0 auto;padding:22px;display:grid;
+  grid-template-columns:var(--nav-w) minmax(0,1fr);gap:var(--gap)}
+main{min-width:0}
+/* 长 URL / 长标识符没有断行点，会把容器整个撑破（窄屏尤其明显）。
+   只作用于文本容器；表格故意不加，让它走 .tbl-wrap 的横向滚动。 */
+main p,main li,main dd,main dt,main h2,main h3,main h4,main h5,
+main .box,main .card,main .readout,main .puzzle,main .step{overflow-wrap:anywhere}
+
+/* ---------- 目录 ---------- */
+nav.toc{position:sticky;top:var(--nav-sticky-top);align-self:start;max-height:calc(100vh - 84px);overflow:auto;padding-right:4px}
+nav.toc h4{margin:0 0 8px;font-size:12px;letter-spacing:.12em;color:var(--muted);text-transform:uppercase;font-weight:600}
+nav.toc a{display:block;padding:7px 11px;border-radius:var(--radius-sm);color:var(--ink);opacity:.78;
+  text-decoration:none;font-size:14.5px;border-left:2.5px solid transparent}
+nav.toc a:hover{background:var(--sel-bg);opacity:1}
+nav.toc a.active{background:var(--accent-soft);color:var(--accent);border-left-color:var(--accent);font-weight:600;opacity:1}
+nav.toc a .n{display:inline-block;min-width:20px;color:var(--muted);font-size:12.5px;font-variant-numeric:tabular-nums}
+nav.toc a.active .n{color:var(--accent)}
+nav.toc .sub{padding-left:26px;font-size:13.5px;opacity:.7}
+
+/* ---------- 章节 ---------- */
+section{background:var(--card);border:var(--card-border);border-radius:var(--radius);
+  padding:var(--sec-pad);margin-bottom:22px;box-shadow:var(--shadow);scroll-margin-top:var(--anchor-offset)}
+section>h2{margin:0 0 6px;font-size:25px;letter-spacing:-.01em;font-family:var(--font-display)}
+section>.lede{color:var(--muted);margin:0 0 20px;font-size:14.5px}
+h3{font-size:18.5px;margin:26px 0 10px;padding-left:11px;border-left:3.5px solid var(--accent);font-family:var(--font-display)}
+h4{font-size:16px;margin:18px 0 8px;font-family:var(--font-display)}
+h5{font-size:15px;font-family:var(--font-display)}
+p{margin:10px 0}
+ul,ol{margin:10px 0;padding-left:22px}
+li{margin:5px 0}
+code{font-family:var(--font-mono);font-size:.89em;background:var(--code-bg);border:1px solid var(--code-bd);border-radius:5px;padding:1px 5px}
+.mono{font-family:var(--font-mono)}
+a{color:var(--accent)}
+hr{border:0;border-top:1px dashed var(--line);margin:24px 0}
+.srcref{font-size:11.5px;color:var(--muted);font-weight:500;font-family:var(--font-sans);margin-left:8px;vertical-align:middle;white-space:nowrap;opacity:.75}
+.en{color:var(--muted);font-size:.92em}
+
+/* ---------- 栅格与卡片 ---------- */
+.grid{display:grid;gap:14px}
+.g2{grid-template-columns:repeat(2,minmax(0,1fr))}
+.g3{grid-template-columns:repeat(3,minmax(0,1fr))}
+/* 窄屏单列：必须用 minmax(0,1fr)。写成 1fr 时轨道最小宽度是 auto，
+   单元格里只要有长代码行（<pre>）就撑破容器，整页横向溢出。 */
+@media(max-width:820px){.g2,.g3{grid-template-columns:minmax(0,1fr)}}
+.card{border:var(--card-border);border-radius:var(--radius-sm);padding:15px 17px;background:var(--paper-soft);box-shadow:var(--shadow-card)}
+.card h5{margin:0 0 7px}
+.card.pad0{padding:0;overflow:hidden}
+
+/* ---------- 提示框 ---------- */
+.box{border:1px solid var(--line);border-left:4px solid var(--accent);background:var(--accent-soft);
+  border-radius:var(--radius-sm);padding:12px 16px;margin:14px 0}
+.box.warn{border-left-color:var(--warn);background:var(--warn-bg)}
+.box.bad{border-left-color:var(--sign);background:var(--bad-bg)}
+.box.ok{border-left-color:var(--frac);background:var(--ok-bg)}
+.box .t{font-weight:650;font-size:14.5px;margin-bottom:2px}
+
+/* ---------- 公式 ---------- */
+.formula{font-family:var(--font-mono);background:var(--paper-soft);border:1px solid var(--line);
+  border-radius:var(--radius-sm);padding:14px 17px;margin:14px 0;font-size:16.5px;text-align:center;overflow-x:auto}
+.formula.big{font-size:20px}
+
+/* ---------- 表格 ---------- */
+table.tbl{width:100%;border-collapse:collapse;font-size:14.5px;margin:14px 0}
+table.tbl th,table.tbl td{border:1px solid var(--line);padding:8px 11px;text-align:left;vertical-align:top}
+table.tbl th{background:var(--tbl-head);font-weight:650;font-size:13.5px;white-space:nowrap}
+table.tbl td.mono,table.tbl th.mono{font-family:var(--font-mono);font-size:13.5px}
+table.tbl tr:hover td{background:var(--tbl-hover)}
+/* 当前行高亮：interactive 表格用它标出「正在看的那一行」。
+   注意 --tbl-hover 是悬停色，深色皮肤下故意比底色亮，所以 hl 用同一套变量。 */
+table.tbl tr.hl td{background:var(--sel-bg)}
+.tbl-wrap{overflow-x:auto}
+
+/* ---------- 位串控件 ---------- */
+.fw{display:flex;flex-wrap:wrap;gap:8px 18px;align-items:flex-start;margin:4px 0 2px;min-width:0}
+.fgrp{min-width:0}
+.fcap{font-size:12px;color:var(--muted);margin-bottom:4px;font-weight:600}
+.fcap b{font-family:var(--font-mono);font-size:12.5px}
+.bits{display:flex;flex-wrap:wrap;gap:2px;font-family:var(--font-mono);margin:4px 0}
+.bits .b{width:25px;height:33px;display:flex;align-items:center;justify-content:center;
+  border-radius:6px;font-size:15px;cursor:pointer;user-select:none;border:1px solid transparent;
+  transition:transform .06s,background .12s;font-weight:600}
+.bits .b:hover{transform:translateY(-2px)}
+.bits .b.s{background:var(--sign-bg);color:var(--sign-fg);border-color:var(--sign-bd)}
+.bits .b.e{background:var(--exp-bg);color:var(--exp-fg);border-color:var(--exp-bd)}
+.bits .b.f{background:var(--frac-bg);color:var(--frac-fg);border-color:var(--frac-bd)}
+.bits .b.sel{outline:2px solid var(--ink);outline-offset:1px}
+.bits.sm .b{width:19px;height:26px;font-size:12px;border-radius:4px}
+.fgrp .bits{flex-wrap:wrap;max-width:100%;gap:2px}
+.fgrp.ge .bits{max-width:300px}
+
+/* ---------- 读数表 ---------- */
+.readout{display:grid;grid-template-columns:auto 1fr;gap:4px 16px;font-size:14.5px;margin:12px 0}
+.readout dt{color:var(--muted);font-weight:600;font-family:var(--font-mono);font-size:13.5px;padding-top:2px}
+.readout dd{margin:0;font-family:var(--font-mono)}
+
+/* ---------- 小标签 ---------- */
+.chip{display:inline-block;font-size:12.5px;padding:2px 9px;border-radius:var(--radius-pill);
+  background:var(--accent-soft);color:var(--accent);font-weight:600}
+.chip.ok{background:var(--frac-bg);color:var(--frac-fg)}
+.chip.bad{background:var(--sign-bg);color:var(--sign-fg)}
+.chip.warn{background:var(--warn-bg);color:var(--warn)}
+.chip.gray{background:var(--gray-bg);color:var(--gray-fg)}
+.kbd{font-family:var(--font-mono);font-size:13px;background:var(--code-bg);border:1px solid var(--code-bd);
+  border-bottom-width:2px;border-radius:6px;padding:1px 7px}
+
+/* ---------- 控件 ---------- */
+.ctrls{display:flex;flex-wrap:wrap;gap:9px;align-items:center;margin:12px 0}
+label.fld{display:inline-flex;align-items:center;gap:7px;font-size:14px;color:var(--ink);max-width:100%;flex-wrap:wrap;min-width:0}
+label.fld select,label.fld input{min-width:0;max-width:100%}
+input[type=text],input[type=number],select{font-family:var(--font-mono);font-size:14px;padding:6px 10px;
+  border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--card);color:var(--ink)}
+input[type=text]:focus,input[type=number]:focus,select:focus{outline:2px solid var(--accent-soft);border-color:var(--accent)}
+button{font-family:var(--font-sans);font-size:14px;font-weight:600;padding:7px 15px;border-radius:var(--radius-sm);
+  border:1px solid var(--line);background:var(--card);color:var(--ink);cursor:pointer}
+button:hover{background:var(--sel-bg)}
+button.p{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+button.sm{padding:4px 10px;font-size:13px}
+button.pill{border-radius:var(--radius-pill)}
+/* 按钮组默认不换行：项一多就会把 .ctrls 撑破。允许它缩到容器宽度并横向滚动。 */
+.seg{display:inline-flex;max-width:100%;border:1px solid var(--line);
+  border-radius:var(--radius-sm);overflow-x:auto;overflow-y:hidden}
+.seg button{border:0;border-radius:0;border-right:1px solid var(--line);padding:6px 13px}
+.seg button:last-child{border-right:0}
+.seg button.on{background:var(--accent);color:var(--accent-ink)}
+
+/* ---------- 分步演示 ---------- */
+/* .steps 是 .step 的包裹层（skill 词汇表里列了但一直没定义）——
+   仅给一点上下留白，步骤块自己的边距由 .step 负责。 */
+.steps{margin:12px 0}
+.step{border:1px solid var(--line);border-radius:var(--radius-sm);padding:11px 15px;margin:9px 0;
+  background:var(--paper-soft);opacity:.42;transition:opacity .2s}
+.step.on{opacity:1;background:var(--card)}
+.step .h{font-size:13px;font-weight:700;color:var(--accent);letter-spacing:.02em;margin-bottom:3px}
+.step .m{font-family:var(--font-mono);font-size:14.5px;overflow-x:auto}
+.step .e{font-size:13.5px;color:var(--muted);margin-top:3px}
+
+/* ---------- 折叠与答案 ---------- */
+.reveal{border:1px solid var(--line);border-radius:var(--radius-sm);padding:11px 15px;margin:8px 0;background:var(--paper-soft)}
+.reveal summary{cursor:pointer;font-weight:600;font-size:14.5px}
+.reveal[open]{background:var(--card)}
+.ans{margin-top:8px;padding-top:8px;border-top:1px dashed var(--line);font-size:14.5px}
+
+/* ---------- 判断题 ---------- */
+.puzzle{border:1px solid var(--line);border-radius:var(--radius-sm);padding:12px 15px;margin:9px 0;
+  display:flex;gap:13px;align-items:flex-start;background:var(--paper-soft)}
+.puzzle .q{font-family:var(--font-mono);font-size:15px;flex:1;min-width:0;overflow-x:auto;white-space:nowrap}
+.puzzle .q small{font-family:var(--font-sans);color:var(--muted);display:block;white-space:normal}
+.puzzle .btns{display:flex;gap:6px;flex-shrink:0}
+.puzzle.correct{border-color:var(--ok-bd);background:var(--ok-bg)}
+.puzzle.wrong{border-color:var(--bad-bd);background:var(--bad-bg)}
+.puzzle .exp{margin-top:9px;padding-top:9px;border-top:1px dashed var(--line);font-size:14.5px;
+  display:none;white-space:normal;font-family:var(--font-sans)}
+.puzzle.done .exp{display:block}
+.puzzle .exp .verdict{font-weight:700}
+
+/* ---------- 分布图 ---------- */
+.tick{stroke:#94a3b8;stroke-width:1.4}
+.tick.dn{stroke:var(--exp)}
+.tick.nm{stroke:var(--frac)}
+.ticklabel{font-size:9.5px;fill:var(--muted);font-family:var(--font-mono)}
+.axisline{stroke:var(--line);stroke-width:1.2}
+.axislabel{font-size:11px;fill:var(--muted)}
+
+/* ---------- 页脚 / 回到顶部 ---------- */
+.footer{max-width:var(--page-max);margin:0 auto;padding:8px 22px 40px;color:var(--muted);font-size:13px}
+.totop{position:fixed;right:22px;bottom:22px;z-index:40;box-shadow:var(--shadow);display:none}
+
+/* ---------- 响应式 ---------- */
+@media(max-width:960px){
+  .layout{grid-template-columns:1fr;padding:16px}
+  nav.toc{position:static;max-height:none;display:flex;flex-wrap:wrap;gap:6px;
+    background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:10px}
+  nav.toc h4{width:100%;margin-bottom:2px}
+  nav.toc a{border-left:0;padding:5px 10px;font-size:13px}
+  nav.toc .sub{display:none}
+  section{padding:20px 17px}
+}
+@media print{
+  nav.toc,.topbar,.totop{display:none}
+  .layout{display:block}
+  section{break-inside:avoid;box-shadow:none}
+}
+
+/* ==========================================================================
+   风格 D · 柔和玻璃（Soft glass / 渐变毛玻璃）
+   渐变背景 · 毛玻璃卡片 · 大圆角 · 悬浮药丸导航 · 柔和彩色阴影
+   ========================================================================== */
+
+:root{
+  --bg:#eef1fb; --card:rgba(255,255,255,.72); --ink:#1f2437; --muted:#646c86; --line:rgba(31,36,55,.10);
+  --accent:#6d4aff; --accent-ink:#fff; --accent-soft:rgba(109,74,255,.10);
+  --sign:#e0475f; --exp:#1f7ae0; --frac:#12a06a; --warn:#c2710c;
+  --sign-bg:rgba(224,71,95,.12); --sign-fg:#c02c45; --sign-bd:rgba(224,71,95,.24);
+  --exp-bg:rgba(31,122,224,.12);  --exp-fg:#1560b8;  --exp-bd:rgba(31,122,224,.24);
+  --frac-bg:rgba(18,160,106,.12); --frac-fg:#0c7f54; --frac-bd:rgba(18,160,106,.24);
+  --ok-bg:rgba(18,160,106,.10); --ok-bd:rgba(18,160,106,.30);
+  --bad-bg:rgba(224,71,95,.09); --bad-bd:rgba(224,71,95,.28);
+  --warn-bg:rgba(194,113,12,.10); --gray-bg:rgba(31,36,55,.07); --gray-fg:#5c6480;
+  --paper-soft:rgba(255,255,255,.55); --code-bg:rgba(255,255,255,.62); --code-bd:rgba(31,36,55,.10);
+  --tbl-head:rgba(109,74,255,.07); --tbl-hover:rgba(109,74,255,.045);
+  --sel-bg:rgba(109,74,255,.09);
+
+  --font-sans:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",system-ui,sans-serif;
+  --font-mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+  --font-display:var(--font-sans);
+  --tracking-title:-.02em;
+
+  --radius:20px; --radius-sm:14px; --radius-pill:999px;
+  --border-w:1px;
+  --shadow:0 10px 30px -12px rgba(31,36,55,.18),0 2px 8px -4px rgba(31,36,55,.10);
+  --shadow-card:0 6px 18px -10px rgba(31,36,55,.16);
+  --card-border:1px solid rgba(255,255,255,.62);
+
+  --page-max:1080px; --nav-w:auto; --gap:0px;
+  --sec-pad:28px 30px; --nav-sticky-top:62px; --anchor-offset:120px;
+  --font-size:16px; --line-height:1.78;
+}
+
+body{
+  background:
+    radial-gradient(900px 520px at 8% -6%, #d9e4ff 0%, transparent 58%),
+    radial-gradient(880px 520px at 98% 2%, #ffe0f2 0%, transparent 56%),
+    radial-gradient(760px 620px at 52% 108%, #dff6ee 0%, transparent 58%),
+    linear-gradient(160deg,#f4f6ff 0%,#eef1fb 42%,#f7f2ff 100%);
+  background-attachment:fixed;
+}
+
+/* ---------- 顶栏：磨砂条 ---------- */
+.topbar{background:rgba(255,255,255,.60);backdrop-filter:blur(16px) saturate(180%);
+  -webkit-backdrop-filter:blur(16px) saturate(180%);border-bottom:1px solid rgba(255,255,255,.7)}
+.topbar-in{max-width:var(--page-max);padding:13px 24px}
+.brand{font-weight:800;font-size:16.5px;letter-spacing:var(--tracking-title)}
+.brand small{font-weight:600;color:var(--muted);font-size:12px}
+.progress{font-weight:600;font-size:12px;color:var(--muted)}
+.progress .bar{width:140px;height:8px;border-radius:var(--radius-pill);background:rgba(31,36,55,.08)}
+.progress .bar>i{background:linear-gradient(90deg,#8b6cff,#6d4aff 55%,#ef7ac0);
+  box-shadow:0 0 12px rgba(109,74,255,.5)}
+
+/* ---------- 布局：单列居中 + 悬浮药丸导航 ---------- */
+.layout{display:block;max-width:var(--page-max);margin:0 auto;padding:0 24px 30px}
+nav.toc{position:sticky;top:var(--nav-sticky-top);z-index:45;display:flex;flex-wrap:wrap;gap:8px;
+  align-items:center;justify-content:center;max-height:none;overflow:visible;
+  margin:0 0 22px;padding:12px 14px;border-radius:var(--radius-pill);
+  background:rgba(255,255,255,.62);backdrop-filter:blur(14px) saturate(180%);
+  -webkit-backdrop-filter:blur(14px) saturate(180%);
+  border:1px solid rgba(255,255,255,.75);box-shadow:var(--shadow)}
+nav.toc h4{display:none}
+nav.toc a{border:0;border-radius:var(--radius-pill);padding:4px 11px;font-size:12.5px;font-weight:600;
+  color:var(--muted);background:transparent}
+nav.toc a:hover{background:rgba(109,74,255,.10);color:var(--accent)}
+nav.toc a.active{background:linear-gradient(135deg,#7c5cff,#6d4aff);color:#fff;
+  box-shadow:0 6px 16px -6px rgba(109,74,255,.6)}
+nav.toc a .n{font-size:11.5px;opacity:.7;margin-right:4px;min-width:auto}
+nav.toc a.active .n{color:#fff;opacity:.85}
+
+/* ---------- 章节：毛玻璃大圆角 ---------- */
+section{background:var(--card);backdrop-filter:blur(18px) saturate(170%);
+  -webkit-backdrop-filter:blur(18px) saturate(170%);
+  border:var(--card-border);border-radius:var(--radius);padding:var(--sec-pad);
+  box-shadow:var(--shadow);margin-bottom:24px}
+section>h2{font-size:25px;font-weight:800}
+section>h2::after{content:"";display:block;width:56px;height:4px;border-radius:99px;margin-top:10px;
+  background:linear-gradient(90deg,#7c5cff,#ef7ac0)}
+section>.lede{font-size:15px;margin-bottom:22px}
+h3{border-left:0;padding-left:0;font-weight:750;position:relative;padding-bottom:6px}
+h3::after{content:"";position:absolute;left:0;bottom:0;width:34px;height:3px;border-radius:99px;
+  background:linear-gradient(90deg,var(--accent),#ef7ac0)}
+h3{margin-left:0}
+h3+*{margin-top:14px}
+h4,h5{font-weight:700}
+code{background:var(--code-bg);border:1px solid var(--code-bd);border-radius:8px;backdrop-filter:blur(6px)}
+
+/* ---------- 卡片 / 盒 ---------- */
+.card{border-radius:var(--radius-sm);background:var(--paper-soft);border:1px solid rgba(255,255,255,.7);
+  box-shadow:var(--shadow-card)}
+.box{border:1px solid rgba(255,255,255,.7);border-left:4px solid var(--accent);
+  border-radius:var(--radius-sm);background:var(--accent-soft);box-shadow:var(--shadow-card)}
+.box .t{font-weight:750;font-size:14.5px}
+
+.formula{background:var(--code-bg);border:1px solid rgba(255,255,255,.7);border-radius:var(--radius-sm);
+  box-shadow:var(--shadow-card);font-weight:600}
+.formula.big{font-size:20px}
+
+/* ---------- 表格：无竖线、圆角容器 ---------- */
+table.tbl{border-collapse:separate;border-spacing:0;overflow:hidden;border-radius:var(--radius-sm)}
+table.tbl th,table.tbl td{border:0;border-bottom:1px solid var(--line);padding:9px 13px}
+table.tbl th{background:var(--tbl-head);font-weight:750;font-size:13px;color:var(--ink)}
+table.tbl tr:last-child td{border-bottom:0}
+table.tbl tr:hover td{background:var(--tbl-hover)}
+
+/* ---------- 位视图：彩色软糖 ---------- */
+.fw{gap:10px 20px;padding:14px 16px;border-radius:var(--radius-sm);background:var(--paper-soft);
+  border:1px solid rgba(255,255,255,.7)}
+.fcap{font-weight:700;font-size:11.5px;letter-spacing:.05em;text-transform:uppercase}
+.bits{gap:3px}
+.bits .b{width:27px;height:34px;border-radius:9px;border:1px solid transparent;font-weight:700;
+  transition:transform .08s,box-shadow .12s}
+.bits .b.s{background:var(--sign-bg);color:var(--sign-fg);border-color:var(--sign-bd)}
+.bits .b.e{background:var(--exp-bg);color:var(--exp-fg);border-color:var(--exp-bd)}
+.bits .b.f{background:var(--frac-bg);color:var(--frac-fg);border-color:var(--frac-bd)}
+.bits .b:hover{transform:translateY(-3px);box-shadow:0 8px 16px -8px currentColor}
+.bits .b.sel{outline:2px solid var(--accent);outline-offset:2px}
+.bits.sm .b{width:21px;height:28px;border-radius:7px;font-size:12px}
+
+/* ---------- 控件：柔和圆润 ---------- */
+input[type=text],input[type=number],select{border:1px solid var(--line);border-radius:var(--radius-pill);
+  background:rgba(255,255,255,.8);font-size:13.5px;padding:7px 14px}
+input[type=number]{border-radius:var(--radius-sm)}
+input:focus,select:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(109,74,255,.16)}
+button{border:1px solid var(--line);border-radius:var(--radius-pill);background:rgba(255,255,255,.8);
+  font-weight:650;font-size:13.5px;box-shadow:0 1px 2px rgba(31,36,55,.06)}
+button:hover{background:#fff;border-color:rgba(109,74,255,.35);color:var(--accent);
+  box-shadow:0 6px 16px -8px rgba(109,74,255,.5)}
+button.p{background:linear-gradient(135deg,#7c5cff,#6d4aff);border-color:transparent;color:#fff}
+button.p:hover{background:linear-gradient(135deg,#8b6cff,#7855ff);color:#fff;
+  box-shadow:0 10px 22px -8px rgba(109,74,255,.75)}
+.chip{border:1px solid transparent;border-radius:var(--radius-pill);background:var(--accent-soft);
+  color:var(--accent);font-weight:700;font-size:12px}
+.seg{border:1px solid var(--line);border-radius:var(--radius-pill);background:rgba(255,255,255,.6);overflow:hidden}
+.seg button{border:0;border-radius:0;border-right:1px solid var(--line);box-shadow:none;background:transparent}
+.seg button.on{background:linear-gradient(135deg,#7c5cff,#6d4aff);color:#fff}
+
+/* ---------- 分步演示 ---------- */
+.step{border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--paper-soft)}
+.step.on{background:rgba(255,255,255,.82);border-color:rgba(109,74,255,.28);
+  box-shadow:0 8px 20px -14px rgba(109,74,255,.5)}
+.step .h{color:var(--accent);font-weight:750;font-size:12.5px;letter-spacing:.03em}
+
+/* ---------- 判断题 / 折叠 ---------- */
+.puzzle{border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--paper-soft)}
+.puzzle.correct{background:var(--ok-bg);border-color:var(--ok-bd)}
+.puzzle.wrong{background:var(--bad-bg);border-color:var(--bad-bd)}
+.reveal{border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--paper-soft)}
+.reveal[open]{background:rgba(255,255,255,.8)}
+
+.totop{border-radius:var(--radius-pill);background:linear-gradient(135deg,#7c5cff,#6d4aff);color:#fff;
+  border:0;font-weight:700;box-shadow:0 10px 24px -10px rgba(109,74,255,.8)}
+.tick{stroke:rgba(100,108,134,.55)}
+.axisline{stroke:rgba(31,36,55,.18)}
+.axislabel,.ticklabel{fill:var(--muted)}
+
+/* ---------- 响应式 ---------- */
+@media(max-width:960px){
+  .layout{padding:0 16px 24px}
+  nav.toc{justify-content:flex-start;border-radius:var(--radius-sm);padding:10px 12px;
+    top:8px;--nav-sticky-top:8px}
+  nav.toc a{padding:5px 11px;font-size:12.5px}
+  section{padding:20px 17px}
+  .topbar-in{padding:11px 16px}
+}
+
+
+/* ---------- 风格切换条（构建时注入，各主题通用） ---------- */
+.stylebar{max-width:var(--page-max);margin:0 auto;padding:14px 22px 0;display:flex;gap:8px;
+  flex-wrap:wrap;align-items:center;font-size:12.5px;color:var(--muted)}
+.stylebar>span{font-weight:600}
+.stylebar a{text-decoration:none;padding:4px 11px;border:1px solid var(--line);border-radius:var(--radius-pill);
+  color:var(--muted);background:var(--card);font-weight:600}
+.stylebar a:hover{border-color:var(--accent);color:var(--accent)}
+.stylebar a.cur{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.stylebar>span{flex:0 0 auto}
+@media(max-width:960px){.stylebar{padding:12px 16px 0}}
+/* 25 讲之后药丸很多：窄屏折行会吃掉大半屏，改成单行横滑 */
+@media(max-width:820px){.stylebar{flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;
+  scrollbar-width:thin}.stylebar a{flex:0 0 auto;font-size:12px;padding:4px 10px}}
+
+</style>
+</head>
+<body>
+
+<header class="topbar"><div class="topbar-in">
+  <div class="brand">异常控制流：异常与进程 Exceptional Control Flow: Exceptions and Processes<small>《计算机系统导论》第 16 讲 · 柔和玻璃版</small></div>
+  <div class="progress"><span id="pgText">学习进度 0%</span><span class="bar"><i id="pgBar"></i></span></div>
+</div></header>
+
+<div class="stylebar">
+  <span>风格：</span>
+  <a href="../ics16-zh.html">清爽蓝（原版）</a>
+  <a href="01-academic.html">学术讲义</a>
+  <a href="02-terminal.html">深色终端</a>
+  <a href="03-brutalist.html">新粗野</a>
+  <a href="index.html">◧ 全部预览</a>
+  <span style="opacity:.5">|</span>
+  <a href="../variants-ics01/index.html">↗ 第 1 讲 · 课程概述</a>
+  <a href="../variants-bits/index.html">↗ 第 2 讲 · 位、字节与整数</a>
+  <a href="../variants/index.html">↗ 第 3 讲 · 浮点数</a>
+  <a href="../variants-ics04/index.html">↗ 第 4 讲 · 机器级编程 I：基础</a>
+  <a href="../variants-ics05/index.html">↗ 第 5 讲 · 机器级编程 II：控制</a>
+  <a href="../variants-ics06/index.html">↗ 第 6 讲 · 机器级编程 III：过程</a>
+  <a href="../variants-ics07/index.html">↗ 第 7 讲 · 机器级编程 IV：数据</a>
+  <a href="../variants-ics08/index.html">↗ 第 8 讲 · 机器级编程 V：高级</a>
+  <a href="../variants-ics09/index.html">↗ 第 9 讲 · 处理器体系结构：ISA 与逻辑</a>
+  <a href="../variants-ics10/index.html">↗ 第 10 讲 · 处理器体系结构：顺序实现</a>
+  <a href="../variants-ics11/index.html">↗ 第 11 讲 · 处理器体系结构：流水线</a>
+  <a href="../variants-ics12/index.html">↗ 第 12 讲 · 存储层次结构</a>
+  <a href="../variants-ics13/index.html">↗ 第 13 讲 · 缓存存储器</a>
+  <a href="../variants-ics14/index.html">↗ 第 14 讲 · 代码优化</a>
+  <a href="../variants-ics15/index.html">↗ 第 15 讲 · 链接</a>
+  <a href="../variants-ics17/index.html">↗ 第 17 讲 · 异常控制流 II</a>
+  <a href="../variants-ics18/index.html">↗ 第 18 讲 · 系统级 I/O</a>
+  <a href="../variants-ics19/index.html">↗ 第 19 讲 · 虚拟内存 I</a>
+  <a href="../variants-ics20/index.html">↗ 第 20 讲 · 虚拟内存 II</a>
+  <a href="../variants-ics21/index.html">↗ 第 21 讲 · 动态内存分配</a>
+  <a href="../variants-ics22/index.html">↗ 第 22 讲 · 网络基础</a>
+  <a href="../variants-ics23/index.html">↗ 第 23 讲 · 网络编程</a>
+  <a href="../variants-ics24/index.html">↗ 第 24 讲 · 并发编程</a>
+  <a href="../variants-ics25/index.html">↗ 第 25 讲 · 同步</a>
+  <a href="../variants-lab/index.html">↗ Data Lab 实验</a>
+</div>
+
+<div class="layout">
+
+<nav class="toc">
+  <h4>目录</h4>
+  <a href="#s0"><span class="n">0</span>课程导览</a>
+  <a href="#s1"><span class="n">1</span>控制流与 ECF</a>
+  <a href="#s2"><span class="n">2</span>异常与异常表</a>
+  <a href="#s3"><span class="n">3</span>中断、陷阱、故障、中止</a>
+  <a href="#s4"><span class="n">4</span>系统调用</a>
+  <a href="#s5"><span class="n">5</span>故障实例：缺页与非法地址</a>
+  <a href="#s6"><span class="n">6</span>进程是什么</a>
+  <a href="#s7"><span class="n">7</span>CPU 复用与并发</a>
+  <a href="#s8"><span class="n">8</span>进程控制与 fork</a>
+  <a href="#s9"><span class="n">9</span>进程图与 fork 输出</a>
+  <a href="#s10"><span class="n">10</span>终止、收割与等待</a>
+  <a href="#s11"><span class="n">11</span>execve、栈布局与测验</a>
+</nav>
+
+<main>
+<!-- ================= 0 ================= -->
+  <section id="s0">
+    <h2>课程导览<span class="srcref">原第 1–4 页</span></h2>
+    <p class="lede">北京大学《计算机系统导论》第 16 讲：<b>异常控制流（ECF）：异常与进程</b>。到上一讲为止，程序的控制流都是「自己说了算」的：跳转、分支、调用、返回。这一讲处理另一种情况 —— <b>处理器被外部事件或指令自身的结果打断，控制权交给操作系统内核</b>；再往前一步，内核用它造出「每个程序独占一台机器」的假象，这个假象的名字叫<b>进程</b>。</p>
+
+    <div class="grid g3">
+      <div class="card"><h5>本讲提纲</h5>
+        <ol style="margin:0;padding-left:20px;font-size:14.5px">
+          <li>异常控制流（ECF）</li>
+          <li>异常（Exceptions）</li>
+          <li>进程（Processes）</li>
+          <li>进程控制（Process Control）</li>
+        </ol>
+        <p style="margin:8px 0 0;font-size:13.5px;color:var(--muted)">课件的提纲页（原第 4 页）在第 8、19、31 页又重复出现三次 —— 每进入一个大主题就重贴一遍，本页也沿用这个结构。</p>
+      </div>
+      <div class="card"><h5>一句话核心</h5>
+        <p style="margin:0;font-size:14.5px">CPU 只会一件事：<b>按顺序取指、执行、再取下一条</b>。要让它响应「磁盘数据到了」「用户按了 Ctrl-C」「除零了」，就必须允许<b>控制流被事件劫持</b>：硬件记下当前指令的位置、查一张表跳进内核、处理完再决定回到哪条指令。这就是异常；而进程，是内核用这套机制造出来的<b>「独占 CPU 和内存」的假象</b>。</p>
+      </div>
+      <div class="card"><h5>与前后讲的衔接</h5>
+        <p style="margin:0;font-size:14.5px">上一讲（第 15 讲）刚讲完链接：程序被拼装成可执行文件。本讲打开「程序开始运行之后」的世界：控制权如何在用户程序与内核之间来回。下一讲（第 17 讲，ECF II）会补上<b>信号</b>与<b>非局部跳转</b>，并深入 <code>fork</code>/<code>execve</code> 的更多细节。</p>
+      </div>
+    </div>
+
+    <h3>0.1 三大主题与原页码</h3>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>主题</th><th>原课件页码</th><th>要回答的问题</th></tr>
+      <tr><td><b>控制流与 ECF</b></td><td class="mono">5–7</td><td>CPU 的控制流本来长什么样？跳转与调用为什么不够用？四种 ECF 机制各由谁实现？</td></tr>
+      <tr><td><b>异常</b></td><td class="mono">9–18</td><td>异常是什么？异常号 <code>k</code> 与异常表（中断向量）怎么对应？中断／陷阱／故障／中止差在哪？系统调用与缺页分别走什么流程？</td></tr>
+      <tr><td><b>进程</b></td><td class="mono">20–30</td><td>进程只是「运行中的程序实例」吗？逻辑控制流与私有地址空间这两个抽象是怎么造出来的？上下文切换具体搬了哪些东西？</td></tr>
+      <tr><td><b>进程控制</b></td><td class="mono">32–60</td><td><code>fork</code> 为什么「调用一次、返回两次」？<code>exit</code>/<code>wait</code>/<code>waitpid</code>/<code>execve</code> 的语义与陷阱是什么？一段输出到底可不可能由某个 fork 程序打印出来？</td></tr>
+    </table></div>
+
+    <div class="box"><div class="t">本页使用说明</div>
+      标有 <span class="chip gray">可交互</span> 的地方都能点击或输入，所有计算都在浏览器里实时完成。最值得反复玩的是<a href="#s9">第 9 节的 <b>fork 输出可行性判定器</b></a>（把课件里那些「可行 / 不可行输出」变成可以自己出题的工具）、<a href="#s2">第 2 节的异常表模拟器</a>与<a href="#s7">第 7 节的上下文切换模拟器</a>。页面里所有「判对错」的基准（进程树、可行输出、进程图拓扑序、收割顺序、缺页地址）都用独立参考实现与真实 C 程序逐项交叉验证过。
+    </div>
+  </section>
+
+  <!-- ================= 1 ================= -->
+  <section id="s1">
+    <h2>1. 控制流与异常控制流<span class="srcref">原第 5–7 页</span></h2>
+    <p class="lede">先把「控制流」这个词说清楚，再看它为什么需要被「异常」地改写。<b>处理器只做一件事：从启动到关机，按顺序读入并执行（解释）一串指令，一次一条</b> —— 这个序列就是 CPU 的控制流。</p>
+
+    <h3>1.1 物理控制流<span class="srcref">原第 5 页</span></h3>
+    <p>课件用一条竖直的时间轴画出「物理控制流」：时间从上往下流，CPU 依次执行 <code>inst₁</code>、<code>inst₂</code>、<code>inst₃</code> …… <code>inst_n</code>，两端分别是 <code>&lt;startup&gt;</code> 与 <code>&lt;shutdown&gt;</code>。</p>
+    <div class="formula">
+      <div>&lt;startup&gt; → inst₁ → inst₂ → inst₃ → … → inst_n → &lt;shutdown&gt;</div>
+    </div>
+    <p>这条链上的每一步都由上一步决定 —— 只要程序是纯计算的，控制流就完全由程序自己说了算。麻烦出在「外界」。</p>
+
+    <h3>1.2 改变控制流：现有机制为什么不够<span class="srcref">原第 6 页</span></h3>
+    <p>到此为止我们学过两种改变控制流的机制，它们有一个共同点：<b>都只是对「程序状态」变化的反应</b>。</p>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>机制</th><th>例子</th><th>它响应什么</th></tr>
+      <tr><td><b>跳转与分支</b></td><td class="mono">jmp / jne / 循环</td><td>程序状态（比如上一条指令算出的条件码）</td></tr>
+      <tr><td><b>调用与返回</b></td><td class="mono">call / ret</td><td>程序状态（比如函数指针的值）</td></tr>
+    </table></div>
+    <p>对一个有用的系统来说这是<b>不够的</b> —— 下面这些情况都是「系统状态」变了，而程序内部的分支指令对此无能为力：</p>
+    <ul>
+      <li>数据从磁盘或网络适配器到达；</li>
+      <li>指令除以零；</li>
+      <li>用户在键盘上按下 <span class="kbd">Ctrl-C</span>；</li>
+      <li>系统定时器到期。</li>
+    </ul>
+    <p>于是系统需要一套新机制：<b>异常控制流（Exceptional Control Flow, ECF）</b>。课件在第 7 页说：ECF <b>存在于计算机系统的所有层次</b>。</p>
+
+    <h3>1.3 ECF 的四种机制与它们的实现者<span class="srcref">原第 7 页</span></h3>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>层次</th><th>机制</th><th>由谁实现</th><th>作用</th></tr>
+      <tr><td rowspan="1"><b>低层</b></td><td><b>1. 异常</b><br><span class="en">Exceptions</span></td><td><b>硬件与 OS 软件的组合</b></td><td>响应系统事件（即系统状态的改变）而改变控制流</td></tr>
+      <tr><td rowspan="3"><b>高层</b></td><td><b>2. 进程上下文切换</b><br><span class="en">Process context switch</span></td><td>OS 软件 + 硬件定时器</td><td>让多个进程轮流使用处理器</td></tr>
+      <tr><td><b>3. 信号</b><br><span class="en">Signals</span></td><td>OS 软件</td><td>把事件通知给进程（下一讲）</td></tr>
+      <tr><td><b>4. 非局部跳转</b><br><span class="en">Nonlocal jumps</span></td><td>C 运行时库<br><span class="mono" style="font-size:12.5px">setjmp() / longjmp()</span></td><td>在一个函数里跳回层层调用之外的某处</td></tr>
+    </table></div>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：ECF 机制判定器 —— 选一个「改写控制流」的机制，看它由谁实现、响应哪些事件</span>
+        <label class="fld">机制
+          <select id="mchSel"></select>
+        </label>
+        <button class="sm" data-mch="jump">跳转与分支</button>
+        <button class="sm" data-mch="call">调用与返回</button>
+        <button class="sm" data-mch="exc">异常</button>
+        <button class="sm" data-mch="ctx">上下文切换</button>
+        <button class="sm" data-mch="sig">信号</button>
+        <button class="sm" data-mch="nlb">非局部跳转</button>
+      </div>
+      <div id="mchOut"></div>
+    </div>
+
+    <div class="box warn"><div class="t">判定的依据：事件从哪来</div>
+      本讲后面反复出现的判据只有一条：事件是<b>处理器外部发生</b>的（异步），还是<b>执行指令的结果</b>（同步）。第 1.3 节的「四种机制」是课件第 7 页的原文划分，第 3 节会把「异常」这一类再拆成四小类 —— 两处的分类维度不同，别混起来记。
+    </div>
+  </section>
+
+  <!-- ================= 2 ================= -->
+  <section id="s2">
+    <h2>2. 异常与异常表<span class="srcref">原第 9–11 页</span></h2>
+    <p class="lede"><b>异常（exception）是为响应某个事件（即处理器状态的改变）而把控制转移给 OS 内核。</b>内核（kernel）是 OS 中常驻内存的那部分代码。这一节解决两个问题：异常怎么跳、跳到哪里去（异常表）。</p>
+
+    <h3>2.1 异常的四步：从事件到返回<span class="srcref">原第 9 页</span></h3>
+    <p>课件第 9 页画的是横跨「用户代码 / 内核代码」的一条控制流：正在执行的指令记为 <code>I_curr</code>，它的下一条记为 <code>I_next</code>；事件发生时，控制权交给内核里的<b>异常处理器</b>（exception handler），处理器处理完之后有三种出路：</p>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>返回路径</th><th>含义</th><th>谁会这样返回</th></tr>
+      <tr><td class="mono">返回 I_current</td><td>回到<b>刚才那条</b>指令，重新执行它</td><td><b>故障</b>（如缺页：把页装入后再执行一次就成功了）</td></tr>
+      <tr><td class="mono">返回 I_next</td><td>回到<b>下一条</b>指令，继续往下走</td><td><b>中断</b>与<b>陷阱</b>（如系统调用、定时器中断）</td></tr>
+      <tr><td><b>终止</b>（abort）</td><td>不返回，直接结束当前程序</td><td><b>中止</b>（如非法指令、奇偶校验错、机器检查）</td></tr>
+    </table></div>
+    <p>课件第 9 页举的事件例子：除零、算术溢出、缺页、I/O 请求完成、按下 <span class="kbd">Ctrl-C</span>。</p>
+
+    <h3>2.2 异常表与异常号<span class="srcref">原第 10 页</span></h3>
+    <ul>
+      <li>每一类事件都有一个<b>唯一的异常号 <code>k</code></b>（exception number）；</li>
+      <li><code>k</code> 是<b>异常表</b>（exception table）的下标 —— 这张表也叫<b>中断向量</b>（interrupt vector）；</li>
+      <li>异常 <code>k</code> 每次发生，都调用<b>处理器 <code>k</code></b>（handler <code>k</code>）。</li>
+    </ul>
+    <p>表长 <code>n</code>，表项是 0、1、2、……、<code>n−1</code>，每一项指向一段「Code for exception handler <code>i</code>」。所以「跳到哪里」这件事在硬件里就是<b>一次数组索引</b>。</p>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：异常处理流程模拟器 —— 给定异常号与返回类型，走一遍「事件 → 查表 → 处理器 → 返回」</span>
+        <label class="fld">异常号 k <input type="number" id="vtK" value="2" min="0" max="63" step="1"></label>
+        <label class="fld">异常表项数 n <input type="number" id="vtN" value="4" min="1" max="16" step="1"></label>
+        <label class="fld">返回类型
+          <select id="vtRet">
+            <option value="next">返回 I_next（中断 / 陷阱）</option>
+            <option value="cur" selected>返回 I_current（故障）</option>
+            <option value="abort">终止（中止）</option>
+          </select>
+        </label>
+        <button class="p" id="vtGo">走一遍</button>
+        <button class="sm" data-vt="k=0;n=4;ret=cur">课件图：k = 0</button>
+        <button class="sm" data-vt="k=3;n=4;ret=next">k = 3（表尾）</button>
+        <button class="sm" data-vt="k=4;n=4;ret=next">k = 4（越界）</button>
+      </div>
+      <div id="vtOut"></div>
+    </div>
+
+    <div class="box ok"><div class="t">为什么用「表」而不是「长 if-else」</div>
+      异常号是硬件在事件发生的那一瞬间给出来的，处理必须<b>快且不依赖分支预测</b>：把 <code>k</code> 直接当数组下标，一次访存就能拿到处理器入口地址。这也解释了为什么异常号必须是「每种事件唯一」的 —— 它是索引，不能撞车。
+    </div>
+
+    <h3>2.3 异常的两大族与四小类<span class="srcref">原第 11 页</span></h3>
+    <div class="formula" style="text-align:left">
+      <div>ECF</div>
+      <div>├── Asynchronous（异步，来自处理器外部） ── Interrupts（中断）</div>
+      <div>└── Synchronous （同步，执行指令的结果） ── Traps（陷阱）· Faults（故障）· Aborts（中止）</div>
+    </div>
+    <p>第 11 页只是把这棵「（不完全的）分类树」先摆在台面上；第 12、13 页再分别展开异步与同步两支 —— 下一节。</p>
+  </section>
+
+  <!-- ================= 3 ================= -->
+  <section id="s3">
+    <h2>3. 中断、陷阱、故障、中止<span class="srcref">原第 12–13 页</span></h2>
+    <p class="lede">四类异常的差别可以压成两个问题：<b>事件来自哪里</b>（处理器外部 / 执行指令的结果），以及<b>处理器返回后去哪</b>（下一条 / 刚才那条 / 不返回）。把这两问当成两个坐标轴，四类异常就各占一个格子。</p>
+
+    <h3>3.1 异步异常：中断<span class="srcref">原第 12 页</span></h3>
+    <ul>
+      <li><b>由处理器外部的事件引起</b>；</li>
+      <li>通过置起处理器的<b>中断引脚</b>（interrupt pin）来表示；</li>
+      <li>处理器返回<b>「下一条」指令</b>（<code>I_next</code>）—— 被打断的指令已经执行完了。</li>
+    </ul>
+    <p>课件给的例子：</p>
+    <ul>
+      <li><b>定时器中断</b>：外部定时器芯片每隔几毫秒触发一次中断，内核靠它把控制权从用户程序手里收回来（这正是第 7 节上下文切换的动力源）；</li>
+      <li><b>来自外部设备的 I/O 中断</b>：键盘上按 <span class="kbd">Ctrl-C</span>、网络包到达、磁盘数据到达。</li>
+    </ul>
+
+    <h3>3.2 同步异常：陷阱、故障、中止<span class="srcref">原第 13 页</span></h3>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>类别</th><th>是否有意</th><th>可恢复性</th><th>课件给的例子</th><th>返回行为</th></tr>
+      <tr><td><b>陷阱</b><br><span class="en">Traps</span></td><td><b>有意</b>（intentional）</td><td>—</td><td>系统调用、断点陷阱、特殊指令</td><td>返回到<b>「下一条」指令</b></td></tr>
+      <tr><td><b>故障</b><br><span class="en">Faults</span></td><td><b>无意</b>，但可能可恢复</td><td>可恢复 / 不可恢复</td><td>缺页（可恢复）、保护性故障（不可恢复）、浮点异常</td><td><b>要么重新执行</b>出错的那条（当前）指令，<b>要么终止</b></td></tr>
+      <tr><td><b>中止</b><br><span class="en">Aborts</span></td><td><b>无意</b>且不可恢复</td><td>不可恢复</td><td>非法指令、奇偶校验错、机器检查</td><td><b>终止当前程序</b></td></tr>
+    </table></div>
+    <p>三类同步异常的「事件」都是<b>执行指令的结果</b>：陷阱是程序主动要求的（<code>syscall</code> 指令），故障是执行中出了问题但还有救，中止是出了没法救的问题。</p>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：异常分类判定器 —— 选一个事件，页面按课件给的规则判定它的四类归属与返回点</span>
+        <label class="fld">事件
+          <select id="taxSel"></select>
+        </label>
+        <button class="sm" data-tax="ctrlc">Ctrl-C</button>
+        <button class="sm" data-tax="pf">缺页</button>
+        <button class="sm" data-tax="syscall">系统调用</button>
+        <button class="sm" data-tax="illegal">非法指令</button>
+        <button class="sm" data-tax="div0">除零（课件未归类）</button>
+      </div>
+      <div id="taxOut"></div>
+    </div>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：判断题 —— 四类异常与 ECF 的易错点</span>
+        <button class="sm" id="tpzReset">重来</button>
+      </div>
+      <div id="tpzOut"></div>
+    </div>
+
+    <div class="box warn"><div class="t">注意「故障」的两条出路</div>
+      课件对故障的表述是 <b>“Either re-executes faulting (‘current’) instruction or aborts”</b>：缺页是「重执行」那一支（装入页面后再执行一次就通过），保护性故障是「终止」那一支。同属故障，结局不同 —— 判断时看的是<b>处理器返回前问题有没有被解决</b>。
+    </div>
+  </section>
+  <!-- ================= 4 ================= -->
+  <section id="s4">
+    <h2>4. 系统调用：一种「有意」的陷阱<span class="srcref">原第 14–16 页</span></h2>
+    <p class="lede">系统调用（system call）是<b>陷阱</b>里最常用的一类：程序主动执行一条特殊指令，主动把控制权交给内核，请内核替它做一件用户态做不到的事（读写文件、创建进程……）。课件用「打开文件」把这条路径走了一遍。</p>
+
+    <h3>4.1 每个 x86-64 系统调用都有唯一的编号<span class="srcref">原第 14 页</span></h3>
+    <p>调用系统调用时，程序放进 <code>%eax</code>（<code>%rax</code> 的低 32 位）的<b>不是函数地址，而是编号</b>。课件给出的例子：</p>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>编号</th><th>名字</th><th>描述</th></tr>
+      <tr><td class="mono">0</td><td class="mono">read</td><td>读文件</td></tr>
+      <tr><td class="mono">1</td><td class="mono">write</td><td>写文件</td></tr>
+      <tr><td class="mono">2</td><td class="mono">open</td><td>打开文件</td></tr>
+      <tr><td class="mono">3</td><td class="mono">close</td><td>关闭文件</td></tr>
+      <tr><td class="mono">4</td><td class="mono">stat</td><td>取得文件信息</td></tr>
+      <tr><td class="mono">57</td><td class="mono">fork</td><td>创建进程</td></tr>
+      <tr><td class="mono">59</td><td class="mono">execve</td><td>执行一个程序</td></tr>
+      <tr><td class="mono">60</td><td class="mono">_exit</td><td>终止进程</td></tr>
+      <tr><td class="mono">62</td><td class="mono">kill</td><td>向进程发送信号</td></tr>
+    </table></div>
+
+    <h3>4.2 例：打开文件<span class="srcref">原第 15 页</span></h3>
+    <p>用户调用 <code>open(filename, options)</code>，它调用 <code>__open</code> 函数，后者执行系统调用指令 <code>syscall</code>：</p>
+    <div class="formula" style="text-align:left">
+      <div>00000000000e5d70 &lt;__open&gt;:</div>
+      <div>&nbsp;&nbsp;...</div>
+      <div>e5d79:&nbsp;&nbsp;b8 02 00 00 00&nbsp;&nbsp;&nbsp;&nbsp;mov&nbsp;&nbsp;&nbsp;$0x2,%eax&nbsp;&nbsp;&nbsp;# open 是 2 号系统调用</div>
+      <div>e5d7e:&nbsp;&nbsp;0f 05&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;syscall&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;# 返回值在 %rax</div>
+      <div>e5d80:&nbsp;&nbsp;48 3d 01 f0 ff ff&nbsp;cmp&nbsp;&nbsp;&nbsp;$0xfffffffffffff001,%rax</div>
+      <div>&nbsp;&nbsp;...</div>
+      <div>e5dfa:&nbsp;&nbsp;c3&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;retq</div>
+    </div>
+    <p>课件的三点总结：<b><code>%rax</code> 放系统调用号</b>；<b>其余参数在 <code>%rdi</code>、<code>%rsi</code>、<code>%rdx</code>、<code>%r10</code>、<code>%r8</code>、<code>%r9</code></b>；<b>返回值在 <code>%rax</code></b> —— 负值表示出错，其绝对值对应负的 <code>errno</code>。</p>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：系统调用速查器 —— 输入编号或名字，看它是什么，并生成调用它的两条指令</span>
+        <label class="fld">编号或名字 <input type="text" id="scIn" value="2" size="10" spellcheck="false"></label>
+        <button class="p" id="scGo">查询</button>
+        <button class="sm" data-sc="open">open</button>
+        <button class="sm" data-sc="59">59</button>
+        <button class="sm" data-sc="fork">fork</button>
+        <button class="sm" data-sc="62">kill</button>
+      </div>
+      <div id="scOut"></div>
+    </div>
+
+    <h3>4.3 「几乎像一个函数调用」——但有一个重要差别<span class="srcref">原第 16 页</span></h3>
+    <p>课件把系统调用和函数调用逐条对照，四点相同、若干点不同：</p>
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：系统调用 vs 函数调用 —— 切换两侧，逐项对比</span>
+        <div class="seg" id="cmpSeg">
+          <button class="on" data-cmp="fn">函数调用</button>
+          <button data-cmp="sys">系统调用</button>
+        </div>
+        <button class="sm" data-cmp="both">并排显示</button>
+      </div>
+      <div id="cmpOut"></div>
+    </div>
+
+    <div class="box warn"><div class="t">别把「编号」当成「地址」</div>
+      课件的原话是：其他差别「比如，『函数』的『地址』在 <code>%rax</code> 里」。普通函数调用把<b>目标地址</b>放进 <code>call</code> 的操作数；系统调用把<b>编号</b>放进 <code>%eax</code>，具体跳到哪段内核代码由<b>异常表</b>（第 2 节）决定。另一处差别是错误处理：系统调用出错时返回值是负的 <code>errno</code>，而标准库函数出错时返回 <code>−1</code> 并把 <code>errno</code> 这个全局变量设好 —— 第 8 节会详细讲。
+    </div>
+  </section>
+
+  <!-- ================= 5 ================= -->
+  <section id="s5">
+    <h2>5. 故障实例：缺页与非法地址<span class="srcref">原第 17–18 页</span></h2>
+    <p class="lede">课件用同一行源代码 <code>a[500] = 13;</code> 的两种写法，把「故障」的两条出路各演示一遍：<b>下标在数组内 → 缺页 → 装入后再执行一次就成功；下标越界 → 非法地址 → 发信号杀掉进程</b>。</p>
+
+    <h3>5.1 缺页：故障 → 装入 → 重新执行<span class="srcref">原第 17 页</span></h3>
+    <div class="formula" style="text-align:left">
+      <div>int a[1000];</div>
+      <div>main ()</div>
+      <div>{</div>
+      <div>&nbsp;&nbsp;a[500] = 13;</div>
+      <div>}</div>
+      <div style="margin-top:10px">80483b7:&nbsp;c7 05 10 9d 04 08 0d  &nbsp;movl&nbsp;&nbsp;$0xd,0x8049d10</div>
+    </div>
+    <p>用户写内存位置 <code>a[500]</code>，而这段内存所在的<b>页当前还在磁盘上</b>。控制流是：</p>
+    <div class="formula" style="text-align:left">
+      <div>movl 执行 → 异常：缺页（page fault） → 把页从磁盘拷入内存 → 返回并重新执行 movl → 这一次成功</div>
+    </div>
+    <ul>
+      <li>缺页处理器必须把该页装入物理内存；</li>
+      <li>处理器<b>返回给出错的那条指令</b>（<code>I_current</code>）；</li>
+      <li>第二次尝试成功。</li>
+    </ul>
+
+    <h3>5.2 非法内存引用：故障 → 检测非法 → 终止<span class="srcref">原第 18 页</span></h3>
+    <div class="formula" style="text-align:left">
+      <div>int a[1000];</div>
+      <div>main ()</div>
+      <div>{</div>
+      <div>&nbsp;&nbsp;a[5000] = 13;</div>
+      <div>}</div>
+      <div style="margin-top:10px">80483b7:&nbsp;c7 05 60 e3 04 08 0d&nbsp;&nbsp;movl&nbsp;&nbsp;$0xd,0x804e360</div>
+    </div>
+    <p>这次同样先发生缺页异常，但处理器一看地址：<b>它根本不是这个进程的合法地址</b>。于是：</p>
+    <div class="formula" style="text-align:left">
+      <div>movl 执行 → 异常：缺页 → 检测到非法地址 → 给进程发信号 → 用户进程以 “segmentation fault” 退出</div>
+    </div>
+    <p>课件原文：向用户进程发送 <code>SIGSEGV</code> 信号，用户进程带着 <b>“segmentation fault”</b> 退出。</p>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：缺页 / 非法地址模拟器 —— 输入下标，页面现算地址与页号，判定走哪条路</span>
+        <label class="fld">数组基址 <input type="text" id="pfBase" value="0x8049540" size="12" spellcheck="false"></label>
+        <label class="fld">下标 i <input type="text" id="pfIdx" value="500" size="8" spellcheck="false"></label>
+        <label class="fld">数组长度 <input type="text" id="pfLen" value="1000" size="8" spellcheck="false"></label>
+        <label class="fld">该页当前位置
+          <select id="pfWhere"><option value="disk" selected>在磁盘上（课件情形）</option><option value="mem">已在物理内存</option></select>
+        </label>
+        <button class="p" id="pfGo">推演</button>
+        <button class="sm" data-pf="i=500;where=disk">课件：a[500]</button>
+        <button class="sm" data-pf="i=5000;where=disk">课件：a[5000]</button>
+        <button class="sm" data-pf="i=1000;where=mem">边界：a[1000]</button>
+      </div>
+      <div id="pfOut"></div>
+    </div>
+
+    <div class="box ok"><div class="t">基址是反推出来的，不是抄的</div>
+      课件只给了两条汇编里的<b>有效地址</b>：<code>a[500] → 0x8049d10</code>、<code>a[5000] → 0x804e360</code>。两个地址之差 <code>0x804e360 − 0x8049d10 = 0x4650 = 18000 = (5000 − 500) × 4</code> 恰好等于下标差乘 <code>sizeof(int)</code> —— 说明两条汇编彼此自洽；由此可反推数组基址 <code>a = 0x8049540</code>。上面的模拟器默认就用这个反推值，你可以把下标改成 500 或 5000 验证它能不能还原出课件里的两个地址。
+    </div>
+  </section>
+
+  <!-- ================= 6 ================= -->
+  <section id="s6">
+    <h2>6. 进程：一个正在运行的程序的实例<span class="srcref">原第 20–23、36 页</span></h2>
+    <p class="lede"><b>定义：进程（process）是一个正在运行的程序的实例。</b>课件称它是计算机科学中最深刻的思想之一 —— 它<b>不等于</b>「程序」，也不等于「处理器」。进程给每个程序提供两个关键抽象，而这两个抽象都靠内核机制造出来。</p>
+
+    <h3>6.1 两个抽象与提供它们的机制<span class="srcref">原第 20 页</span></h3>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>抽象</th><th>程序看到的现象</th><th>内核机制</th></tr>
+      <tr><td><b>逻辑控制流</b><br><span class="en">Logical control flow</span></td><td>每个程序<b>看起来独占 CPU</b> —— 好像自己的指令一条接一条地往下走，中间没有别人的指令插进来</td><td><b>上下文切换</b><br><span class="en">context switching</span></td></tr>
+      <tr><td><b>私有地址空间</b><br><span class="en">Private address space</span></td><td>每个程序<b>看起来独占主存</b> —— 好像整片内存只有自己在用</td><td><b>虚拟内存</b><br><span class="en">virtual memory</span></td></tr>
+    </table></div>
+    <p>课件第 20 页右侧画的是同一个地址空间的四个区：从低地址到高地址依次是 <b>Code（代码）→ Data（数据）→ Heap（堆）→ Stack（栈）</b>，再加上寄存器 —— 每个进程都有<b>各自的一份</b>。</p>
+
+    <h3>6.2 多进程的假象<span class="srcref">原第 21 页</span></h3>
+    <p>「多处理」的第一张图是纯粹的假象：内存里并排站着许多份 Memory（Stack / Heap / Data / Code）与 CPU（Registers），每个进程<strong>都以为自己有一台完整的机器</strong>。现实是：计算机同时在跑很多进程 —— 一个或多个用户的应用（浏览器、邮件客户端、编辑器……），再加上后台任务（监视网络与 I/O 设备）。</p>
+
+    <h3>6.3 现实：一台机器上 123 个进程<span class="srcref">原第 22–23 页</span></h3>
+    <p>课件用 Mac 上的 <code>top</code> 截图说明「同时有多少个进程」，并把每个进程用一个 <b>PID（Process ID）</b>标识。截图的摘要行与表格重建如下（只保留最能说明问题的几列）：</p>
+    <div class="formula" style="text-align:left;font-size:14.5px">
+      <div>Processes: 123 total, 5 running, 9 stuck, 109 sleeping, 611 threads</div>
+      <div>Load Avg: 1.03, 1.13, 1.14&nbsp;&nbsp;&nbsp;CPU usage: 3.27% user, 5.15% sys, 91.56% idle</div>
+      <div>MemRegions: 27568 total, 1127K resident, 35M private, 494M shared.</div>
+      <div>PhysMem: 1039M wired, 1374M active, 1062M inactive, 4076M used, 18M free.</div>
+    </div>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th class="mono">PID</th><th>COMMAND</th><th class="mono">%CPU</th><th class="mono">TIME</th><th class="mono">#TH</th></tr>
+      <tr><td class="mono">9426</td><td class="mono">bash</td><td class="mono">0.0</td><td class="mono">00:00:11.1</td><td class="mono">0</td></tr>
+      <tr><td class="mono">84285</td><td class="mono">xterm</td><td class="mono">0.0</td><td class="mono">00:00:35.1</td><td class="mono">0</td></tr>
+      <tr><td class="mono">54737</td><td class="mono">top</td><td class="mono">0.0</td><td class="mono">6:05.1</td><td class="mono">0</td></tr>
+      <tr><td class="mono">54719</td><td class="mono">automountd</td><td class="mono">0.0</td><td class="mono">00:00:02.7</td><td class="mono">1</td></tr>
+      <tr><td class="mono">54701</td><td class="mono">ocspd</td><td class="mono">0.0</td><td class="mono">00:00:05.4</td><td class="mono">1</td></tr>
+    </table></div>
+    <p>第 23 页开始讲「真实的机器在干什么」：<b>单处理器并发执行多个进程</b>；各进程的执行是<b>交错的</b>（多任务，multitasking）；地址空间由虚拟内存系统管理（本课后面会讲）；<b>不在执行的进程，它的寄存器值被保存进内存</b>。</p>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：进程计数校验器 —— 改一改 top 摘要里的数字，看它们是不是自洽</span>
+        <label class="fld">total <input type="number" id="topT" value="123" min="0" step="1"></label>
+        <label class="fld">running <input type="number" id="topR" value="5" min="0" step="1"></label>
+        <label class="fld">stuck <input type="number" id="topS" value="9" min="0" step="1"></label>
+        <label class="fld">sleeping <input type="number" id="topL" value="109" min="0" step="1"></label>
+        <label class="fld">threads <input type="number" id="topTh" value="611" min="0" step="1"></label>
+        <button class="p" id="topGo">校验</button>
+        <button class="sm" data-top="t=123;r=5;s=9;l=109">课件值</button>
+        <button class="sm" data-top="t=123;r=5;s=9;l=100">改一个数（不闭合）</button>
+      </div>
+      <div id="topOut"></div>
+    </div>
+
+    <h3>6.4 进程的三个状态<span class="srcref">原第 36 页</span></h3>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>状态</th><th>含义（课件原文展开）</th></tr>
+      <tr><td><b>运行 Running</b></td><td>进程<b>正在执行</b>，或者<b>等待被执行</b>、最终会被内核调度（即被选中执行）</td></tr>
+      <tr><td><b>停止 Stopped</b></td><td>进程的执行被<b>挂起</b>，在收到进一步的指示之前不会被调度（下一讲讲信号时会用到）</td></tr>
+      <tr><td><b>终止 Terminated</b></td><td>进程<b>永久停止</b></td></tr>
+    </table></div>
+    <p>注意 Running 的定义里包含「已就绪但还没上 CPU」这一档：从程序员视角看，它和「正在执行」不必区分 —— 区分它们的是内核的调度器，不是你的程序。</p>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：进程状态机 —— 点事件，看进程在三个状态之间怎么走</span>
+        <select class="fld" id="psEvt" style="font-family:var(--font-mono)"></select>
+        <button class="p" id="psGo">施加事件</button>
+        <button class="sm" id="psReset">复位</button>
+        <button class="sm" data-ps="fork">fork（创建）</button>
+        <button class="sm" data-ps="sched">被调度上 CPU</button>
+        <button class="sm" data-ps="stop">SIGSTOP</button>
+        <button class="sm" data-ps="cont">SIGCONT</button>
+        <button class="sm" data-ps="exit">调用 exit(0)</button>
+      </div>
+      <div id="psOut"></div>
+    </div>
+
+    <div class="box"><div class="t">「已终止」还没结束：僵死状态</div>
+      进程终止后并不立刻消失 —— 如果父进程还没收割它，它会以「僵死（zombie）」的形态继续占着系统的退出状态与若干 OS 表项。第 10 节会把这件事讲透（课件把这一节放在「进程控制」里，这里先与「三个状态」一起记）。
+    </div>
+  </section>
+  <!-- ================= 7 ================= -->
+  <section id="s7">
+    <h2>7. 复用 CPU：上下文切换与并发<span class="srcref">原第 23–30 页</span></h2>
+    <p class="lede">「每个程序独占一台机器」是假象，造假的原材料是四样东西：<b>内存里给每个进程留的寄存器保存区</b>、<b>CPU 里那一组寄存器</b>、<b>地址空间</b>，以及一个<b>每隔几毫秒响一次的定时器</b>。这一节把假象拆开。</p>
+
+    <h3>7.1 传统现实：单核轮流执行<span class="srcref">原第 23–26 页</span></h3>
+    <p>课件用四页把同一张图改四遍，每页只标一句话 —— 四句话连起来就是上下文切换的全过程：</p>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>原页</th><th>这一步做什么</th></tr>
+      <tr><td class="mono">23</td><td>非执行进程的寄存器值<b>保存在内存里</b>（图中每个进程旁边多出一个 “Saved registers” 框）</td></tr>
+      <tr><td class="mono">24</td><td><b>把当前寄存器保存进内存</b></td></tr>
+      <tr><td class="mono">25</td><td><b>调度下一个进程</b>执行</td></tr>
+      <tr><td class="mono">26</td><td><b>装入保存的寄存器并切换地址空间</b>（这一步整体叫上下文切换，context switch）</td></tr>
+    </table></div>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：上下文切换模拟器 —— 单核上三个进程轮流跑，寄存器在 CPU 与内存之间来回搬</span>
+        <button class="p" id="mpIrq">① 时钟中断：把当前寄存器保存进内存</button>
+        <button class="p" id="mpSched">② 调度下一个进程</button>
+        <button class="p" id="mpLoad">③ 装入保存的寄存器 + 切换地址空间</button>
+        <button class="sm" id="mpAuto">自动跑一轮</button>
+        <button class="sm" id="mpReset">复位</button>
+      </div>
+      <div id="mpOut"></div>
+    </div>
+
+    <h3>7.2 现代现实：多核<span class="srcref">原第 27 页</span></h3>
+    <ul>
+      <li>一颗芯片上有<b>多个 CPU</b>；</li>
+      <li>它们<b>共享主存</b>（以及部分缓存）；</li>
+      <li><b>每个核可以执行一个独立的进程</b> —— 于是「同时」在某种意义上成了真的，但进程数通常远大于核数；</li>
+      <li>处理器（进程？）到核心的<b>调度由内核完成</b>。</li>
+    </ul>
+
+    <h3>7.3 并发与顺序：靠时间重叠来判定<span class="srcref">原第 28–29 页</span></h3>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>说法</th><th>课件原文</th></tr>
+      <tr><td><b>逻辑控制流</b></td><td>每个进程都是一条逻辑控制流</td></tr>
+      <tr><td><b>并发 concurrent</b></td><td>两个进程的控制流<b>在时间上重叠</b>，它们就是并发的</td></tr>
+      <tr><td><b>顺序 sequential</b></td><td>否则它们就是顺序的</td></tr>
+    </table></div>
+    <p>课件给的例子（单核上跑 A、B、C 三个进程）：<b>并发：A &amp; B、A &amp; C</b>；<b>顺序：B &amp; C</b>。第 29 页「用户视角」再补一句：并发进程的控制流在物理上是<b>互不重叠</b>的，但我们<b>可以把它们想成在互相并行地运行</b>。</p>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：并发 / 顺序判定器 —— 输入三个进程的运行区间，页面按「时间是否重叠」逐对判定并画时间轴</span>
+        <label class="fld">A <input type="text" id="ccA" value="0,6" size="8" spellcheck="false"></label>
+        <label class="fld">B <input type="text" id="ccB" value="0,3" size="8" spellcheck="false"></label>
+        <label class="fld">C <input type="text" id="ccC" value="4,8" size="8" spellcheck="false"></label>
+        <button class="p" id="ccGo">判定</button>
+        <button class="sm" data-cc="a=0,6;b=0,3;c=4,8">课件例（A&amp;B、A&amp;C 并发，B&amp;C 顺序）</button>
+        <button class="sm" data-cc="a=0,3;b=3,6;c=6,9">完全顺序</button>
+        <button class="sm" data-cc="a=0,6;b=2,8;c=1,9">两两都并发</button>
+      </div>
+      <div id="ccOut"></div>
+    </div>
+
+    <h3>7.4 上下文切换发生在什么代码里<span class="srcref">原第 30 页</span></h3>
+    <p>课件第 30 页画出两个进程的甘特图：<b>user code → kernel code（上下文切换）→ user code</b>，切换来回发生。三条要点：</p>
+    <ul>
+      <li>进程由内核管理，内核是一块<b>共享的、常驻内存的 OS 代码</b>；</li>
+      <li><b>重要：内核不是独立的进程</b> —— 它作为某个<b>已存在的进程的一部分</b>运行；</li>
+      <li>控制流通过<b>上下文切换</b>从一个进程传到另一个进程。</li>
+    </ul>
+
+    <div class="box warn"><div class="t">「内核不是进程」这句话的三个推论</div>
+      ① 内核代码没有自己的地址空间，它借用当前进程的页表（所以第 5 节的缺页处理「就发生在你的进程里」）；② 定时器中断打断的是某个具体进程，内核是在这个进程的上下文里把控制权交给调度器的；③ 用户看到的每条逻辑控制流都是「用户代码 + 内核代码」交替的连续体，不是两样东西。
+    </div>
+  </section>
+
+  <!-- ================= 8 ================= -->
+  <section id="s8">
+    <h2>8. 进程控制：错误处理、PID 与 fork<span class="srcref">原第 32–42 页</span></h2>
+    <p class="lede">从这里开始写真正的系统编程代码。课件先立一条规矩（检查每个系统调用），再给出创建与终止进程的三个函数（<code>fork</code> / <code>exit</code> / <code>wait</code>），最后用它把「一个程序变成两个」这件事讲透。</p>
+
+    <h3>8.1 系统调用的错误处理<span class="srcref">原第 32–34 页</span></h3>
+    <p>课件第 32 页：<b>出错时，Linux 的系统级函数通常返回 <code>−1</code>，并把全局变量 <code>errno</code> 设成出错原因。</b>接着是一条「金科玉律」：</p>
+    <div class="box ok"><div class="t">Hard and fast rule（课件原文）</div>
+      你必须检查<b>每一个</b>系统级函数的返回状态；唯一的例外是那几个返回 <code>void</code> 的函数。
+    </div>
+    <p>课件随后给出三层简化写法：第 32 页直接在 <code>if</code> 里检查并打印 <code>strerror(errno)</code>；第 33 页抽出一个 <code>unix_error(char *msg)</code> 函数（<b>课件原注：csapp.c 里它是以 0 退出</b>）；第 34 页再进一步，用 Stevens 风格的<b>错误处理包装函数</b>，把检查藏进 <code>Fork()</code> 里，页面上直接写 <code>pid = Fork();</code>。课件同时提醒：这在真实应用里「一般不是你想要的做法」—— 不是所有场合都应该一出错就退出。</p>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：错误处理判定器 —— 填一个系统调用的返回值，看它算不算出错、该用哪种写法处理</span>
+        <label class="fld">返回值 <input type="text" id="errV" value="-1" size="10" spellcheck="false"></label>
+        <label class="fld">调用
+          <select id="errFn">
+            <option value="fork">fork()</option>
+            <option value="open">open()</option>
+            <option value="write">write()</option>
+            <option value="close">close()</option>
+            <option value="void">一个返回 void 的函数</option>
+          </select>
+        </label>
+        <button class="p" id="errGo">判定</button>
+        <button class="sm" data-err="v=0">返回 0</button>
+        <button class="sm" data-err="v=-1">返回 −1（出错）</button>
+        <button class="sm" data-err="v=63">返回 63（成功，正整数）</button>
+        <button class="sm" data-err="v=-1;fn=void">返回 void 的函数</button>
+      </div>
+      <div id="errOut"></div>
+    </div>
+
+    <h3>8.2 取得进程号<span class="srcref">原第 35 页</span></h3>
+    <div class="formula" style="text-align:left">
+      <div>pid_t getpid(void)&nbsp;&nbsp;&nbsp;/* 返回当前进程的 PID */</div>
+      <div>pid_t getppid(void)&nbsp;&nbsp;/* 返回父进程的 PID */</div>
+    </div>
+
+    <h3>8.3 fork：调用一次，返回两次<span class="srcref">原第 37–38 页</span></h3>
+    <p>父进程<b>调用 <code>fork</code></b> 创建一个新的、正在运行的<b>子进程</b>。它的返回值是这个函数最反直觉的地方：</p>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>返回值</th><th>谁收到</th><th>含义</th></tr>
+      <tr><td class="mono">&lt; 0</td><td>父进程</td><td>创建失败（出错，见 8.1 节）</td></tr>
+      <tr><td class="mono">= 0</td><td><b>子进程</b></td><td>「你是新创建的那个」</td></tr>
+      <tr><td class="mono">&gt; 0</td><td><b>父进程</b></td><td>新创建的子进程的 PID</td></tr>
+    </table></div>
+    <p>子进程<b>几乎与父进程完全相同</b>：</p>
+    <ul>
+      <li>得到父进程虚拟地址空间的一份<b>完全相同但相互独立</b>的副本；</li>
+      <li>得到父进程<b>打开的文件描述符</b>的相同副本；</li>
+      <li>但 PID 与父进程不同。</li>
+    </ul>
+    <p>第 38 页的「概念视图」：<b>完整复制执行状态 → 指定一个是父、一个是子 → 恢复父或子的执行</b>。课件对 <code>fork</code> 的评价是：它有意思（也常常令人困惑），因为它<b>被调用一次，却返回两次</b>。</p>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：fork 进程数计算器 —— 选一种 fork 结构，页面模拟出进程树并数出进程数</span>
+        <label class="fld">结构
+          <select id="fkPat">
+            <option value="chain">连续 n 次 fork()（课件第 46 页 fork2）</option>
+            <option value="parent">fork() != 0 里再 fork（课件第 47 页 fork4）</option>
+            <option value="child">fork() == 0 里再 fork（课件第 48 页 fork5）</option>
+          </select>
+        </label>
+        <label class="fld">n <input type="number" id="fkN" value="2" min="0" max="6" step="1"></label>
+        <button class="p" id="fkGo">模拟</button>
+        <button class="sm" data-fk="pat=chain;n=2">两次连续 fork</button>
+        <button class="sm" data-fk="pat=parent;n=2">父分支嵌套 2 层</button>
+        <button class="sm" data-fk="pat=child;n=2">子分支嵌套 2 层</button>
+        <button class="sm" data-fk="pat=chain;n=3">三次连续 fork</button>
+      </div>
+      <div id="fkOut"></div>
+    </div>
+
+    <h3>8.4 fork 的两个例题：谁先打印说不准<span class="srcref">原第 39–42 页</span></h3>
+    <div class="formula" style="text-align:left">
+      <div>int main(int argc, char** argv) {</div>
+      <div>&nbsp;&nbsp;pid_t pid; int x = 1;</div>
+      <div>&nbsp;&nbsp;pid = Fork();</div>
+      <div>&nbsp;&nbsp;if (pid == 0) {&nbsp;&nbsp;/* Child */</div>
+      <div>&nbsp;&nbsp;&nbsp;&nbsp;printf("child : x=%d\n", ++x); return 0;</div>
+      <div>&nbsp;&nbsp;}</div>
+      <div>&nbsp;&nbsp;/* Parent */</div>
+      <div>&nbsp;&nbsp;printf("parent: x=%d\n", --x); return 0;</div>
+      <div>}</div>
+    </div>
+    <p>课件连跑四次，打印顺序两种都出现过（父先两次、子先两次）：</p>
+    <div class="formula" style="text-align:left">
+      <div>linux&gt; ./fork&nbsp;&nbsp;&nbsp;parent: x=0&nbsp;&nbsp;child : x=2&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;（另一种：child : x=2 先出现）</div>
+    </div>
+    <p>课件提醒这只是「看起来随机的两种顺序」，实际由调度器决定。第 40–41 页更狠：写一个 <code>fork</code> 的替身（<code>myfork.c</code>），在父、子两条分支里插入<b>随机延迟</b>（<code>ms_sleep(parent_delay)</code> / <code>ms_sleep(child_delay)</code>），把「谁先跑」的概率摊平，从而暴露程序里潜在的竞争条件。</p>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：forkx2 值推演器 —— 两个进程各自改自己的 x，互不影响（课件第 42 页）</span>
+        <button class="p" id="fxStepP">父进程执行一行</button>
+        <button class="p" id="fxStepC">子进程执行一行</button>
+        <button class="sm" id="fxAuto">让它自己跑完</button>
+        <button class="sm" id="fxReset">复位</button>
+      </div>
+      <div id="fxOut"></div>
+    </div>
+
+    <div class="box ok"><div class="t">为什么 <code>x=-1</code> 会出现</div>
+      第 42 页的 <code>forkx2</code> 与第 39 页的 <code>fork</code> 是同一段代码，只是把两条 <code>printf</code> 各写了两遍：子进程里 <code>++x</code> 跑两次（1 → 2 → 3），父进程里 <code>--x</code> 跑两次（1 → 0 → −1），所以输出是 <code>parent: x=0</code>、<code>parent: x=-1</code>、<code>child : x=2</code>、<code>child : x=3</code> 这四行。两个进程的 <code>x</code> 是<b>各自地址空间里的两份</b>，改一个不影响另一个 —— 这正是第 6 节「私有地址空间」的直接后果。
+    </div>
+  </section>
+  <!-- ================= 9 ================= -->
+  <section id="s9">
+    <h2>9. 进程图与 fork 输出<span class="srcref">原第 43–48 页</span></h2>
+    <p class="lede">前面已经看到「谁先打印说不准」。这一节给出判断「哪些输出<b>可能</b>发生、哪些<b>不可能</b>」的工具：<b>进程图</b>。它把并发程序里唯一确定的东西 —— 偏序 —— 画出来，剩下的交给拓扑排序。</p>
+
+    <h3>9.1 进程图：把「happens before」画出来<span class="srcref">原第 43 页</span></h3>
+    <ul>
+      <li>进程图（process graph）是刻画并发程序中语句<b>偏序</b>的有用工具；</li>
+      <li>每个顶点是<b>一条语句的执行</b>；</li>
+      <li><code>a → b</code> 表示 <b>a 在 b 之前发生</b>；</li>
+      <li>边可以用<b>变量的当前值</b>标注；</li>
+      <li><code>printf</code> 顶点可以用<b>输出</b>标注；</li>
+      <li>每张图都从一个<b>没有入边的顶点</b>开始。</li>
+    </ul>
+    <p>关键结论：<b>图的任意一个拓扑排序都对应一个可行的全序</b> —— 所谓全序，就是「所有边都从左指向右」的顶点排列。反过来，违反任意一条边的排列都<b>不可能</b>出现。</p>
+
+    <h3>9.2 例题的进程图：六个顶点<span class="srcref">原第 44–45 页</span></h3>
+    <p>课件把第 39 页 <code>fork.c</code> 的执行过程画成六个顶点，并重新标号为 <code>a</code>–<code>f</code>：</p>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>顶点</th><th>对应的执行</th><th>前置</th></tr>
+      <tr><td class="mono">a</td><td><code>main</code> 开始执行（<code>int x = 1;</code>）</td><td>—</td></tr>
+      <tr><td class="mono">b</td><td><code>fork</code>（<code>pid = Fork();</code>）</td><td class="mono">a</td></tr>
+      <tr><td class="mono">c</td><td>父进程 printf：输出 <code>parent: x=0</code></td><td class="mono">b</td></tr>
+      <tr><td class="mono">d</td><td>父进程 exit</td><td class="mono">c</td></tr>
+      <tr><td class="mono">e</td><td>子进程 printf：输出 <code>child : x=2</code></td><td class="mono">b</td></tr>
+      <tr><td class="mono">f</td><td>子进程 exit</td><td class="mono">e</td></tr>
+    </table></div>
+    <p>课件的重标号图给出的两条排序：<b>可行全序 <code>a b e c f d</code></b>（子进程先打印，正是第 39 页第 2 次运行的顺序）、<b>不可行全序 <code>a b f c e d</code></b>（<code>f</code> 跑到 <code>e</code> 前面，违反了 <code>e → f</code>）。</p>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：拓扑排序判定器 —— 输入 a–f 的一个排列，看它是不是可行的全序</span>
+        <label class="fld">排列 <input type="text" id="pgIn" value="a b e c f d" size="18" spellcheck="false"></label>
+        <button class="p" id="pgGo">判定</button>
+        <button class="sm" data-pg="a b e c f d">课件：可行</button>
+        <button class="sm" data-pg="a b f c e d">课件：不可行</button>
+        <button class="sm" data-pg="a b c e d f">另一种可行序</button>
+        <button class="sm" data-pg="b a e c f d">把 main 放到 fork 后面</button>
+      </div>
+      <div id="pgOut"></div>
+    </div>
+
+    <h3>9.3 三道 fork 例题：可行与不可行输出<span class="srcref">原第 46–48 页</span></h3>
+    <p>三页课件各给一个程序、两段输出：左边是<b>可行</b>的（确实可能打印出来），右边是<b>不可行</b>的。先把它们的结构并排看一遍：</p>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>原页</th><th>程序</th><th>打印次数（由模型现算）</th><th>课件的不可行输出</th></tr>
+      <tr><td class="mono">46</td><td class="mono">fork2()：L0 / fork / L1 / fork / Bye</td><td class="mono">L0×1，L1×2，Bye×4</td><td class="mono">Bye 出现在<br>两个 L1 之前</td></tr>
+      <tr><td class="mono">47</td><td class="mono">fork4()：L0 / if(fork()!=0){L1 / if(fork()!=0){L2}} / Bye</td><td class="mono">L0×1，L1×1，L2×1，Bye×3</td><td class="mono">L2 排在三个<br>Bye 之后</td></tr>
+      <tr><td class="mono">48</td><td class="mono">fork5()：L0 / if(fork()==0){L1 / if(fork()==0){L2}} / Bye</td><td class="mono">L0×1，L1×1，L2×1，Bye×3</td><td class="mono">L2 排在所有<br>Bye 之后</td></tr>
+      <tr><td class="mono">55</td><td class="mono">fork9()：fork 后子进程打印 HC 并 exit，父进程打印 HP → wait → CT，再打印 Bye</td><td class="mono">HC×1，HP×1，CT×1，Bye×1</td><td class="mono">HC 排在 CT<br>之后</td></tr>
+    </table></div>
+    <p>「由模型现算」的意思是：这些次数不是抄来的，而是页面把程序按 fork 语义展开成<b>进程树</b>后数出来的 —— 展开的同时还给每个进程标出了它的输出序列与创建时刻，下面这个工具就干这件事。</p>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：fork 输出可行性判定器 —— 选程序、给一段输出，页面判定它是否可能由该程序打印出来</span>
+        <label class="fld">程序
+          <select id="fjProg"></select>
+        </label>
+        <label class="fld" style="flex:1 1 420px">输出（每行/每逗号一项）
+          <input type="text" id="fjSeq" value="L0, L1, Bye, Bye, L1, Bye, Bye" size="46" spellcheck="false" style="flex:1 1 320px">
+        </label>
+        <button class="p" id="fjGo">判定</button>
+        <button class="sm" data-fj="prog=fork2;seq=L0 L1 Bye Bye L1 Bye Bye">课件 46 页：可行</button>
+        <button class="sm" data-fj="prog=fork2;seq=L0 Bye L1 Bye L1 Bye Bye">课件 46 页：不可行</button>
+        <button class="sm" data-fj="prog=fork4;seq=L0 L1 Bye Bye L2 Bye">课件 47 页：可行</button>
+        <button class="sm" data-fj="prog=fork4;seq=L0 Bye L1 Bye Bye L2">课件 47 页：不可行</button>
+        <button class="sm" data-fj="prog=fork5;seq=L0 Bye L1 L2 Bye Bye">课件 48 页：可行</button>
+        <button class="sm" data-fj="prog=fork5;seq=L0 Bye L1 Bye Bye L2">课件 48 页：不可行</button>
+        <button class="sm" data-fj="prog=fork9;seq=HC HP CT Bye">课件 55 页：可行</button>
+        <button class="sm" data-fj="prog=fork9;seq=HP CT Bye HC">课件 55 页：不可行</button>
+      </div>
+      <div id="fjOut"></div>
+    </div>
+
+    <div class="box warn"><div class="t">判定的规则只有两条</div>
+      ① 同一个进程打印出的东西，<b>顺序固定</b>（进程图里同一条链上的边）；② 子进程是<b>在父进程执行到 fork 那一刻</b>才诞生的，所以它打印的每一行都在「父进程 fork 之前的那些输出」之后（课件第 55 页的 <code>wait</code> 还会再加一条同步约束：父进程的 <code>CT</code> 必须等子进程退出）。两条规则能解释课件里全部六个「不可行」例子 —— 上面的工具就是按这两条在后台做搜索。
+    </div>
+  </section>
+
+  <!-- ================= 10 ================= -->
+  <section id="s10">
+    <h2>10. 终止、收割与等待<span class="srcref">原第 49–57 页</span></h2>
+    <p class="lede">进程怎么死、死了之后谁来收尾、父进程怎么等它 —— 三件事。<b>僵尸</b>（zombie）与<b>孤儿</b>（orphan）这两个词就是这里来的。</p>
+
+    <h3>10.1 终止进程<span class="srcref">原第 49 页</span></h3>
+    <p>进程会因为三个原因之一变成「终止」状态：<b>① 收到一个默认动作是终止的信号</b>（下一讲）、<b>② 从 <code>main</code> 返回</b>、<b>③ 调用 <code>exit</code> 函数</b>。</p>
+    <div class="formula" style="text-align:left">
+      <div>void exit(int status)</div>
+    </div>
+    <ul>
+      <li>以退出状态 <code>status</code> 终止；</li>
+      <li>约定：正常返回状态是 <b>0</b>，出错时<b>非零</b>；</li>
+      <li>另一种显式设置退出状态的方法，就是<b>从 <code>main</code> 返回一个整数值</b>；</li>
+      <li><b><code>exit</code> 被调用一次，但永不返回。</b></li>
+    </ul>
+
+    <h3>10.2 收割子进程：僵尸与孤儿<span class="srcref">原第 50 页</span></h3>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>概念</th><th>课件的说法</th></tr>
+      <tr><td><b>为什么需要收割</b></td><td>进程终止后<b>仍然占用系统资源</b>：退出状态、各种 OS 表项</td></tr>
+      <tr><td><b>僵尸 zombie</b></td><td>处于这种状态的进程叫「僵尸」—— 课件的形容是「活着的尸体，半生半死」</td></tr>
+      <tr><td><b>收割 reaping</b></td><td>由<b>父进程</b>对已终止的子进程执行（用 <code>wait</code> 或 <code>waitpid</code>）：父进程拿到退出状态信息，<b>内核随后删除僵尸子进程</b></td></tr>
+      <tr><td><b>父进程不收割呢</b></td><td>任何父进程在未收割子进程的情况下终止，<b>孤儿</b>子进程应当由 <code>init</code> 进程（<code>pid == 1</code>）收割 —— 除非 <code>ppid == 1</code>！那就得重启了……</td></tr>
+      <tr><td><b>什么时候必须显式收割</b></td><td>只有<b>长期运行</b>的进程才需要，比如 shell 与服务器</td></tr>
+    </table></div>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：僵尸 / 孤儿生命周期模拟器 —— 逐阶段看 ps 输出，对照课件第 51、52 页的快照</span>
+        <div class="seg" id="zomSeg">
+          <button class="on" data-zom="7">僵尸：父进程不收割（forks 7）</button>
+          <button data-zom="8">孤儿：父进程先终止（forks 8）</button>
+        </div>
+        <button class="sm" id="zomPrev">上一步</button>
+        <button class="p" id="zomNext">下一步</button>
+        <button class="sm" id="zomReset">复位</button>
+      </div>
+      <div id="zomOut"></div>
+    </div>
+
+    <h3>10.3 wait：与子进程同步<span class="srcref">原第 53–55 页</span></h3>
+    <div class="formula" style="text-align:left">
+      <div>int wait(int *child_status)</div>
+    </div>
+    <ul>
+      <li>挂起当前进程，<b>直到它的某个子进程终止</b>；</li>
+      <li><b>作为系统调用实现</b>（内核在等待期间可以跑别的进程 —— 课件第 53 页特别画出「以及可能还有别的用户进程，包括父进程的子进程」）；</li>
+      <li>返回值是<b>终止的那个子进程的 pid</b>；</li>
+      <li>如果 <code>child_status != NULL</code>，它指向的整数会被设成一个<b>指示子进程终止原因与退出状态</b>的值，用 <code>wait.h</code> 里的宏来解读：<code>WIFEXITED</code>、<code>WEXITSTATUS</code>、<code>WIFSIGNALED</code>、<code>WTERMSIG</code>、<code>WIFSTOPPED</code>、<code>WSTOPSIG</code>、<code>WIFCONTINUED</code>。</li>
+    </ul>
+    <p>课件第 55 页的例子（<code>fork9</code>）：子进程打印 <code>HC</code> 后 <code>exit(0)</code>；父进程打印 <code>HP</code>、<code>wait(&amp;child_status)</code>、打印 <code>CT</code>，最后两者（其实是父进程）打印 <code>Bye</code>。可行的输出是 <code>HC HP CT Bye</code> 或 <code>HP HC CT Bye</code>；不可行的是 <code>HP CT Bye HC</code>。</p>
+
+    <h3>10.4 waitpid：等一个指定的进程<span class="srcref">原第 56–57 页</span></h3>
+    <div class="formula" style="text-align:left">
+      <div>pid_t waitpid(pid_t pid, int *status, int options)</div>
+    </div>
+    <ul>
+      <li>挂起当前进程，<b>直到指定进程终止</b>；</li>
+      <li>有各种选项（见教材）；<code>options = 0</code> 时就是「等这个 pid」；</li>
+      <li>如果多个子进程都已经完成，<code>wait</code> 会以<b>任意顺序</b>取（课件第 56 页）；要用 <code>WIFEXITED</code>/<code>WEXITSTATUS</code> 才能知道拿到的是谁、退出状态是多少。</li>
+    </ul>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：wait / waitpid 收割顺序模拟器 —— N 个子进程各自 exit(100+i)，看父进程按什么顺序收</span>
+        <label class="fld">子进程数 N <input type="number" id="wtN" value="5" min="1" max="8" step="1"></label>
+        <label class="fld">收割方式
+          <select id="wtMode">
+            <option value="wait">wait()：任意顺序（可复现随机）</option>
+            <option value="desc">waitpid(pid[i])：i 从 N−1 递减（课件 fork11）</option>
+            <option value="asc">waitpid(pid[i])：i 从 0 递增</option>
+          </select>
+        </label>
+        <button class="p" id="wtGo">模拟</button>
+        <button class="sm" data-wt="n=5;mode=desc">课件 fork11（N=5，逆序）</button>
+        <button class="sm" data-wt="n=3;mode=wait">wait 任意顺序（N=3）</button>
+        <button class="sm" data-wt="n=5;mode=asc">waitpid 正序</button>
+      </div>
+      <div id="wtOut"></div>
+    </div>
+
+    <div class="box ok"><div class="t">退出状态是被「打包」过的</div>
+      <code>wait</code> 交回来的不是退出码本身，而是一个状态字；<code>WEXITSTATUS(status)</code> 才把它解出来。上面这个工具会同时显示状态字与解码结果，你也能看到 <code>WIFEXITED</code> 为假时（进程被信号杀死）那一支应该怎么处理 —— 下一讲讲信号时还会回来。
+    </div>
+  </section>
+
+  <!-- ================= 11 ================= -->
+  <section id="s11">
+    <h2>11. execve、程序启动栈与总结<span class="srcref">原第 58–62 页</span></h2>
+    <p class="lede"><code>fork</code> 造出的是「自己的副本」；要让一个进程<b>变成另一个程序</b>，得用 <code>execve</code>。这一节还给出新程序启动时栈上到底摆了什么 —— 这是理解 <code>main(argc, argv, envp)</code> 参数从哪来的最后一环。</p>
+
+    <h3>11.1 execve：在当前进程里加载并运行<span class="srcref">原第 58 页</span></h3>
+    <div class="formula" style="text-align:left">
+      <div>int execve(char *filename, char *argv[], char *envp[])</div>
+    </div>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>参数</th><th>含义（课件原文展开）</th></tr>
+      <tr><td class="mono">filename</td><td>要加载并运行的可执行文件；可以是目标文件，也可以是<b>以 <code>#!</code> 解释器开头的脚本文件</b>（例如 <code>#!/bin/bash</code>）</td></tr>
+      <tr><td class="mono">argv[]</td><td>参数列表；按约定 <code>argv[0] == filename</code></td></tr>
+      <tr><td class="mono">envp[]</td><td>环境变量列表，形如 <code>"name=value"</code> 的字符串（例如 <code>USER=droh</code>）；相关函数 <code>getenv</code>、<code>putenv</code>、<code>printenv</code></td></tr>
+    </table></div>
+    <ul>
+      <li>它<b>覆盖代码、数据与栈</b>；</li>
+      <li>但<b>保留 PID、打开的文件与信号上下文</b>；</li>
+      <li><b>调用一次，永不返回</b> —— 除非出错。</li>
+    </ul>
+
+    <h3>11.2 例：在子进程里执行 /bin/ls<span class="srcref">原第 59 页</span></h3>
+    <p>要用当前环境执行 <code>"/bin/ls –lt /usr/include"</code>：</p>
+    <div class="formula" style="text-align:left">
+      <div>myargv[0] = "/bin/ls"&nbsp;&nbsp;&nbsp;myargv[1] = "-lt"&nbsp;&nbsp;&nbsp;myargv[2] = "/usr/include"&nbsp;&nbsp;(argc == 3)</div>
+      <div>envp[0] = "USER=droh"&nbsp;&nbsp;…&nbsp;&nbsp;envp[n-1] = "PWD=/usr/droh"</div>
+      <div style="margin-top:10px">if ((pid = Fork()) == 0) {&nbsp;&nbsp;/* 子进程运行程序 */</div>
+      <div>&nbsp;&nbsp;if (execve(myargv[0], myargv, environ) &lt; 0) {</div>
+      <div>&nbsp;&nbsp;&nbsp;&nbsp;printf("%s: Command not found.\n", myargv[0]);</div>
+      <div>&nbsp;&nbsp;&nbsp;&nbsp;exit(1);</div>
+      <div>&nbsp;&nbsp;}</div>
+      <div>}</div>
+    </div>
+
+    <h3>11.3 新程序启动时的栈结构<span class="srcref">原第 60 页</span></h3>
+    <p>从<b>栈底（高地址）</b>到<b>栈顶（低地址）</b>依次是：</p>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>位置</th><th>内容</th><th>指针</th></tr>
+      <tr><td>栈底</td><td>环境变量字符串（以 <code>\0</code> 结尾）</td><td>—</td></tr>
+      <tr><td>↓</td><td>命令行参数字符串（以 <code>\0</code> 结尾）</td><td>—</td></tr>
+      <tr><td>↓</td><td><code>envp[]</code> 指针数组：<code>envp[n] == NULL</code>、<code>envp[n-1]</code>、…、<code>envp[0]</code></td><td class="mono">%rdx、全局 environ</td></tr>
+      <tr><td>↓</td><td><code>argv[]</code> 指针数组：<code>argv[argc] = NULL</code>、<code>argv[argc-1]</code>、…、<code>argv[0]</code></td><td class="mono">%rsi</td></tr>
+      <tr><td>↓</td><td><code>argc</code>（在 <code>libc_start_main</code> 的栈帧里）</td><td class="mono">%rdi</td></tr>
+      <tr><td>栈顶</td><td><code>main</code> 未来的栈帧</td><td>—</td></tr>
+    </table></div>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：新程序启动栈布局构建器 —— 改命令行与环境变量，页面现算栈上摆了什么</span>
+        <label class="fld" style="flex:1 1 380px">命令行 <input type="text" id="exCmd" value="/bin/ls -lt /usr/include" size="30" spellcheck="false" style="flex:1 1 260px"></label>
+        <label class="fld" style="flex:1 1 380px">环境变量（空格分隔） <input type="text" id="exEnv" value="USER=droh PWD=/usr/droh" size="30" spellcheck="false" style="flex:1 1 260px"></label>
+        <button class="p" id="exGo">构建</button>
+        <button class="sm" data-ex="cmd=/bin/ls -lt /usr/include;env=USER=droh PWD=/usr/droh">课件例</button>
+        <button class="sm" data-ex="cmd=./a.out 8 213">./a.out 8 213</button>
+        <button class="sm" data-ex="cmd=/bin/bash -c ls;env=HOME=/usr/droh">/bin/bash -c ls</button>
+      </div>
+      <div id="exOut"></div>
+    </div>
+
+    <h3>11.4 总结<span class="srcref">原第 61–62 页</span></h3>
+    <div class="grid g2">
+      <div class="card"><h5>异常（原第 61 页）</h5>
+        <ul style="margin:0;font-size:14.5px">
+          <li>需要非标准控制流的事件；</li>
+          <li>由<b>外部</b>产生（中断）或由<b>内部</b>产生（陷阱与故障）；</li>
+          <li>由 OS 内核处理，处理完可能返回下一条、重执行当前指令，或终止程序。</li>
+        </ul>
+        <h5 style="margin:12px 0 7px">进程（原第 61 页）</h5>
+        <ul style="margin:0;font-size:14.5px">
+          <li>任何时刻系统里都有多个活动进程；</li>
+          <li><b>单个核上任何时刻只有一个能执行</b>；</li>
+          <li>每个进程都看起来完全掌控处理器与私有内存空间。</li>
+        </ul>
+      </div>
+      <div class="card"><h5>进程控制（原第 62 页）</h5>
+        <ul style="margin:0;font-size:14.5px">
+          <li><b>孵化进程</b>：调用 <code>fork</code>；一次调用，两次返回；</li>
+          <li><b>进程完成</b>：调用 <code>exit</code>；一次调用，没有返回；</li>
+          <li><b>收割与等待</b>：调用 <code>wait</code> 或 <code>waitpid</code>；</li>
+          <li><b>加载并运行程序</b>：调用 <code>execve</code>（或其变体）；一次调用，（正常时）没有返回。</li>
+        </ul>
+        <p style="margin:8px 0 0;font-size:13.5px;color:var(--muted)">四个函数正好对应本讲的四节内容 —— 也是下一讲（ECF II：信号与非局部跳转）的地基。</p>
+      </div>
+    </div>
+
+    <h3>11.5 测验<span class="srcref">10 题</span></h3>
+    <p>每题选完立刻判分并给出解析，解析里写清了依据出自本讲的哪一节、哪一页。</p>
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：本讲测验</span>
+        <button class="sm" id="qzReset">重来</button>
+      </div>
+      <div id="qzOut"></div>
+    </div>
+  </section>
+</main>
+
+</div>
+
+<div class="footer">
+  本页由原课件 PDF 翻译整理而成 · 数值计算与可视化均为页面内实时计算 · 可对照原课件页码阅读。
+</div>
+<button class="totop" id="toTop">↑ 顶部</button>
+
+<script>
+"use strict";
+/* ============================================================
+   异常控制流：异常与进程（ICS 第 16 讲）· 交互式课件 —— 全部逻辑
+   约定：所有计算在页面内实时完成；无效输入必须给出提示而不是抛错。
+   顶层以下函数是「判分基准」，由 tools/verify_ics16.js 与独立参考实现
+   （以及真实 C 程序 fork/waitpid 实测）逐项比对：
+     forkModel / forkJudge / forkEnumerate / forkForkCount
+     topoViolations / topoEnumerate / topoCount
+     pageWalk / concurrentPair / stackLayout / syscallLookup
+     classifyExc / decodeWaitStatus / topCountCheck
+   ============================================================ */
+
+const $  = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const badBox = msg => `<div class="box bad"><div class="t">输入无效</div>${esc(msg)}</div>`;
+const kvAttr = str => {
+  const out = {};
+  String(str).split(';').forEach(part => {
+    const i = part.indexOf('=');
+    if (i > 0) out[part.slice(0, i).trim()] = part.slice(i + 1).trim();
+  });
+  return out;
+};
+/* 千分位 */
+const group = s => String(s).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+
+/* ---------- 渲染小工具 ---------- */
+const stepBox = (h, m, e, on) => `<div class="step${on === false ? '' : ' on'}"><div class="h">${h}</div>` +
+  (m ? `<div class="m">${m}</div>` : '') + (e ? `<div class="e">${e}</div>` : '') + '</div>';
+const chip = (cls, t) => `<span class="chip ${cls}">${t}</span>`;
+/* 解析整数（支持 0x… / 十进制 / 0b… / 下划线 / 负号），失败返回 null */
+function parseInt10(str, allowHex) {
+  const t = String(str).trim().replace(/[_\s]/g, '');
+  if (!t) return null;
+  if (allowHex && /^0[xX][0-9a-fA-F]+$/.test(t)) return Number(BigInt(t));
+  if (/^[+-]?\d+$/.test(t)) return Number(t);
+  return null;
+}
+/* 解析地址（BigInt，支持 0x…） */
+function parseAddr(str) {
+  const t = String(str).trim().replace(/[_\s]/g, '');
+  try {
+    if (/^0[xX][0-9a-fA-F]+$/.test(t)) return BigInt(t);
+    if (/^\d+$/.test(t)) return BigInt(t);
+  } catch (e) { return null; }
+  return null;
+}
+const hexAddr = v => '0x' + BigInt(v).toString(16).toUpperCase();
+const hx = n => (Number(n) & 0xffffffff).toString(16).toUpperCase();
+const hexByte = n => (Number(n) & 0xff).toString(16).padStart(2, '0');
+const hexByteU = n => (Number(n) & 0xff).toString(16).toUpperCase().padStart(2, '0');
+
+/* ============================================================
+   一、fork 进程树模型与「输出可行性」判定
+   ------------------------------------------------------------
+   程序用一棵「步骤树」描述，步骤类型：
+     { t:'print', l }              打印一行
+     { t:'fork', child:[…], parent:[…] }   fork：两条分支各自被执行
+     { t:'exit' }                  终止本进程（不再执行后续语句）
+     { t:'wait' }                  等待此前创建的子进程退出
+   与 C 语义一一对应：child 分支 = if (fork()==0) 的块，
+   parent 分支 = if (fork()!=0) 的块；fork 之后的语句由两条进程各走一遍。
+   ============================================================ */
+const P = l => ({ t: 'print', l });
+const F = o => ({ t: 'fork', child: (o && o.child) || [], parent: (o && o.parent) || [] });
+const EXIT = { t: 'exit' };
+const WAIT = { t: 'wait' };
+
+const FORK_PROGS = {
+  forkc: {
+    label: 'fork.c（原第 39、44 页）',
+    note: '父子各打印一行：子进程 ++x 得 2，父进程 --x 得 0。',
+    steps: [F({ child: [P('child : x=2'), EXIT], parent: [P('parent: x=0')] })],
+    alphabet: ['parent: x=0', 'child : x=2'],
+  },
+  forkx2: {
+    label: 'forkx2（原第 42 页）',
+    note: '同一段代码，两条 printf 各写两遍：父 1→0→−1，子 1→2→3。',
+    steps: [F({ child: [P('child : x=2'), P('child : x=3'), EXIT],
+               parent: [P('parent: x=0'), P('parent: x=-1')] })],
+    alphabet: ['parent: x=0', 'parent: x=-1', 'child : x=2', 'child : x=3'],
+  },
+  fork2: {
+    label: 'fork2()（原第 46 页：两次连续 fork）',
+    note: 'L0 在第一次 fork 之前打印一次；L1 被两个进程各打印一次；Bye 四个进程各一次。',
+    steps: [P('L0'), F({}), P('L1'), F({}), P('Bye')],
+    alphabet: ['L0', 'L1', 'Bye'],
+  },
+  fork4: {
+    label: 'fork4()（原第 47 页：fork 嵌在父分支里）',
+    note: '两次 fork 都在 if (fork() != 0) 里 —— 只有「父」那一支继续往下分叉。',
+    steps: [P('L0'), F({ parent: [P('L1'), F({ parent: [P('L2')] })] }), P('Bye')],
+    alphabet: ['L0', 'L1', 'L2', 'Bye'],
+  },
+  fork5: {
+    label: 'fork5()（原第 48 页：fork 嵌在子分支里）',
+    note: '两次 fork 都在 if (fork() == 0) 里 —— 分叉的是「子」那一支。',
+    steps: [P('L0'), F({ child: [P('L1'), F({ child: [P('L2')] })] }), P('Bye')],
+    alphabet: ['L0', 'L1', 'L2', 'Bye'],
+  },
+  fork9: {
+    label: 'fork9()（原第 55 页：wait 同步）',
+    note: '子进程打印 HC 后 exit；父进程打印 HP、wait、打印 CT，最后打印 Bye。',
+    steps: [F({ child: [P('HC'), EXIT], parent: [P('HP'), WAIT, P('CT')] }), P('Bye')],
+    alphabet: ['HC', 'HP', 'CT', 'Bye'],
+  },
+};
+
+/** 按 fork 语义展开程序 → { procs:[{id,parent,out,forkAt,forks,waits}], forks:次数, conds:偏序约束 }
+ *  out[i] 是第 i 个进程打印的标签序列；forkAt 是「父进程打印到第几行时发生的 fork」。 */
+function forkModelSteps(spec) {
+  const procs = [];
+  let forks = 0;
+  const newProc = parentId => {
+    const p = { id: procs.length, parent: parentId, out: [], forks: [], waits: [] };
+    procs.push(p);
+    return p;
+  };
+  const exec = (proc, frames) => {
+    while (frames.length && !proc.dead) {
+      const fr = frames[frames.length - 1];
+      if (fr.i >= fr.steps.length) { frames.pop(); continue; }
+      const st = fr.steps[fr.i++];
+      if (st.t === 'print') proc.out.push(st.l);
+      else if (st.t === 'exit') proc.dead = true;
+      else if (st.t === 'wait') proc.waits.push({ at: proc.out.length, kids: proc.forks.map(f => f.child) });
+      else if (st.t === 'fork') {
+        forks++;
+        const child = newProc(proc.id);
+        const childFrames = frames.map(f => ({ steps: f.steps, i: f.i }));
+        childFrames.push({ steps: st.child || [], i: 0 });
+        proc.forks.push({ child: child.id, at: proc.out.length });
+        if (st.parent && st.parent.length) frames.push({ steps: st.parent, i: 0 });
+        exec(child, childFrames);
+      }
+    }
+  };
+  exec(newProc(-1), [{ steps: spec.steps, i: 0 }]);
+  /* 偏序约束：(a 进程, a 行号) 必须先于 (b 进程, b 行号) */
+  const conds = [];
+  for (const p of procs) {
+    p.forks.forEach(f => { if (f.at >= 1) conds.push([p.id, f.at - 1, f.child, 0]); });
+    p.waits.forEach(w => {
+      if (w.at < p.out.length) w.kids.forEach(kid => {
+        if (procs[kid].out.length) conds.push([kid, procs[kid].out.length - 1, p.id, w.at]);
+      });
+    });
+  }
+  return { key: spec.key || '', label: spec.label || '', note: spec.note || '', procs, forks, conds,
+           alphabet: spec.alphabet || [], total: procs.reduce((s, p) => s + p.out.length, 0) };
+}
+function forkModel(key) {
+  const prog = FORK_PROGS[key];
+  return prog ? forkModelSteps({ key, label: prog.label, note: prog.note, steps: prog.steps, alphabet: prog.alphabet }) : null;
+}
+
+/** 进程数 / fork 被执行的次数（供「进程数计算器」与交叉验证用）。 */
+function forkForkCount(key) { const m = forkModel(key); return m ? { procs: m.procs.length, forks: m.forks } : null; }
+function forkJudge(key, tokens) { return forkJudgeModel(forkModel(key), tokens); }
+function forkEnumerate(key) { return forkEnumerateModel(forkModel(key)); }
+
+/** 判定：给定的一串输出，是否可能由该程序打印出来。
+ *  做法：把序列逐个记号地「派给」某个进程 —— 该进程必须在等这个记号（顺序约束），
+ *  且它此前创建它的 fork 点、以及它等过的子进程都已就绪（偏序约束）。带记忆化搜索。 */
+function forkJudgeModel(m, tokens) {
+  if (!m) return { ok: false, reason: '未知程序' };
+  const seq = tokens.map(s => String(s).trim()).filter(s => s !== '');
+  if (!seq.length) return { ok: false, reason: '没有输出内容' };
+  const P_ = m.procs.length;
+  if (seq.length !== m.total) {
+    return { ok: false, reason: `行数不对：该程序一共打印 ${m.total} 行，你给了 ${seq.length} 行`,
+             extra: m };
+  }
+  const memo = new Set();
+  const failed = [];
+  const search = (pos, idx) => {
+    if (idx === seq.length) return true;
+    const st = pos.join(',');
+    if (memo.has(st)) return false;
+    const tok = seq[idx];
+    for (let i = 0; i < P_; i++) {
+      const p = m.procs[i];
+      if (pos[i] >= p.out.length || p.out[pos[i]] !== tok) continue;
+      /* 该进程能否「现在」打印这一行：指向它的所有偏序前驱都要已完成 */
+      let ok = true;
+      for (const [pi, pj, ci, cj] of m.conds) {
+        if (ci === i && cj === pos[i] && !(pos[pi] > pj)) { ok = false; break; }
+      }
+      if (!ok) continue;
+      pos[i]++;
+      if (search(pos, idx + 1)) { pos[i]--; return true; }
+      pos[i]--;
+    }
+    memo.add(st);
+    if (failed.length < 1) failed.push(idx);
+    return false;
+  };
+  const ok = search(m.procs.map(() => 0), 0);
+  return { ok, model: m,
+           reason: ok ? '' : `走到第 ${failed[0] + 1} 行「${seq[failed[0]]}」时没有进程能接上`,
+           hint: ok ? '' : '要么行数/内容与程序对不上，要么违反了「同一进程内的先后」或「子进程不早于创建它的 fork」这两条约束' };
+}
+
+/** 枚举该程序全部可行的输出（去重的记号序列）。进程数与行数都很小，直接 DFS。 */
+function forkEnumerateModel(m) {
+  if (!m) return null;
+  const P_ = m.procs.length, out = new Set();
+  const seen = new Set();
+  const walk = (pos, acc) => {
+    if (acc.length === m.total) { out.add(acc.join('|')); return; }
+    const st = pos.join(',');
+    if (seen.has(st)) return;
+    let moved = false;
+    for (let i = 0; i < P_; i++) {
+      const p = m.procs[i];
+      if (pos[i] >= p.out.length) continue;
+      let ok = true;
+      for (const [pi, pj, ci, cj] of m.conds) {
+        if (ci === i && cj === pos[i] && !(pos[pi] > pj)) { ok = false; break; }
+      }
+      if (!ok) continue;
+      moved = true;
+      pos[i]++;
+      acc.push(p.out[pos[i] - 1]);
+      walk(pos, acc);
+      acc.pop();
+      pos[i]--;
+    }
+    if (!moved) seen.add(st);
+  };
+  walk(m.procs.map(() => 0), []);
+  return Array.from(out).map(s => s.split('|'));
+}
+
+/* ============================================================
+   二、进程图（原第 44–45 页）的拓扑排序
+   顶点与边来自课件重标号图：
+     a=main  b=fork  c=父 printf  d=父 exit  e=子 printf  f=子 exit
+     a→b ; b→c ; b→e ; c→d ; e→f
+   ============================================================ */
+const TOPO_NODES = [
+  { id: 'a', name: 'main', desc: 'main 开始执行（int x = 1;）' },
+  { id: 'b', name: 'fork', desc: 'pid = Fork();' },
+  { id: 'c', name: '父 printf', desc: '输出 parent: x=0' },
+  { id: 'd', name: '父 exit', desc: '父进程退出' },
+  { id: 'e', name: '子 printf', desc: '输出 child : x=2' },
+  { id: 'f', name: '子 exit', desc: '子进程退出' },
+];
+const TOPO_EDGES = [['a', 'b'], ['b', 'c'], ['b', 'e'], ['c', 'd'], ['e', 'f']];
+
+/** 判定一个排列是不是合法拓扑序；返回违反的边。 */
+function topoViolations(order) {
+  const pos = {};
+  (order || []).forEach((v, i) => { pos[v] = i; });
+  const missing = TOPO_NODES.map(n => n.id).filter(v => !(v in pos));
+  const extra = (order || []).filter(v => !TOPO_NODES.some(n => n.id === v));
+  const bad = TOPO_EDGES.filter(([x, y]) => (x in pos) && (y in pos) && !(pos[x] < pos[y]));
+  const n = (order || []).length;
+  return { ok: n === TOPO_NODES.length && !missing.length && !extra.length && !bad.length,
+           bad, missing, extra };
+}
+
+/** 枚举全部合法拓扑序（课件图规模很小，直接暴力 720 个排列）。 */
+function topoEnumerate() {
+  const ids = TOPO_NODES.map(n => n.id), out = [];
+  const perm = [], used = {};
+  const rec = () => {
+    if (perm.length === ids.length) { if (topoViolations(perm).ok) out.push(perm.slice()); return; }
+    for (const id of ids) {
+      if (used[id]) continue;
+      used[id] = 1; perm.push(id); rec(); perm.pop(); used[id] = 0;
+    }
+  };
+  rec();
+  return out;
+}
+const topoCount = () => topoEnumerate().length;
+
+/* ============================================================
+   三、缺页 / 非法地址（原第 17–18 页）
+   a[500]  → 0x8049d10   a[5000] → 0x804e360   两条汇编反推基址 0x8049540
+   ============================================================ */
+const PAGE_SIZE = 4096;
+
+function pageWalk(base, idx, len, where) {
+  if (typeof base !== 'bigint' || !Number.isInteger(idx) || !Number.isInteger(len)) return null;
+  if (idx < 0) return null;
+  const addr = base + BigInt(4 * idx);
+  const inRange = idx < len;
+  const page = addr / BigInt(PAGE_SIZE);
+  const off = addr % BigInt(PAGE_SIZE);
+  const lastAddr = base + BigInt(4 * (len - 1));
+  const out = {
+    addr, addrHex: hexAddr(addr), page, pageHex: hexAddr(page), off: Number(off),
+    inRange, lastAddrHex: hexAddr(lastAddr), size: len * 4,
+  };
+  if (!inRange) {
+    out.verdict = 'segv';
+    out.title = '非法内存引用 → SIGSEGV';
+  } else if (where === 'disk') {
+    out.verdict = 'fault';
+    out.title = '缺页（page fault）→ 装入后重新执行';
+  } else {
+    out.verdict = 'ok';
+    out.title = '命中：页已在物理内存，直接完成';
+  }
+  return out;
+}
+
+/* ============================================================
+   四、并发 / 顺序（原第 28–29 页）
+   口径：两个进程的运行区间 [s,e) 有公共时刻即为「并发」。
+   区间只在端点相接（如 [0,3] 与 [3,6]）不算重叠 —— 页面里也这样标注。
+   ============================================================ */
+function concurrentPair(a, b) {
+  const s = Math.max(a[0], b[0]), e = Math.min(a[1], b[1]);
+  return { overlap: s < e, lo: s, hi: e, len: Math.max(0, e - s) };
+}
+
+/* ============================================================
+   五、新程序启动时的栈布局（原第 59–60 页）
+   ============================================================ */
+function stackLayout(argv, envp) {
+  const a = (argv || []).filter(s => s !== '');
+  const e = (envp || []).filter(s => s !== '');
+  const aBytes = a.map(s => s.length + 1), eBytes = e.map(s => s.length + 1);
+  return {
+    argv: a, envp: e, argc: a.length, envc: e.length,
+    argBytes: aBytes, envBytes: eBytes,
+    argTotal: aBytes.reduce((x, y) => x + y, 0),
+    envTotal: eBytes.reduce((x, y) => x + y, 0),
+    /* 指针数组：envp[] 有 n+1 项（含结尾 NULL），argv[] 有 argc+1 项，再加一个 argc */
+    envSlots: e.length + 1, argSlots: a.length + 1,
+    totalSlots: e.length + 1 + a.length + 1 + 1,
+  };
+}
+
+/* ============================================================
+   六、系统调用表（原第 14 页）
+   ============================================================ */
+const SYSCALLS = [
+  { n: 0,  name: 'read',   dn: '读文件' },
+  { n: 1,  name: 'write',  dn: '写文件' },
+  { n: 2,  name: 'open',   dn: '打开文件' },
+  { n: 3,  name: 'close',  dn: '关闭文件' },
+  { n: 4,  name: 'stat',   dn: '取得文件信息' },
+  { n: 57, name: 'fork',   dn: '创建进程' },
+  { n: 59, name: 'execve', dn: '执行一个程序' },
+  { n: 60, name: '_exit',  dn: '终止进程' },
+  { n: 62, name: 'kill',   dn: '向进程发送信号' },
+];
+/** 按编号或名字查表；返回 { hit, n, name, dn } 或 { miss } */
+function syscallLookup(q) {
+  const t = String(q == null ? '' : q).trim();
+  if (!t) return { miss: '请输入系统调用号或名字' };
+  const num = /^\d+$/.test(t) ? Number(t) : null;
+  const hit = num === null ? SYSCALLS.find(s => s.name === t.toLowerCase())
+                           : SYSCALLS.find(s => s.n === num);
+  if (!hit) return { miss: num === null ? `课件表里没有名为 ${t} 的系统调用` : `课件表里没有编号为 ${num} 的系统调用` };
+  return { hit, n: hit.n, name: hit.name, dn: hit.dn };
+}
+/** 生成「把编号放进 %eax」的两条指令（原第 15 页的写法：b8 + 小端 32 位立即数） */
+function syscallAsm(n) {
+  const imm = [0, 1, 2, 3].map(i => hexByte((Number(n) >>> (8 * i)) & 0xff)).join(' ');
+  return { movBytes: 'b8 ' + imm, mov: `mov  $0x${Number(n).toString(16)},%eax`, syscall: 'syscall' };
+}
+
+/* ============================================================
+   七、异常分类（原第 9、11、12、13 页）
+   分类规则全部来自课件原文，未归类的事件如实标出「课件未归类」。
+   ============================================================ */
+const EXC_KINDS = {
+  intr:  { cn: '中断', en: 'Interrupt', cls: '异步', src: '处理器外部的事件（由中断引脚表示）', ret: '返回 I_next' },
+  trap:  { cn: '陷阱', en: 'Trap',      cls: '同步', src: '执行指令的结果（有意为之）', ret: '返回 I_next' },
+  fault: { cn: '故障', en: 'Fault',     cls: '同步', src: '执行指令的结果（无意，但可能可恢复）', ret: '重新执行 I_current 或终止' },
+  abort: { cn: '中止', en: 'Abort',     cls: '同步', src: '执行指令的结果（无意且不可恢复）', ret: '终止当前程序' },
+};
+const EXC_EVENTS = [
+  { id: 'timer',   cn: '定时器中断',        en: 'Timer interrupt',        kind: 'intr',  src: '第 12 页', note: '外部定时器芯片每隔几毫秒触发一次；内核靠它收回控制权。' },
+  { id: 'ctrlc',   cn: '键盘敲下 Ctrl-C',   en: 'Hitting Ctrl-C',         kind: 'intr',  src: '第 12 页', note: '外部设备的 I/O 中断。' },
+  { id: 'net',     cn: '网络包到达',        en: 'Arrival of a packet from a network', kind: 'intr', src: '第 12 页' },
+  { id: 'disk',    cn: '磁盘数据到达',      en: 'Arrival of data from a disk',        kind: 'intr', src: '第 12 页' },
+  { id: 'io',      cn: 'I/O 请求完成',      en: 'I/O request completes',  kind: 'intr',  src: '第 9、12 页' },
+  { id: 'syscall', cn: '系统调用',          en: 'System call',            kind: 'trap',  src: '第 13、14 页', note: '陷阱里最常用的一类：程序主动执行 syscall 指令。' },
+  { id: 'brk',     cn: '断点陷阱',          en: 'Breakpoint trap',        kind: 'trap',  src: '第 13 页' },
+  { id: 'special', cn: '特殊指令',          en: 'Special instruction',    kind: 'trap',  src: '第 13 页' },
+  { id: 'pf',      cn: '缺页',              en: 'Page fault',             kind: 'fault', src: '第 13、17 页', recover: '可恢复', note: '装入页面后返回并重新执行 —— 课件第 17 页的完整例子。' },
+  { id: 'prot',    cn: '保护性故障',        en: 'Protection fault',       kind: 'fault', src: '第 13 页', recover: '不可恢复' },
+  { id: 'fpe',     cn: '浮点异常',          en: 'Floating point exception', kind: 'fault', src: '第 13 页', recover: '课件未说明' },
+  { id: 'illegal', cn: '非法指令',          en: 'Illegal instruction',    kind: 'abort', src: '第 13 页' },
+  { id: 'parity',  cn: '奇偶校验错',        en: 'Parity error',           kind: 'abort', src: '第 13 页' },
+  { id: 'mcheck',  cn: '机器检查',          en: 'Machine check',          kind: 'abort', src: '第 13 页' },
+  { id: 'div0',    cn: '除零',              en: 'Divide by 0',            kind: null,    src: '第 9 页', note: '课件第 9 页把它列为「事件的例子」，但没有归类到中断/陷阱/故障/中止中的任何一类。' },
+  { id: 'ovf',     cn: '算术溢出',          en: 'Arithmetic overflow',    kind: null,    src: '第 9 页', note: '同上：课件只把它当作异常事件的例子。' },
+];
+function classifyExc(id) {
+  const ev = EXC_EVENTS.find(e => e.id === id);
+  if (!ev) return null;
+  const k = ev.kind ? EXC_KINDS[ev.kind] : null;
+  return {
+    ev, kind: k,
+    cls: k ? k.cls : '课件未归类',
+    name: k ? `${k.cn}（${k.en}）` : '课件未归类',
+    where: k ? k.src : '课件只把它列为异常事件的例子',
+    ret: k ? k.ret : '取决于具体实现（课件未给）',
+    recover: ev.recover || '',
+  };
+}
+
+/* ============================================================
+   八、wait / waitpid 的状态字解码（原第 54、56 页）
+   status 是一个「打包」过的整数：退出码在高 8 位；低 7 位是终止信号。
+   ============================================================ */
+function decodeWaitStatus(status) {
+  const s = Number(status) & 0xffff;
+  const exited = (s & 0x7f) === 0;
+  return {
+    status: s, statusHex: '0x' + s.toString(16).toUpperCase(),
+    exited, exitCode: exited ? (s >> 8) & 0xff : null,
+    signalled: !exited, termSig: exited ? null : (s & 0x7f),
+    lowByte: '0x' + (s & 0xff).toString(16).toUpperCase(),
+  };
+}
+
+/* ============================================================
+   九、top 计数校验（原第 22 页）
+   ============================================================ */
+function topCountCheck(t, r, s, l) {
+  const sum = r + s + l;
+  return { sum, total: t, ok: sum === t, diff: t - sum };
+}
+
+/* ============================================================
+   6.3 top 计数校验
+   ============================================================ */
+function renderTop() {
+  const g = id => parseInt10($('#' + id).value, false);
+  const t = g('topT'), r = g('topR'), s = g('topS'), l = g('topL'), th = g('topTh');
+  if ([t, r, s, l, th].some(v => v === null || v < 0)) {
+    $('#topOut').innerHTML = badBox('五个计数都要填 0 或正整数。'); return;
+  }
+  const c = topCountCheck(t, r, s, l);
+  const rows = [['9426', 'bash', '0.0', '00:00:11.1', '0'], ['84285', 'xterm', '0.0', '00:00:35.1', '0'],
+                ['54737', 'top', '0.0', '6:05.1', '0'], ['54719', 'automountd', '0.0', '00:00:02.7', '1'],
+                ['54701', 'ocspd', '0.0', '00:00:05.4', '1']]
+    .map(([p, cmd, cpu, tm, thn]) => `<tr><td class="mono">${p}</td><td class="mono">${cmd}</td><td class="mono">${cpu}</td><td class="mono">${tm}</td><td class="mono">${thn}</td></tr>`).join('');
+  $('#topOut').innerHTML = `
+    <div class="grid g2">
+      <div>
+        <div class="formula" style="text-align:left;font-size:13.5px;margin-top:0">
+          <div>Processes: ${t} total, ${r} running, ${s} stuck, ${l} sleeping, ${th} threads</div>
+        </div>
+        <div class="readout">
+          <dt>三段相加</dt><dd>${r} running + ${s} stuck + ${l} sleeping = <b>${c.sum}</b></dd>
+          <dt>total</dt><dd>${t}</dd>
+          <dt>校验</dt><dd>${c.ok ? chip('ok', '闭合：' + r + ' + ' + s + ' + ' + l + ' = ' + t) : chip('bad', '差 ' + Math.abs(c.diff) + ' 个：' + c.sum + ' ≠ ' + t)}</dd>
+        </div>
+        <div class="box ${c.ok ? 'ok' : 'bad'}" style="margin-bottom:0"><div class="t">${c.ok ? '课件里的数字是对得上的' : '这组数字不闭合'}</div>
+          ${c.ok ? `课件截图写的是 <b>123 total, 5 running, 9 stuck, 109 sleeping</b>，5 + 9 + 109 正好等于 123 —— 「total」是把三个状态加起来的，不是另有来源。` :
+                   `这三个状态的总和是 ${c.sum}，与 total 差 ${c.diff > 0 ? 'total 多了 ' + c.diff : 'total 少了 ' + (-c.diff)} —— 改坏了。点击「课件值」恢复。`}
+        </div>
+      </div>
+      <div>
+        <p style="margin-top:0;font-size:13.5px;color:var(--muted)">截图左上角的进程表（节选，原文引用）：</p>
+        <div class="tbl-wrap"><table class="tbl">
+          <tr><th class="mono">PID</th><th>COMMAND</th><th class="mono">%CPU</th><th class="mono">TIME</th><th class="mono">#TH</th></tr>
+          ${rows}
+        </div></div>
+      </div>
+    </div>`;
+}
+
+/* ============================================================
+   6.4 进程状态机
+   ============================================================ */
+const PS_EVENTS = [
+  { id: 'fork',  cn: 'fork()：被父进程创建', from: ['none'], to: 'running', why: '新进程被创建后处于「运行」状态（要么在执行，要么等着被内核调度）。' },
+  { id: 'sched', cn: '被内核调度上 CPU', from: ['running'], to: 'running', why: 'Running 这一状态本身就包含「等待被执行、最终会被调度」这一档 —— 所以它仍留在同一状态里。' },
+  { id: 'irq',   cn: '时钟中断：被换下 CPU', from: ['running'], to: 'running', why: '被换下 CPU 不是「停止」：它只是回到「就绪、等调度」那一档，仍然是 Running 状态。' },
+  { id: 'stop',  cn: '收到 SIGSTOP', from: ['running'], to: 'stopped', why: '进程的执行被挂起，在收到进一步指示之前不会被调度（课件原话）。' },
+  { id: 'cont',  cn: '收到 SIGCONT', from: ['stopped'], to: 'running', why: '重新可以被调度 —— 回到 Running。' },
+  { id: 'kill',  cn: '收到默认动作是终止的信号', from: ['running', 'stopped'], to: 'terminated', why: '课件第 49 页列的三个终止原因之一。' },
+  { id: 'ret',   cn: '从 main 返回', from: ['running'], to: 'terminated', why: '第二个终止原因：从 main 例程返回。' },
+  { id: 'exit',  cn: '调用 exit(status)', from: ['running'], to: 'terminated', why: '第三个终止原因：exit 被调用一次，永不返回。' },
+];
+const PS_STATES = [
+  { id: 'running', cn: '运行 Running', d: '正在执行，或等待被执行（会被内核调度）' },
+  { id: 'stopped', cn: '停止 Stopped', d: '执行被挂起，未收到进一步指示前不会被调度' },
+  { id: 'terminated', cn: '终止 Terminated', d: '永久停止' },
+];
+let psState = 'none';
+let psLog = [];
+function renderPs() {
+  const cur = psState === 'none' ? null : PS_STATES.find(s => s.id === psState);
+  const cards = PS_STATES.map(s => `<div class="card" style="${s.id === psState ? 'border-color:var(--accent);background:var(--accent-soft)' : ''}">
+      <h5>${esc(s.cn)}${s.id === psState ? ' ' + chip('', '当前') : ''}</h5>
+      <p style="margin:0;font-size:13.5px">${esc(s.d)}</p>
+    </div>`).join('');
+  const opts = PS_EVENTS.map(e => `<option value="${e.id}">${esc(e.cn)}</option>`).join('');
+  const log = psLog.slice(-6).reverse().map(l => stepBox(l.h, esc(l.m), l.e)).join('');
+  $('#psEvt').innerHTML = opts;
+  const pend = $('#psEvt').value ? PS_EVENTS.find(e => e.id === $('#psEvt').value) : null;
+  const legal = pend ? pend.from.includes(psState) : null;
+  $('#psOut').innerHTML = `
+    <div class="grid g3">${cards}</div>
+    <div class="readout">
+      <dt>当前状态</dt><dd>${cur ? `<b>${esc(cur.cn)}</b>` : '<b>尚未创建</b>（先点「fork（创建）」）'}</dd>
+      <dt>待施加事件</dt><dd>${pend ? esc(pend.cn) : '—'}</dd>
+      <dt>是否会发生</dt><dd>${pend === null ? '—' : legal ? chip('ok', '会') : chip('bad', '不会：该事件在这个状态上不适用')}</dd>
+    </div>
+    ${log || '<div class="box" style="margin-bottom:0"><div class="t">尚未创建进程</div>点「fork（创建）」开始，然后按顺序施加事件。</div>'}`;
+}
+function psApply(id) {
+  const e = PS_EVENTS.find(x => x.id === id);
+  if (!e) return;
+  if (!e.from.includes(psState)) {
+    psLog.push({ h: `× 事件「${e.cn}」不能施加`, m: `当前状态：${psState === 'none' ? '（无进程）' : psState}`,
+                 e: `合法来源状态：${e.from.map(f => f === 'none' ? '（无进程）' : f).join('、')}` });
+    renderPs(); return;
+  }
+  const before = psState;
+  psState = e.to;
+  psLog.push({ h: `→ ${e.cn}`, m: `${before === 'none' ? '（无进程）' : before} → ${psState}`, e: e.why });
+  renderPs();
+}
+
+/* ============================================================
+   7.1 上下文切换模拟器（原第 23–26、30 页）
+   三个进程各有自己的寄存器保存区；CPU 里只有一组寄存器。
+   值是为了看清「搬运」而编的示例值 —— 课件只给了框图，没有具体数值。
+   ============================================================ */
+const MP_PROCS = [
+  { pid: 100, name: '进程 A', save: { rip: 0x400120, rsp: 0x7fffe00, rax: 11 }, as: '0x7f01' },
+  { pid: 200, name: '进程 B', save: { rip: 0x400240, rsp: 0x7fff000, rax: 22 }, as: '0x7f02' },
+  { pid: 300, name: '进程 C', save: { rip: 0x400360, rsp: 0x7fff200, rax: 33 }, as: '0x7f03' },
+];
+let MP = null;
+function mpReset() {
+  MP = { cpu: { rip: 0x400120, rsp: 0x7fffe00, rax: 11 }, cur: 0, addr: '0x7f01', phase: 'run',
+         switches: 0, log: [], irqDone: false, schedDone: false };
+  renderMp();
+}
+const regSet = (o, hl) => `<div class="fw"><div class="fgrp">
+  ${['rip', 'rsp', 'rax'].map(k => `<div class="fcap">%${k}</div><div class="mono" style="font-size:13.5px${hl && hl[k] !== undefined ? ';color:var(--accent);font-weight:700' : ''}">${hl && hl[k] !== undefined ? hl[k] : '0x' + o[k].toString(16)}</div>`).join('')}
+  </div></div>`;
+function renderMp() {
+  if (!MP) { mpReset(); return; }
+  const rows = MP_PROCS.map((p, i) => `<tr style="${i === MP.cur ? 'background:var(--accent-soft)' : ''}">
+      <td class="mono">${p.pid}</td><td>${esc(p.name)}</td>
+      <td>${i === MP.cur ? chip('ok', '正在执行') : chip('gray', '未执行（寄存器已保存）')}</td>
+      <td class="mono" style="font-size:12.5px">rip=0x${p.save.rip.toString(16)} rsp=0x${p.save.rsp.toString(16)} rax=${p.save.rax}</td>
+      <td class="mono">${p.as}</td>
+    </tr>`).join('');
+  const log = MP.log.slice(-5).reverse().map(l => stepBox(l.h, esc(l.m), l.e)).join('');
+  $('#mpOut').innerHTML = `
+    <div class="grid g2">
+      <div>
+        <div class="card" style="border-color:var(--accent)">
+          <h5>CPU：一组寄存器 + 当前地址空间</h5>
+          ${regSet(MP.cpu)}
+          <p style="margin:6px 0 0;font-size:13.5px">当前执行：<b>${MP_PROCS[MP.cur].name}（PID ${MP_PROCS[MP.cur].pid}）</b>；地址空间 ${MP.addr}
+          ${MP.phase === 'run' ? chip('ok', '可以继续执行') : MP.phase === 'saved' ? chip('warn', '已保存，等待调度') : chip('warn', '已调度，等待装入')}</p>
+        </div>
+        <div class="readout">
+          <dt>上下文切换次数</dt><dd><b>${MP.switches}</b></dd>
+          <dt>当前执行的进程数</dt><dd>1 —— 单核上任何时刻只有一个进程在执行（原第 61 页）</dd>
+        </div>
+      </div>
+      <div>
+        <div class="tbl-wrap"><table class="tbl">
+          <tr><th class="mono">PID</th><th>进程</th><th>状态</th><th>内存里的寄存器保存区</th><th>地址空间</th></tr>
+          ${rows}
+        </table></div>
+      </div>
+    </div>
+    ${log || '<div class="box" style="margin-bottom:0"><div class="t">三步走（原第 24–26 页）</div>① 时钟中断 → 把当前寄存器保存进内存；② 调度下一个进程；③ 装入保存的寄存器并切换地址空间。照顺序点。</div>'}`;
+}
+function mpIrq() {
+  if (!MP) mpReset();
+  if (MP.phase !== 'run') { MP.log.push({ h: '× 顺序不对', m: '当前阶段：' + MP.phase, e: '先完成「装入」，再让时钟中断发生。' }); renderMp(); return; }
+  const p = MP_PROCS[MP.cur];
+  p.save = { rip: MP.cpu.rip, rsp: MP.cpu.rsp, rax: MP.cpu.rax };
+  MP.phase = 'saved'; MP.irqDone = true;
+  MP.log.push({ h: '① 时钟中断：保存当前寄存器进内存',
+    m: `${p.name} 的保存区 ← rip=0x${p.save.rip.toString(16)} rsp=0x${p.save.rsp.toString(16)} rax=${p.save.rax}`,
+    e: '从此这个进程「未在执行」，它的寄存器值只存在于内存里。' });
+  renderMp();
+}
+function mpSched() {
+  if (!MP) mpReset();
+  if (MP.phase !== 'saved') { MP.log.push({ h: '× 顺序不对', m: '当前阶段：' + MP.phase, e: '先让时钟中断把当前寄存器保存进内存。' }); renderMp(); return; }
+  const next = (MP.cur + 1) % MP_PROCS.length;
+  MP.cur = next; MP.phase = 'sched'; MP.schedDone = true;
+  MP.log.push({ h: '② 调度下一个进程',
+    m: `内核选中 ${MP_PROCS[next].name}（PID ${MP_PROCS[next].pid}）`,
+    e: '调度是内核做的事；内核不是独立进程，它作为某个已存在进程的一部分运行。' });
+  renderMp();
+}
+function mpLoad() {
+  if (!MP) mpReset();
+  if (MP.phase !== 'sched') { MP.log.push({ h: '× 顺序不对', m: '当前阶段：' + MP.phase, e: '先「调度下一个进程」，再装入它的寄存器。' }); renderMp(); return; }
+  const p = MP_PROCS[MP.cur];
+  MP.cpu = { rip: p.save.rip, rsp: p.save.rsp, rax: p.save.rax };
+  MP.addr = p.as; MP.phase = 'run'; MP.switches++;
+  MP.log.push({ h: '③ 装入保存的寄存器 + 切换地址空间',
+    m: `CPU ← ${p.name} 的保存区（rip=0x${p.save.rip.toString(16)}）；地址空间 → ${p.as}`,
+    e: '到这一步，一次完整的上下文切换才算做完 —— 装入寄存器与切换地址空间是同一步。' });
+  renderMp();
+}
+
+/* ============================================================
+   7.3 并发 / 顺序判定器（原第 28–29 页）
+   ============================================================ */
+function renderCc() {
+  const parse = v => {
+    const m = String(v).split(/[,，\s]+/).filter(s => s !== '');
+    if (m.length !== 2) return null;
+    const a = parseInt10(m[0], true), b = parseInt10(m[1], true);
+    if (a === null || b === null || b < a) return null;
+    return [a, b];
+  };
+  const A = parse($('#ccA').value), B = parse($('#ccB').value), C = parse($('#ccC').value);
+  if (!A || !B || !C) { $('#ccOut').innerHTML = badBox('三个进程各要两个整数「起点,终点」（例如 0,6），且终点不小于起点。'); return; }
+  const set = [['A', A], ['B', B], ['C', C]];
+  const pairRows = [];
+  for (let i = 0; i < 3; i++) for (let j = i + 1; j < 3; j++) {
+    const r = concurrentPair(set[i][1], set[j][1]);
+    pairRows.push({ i, j, r });
+  }
+  const hi = Math.max(A[1], B[1], C[1]), lo = Math.min(A[0], B[0], C[0]);
+  const span = Math.max(1, hi - lo);
+  const W = 640, H = 128, padL = 46, padR = 12;
+  const x = t => padL + (t - lo) / span * (W - padL - padR);
+  const bars = set.map(([nm, iv], i) => {
+    const y = 16 + i * 32;
+    const color = 'var(--accent)';
+    return `<text x="8" y="${y + 15}" font-size="12" fill="var(--muted)" font-family="var(--font-mono)">${nm}</text>
+      <rect x="${x(iv[0])}" y="${y}" width="${Math.max(2, x(iv[1]) - x(iv[0]))}" height="20" rx="4" fill="${color}" opacity=".22" stroke="${color}"></rect>
+      <text x="${x(iv[0]) + 4}" y="${y + 15}" font-size="11" fill="var(--ink)" font-family="var(--font-mono)">${iv[0]}</text>
+      <text x="${x(iv[1]) - 16}" y="${y + 15}" font-size="11" fill="var(--ink)" font-family="var(--font-mono)">${iv[1]}</text>`;
+  }).join('');
+  const ticks = (() => {
+    let t = '';
+    for (let v = lo; v <= hi; v++) {
+      if (span > 40 && (v - lo) % 5) continue;
+      t += `<line x1="${x(v)}" y1="10" x2="${x(v)}" y2="${H - 22}" class="axisline"></line>
+            <text x="${x(v)}" y="${H - 8}" font-size="9.5" fill="var(--muted)" text-anchor="middle" font-family="var(--font-mono)">${v}</text>`;
+    }
+    return t;
+  })();
+  $('#ccOut').innerHTML = `
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>进程对</th><th>区间</th><th>共同时刻</th><th>判定</th></tr>
+      ${pairRows.map(({ i, j, r }) => `<tr>
+        <td class="mono">${set[i][0]} &amp; ${set[j][0]}</td>
+        <td class="mono">[${set[i][1][0]}, ${set[i][1][1]}) 与 [${set[j][1][0]}, ${set[j][1][1]})</td>
+        <td class="mono">${r.overlap ? `${r.lo} … ${r.hi}（重叠长度 ${r.len}）` : '无（只在端点相接不算重叠）'}</td>
+        <td>${r.overlap ? chip('ok', '并发 concurrent') : chip('gray', '顺序 sequential')}</td>
+      </tr>`).join('')}
+    </table></div>
+    <svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto;display:block;margin:10px 0">
+      ${ticks}${bars}
+      <line x1="${padL}" y1="${H - 22}" x2="${W - padR}" y2="${H - 22}" class="axisline"></line>
+      <text x="${padL}" y="${H - 8}" font-size="9.5" fill="var(--muted)" font-family="var(--font-mono)">时间 →</text>
+    </svg>
+    <div class="readout">
+      <dt>并发对数</dt><dd>${pairRows.filter(p => p.r.overlap).length} / 3</dd>
+      <dt>用户视角</dt><dd>物理上互不重叠，但可以「想成」在并行运行 —— 这正是「逻辑控制流」这个抽象的来历（原第 29 页）</dd>
+    </div>`;
+}
+
+/* ============================================================
+   8.1 系统调用错误处理判定器
+   ============================================================ */
+function renderErr() {
+  const raw = $('#errV').value;
+  const fn = $('#errFn').value;
+  const v = parseInt10(raw, true);
+  if (v === null) { $('#errOut').innerHTML = badBox('返回值请填一个整数（如 −1、0、63）。'); return; }
+  const isVoid = fn === 'void';
+  const err = !isVoid && v === -1;
+  const code = isVoid
+    ? `<div class="formula" style="text-align:left;margin:0;font-size:13.5px">
+         <div>/* 返回 void 的函数：没有返回值可查 */</div>
+         <div>foo();</div>
+       </div>`
+    : err
+      ? (fn === 'fork'
+        ? `<div class="formula" style="text-align:left;margin:0;font-size:13.5px">
+             <div>if ((pid = fork()) &lt; 0) {</div>
+             <div>&nbsp;&nbsp;fprintf(stderr, "fork error: %s\\n", strerror(errno));</div>
+             <div>&nbsp;&nbsp;exit(-1);</div>
+             <div>}</div>
+           </div>`
+        : `<div class="formula" style="text-align:left;margin:0;font-size:13.5px">
+             <div>if (${fn === 'open' ? '(fd = open(name, options))' : fn === 'write' ? '(n = write(fd, buf, n))' : 'close(fd)'} &lt; 0) {</div>
+             <div>&nbsp;&nbsp;unix_error("${fn} error");</div>
+             <div>}</div>
+           </div>`)
+      : `<div class="formula" style="text-align:left;margin:0;font-size:13.5px">
+           <div>/* 返回值 ≥ 0：这次没出错，可以正常使用结果 */</div>
+           <div>${fn === 'fork' ? 'pid_t pid = fork(); /* pid ≥ 0 有效 */' : '/* 使用返回值 */'}</div>
+         </div>`;
+  $('#errOut').innerHTML = `
+    <div class="grid g2">
+      <div>
+        <div class="readout">
+          <dt>返回值</dt><dd><b>${v}</b></dd>
+          <dt>判定</dt><dd>${isVoid ? chip('gray', '没有返回值可查') : err ? chip('bad', '出错：errno 被设置') : chip('ok', '成功（没有出错）')}</dd>
+          <dt>errno</dt><dd>${isVoid ? '—' : err ? '被函数设成出错原因（可用 <code>strerror(errno)</code> 打印成人话）' : '未被设置'}</dd>
+        </div>
+        <div class="box ${isVoid ? 'warn' : err ? 'bad' : 'ok'}" style="margin-bottom:0"><div class="t">该用的写法</div>
+          ${isVoid ? '金科玉律里唯一的例外：返回 <code>void</code> 的函数没有返回状态可查（原第 32 页）。'
+                   : err ? '这就是「必须检查每一个系统级函数返回状态」要拦下的情况 —— 课件第 32 页的写法如下。'
+                         : '虽然这次没出错，检查仍然要写：出错与否由运行时决定，不由这次的结果决定。'}
+        </div>
+      </div>
+      <div>
+        ${code}
+        <div class="box" style="margin-bottom:0"><div class="t">三层简化（原第 32–34 页）</div>
+          ① 就地检查：<code>if ((pid = fork()) &lt; 0) {…}</code><br>
+          ② 抽成 <code>unix_error(msg)</code>：打印 <code>strerror(errno)</code> 后退出（<b>课件原注：csapp.c 里它是以 0 退出</b>）<br>
+          ③ Stevens 风格包装：把检查藏进 <code>Fork()</code> 里，代码里只剩 <code>pid = Fork();</code> —— 课件提醒这在真实应用里「一般不是你想要的做法」。
+        </div>
+      </div>
+    </div>`;
+}
+
+/* ============================================================
+   8.3 fork 进程数计算器
+   ============================================================ */
+function fkSteps(pat, n) {
+  if (pat === 'chain') {
+    const st = [];
+    for (let i = 0; i < n; i++) { st.push(P('L' + i)); st.push(F({})); }
+    st.push(P('Bye'));
+    return st;
+  }
+  if (pat === 'parent') {
+    let inner = [];
+    for (let i = n; i >= 1; i--) inner = [P('L' + i), F({ parent: inner })];
+    return [P('L0'), ...(n === 0 ? [] : inner), P('Bye')];
+  }
+  let inner = [];
+  for (let i = n; i >= 1; i--) inner = [P('L' + i), F({ child: inner })];
+  return [P('L0'), ...(n === 0 ? [] : inner), P('Bye')];
+}
+function renderFk() {
+  const pat = $('#fkPat').value;
+  const n = parseInt10($('#fkN').value, false);
+  if (n === null || n < 0 || n > 6) { $('#fkOut').innerHTML = badBox('n 请填 0–6 之间的整数。'); return; }
+  const steps = fkSteps(pat, n);
+  const m = forkModelSteps({ steps, label: pat, alphabet: [] });
+  const rows = m.procs.map(p => `<tr>
+      <td class="mono">P${p.id}</td>
+      <td class="mono">${p.parent < 0 ? '—' : 'P' + p.parent}</td>
+      <td class="mono">${p.out.length ? p.out.map(esc).join(' → ') : '<span style="color:var(--muted)">（不打印）</span>'}</td>
+      <td class="mono" style="font-size:12.5px">${p.forks.length ? p.forks.map(f => `在打印 ${f.at} 行后 fork`).join('；') : '—'}</td>
+    </tr>`).join('');
+  const patName = { chain: '连续 n 次 fork', parent: 'fork() != 0 分支里嵌套 n 层', child: 'fork() == 0 分支里嵌套 n 层' }[pat];
+  $('#fkOut').innerHTML = `
+    <div class="readout">
+      <dt>结构</dt><dd>${esc(patName)}，n = ${n}</dd>
+      <dt>进程数</dt><dd><b>${m.procs.length}</b>${pat === 'chain' ? `（2^${n}）` : `（第一个 fork 之后每个 fork 只多出一个进程，共 1 + ${n}）`}</dd>
+      <dt>fork 被执行</dt><dd><b>${m.forks}</b> 次${pat === 'chain' ? `（2^${n} − 1：每个进程都执行到了它后面的 fork）` : ''}</dd>
+      <dt>打印总行数</dt><dd><b>${m.total}</b> 行</dd>
+    </div>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>进程</th><th>父进程</th><th>它打印什么（按顺序）</th><th>它在哪里 fork</th></tr>
+      ${rows}
+    </table></div>
+    <div class="box ok" style="margin-bottom:0"><div class="t">这张表是页面按 fork 语义「跑」出来的</div>
+      规则只有三条：① <code>fork</code> 让<b>调用它的进程</b>一分为二，两条进程都从 fork 之后继续；② <code>if (fork() != 0)</code> 的块只有父进程走，<code>== 0</code> 的块只有子进程走；③ 打印顺序由调度器决定，但<b>每个进程自己打印的顺序</b>是固定的。
+    </div>`;
+}
+
+/* ============================================================
+   8.4 forkx2 值推演器
+   ============================================================ */
+let FX = null;
+function fxReset() {
+  FX = { p: { x: 1, out: [], done: false }, c: { x: 1, out: [], done: false }, log: [] };
+  renderFx();
+}
+function fxInfo(role) {
+  const o = role === 'p' ? FX.p : FX.c;
+  const inc = role === 'c';
+  const next = inc ? o.x + 1 : o.x - 1;
+  const line = `${inc ? 'child : x=' : 'parent: x='}${next}`;
+  return { next, line };
+}
+function fxStep(role) {
+  if (!FX) fxReset();
+  const o = role === 'p' ? FX.p : FX.c;
+  const nm = role === 'p' ? '父进程' : '子进程';
+  if (o.done) { FX.log.push({ h: `× ${nm}已经结束`, m: '它已经执行完两条 printf', e: 'ingress：forkx2 的每条分支只有两条 printf。' }); renderFx(); return; }
+  const { next, line } = fxInfo(role);
+  o.x = next; o.out.push(line);
+  if (o.out.length >= 2) o.done = true;
+  FX.log.push({ h: `${nm}执行一行 printf`,
+    m: `${role === 'c' ? '++x' : '--x'} → x = ${next}；打印 ${line}`,
+    e: `%rax / 内存里这个进程自己的 x 变成了 ${next} —— 另一个进程的 x 不受影响，两份 x 在各自的地址空间里。` });
+  renderFx();
+}
+function renderFx() {
+  if (!FX) { fxReset(); return; }
+  const box = (t, o, cls) => `<div class="card ${cls || ''}">
+      <h5>${t}</h5>
+      <div class="readout" style="margin:6px 0">
+        <dt>当前的 x</dt><dd><b>${o.x}</b></dd>
+        <dt>已打印</dt><dd class="mono">${o.out.length ? o.out.map(esc).join('<br>') : '（还没有）'}</dd>
+      </div>
+      ${o.done ? chip('gray', '已结束（两条 printf 都跑完）') : chip('ok', '还能再打印一行')}
+    </div>`;
+  $('#fxOut').innerHTML = `
+    <div class="grid g2">
+      ${box('父进程（--x）', FX.p, FX.p.done ? '' : 'style="border-color:var(--accent)"')}
+      ${box('子进程（++x）', FX.c, FX.c.done ? '' : 'style="border-color:var(--accent)"')}
+    </div>
+    ${FX.log.slice(-4).reverse().map(l => stepBox(l.h, esc(l.m), l.e)).join('')}
+    <div class="box ${FX.p.done && FX.c.done ? 'ok' : ''}" style="margin-bottom:0"><div class="t">课件的输出（原第 42 页）</div>
+      课件一次运行打印的是 <code>parent: x=0</code>、<code>parent: x=-1</code>、<code>child : x=2</code>、<code>child : x=3</code>。两行父、两行子<b>谁先谁后由调度器决定</b>，但父进程内部一定是 0 在 −1 之前、子进程内部一定是 2 在 3 之前 —— 这正是第 9 节「可行输出」要判定的东西。
+    </div>`;
+}
+
+/* ============================================================
+   9.2 拓扑排序判定器
+   ============================================================ */
+function renderPg() {
+  const raw = $('#pgIn').value.toUpperCase().replace(/[^A-F]/g, '');
+  if (raw.length !== 6) { $('#pgOut').innerHTML = badBox('请给出 a–f 六个字母各一次（例如 a b e c f d）。'); return; }
+  const order = raw.split('');
+  if (new Set(order).size !== 6) { $('#pgOut').innerHTML = badBox('六个顶点不能重复 —— 全序要求每个顶点恰好出现一次。'); return; }
+  const r = topoViolations(order);
+  const all = topoEnumerate();
+  const nodeRows = TOPO_NODES.map(n => `<tr><td class="mono"><b>${n.id}</b></td><td class="mono">${esc(n.name)}</td><td>${esc(n.desc)}</td></tr>`).join('');
+  const edgeRows = TOPO_EDGES.map(([x, y2]) => {
+    const bad = r.bad.some(([a, b]) => a === x && b === y2);
+    return `<tr style="${bad ? 'background:var(--bad-bg)' : ''}"><td class="mono">${x} → ${y2}</td>
+      <td>${bad ? chip('bad', '被违反：' + x + ' 排到了 ' + y2 + ' 后面') : chip('ok', '满足')}</td></tr>`;
+  }).join('');
+  $('#pgOut').innerHTML = `
+    <div class="grid g2">
+      <div>
+        <div class="readout">
+          <dt>你的排列</dt><dd class="mono">${order.join(' ')}</dd>
+          <dt>判定</dt><dd>${r.ok ? chip('ok', '可行全序（拓扑序）') : chip('bad', '不可行')}</dd>
+          <dt>违反的边</dt><dd>${r.bad.length ? r.bad.map(([a, b]) => `<span class="mono">${a} → ${b}</span>`).join('、') : '无'}</dd>
+          <dt>该图的全部可行全序</dt><dd><b>${all.length}</b> 个</dd>
+        </div>
+        <div class="tbl-wrap"><table class="tbl">
+          <tr><th>边</th><th>在你的排列里</th></tr>
+          ${edgeRows}
+        </table></div>
+      </div>
+      <div>
+        <div class="tbl-wrap"><table class="tbl">
+          <tr><th>顶点</th><th>名字</th><th>含义</th></tr>
+          ${nodeRows}
+        </table></div>
+        <p style="font-size:13px;color:var(--muted);margin-bottom:0">全部 ${all.length} 个可行全序：<span class="mono">${all.map(o => o.join('')).join(' · ')}</span>。</p>
+      </div>
+    </div>
+    ${r.ok ? `<div class="box ok" style="margin-bottom:0"><div class="t">可行</div>这个排列就是图上的一条「所有边都从左指向右」的顺序，因此<b>确实可能出现</b>。</div>`
+           : `<div class="box bad" style="margin-bottom:0"><div class="t">不可行</div>违反的边在真实执行里意味着「后面的语句跑到了前面」—— 课件把这种排列叫 infeasible total ordering。</div>`}`;
+}
+
+/* ============================================================
+   9.3 fork 输出可行性判定器
+   ============================================================ */
+function renderFj() {
+  const key = $('#fjProg').value;
+  const m = forkModel(key);
+  const raw = $('#fjSeq').value;
+  const toks = raw.split(/[\n,，;；]+/).map(s => s.trim()).filter(s => s !== '');
+  const j = forkJudge(key, toks);
+  const rows = m.procs.map(p => `<tr>
+      <td class="mono">P${p.id}</td><td class="mono">${p.parent < 0 ? '—' : 'P' + p.parent}</td>
+      <td class="mono">${p.out.length ? p.out.map(esc).join(' → ') : '<span style="color:var(--muted)">（不打印）</span>'}</td>
+      <td class="mono" style="font-size:12.5px">${p.forks.length ? p.forks.map(f => `打印 ${f.at} 行后`) .join('、') : '—'}</td>
+    </tr>`).join('');
+  const condRows = m.conds.map(([pi, pj, ci, cj]) =>
+    `<tr><td class="mono">P${pi} 的第 ${pj + 1} 行</td><td class="mono">先于</td><td class="mono">P${ci} 的第 ${cj + 1} 行</td></tr>`).join('');
+  const all = forkEnumerate(key);
+  const feas = all ? all.length : 0;
+  let eqTbl = '';
+  if (j.ok) {
+    /* 把可行的判定「摊开」：每个记号派给了哪个进程（贪心回溯一次即可） */
+    const assign = forkAssign(key, toks);
+    eqTbl = assign ? `<div class="tbl-wrap"><table class="tbl">
+        <tr><th>第几行</th><th>输出</th><th>由哪个进程打印</th><th>为什么它现在能打印</th></tr>
+        ${assign.map((a, i) => `<tr><td class="mono">${i + 1}</td><td class="mono">${esc(toks[i])}</td>
+          <td class="mono">P${a.id}</td><td style="font-size:13px">${esc(a.why)}</td></tr>`).join('')}
+      </table></div>` : '';
+  }
+  $('#fjOut').innerHTML = `
+    <div class="readout">
+      <dt>程序</dt><dd>${esc(m.label)}</dd>
+      <dt>进程数 / fork 次数</dt><dd><b>${m.procs.length}</b> 个进程，fork 执行 <b>${m.forks}</b> 次</dd>
+      <dt>打印总行数</dt><dd><b>${m.total}</b> 行（各进程：${m.procs.map(p => 'P' + p.id + '×' + p.out.length).join('，')}）</dd>
+      <dt>判定</dt><dd>${j.ok ? chip('ok', '可行 feasible') : chip('bad', '不可行 infeasible')}</dd>
+      <dt>该程序的全部可行输出</dt><dd><b>${feas}</b> 种（由页面枚举）</dd>
+    </div>
+    ${m.note ? `<p style="font-size:13.5px;color:var(--muted)">${esc(m.note)}</p>` : ''}
+    ${j.ok ? `<div class="box ok"><div class="t">可行：这段输出确实能被打印出来</div>${esc(j.reason || '每个记号都能派给一个此刻正好在等它的进程，全部约束都满足。')}</div>`
+           : `<div class="box bad"><div class="t">不可行</div>${esc(j.reason)}<br>${esc(j.hint || '')}</div>`}
+    ${eqTbl}
+    <div class="grid g2">
+      <div>
+        <h4>进程树</h4>
+        <div class="tbl-wrap"><table class="tbl">
+          <tr><th>进程</th><th>父进程</th><th>它的输出（顺序固定）</th><th>它在父进程的哪个位置 fork</th></tr>
+          ${rows}
+        </table></div>
+      </div>
+      <div>
+        <h4>偏序约束</h4>
+        <div class="tbl-wrap"><table class="tbl">
+          <tr><th>前</th><th></th><th>后</th></tr>
+          ${condRows || '<tr><td colspan="3" style="color:var(--muted)">没有跨进程约束</td></tr>'}
+        </table></div>
+        <p style="font-size:13px;color:var(--muted);margin-bottom:0">子进程被创建于父进程打印第 k 行之后，所以它的输出必须晚于父进程的第 k 行；写完这一列，判定就退化成一个「带偏序的可满足性」问题。</p>
+      </div>
+    </div>`;
+}
+/** 给出一种可行的「记号 → 进程」派法（并说明理由），供展示用 */
+function forkAssign(key, tokens) {
+  const m = forkModel(key);
+  if (!m) return null;
+  const seq = tokens.slice();
+  const pos = m.procs.map(() => 0), out = [];
+  for (let idx = 0; idx < seq.length; idx++) {
+    let taken = false;
+    for (let i = 0; i < m.procs.length; i++) {
+      const p = m.procs[i];
+      if (pos[i] >= p.out.length || p.out[pos[i]] !== seq[idx]) continue;
+      const blockers = m.conds.filter(([pi, pj, ci, cj]) => ci === i && cj === pos[i] && !(pos[pi] > pj));
+      if (blockers.length) continue;
+      const whys = [];
+      if (pos[i] === 0 && p.forks.length) whys.push('它是本进程的第一行输出');
+      if (i === 0) whys.push('初始进程');
+      out.push({ id: i, why: `P${i} 的第 ${pos[i] + 1} 行；` + (blockers.length ? '' : '它前面的约束都已满足') + (whys.length ? '（' + whys.join('；') + '）' : '') });
+      pos[i]++; taken = true; break;
+    }
+    if (!taken) return null;
+  }
+  return out;
+}
+
+/* ============================================================
+   10.2 僵尸 / 孤儿生命周期模拟器（原第 50–52 页）
+   ps 表里的 PID 与命令行都是课件原文里的值。
+   ============================================================ */
+const ZOM_SCRIPTS = {
+  '7': {
+    name: '僵尸（forks 7）：子进程先终止，父进程不收割',
+    code: ['void fork7() {', '  if (fork() == 0) { printf("Terminating Child, PID = %d\\n", getpid()); exit(0); }',
+           '  else { printf("Running Parent, PID = %d\\n", getpid()); while (1) ; }', '}'],
+    steps: [
+      { h: '① 现状：shell 在跑', m: 'linux> ./forks 7 &', e: '后台启动。终端里出现 [1] 6639 —— 6639 是 shell 为这个后台作业创建的子进程 PID。',
+        ps: [['6585', 'ttyp9', '00:00:00', 'tcsh']] },
+      { h: '② 父进程与子进程各自打印', m: 'Running Parent, PID = 6639 ｜ Terminating Child, PID = 6640',
+        e: 'fork 之后：父进程 6639（父是 shell 6585）、子进程 6640（父是 6639）。子进程打印完就 exit(0)。',
+        ps: [['6585', 'ttyp9', '00:00:00', 'tcsh'], ['6639', 'ttyp9', '00:00:03', 'forks']] },
+      { h: '③ 子进程终止，父进程还在死循环', m: '子进程 6640 已 exit，父进程 6639 从不调用 wait',
+        e: '这就是「僵尸」：子进程已经终止，但它的退出状态还挂在 OS 表里，等父进程来收割。', zombie: true,
+        ps: [['6585', 'ttyp9', '00:00:00', 'tcsh'], ['6639', 'ttyp9', '00:00:03', 'forks'],
+             ['6640', 'ttyp9', '00:00:00', 'forks <defunct>'], ['6641', 'ttyp9', '00:00:00', 'ps']] },
+      { h: '④ ps 里能直接看见僵尸', m: 'ps 的输出里 6640 显示为 forks &lt;defunct&gt;',
+        e: 'defunct 就是「僵尸」在 ps 里的样子（课件原话：ps shows child process as “defunct” (i.e., a zombie)）。',
+        ps: [['6585', 'ttyp9', '00:00:00', 'tcsh'], ['6639', 'ttyp9', '00:00:03', 'forks'],
+             ['6640', 'ttyp9', '00:00:00', 'forks <defunct>'], ['6641', 'ttyp9', '00:00:00', 'ps']] },
+      { h: '⑤ 杀掉父进程', m: 'linux> kill 6639 ｜ [1] Terminated',
+        e: '父进程一死，僵尸子进程就成了孤儿 —— 应当由 init（pid == 1）来收割。',
+        ps: [['6585', 'ttyp9', '00:00:00', 'tcsh'], ['6642', 'ttyp9', '00:00:00', 'ps']] },
+      { h: '⑥ 僵尸消失', m: 'linux> ps',
+        e: '6640 不在表里了 —— 孤儿被 init 收割，内核删掉了这个僵尸进程。',
+        ps: [['6585', 'ttyp9', '00:00:00', 'tcsh'], ['6642', 'ttyp9', '00:00:00', 'ps']] },
+    ],
+  },
+  '8': {
+    name: '孤儿（forks 8）：父进程先终止，子进程继续跑',
+    code: ['void fork8() {', '  if (fork() == 0) { printf("Running Child, PID = %d\\n", getpid()); while (1) ; }',
+           '  else { printf("Terminating Parent, PID = %d\\n", getpid()); exit(0); }', '}'],
+    steps: [
+      { h: '① 启动', m: 'linux> ./forks 8',
+        e: '父进程 6675、子进程 6676（fork 得到的 PID 与父进程不同）。',
+        ps: [['6585', 'ttyp9', '00:00:00', 'tcsh']] },
+      { h: '② 父进程先终止', m: 'Terminating Parent, PID = 6675 ｜ Running Child, PID = 6676',
+        e: '父进程打印后立刻 exit(0)；子进程打印后进入死循环 —— 它成了「孤儿」，由 init 接管（ppid 变成 1）。',
+        ps: [['6585', 'ttyp9', '00:00:00', 'tcsh'], ['6676', 'ttyp9', '00:00:06', 'forks']] },
+      { h: '③ ps：子进程还在', m: 'linux> ps',
+        e: '课件原话：Child process still active even though parent has terminated。',
+        ps: [['6585', 'ttyp9', '00:00:00', 'tcsh'], ['6676', 'ttyp9', '00:00:06', 'forks'],
+             ['6677', 'ttyp9', '00:00:00', 'ps']] },
+      { h: '④ 必须显式杀掉', m: 'linux> kill 6676 ｜ linux> ps',
+        e: '课件原话：Must kill child explicitly, or else will keep running indefinitely。',
+        ps: [['6585', 'ttyp9', '00:00:00', 'tcsh'], ['6678', 'ttyp9', '00:00:00', 'ps']] },
+    ],
+  },
+};
+let zomCur = '7', zomStep = 0;
+function renderZom() {
+  const sc = ZOM_SCRIPTS[zomCur];
+  const st = sc.steps[zomStep];
+  const rows = st.ps.map(([pid, tty, tm, cmd]) => `<tr${/defunct/.test(cmd) ? ' style="background:var(--bad-bg)"' : ''}>
+      <td class="mono">${pid}</td><td class="mono">${tty}</td><td class="mono">${tm}</td>
+      <td class="mono">${cmd}${/defunct/.test(cmd) ? ' ' + chip('bad', '僵尸') : ''}</td></tr>`).join('');
+  const zombies = st.ps.filter(([, , , c]) => /defunct/.test(c)).length;
+  $('#zomOut').innerHTML = `
+    <div class="readout">
+      <dt>场景</dt><dd>${esc(sc.name)}</dd>
+      <dt>进度</dt><dd>第 ${zomStep + 1} / ${sc.steps.length} 步</dd>
+      <dt>此刻的僵尸数</dt><dd>${zombies ? chip('bad', zombies + ' 个') : chip('ok', '0 个')}</dd>
+    </div>
+    <div class="formula" style="text-align:left;font-size:13.5px;margin-top:0">
+      ${sc.code.map(esc).join('<br>')}
+    </div>
+    <div class="grid g2">
+      <div class="tbl-wrap"><table class="tbl">
+        <tr><th class="mono">PID</th><th class="mono">TTY</th><th class="mono">TIME</th><th class="mono">CMD</th></tr>
+        ${rows}
+      </table></div>
+      <div>${stepBox(st.h, esc(st.m), st.e)}</div>
+    </div>`;
+}
+function zomMove(d) {
+  const sc = ZOM_SCRIPTS[zomCur];
+  const n = Math.min(sc.steps.length - 1, Math.max(0, zomStep + d));
+  if (n === zomStep) zomStep = zomStep === sc.steps.length - 1 ? 0 : 0;
+  else zomStep = n;
+  renderZom();
+}
+
+/* ============================================================
+   10.4 wait / waitpid 收割顺序（原第 56–57 页）
+   PID 是示例值 —— 课件没有给具体 PID；退出码 100+i 与打印文本都是课件原文。
+   ============================================================ */
+function mulberry32(a) {
+  return function () {
+    a |= 0; a = a + 0x6D2B79F5 | 0;
+    let t = Math.imul(a ^ a >>> 15, 1 | a);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+function wtRun(n, mode) {
+  const base = 6000;
+  const kids = Array.from({ length: n }, (_, i) => ({ pid: base + i + 1, code: 100 + i, i }));
+  let order;
+  if (mode === 'desc') order = kids.slice().reverse();
+  else if (mode === 'asc') order = kids.slice();
+  else {
+    order = kids.slice();
+    const rnd = mulberry32(0x16ECF1);        /* 固定种子：每次打开看到的都一样 */
+    for (let i = order.length - 1; i > 0; i--) {
+      const j = Math.floor(rnd() * (i + 1));
+      const t = order[i]; order[i] = order[j]; order[j] = t;
+    }
+  }
+  return order.map(k => {
+    const status = (k.code << 8) & 0xffff;
+    const d = decodeWaitStatus(status);
+    return { ...k, status, d,
+             line: d.exited ? `Child ${k.pid} terminated with exit status ${d.exitCode}`
+                            : `Child ${k.pid} terminate abnormally` };
+  });
+}
+function renderWt() {
+  const n = parseInt10($('#wtN').value, false);
+  const mode = $('#wtMode').value;
+  if (n === null || n < 1 || n > 8) { $('#wtOut').innerHTML = badBox('N 请填 1–8 之间的整数。'); return; }
+  const res = wtRun(n, mode);
+  const modeTxt = { wait: 'wait(&child_status)：取任意一个已终止的子进程', desc: 'waitpid(pid[i], …)：i 从 N−1 递减（课件 fork11）', asc: 'waitpid(pid[i], …)：i 从 0 递增' }[mode];
+  const codes = Array.from({ length: n }, (_, i) => `<tr><td class="mono">${i}</td><td class="mono">${(100 + i) << 8}</td>
+      <td class="mono">0x${((100 + i) << 8).toString(16).toUpperCase()}</td>
+      <td class="mono">${100 + i}</td><td>${chip('ok', 'WIFEXITED 为真')}</td></tr>`).join('');
+  $('#wtOut').innerHTML = `
+    <div class="readout">
+      <dt>子进程</dt><dd>${n} 个，第 i 个执行 <code>exit(${100}+i)</code>（课件 fork10/fork11 的写法）</dd>
+      <dt>收割方式</dt><dd>${esc(modeTxt)}</dd>
+      <dt>顺序是否确定</dt><dd>${mode === 'wait' ? chip('warn', '不确定：任意顺序') : chip('ok', '确定')}${mode === 'wait' ? '（本页用固定随机种子展示其中一种）' : ''}</dd>
+    </div>
+    <div class="formula" style="text-align:left;font-size:13.5px;margin-top:0">
+      ${res.map(r => esc(r.line)).join('<br>')}
+    </div>
+    <div class="grid g2">
+      <div class="tbl-wrap"><table class="tbl">
+        <tr><th>收割次序</th><th class="mono">wait 返回的 wpid</th><th class="mono">child_status</th><th class="mono">WEXITSTATUS</th><th>WIFEXITED</th></tr>
+        ${res.map((r, i) => `<tr><td class="mono">${i + 1}</td><td class="mono">${r.pid}</td>
+          <td class="mono">${r.status} (0x${r.status.toString(16).toUpperCase()})</td>
+          <td class="mono">${r.d.exitCode}</td><td>${r.d.exited ? chip('ok', '真') : chip('bad', '假')}</td></tr>`).join('')}
+      </table></div>
+      <div>
+        <div class="tbl-wrap"><table class="tbl">
+          <tr><th>子进程 i</th><th class="mono">exit(100+i)</th><th class="mono">status 值</th><th class="mono">WEXITSTATUS(status)</th><th>结论</th></tr>
+          ${codes}
+        </table></div>
+        <p style="font-size:13px;color:var(--muted);margin:8px 0 0">状态字把退出码放在高 8 位：<code>status = 退出码 &lt;&lt; 8</code>，所以 <code>WEXITSTATUS(status) = status &gt;&gt; 8</code> 才还原出 100+i。页面表格里的 wpid 与状态值都是现算的。</p>
+      </div>
+    </div>`;
+}
+
+/* ============================================================
+   11.3 新程序启动栈布局构建器（原第 59–60 页）
+   ============================================================ */
+function renderEx() {
+  const argv = $('#exCmd').value.trim().split(/\s+/).filter(s => s !== '');
+  const envp = $('#exEnv').value.trim().split(/\s+/).filter(s => s !== '');
+  if (!argv.length) { $('#exOut').innerHTML = badBox('命令行至少要有一个词（按约定 argv[0] 就是文件名）。'); return; }
+  const L = stackLayout(argv, envp);
+  const hand = (n, L2) => n * 8;   /* 仅用于「槽位 → 字节」的估算 */
+  const rows = [
+    { pos: '栈底（高地址）', what: '环境变量字符串区', detail: L.envp.length ? L.envp.map((s, i) => `${esc(s)}${'\\0'}`).join(' · ') : '（无）', bytes: L.envTotal },
+    { pos: '↓', what: '命令行参数字符串区', detail: L.argv.map(s => `${esc(s)}${'\\0'}`).join(' · '), bytes: L.argTotal },
+    { pos: '↓', what: `envp[] 指针数组（${L.envSlots} 项）`, detail: [`envp[${L.envc}] = NULL`].concat(L.envp.map((_, i) => `envp[${L.envc - 1 - i}]`)).join(' → ') + '，指向字符串区', bytes: hand(L.envSlots) },
+    { pos: '↓', what: `argv[] 指针数组（${L.argSlots} 项）`, detail: [`argv[${L.argc}] = NULL`].concat(L.argv.map((_, i) => `argv[${L.argc - 1 - i}]`)).join(' → ') + '，指向字符串区', bytes: hand(L.argSlots) },
+    { pos: '↓', what: 'argc', detail: `<b>${L.argc}</b>（只这一个整数）`, bytes: 8 },
+    { pos: '栈顶（低地址）', what: 'main 未来的栈帧', detail: 'libc_start_main 的栈帧在它上面 —— 这就是 main 还没开始跑时的现场', bytes: 0 },
+  ];
+  $('#exOut').innerHTML = `
+    <div class="readout">
+      <dt>argc</dt><dd><b>${L.argc}</b>（%rdi）</dd>
+      <dt>argv</dt><dd>${L.argv.map(esc).join(' · ')} （%rsi）</dd>
+      <dt>envp</dt><dd>${L.envp.length ? L.envp.map(esc).join(' · ') : '（空）'} （%rdx）</dd>
+      <dt>environ</dt><dd>全局变量，指向 <code>envp[0]</code> 所在的数组</dd>
+      <dt>字符串总字节</dt><dd>环境 ${L.envTotal} B + 参数 ${L.argTotal} B（每串末尾各有一个 <code>\\0</code>）</dd>
+      <dt>指针项数</dt><dd>${L.envSlots}（envp）+ ${L.argSlots}（argv）+ 1（argc）= <b>${L.totalSlots}</b> 项</dd>
+    </div>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>位置</th><th>内容</th><th>具体是</th><th>槽位字节（按 8 字节指针估算）</th></tr>
+      ${rows.map(r => `<tr><td>${r.pos}</td><td><b>${r.what}</b></td><td style="font-size:13.5px">${r.detail}</td><td class="mono">${r.bytes || '—'}</td></tr>`).join('')}
+    </table></div>
+    <div class="box ok" style="margin-bottom:0"><div class="t">这张表想说明什么</div>
+      <code>main</code> 的参数与 <code>envp</code> 不是「魔法」：它们是 <code>execve</code> 在<b>栈上按约定摆好的一串指针</b>。课件第 59 页的例子（<code>"/bin/ls –lt /usr/include"</code> + 两个环境变量）在这里对应 <code>argc == 3</code>、<code>argv[0]="/bin/ls"</code>、… 、<code>envp[n-1]="PWD=/usr/droh"</code>。字节数是按 64 位机器每个指针 8 字节估算的 —— 课件只给了结构，没给字节数。
+    </div>`;
+}
+
+/* ============================================================
+   11.5 测验
+   ============================================================ */
+const QUIZ = [
+  { q: '课件对「异常」的定义是？',
+    o: ['为响应某个事件（处理器状态改变）把控制转移给 OS 内核', '一条跳转指令的别名', '一种函数调用约定', '处理器断电重启'],
+    a: 0, w: '原第 9 页：An exception is a transfer of control to the OS kernel in response to some event。内核是 OS 中常驻内存的那部分。' },
+  { q: '四类异常里，哪一类是程序<b>有意</b>触发的？',
+    o: ['中断', '陷阱', '故障', '中止'], a: 1,
+    w: '原第 13 页：Traps —— Intentional；例子是系统调用、断点陷阱、特殊指令。中断是外部异步事件，故障与中止都是无意的。' },
+  { q: '把 <code>a[5000] = 13;</code>（数组只有 1000 个元素）执行下去，最终会怎样？',
+    o: ['缺页 → 装入页 → 成功', '发 SIGSEGV 信号，进程以 segmentation fault 退出', '编译器报错，根本编不过', '进程被挂起，等父进程收割'],
+    a: 1, w: '原第 18 页：缺页处理器检测到非法地址 → 发 SIGSEGV → 用户进程以 “segmentation fault” 退出。下标在数组内才走「装入后重执行」那条路（原第 17 页）。' },
+  { q: '<code>fork</code> 在子进程里的返回值是？',
+    o: ['0', '子进程自己的 PID', '父进程的 PID', '−1'], a: 0,
+    w: '原第 37 页：返回 0 给子进程，返回子进程的 PID 给父进程；出错时返回负值。这就是「一次调用、两次返回」。' },
+  { q: 'fork2()（<code>L0 / fork / L1 / fork / Bye</code>）一共会打印几行 <code>Bye</code>？',
+    o: ['2', '3', '4', '8'], a: 2,
+    w: '两次 fork 一共产生 4 个进程，每个进程都会执行到最后的 printf("Bye")，所以 4 行。课件第 46 页的可行输出里正好有 4 个 Bye —— 页面用进程树现算过。' },
+  { q: 'fork4()（两次 fork 都嵌在 <code>if (fork() != 0)</code> 里）一共几行 <code>Bye</code>？',
+    o: ['1', '2', '3', '4'], a: 2,
+    w: '原第 47 页。第一次 fork 产生 2 个进程，但第二次 fork 只有「父」那一支会执行，所以一共 3 个进程、3 行 Bye（可行输出 L0 L1 Bye Bye L2 Bye 里数得出来）。' },
+  { q: '进程处于「停止 Stopped」状态意味着？',
+    o: ['进程不存在了', '执行被挂起，在收到进一步指示前不会被调度', '进程正在等 I/O 完成，但仍会被调度', '进程变成僵尸'], a: 1,
+    w: '原第 36 页：Process execution is suspended and will not be scheduled until further notice（下一讲讲信号时会用到这一状态）。' },
+  { q: '课件第 51 页里，已终止但父进程没收割的子进程在 ps 里显示成什么？',
+    o: ['<code>forks &lt;defunct&gt;</code>', '<code>forks &lt;zombie&gt;</code>', '它压根不出现', '<code>forks &lt;stopped&gt;</code>'], a: 0,
+    w: '原第 51 页：ps shows child process as “defunct” (i.e., a zombie)。父进程被 kill 之后，孤儿由 init（pid == 1）收割。' },
+  { q: '<code>wait(&amp;child_status)</code> 的返回值是？',
+    o: ['0 或 −1', '终止的那个子进程的 pid', '子进程的退出码', '还没有被收割的子进程个数'], a: 1,
+    w: '原第 54 页：Return value is the pid of the child process that terminated。退出码要另外用 WEXITSTATUS(child_status) 才能解出来。' },
+  { q: '<code>execve</code> 正常执行之后会怎样返回？',
+    o: ['返回 0', '返回新程序的 PID', '不返回 —— 只有出错时才返回', '返回 −1'], a: 2,
+    w: '原第 58 页：Called once and never returns —— 除了出错（这时才轮到后面的 printf 与 exit）。第 59 页的代码正是靠这一点写的：出错才打印 “Command not found”。' },
+];
+let qzState = QUIZ.map(() => null);
+function renderQuiz() {
+  const answered = qzState.filter(v => v !== null).length;
+  const right = QUIZ.filter((q, i) => qzState[i] === q.a).length;
+  const list = QUIZ.map((q, i) => {
+    const sel = qzState[i];
+    const cls = sel === null ? '' : sel === q.a ? ' correct done' : ' wrong done';
+    return `<div class="puzzle${cls}" style="flex-direction:column;align-items:stretch">
+      <div class="q" style="white-space:normal"><b>${i + 1}.</b> ${q.q}</div>
+      <div style="display:flex;flex-wrap:wrap;gap:7px;margin-top:8px">
+        ${q.o.map((o, j) => `<button class="sm" data-qzo="${i}:${j}"
+          style="${sel === null ? '' : j === q.a ? 'border-color:var(--ok-bd);background:var(--ok-bg)'
+            : j === sel ? 'border-color:var(--bad-bd);background:var(--bad-bg)' : 'opacity:.6'}">
+          ${'ABCD'[j]}. ${o}</button>`).join('')}
+      </div>
+      <div class="exp"><span class="verdict">${sel === null ? '' : sel === q.a ? '✓ 正确' : '✗ 错误'}</span>
+        &nbsp;正确答案：<b>${'ABCD'[q.a]}. ${q.o[q.a]}</b><br>${q.w}</div>
+    </div>`;
+  }).join('');
+  const score = answered === 0 ? '' : `<div class="box ${right === QUIZ.length ? 'ok' : right >= QUIZ.length / 2 ? 'warn' : 'bad'}" style="margin-bottom:0">
+    <div class="t">已答 ${answered} / ${QUIZ.length} 题，答对 ${right} 题</div>
+    ${answered === QUIZ.length
+      ? (right === QUIZ.length ? '全对 —— 异常、进程与进程控制三条线都拿下了。下一讲接着看信号与非局部跳转。'
+                               : '错题上方已标出正确答案与依据，回对应小节再看一遍即可。')
+      : '继续答题，每题都会立即给出解析。'}
+  </div>`;
+  $('#qzOut').innerHTML = list + score;
+}
+
+/* ============================================================
+   初始化
+   ============================================================ */
+function initAll() {
+  /* 全局点击委托：机制表 / 异常表 / 判断题 / 测验 / 快捷按钮由各自的监听器处理 */
+  document.addEventListener('click', e => {
+    const mech = e.target.closest('[data-mch]');
+    if (mech && mech.tagName === 'TR') { mchCur = mech.dataset.mch; renderMch(); return; }
+    const tax = e.target.closest('[data-tax]');
+    if (tax && tax.tagName === 'TR') { taxCur = tax.dataset.tax; renderTax(); return; }
+    const pg = e.target.closest('[data-pg]');
+    if (pg && pg.tagName === 'BUTTON') { $('#pgIn').value = pg.dataset.pg; renderPg(); return; }
+    const tpz = e.target.closest('[data-tpz]');
+    if (tpz) {
+      const [i, v] = tpz.dataset.tpz.split(':').map(Number);
+      if (tpzState[i] !== null) return;
+      tpzState[i] = v; renderTpz(); return;
+    }
+    const fj = e.target.closest('[data-fj]');
+    if (fj) {
+      const kv = kvAttr(fj.dataset.fj);
+      if (kv.prog) $('#fjProg').value = kv.prog;
+      if (kv.seq) $('#fjSeq').value = kv.seq;
+      renderFj(); return;
+    }
+    const qzo = e.target.closest('[data-qzo]');
+    if (qzo) {
+      const [i, j] = qzo.dataset.qzo.split(':').map(Number);
+      if (qzState[i] !== null) return;
+      qzState[i] = j; renderQuiz(); return;
+    }
+  });
+
+  /* --- 1.3 机制判定器 --- */
+  $('#mchSel').innerHTML = MECHS.map(m => `<option value="${m.id}">${esc(m.cn)}（${esc(m.en)}）</option>`).join('');
+  $('#mchSel').value = mchCur;
+  $('#mchSel').addEventListener('change', () => { mchCur = $('#mchSel').value; renderMch(); });
+  $$('[data-mch]').forEach(b => b.addEventListener('click', () => {
+    if (b.tagName !== 'BUTTON') return;
+    mchCur = b.dataset.mch; $('#mchSel').value = mchCur; renderMch();
+  }));
+  renderMch();
+
+  /* --- 2.2 异常处理流程 --- */
+  const vtRead = () => { vtK = parseInt10($('#vtK').value, false); vtN = parseInt10($('#vtN').value, false); vtRet = $('#vtRet').value; };
+  $('#vtGo').addEventListener('click', () => {
+    vtRead();
+    if (vtK === null || vtN === null || vtN < 1 || vtN > 16 || vtK < 0 || vtK > 63) {
+      $('#vtOut').innerHTML = badBox('异常号 k 要填 0–63，表项数 n 要填 1–16。'); return;
+    }
+    renderVt();
+  });
+  ['#vtK', '#vtN'].forEach(id => $(id).addEventListener('keydown', e => { if (e.key === 'Enter') $('#vtGo').click(); }));
+  $('#vtRet').addEventListener('change', () => { vtRead(); if (vtK !== null && vtN !== null) renderVt(); });
+  $$('[data-vt]').forEach(b => b.addEventListener('click', () => {
+    const kv = kvAttr(b.dataset.vt);
+    if (kv.k !== undefined) $('#vtK').value = kv.k;
+    if (kv.n !== undefined) $('#vtN').value = kv.n;
+    if (kv.ret) $('#vtRet').value = kv.ret;
+    $('#vtGo').click();
+  }));
+  vtRead(); if (vtK !== null && vtN !== null) renderVt();
+
+  /* --- 3.2 异常分类 --- */
+  $('#taxSel').innerHTML = EXC_EVENTS.map(e => `<option value="${e.id}">${esc(e.cn)}（${esc(e.en)}）</option>`).join('');
+  $('#taxSel').value = taxCur;
+  $('#taxSel').addEventListener('change', () => { taxCur = $('#taxSel').value; renderTax(); });
+  $$('[data-tax]').forEach(b => b.addEventListener('click', () => {
+    if (b.tagName !== 'BUTTON') return;
+    taxCur = b.dataset.tax; $('#taxSel').value = taxCur; renderTax();
+  }));
+  renderTax();
+
+  /* --- 3.3 判断题 --- */
+  renderTpz();
+  $('#tpzReset').addEventListener('click', () => { tpzState = TPZ.map(() => null); renderTpz(); });
+
+  /* --- 4.2 系统调用速查 --- */
+  $('#scGo').addEventListener('click', renderSc);
+  $('#scIn').addEventListener('keydown', e => { if (e.key === 'Enter') renderSc(); });
+  $$('[data-sc]').forEach(b => b.addEventListener('click', () => { $('#scIn').value = b.dataset.sc; renderSc(); }));
+  renderSc();
+
+  /* --- 4.3 函数调用 vs 系统调用 --- */
+  $$('#cmpSeg button').forEach(b => b.addEventListener('click', () => {
+    $$('#cmpSeg button').forEach(x => x.classList.remove('on'));
+    b.classList.add('on'); cmpCur = b.dataset.cmp; renderCmp();
+  }));
+  $$('[data-cmp]').forEach(b => b.addEventListener('click', () => {
+    if (b.tagName !== 'BUTTON' || b.dataset.cmp === 'both') return;
+  }));
+  document.addEventListener('click', e => {
+    const both = e.target.closest('[data-cmp="both"]');
+    if (both) {
+      cmpCur = 'both';
+      $$('#cmpSeg button').forEach(x => x.classList.remove('on'));
+      renderCmp();
+    }
+  });
+  renderCmp();
+
+  /* --- 5 缺页 / 非法地址 --- */
+  const pfRead = () => {
+    const b = parseAddr($('#pfBase').value), i = parseInt10($('#pfIdx').value, false), l = parseInt10($('#pfLen').value, false);
+    if (b === null || i === null || l === null || i < 0 || l < 1) return false;
+    pfBase = b; pfIdx = i; pfLen = l; pfWhere = $('#pfWhere').value; return true;
+  };
+  $('#pfGo').addEventListener('click', () => {
+    if (!pfRead()) { $('#pfOut').innerHTML = badBox('基址填 0x… 或十进制，下标填 ≥ 0 的整数，长度填 ≥ 1 的整数。'); return; }
+    renderPf();
+  });
+  ['#pfBase', '#pfIdx', '#pfLen'].forEach(id => $(id).addEventListener('keydown', e => { if (e.key === 'Enter') $('#pfGo').click(); }));
+  $('#pfWhere').addEventListener('change', () => { if (pfRead()) renderPf(); });
+  $$('[data-pf]').forEach(b => b.addEventListener('click', () => {
+    const kv = kvAttr(b.dataset.pf);
+    if (kv.i) $('#pfIdx').value = kv.i;
+    if (kv.where) $('#pfWhere').value = kv.where;
+    $('#pfGo').click();
+  }));
+  if (pfRead()) renderPf();
+
+  /* --- 6.3 top 计数 --- */
+  $('#topGo').addEventListener('click', renderTop);
+  $$('#topT,#topR,#topS,#topL,#topTh').forEach(el => el.addEventListener('change', renderTop));
+  $$('[data-top]').forEach(b => b.addEventListener('click', () => {
+    const kv = kvAttr(b.dataset.top);
+    $('#topT').value = kv.t; $('#topR').value = kv.r; $('#topS').value = kv.s; $('#topL').value = kv.l;
+    renderTop();
+  }));
+  renderTop();
+
+  /* --- 6.4 进程状态机 --- */
+  $('#psGo').addEventListener('click', () => psApply($('#psEvt').value));
+  $('#psReset').addEventListener('click', () => { psState = 'none'; psLog = []; renderPs(); });
+  $$('[data-ps]').forEach(b => b.addEventListener('click', () => { $('#psEvt').value = b.dataset.ps; psApply(b.dataset.ps); }));
+  renderPs();
+
+  /* --- 7.1 上下文切换 --- */
+  $('#mpIrq').addEventListener('click', mpIrq);
+  $('#mpSched').addEventListener('click', mpSched);
+  $('#mpLoad').addEventListener('click', mpLoad);
+  $('#mpAuto').addEventListener('click', () => { mpIrq(); mpSched(); mpLoad(); });
+  $('#mpReset').addEventListener('click', mpReset);
+  mpReset();
+
+  /* --- 7.3 并发 / 顺序 --- */
+  $('#ccGo').addEventListener('click', renderCc);
+  $$('#ccA,#ccB,#ccC').forEach(el => el.addEventListener('change', renderCc));
+  $$('[data-cc]').forEach(b => b.addEventListener('click', () => {
+    const kv = kvAttr(b.dataset.cc);
+    $('#ccA').value = kv.a; $('#ccB').value = kv.b; $('#ccC').value = kv.c; renderCc();
+  }));
+  renderCc();
+
+  /* --- 8.1 错误处理 --- */
+  $('#errGo').addEventListener('click', renderErr);
+  $('#errV').addEventListener('keydown', e => { if (e.key === 'Enter') renderErr(); });
+  $('#errFn').addEventListener('change', renderErr);
+  $$('[data-err]').forEach(b => b.addEventListener('click', () => {
+    const kv = kvAttr(b.dataset.err);
+    if (kv.v !== undefined) $('#errV').value = kv.v;
+    if (kv.fn) $('#errFn').value = kv.fn;
+    renderErr();
+  }));
+  renderErr();
+
+  /* --- 8.3 fork 进程数 --- */
+  $('#fkGo').addEventListener('click', renderFk);
+  $('#fkPat').addEventListener('change', renderFk);
+  $('#fkN').addEventListener('change', renderFk);
+  $('#fkN').addEventListener('keydown', e => { if (e.key === 'Enter') renderFk(); });
+  $$('[data-fk]').forEach(b => b.addEventListener('click', () => {
+    const kv = kvAttr(b.dataset.fk);
+    $('#fkPat').value = kv.pat; $('#fkN').value = kv.n; renderFk();
+  }));
+  renderFk();
+
+  /* --- 8.4 forkx2 --- */
+  $('#fxStepP').addEventListener('click', () => fxStep('p'));
+  $('#fxStepC').addEventListener('click', () => fxStep('c'));
+  $('#fxAuto').addEventListener('click', () => {
+    while (!(FX.p.done && FX.c.done)) { if (!FX.p.done) fxStep('p'); if (!FX.c.done) fxStep('c'); }
+  });
+  $('#fxReset').addEventListener('click', fxReset);
+  fxReset();
+
+  /* --- 9.2 拓扑排序 --- */
+  $('#pgGo').addEventListener('click', renderPg);
+  $('#pgIn').addEventListener('keydown', e => { if (e.key === 'Enter') renderPg(); });
+  renderPg();
+
+  /* --- 9.3 输出可行性 --- */
+  $('#fjProg').innerHTML = Object.keys(FORK_PROGS).map(k => `<option value="${k}">${esc(FORK_PROGS[k].label)}</option>`).join('');
+  $('#fjProg').value = 'fork2';
+  $('#fjGo').addEventListener('click', renderFj);
+  $('#fjProg').addEventListener('change', () => {
+    $('#fjSeq').value = forkEnumerate($('#fjProg').value)[0].join(', ');
+    renderFj();
+  });
+  $('#fjSeq').addEventListener('keydown', e => { if (e.key === 'Enter') renderFj(); });
+  renderFj();
+
+  /* --- 10.2 僵尸 / 孤儿 --- */
+  $$('#zomSeg button').forEach(b => b.addEventListener('click', () => {
+    $$('#zomSeg button').forEach(x => x.classList.remove('on'));
+    b.classList.add('on'); zomCur = b.dataset.zom; zomStep = 0; renderZom();
+  }));
+  $('#zomNext').addEventListener('click', () => {
+    const sc = ZOM_SCRIPTS[zomCur];
+    zomStep = zomStep >= sc.steps.length - 1 ? 0 : zomStep + 1; renderZom();
+  });
+  $('#zomPrev').addEventListener('click', () => {
+    const sc = ZOM_SCRIPTS[zomCur];
+    zomStep = zomStep <= 0 ? sc.steps.length - 1 : zomStep - 1; renderZom();
+  });
+  $('#zomReset').addEventListener('click', () => { zomStep = 0; renderZom(); });
+  renderZom();
+
+  /* --- 10.4 wait / waitpid --- */
+  $('#wtGo').addEventListener('click', renderWt);
+  $('#wtMode').addEventListener('change', renderWt);
+  $('#wtN').addEventListener('change', renderWt);
+  $('#wtN').addEventListener('keydown', e => { if (e.key === 'Enter') renderWt(); });
+  $$('[data-wt]').forEach(b => b.addEventListener('click', () => {
+    const kv = kvAttr(b.dataset.wt);
+    $('#wtN').value = kv.n; $('#wtMode').value = kv.mode; renderWt();
+  }));
+  renderWt();
+
+  /* --- 11.3 栈布局 --- */
+  $('#exGo').addEventListener('click', renderEx);
+  $$('#exCmd,#exEnv').forEach(el => el.addEventListener('keydown', e => { if (e.key === 'Enter') renderEx(); }));
+  $$('[data-ex]').forEach(b => b.addEventListener('click', () => {
+    const kv = kvAttr(b.dataset.ex);
+    $('#exCmd').value = kv.cmd;
+    $('#exEnv').value = kv.env || '';
+    renderEx();
+  }));
+  renderEx();
+
+  /* --- 11.5 测验 --- */
+  renderQuiz();
+  $('#qzReset').addEventListener('click', () => { qzState = QUIZ.map(() => null); renderQuiz(); });
+}
+
+document.addEventListener('DOMContentLoaded', initAll);
+/* ============================================================
+   1.3 ECF 机制判定器
+   ============================================================ */
+const MECHS = [
+  { id: 'jump', cn: '跳转与分支', en: 'Jumps and branches', layer: '程序内部', impl: '编译器生成的指令（硬件执行）',
+    evt: '程序状态的改变（如条件码）', ecf: false, page: '第 6 页',
+    note: '只能对「程序状态」的变化做出反应；对外部事件无能为力。' },
+  { id: 'call', cn: '调用与返回', en: 'Call and return', layer: '程序内部', impl: '编译器生成的指令（硬件执行）',
+    evt: '程序状态的改变（如函数指针的值）', ecf: false, page: '第 6 页',
+    note: '同样是「程序内部」的机制 —— 被调用的函数还是这个程序自己的代码。' },
+  { id: 'exc', cn: '异常', en: 'Exceptions', layer: '低层', impl: '硬件与 OS 软件的组合',
+    evt: '系统事件（系统状态的改变）', ecf: true, page: '第 7、9 页',
+    note: '控制权转移到 OS 内核；异常表按异常号索引处理器入口。' },
+  { id: 'ctx', cn: '进程上下文切换', en: 'Process context switch', layer: '高层', impl: 'OS 软件 + 硬件定时器',
+    evt: '定时器到期（把控制权从用户程序收回）', ecf: true, page: '第 7、30 页',
+    note: '内核不是独立进程 —— 它作为某个已存在进程的一部分运行。' },
+  { id: 'sig', cn: '信号', en: 'Signals', layer: '高层', impl: 'OS 软件',
+    evt: '把事件通知给进程（下一讲）', ecf: true, page: '第 7 页',
+    note: '本讲只在「进程终止的三个原因」里用到它：收到默认动作是终止的信号。' },
+  { id: 'nlb', cn: '非局部跳转', en: 'Nonlocal jumps', layer: '高层', impl: 'C 运行时库（setjmp / longjmp）',
+    evt: '程序自己安排的跨函数跳转', ecf: true, page: '第 7 页',
+    note: '唯一一个「纯用户态」的 ECF 机制：由 C 运行时库实现。' },
+];
+let mchCur = 'exc';
+function renderMch() {
+  const rows = MECHS.map(m => `<tr style="cursor:pointer${m.id === mchCur ? ';background:var(--accent-soft)' : ''}" data-mch="${m.id}">
+      <td><b>${esc(m.cn)}</b><br><span class="en" style="font-size:12.5px">${esc(m.en)}</span></td>
+      <td>${esc(m.layer)}</td>
+      <td>${esc(m.impl)}</td>
+      <td>${esc(m.evt)}</td>
+      <td>${m.ecf ? chip('', '是') : chip('gray', '否')}</td>
+      <td class="mono" style="font-size:12.5px">${esc(m.page)}</td>
+    </tr>`).join('');
+  const m = MECHS.find(x => x.id === mchCur);
+  const ecfCount = MECHS.filter(x => x.ecf).length;
+  $('#mchOut').innerHTML = `
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>机制</th><th>层次</th><th>由谁实现</th><th>响应的事件</th><th>是否 ECF</th><th>课件</th></tr>
+      ${rows}
+    </table></div>
+    <div class="readout">
+      <dt>当前选择</dt><dd>${esc(m.cn)}（${esc(m.en)}）</dd>
+      <dt>实现者</dt><dd>${esc(m.impl)}</dd>
+      <dt>响应</dt><dd>${esc(m.evt)}</dd>
+      <dt>是否 ECF</dt><dd>${m.ecf ? '<b>是</b> —— 属于课件第 7 页列的四种 ECF 机制之一' : '<b>否</b> —— 它只响应程序状态，正是课件第 6 页说「不够用」的那两类'}</dd>
+    </div>
+    <div class="box ${m.ecf ? 'ok' : 'warn'}" style="margin-bottom:0"><div class="t">${esc(m.cn)}</div>
+      ${esc(m.note)}<br>页面上共列出 ${MECHS.length} 种改写控制流的机制，其中课件称为「异常控制流」的有 <b>${ecfCount}</b> 种。
+    </div>`;
+}
+
+/* ============================================================
+   2.2 异常处理流程模拟器
+   ============================================================ */
+let vtK = 2, vtN = 4, vtRet = 'cur';
+function renderVt() {
+  const k = vtK, n = vtN;
+  const retTxt = { next: '返回 I_next（下一条指令）', cur: '返回 I_current（重新执行当前指令）', abort: '不返回 —— 终止当前程序' }[vtRet];
+  const oob = k >= n || k < 0;
+  const table = Array.from({ length: n }, (_, i) =>
+    `<tr${i === k ? ' style="background:var(--accent-soft)"' : ''}>
+       <td class="mono">${i}</td><td class="mono">0x…（handler ${i} 的入口地址）</td>
+       <td>${i === k ? '<b>异常 ' + k + ' 发生时调用它</b>' : '<span style="color:var(--muted)">—</span>'}</td>
+     </tr>`).join('');
+  const steps = [
+    ['① 事件发生', `I_curr 正在执行（下一条是 I_next）`, '事件可以是处理器外部来的（中断）或执行指令的结果（陷阱/故障/中止）。'],
+    ['② 处理器把现场压栈', `保存 I_curr 的位置与处理器状态`, '这一步是「回来还有得找」的保证 —— 返回哪种路径都靠它。'],
+    ['③ 用异常号查异常表', `k = ${k} → 表第 ${k} 项`, oob ? `<b style="color:var(--sign)">越界：表只有 ${n} 项（0…${n - 1}），k = ${k} 根本索引不到项</b>` : '异常表（中断向量）的每一项是一个处理器入口地址。'],
+    ['④ 控制转移到 OS 内核', `跳到 Code for exception handler ${k}`, '处理器在<b>内核态</b>运行，使用与用户代码不同的特权级。'],
+    ['⑤ 处理器处理这个事件', '按事件类型做对应的事（装入页面 / 完成 I/O / 结束进程……）', '处理所需的时间与是否可恢复，决定了下一步能往哪走。'],
+    ['⑥ 决定返回路径', retTxt, vtRet === 'next' ? '中断与陷阱这样返回（被打断的指令已经做完）。' : vtRet === 'cur' ? '故障这样返回：修好后重新执行那条指令（缺页就是这个套路）。' : '中止这样结束：当前程序不再继续。'],
+  ].map(([h, m2, e]) => stepBox(h, esc(m2), e)).join('');
+  $('#vtOut').innerHTML = `
+    <div class="grid g2">
+      <div>
+        <div class="tbl-wrap"><table class="tbl">
+          <tr><th>异常号 k</th><th>表项内容</th><th>何时被调用</th></tr>
+          ${table}
+        </table></div>
+        <div class="readout">
+          <dt>表项数 n</dt><dd>${n}（合法下标 0 … ${n - 1}）</dd>
+          <dt>本次 k</dt><dd>${k}${oob ? ' ' + chip('bad', '越界') : ' ' + chip('ok', '在表内')}</dd>
+          <dt>返回路径</dt><dd>${esc(retTxt)}</dd>
+        </div>
+      </div>
+      <div>${steps}</div>
+    </div>
+    <div class="box ${oob ? 'bad' : 'ok'}" style="margin-bottom:0"><div class="t">${oob ? '异常号越界' : '这次走的路径'}</div>
+      ${oob ? '异常号必须是异常表的合法下标（课件第 10 页：k = index into exception table）。真实硬件不会给出越界的异常号 —— 这个输入只是用来看清「索引」这件事。'
+            : `异常 <b>${k}</b> 发生 → 查表第 <b>${k}</b> 项 → 调用 <b>处理器 ${k}</b> → ${esc(retTxt)}。`}
+    </div>`;
+}
+
+/* ============================================================
+   3.2 异常分类判定器
+   ============================================================ */
+let taxCur = 'ctrlc';
+function renderTax() {
+  const sel = EXC_EVENTS.find(e => e.id === taxCur) || EXC_EVENTS[0];
+  const c = classifyExc(sel.id);
+  const rows = EXC_EVENTS.map(e => {
+    const k = e.kind ? EXC_KINDS[e.kind] : null;
+    return `<tr style="cursor:pointer${e.id === sel.id ? ';background:var(--accent-soft)' : ''}" data-tax="${e.id}">
+      <td>${esc(e.cn)}<br><span class="en" style="font-size:12.5px">${esc(e.en)}</span></td>
+      <td>${k ? chip('gray', k.cls) : chip('warn', '未归类')}</td>
+      <td>${k ? esc(k.cn) : '<span style="color:var(--muted)">—</span>'}</td>
+      <td class="mono" style="font-size:12.5px">${esc(e.src)}</td>
+    </tr>`;
+  }).join('');
+  const kinds = ['intr', 'trap', 'fault', 'abort'];
+  const counts = kinds.map(id => ({
+    k: EXC_KINDS[id],
+    list: EXC_EVENTS.filter(e => e.kind === id),
+  }));
+  const uncl = EXC_EVENTS.filter(e => !e.kind);
+  $('#taxOut').innerHTML = `
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>事件（课件举的例子）</th><th>同步性</th><th>四类归属</th><th>课件出处</th></tr>
+      ${rows}
+    </table></div>
+    <div class="readout">
+      <dt>当前选择</dt><dd><b>${esc(sel.cn)}</b>（${esc(sel.en)}）</dd>
+      <dt>同步性</dt><dd>${esc(c.cls)}${c.kind ? ` —— ${esc(c.where)}` : ' —— ' + esc(c.where)}</dd>
+      <dt>四类归属</dt><dd>${c.kind ? `<b>${esc(c.name)}</b>` : '<b>课件未归类</b>'}</dd>
+      <dt>返回行为</dt><dd>${esc(c.ret)}</dd>
+      ${c.recover ? `<dt>可恢复性</dt><dd>${esc(c.recover)}</dd>` : ''}
+    </div>
+    ${sel.note ? `<div class="box ${c.kind ? '' : 'warn'}" style="margin-bottom:0"><div class="t">关于「${esc(sel.cn)}」</div>${esc(sel.note)}</div>` : ''}
+    <h4 style="margin-top:16px">四类各有哪些例子（按课件第 12、13 页整理）</h4>
+    <div class="grid g2">
+      ${counts.map(({ k, list }) => `<div class="card"><h5>${esc(k.cn)}（${esc(k.en)}）· ${esc(k.cls)} · 共 ${list.length} 例</h5>
+        <p class="mono" style="margin:0;font-size:13px">${list.map(e => esc(e.cn)).join(' · ')}</p>
+        <p style="margin:6px 0 0;font-size:13px;color:var(--muted)">事件来源：${esc(k.src)}；返回：${esc(k.ret)}</p>
+      </div>`).join('')}
+    </div>
+    <div class="box warn" style="margin-bottom:0"><div class="t">课件没有归类的事件：${uncl.length} 个</div>
+      ${uncl.map(e => `<b>${esc(e.cn)}</b>（${esc(e.en)}，原第 9 页）`).join('、')} —— 课件只把它们列为「异常事件的例子」，没有指出属于中断/陷阱/故障/中止的哪一类。本页不做推断。
+    </div>`;
+}
+
+/* ============================================================
+   3.3 判断题
+   ============================================================ */
+const TPZ = [
+  { q: '中断（interrupt）是<b>异步</b>异常。', a: true,
+    w: '异步：事件来自处理器<b>外部</b>（定时器、键盘、网络、磁盘），通过置起处理器的中断引脚来表示 —— 原第 12 页。' },
+  { q: '陷阱是程序<b>有意</b>触发的。', a: true,
+    w: '原第 13 页：Traps —— Intentional；例子是系统调用、断点陷阱、特殊指令。' },
+  { q: '故障发生后，处理器<b>一定</b>会重新执行出错的那条指令。', a: false,
+    w: '原第 13 页：Faults —— 「要么重新执行出错的（当前）指令，要么终止」。缺页属于前者，保护性故障属于后者。' },
+  { q: '异常号 <code>k</code> 是异常表的下标，表里第 <code>k</code> 项指向处理器 <code>k</code>。', a: true,
+    w: '原第 10 页：k = index into exception table（a.k.a. interrupt vector）；handler k 在异常 k 发生时被调用。' },
+  { q: '控制器转移到内核后，内核是<b>一个独立的进程</b>。', a: false,
+    w: '原第 30 页：内核不是独立进程，它作为某个<b>已存在进程</b>的一部分运行 —— 内核代码借用当前进程的地址空间。' },
+  { q: '子进程通过 <code>fork</code> 得到父进程地址空间的<b>同一份</b>副本（改一个另一个也变）。', a: false,
+    w: '原第 37、42 页：得到「完全相同但<b>相互独立</b>」的副本 —— 第 42 页的例子正是为了让这一点显形：两个进程各自的 x 互不影响。' },
+];
+let tpzState = TPZ.map(() => null);
+function renderTpz() {
+  const right = TPZ.filter((q, i) => tpzState[i] === (q.a ? 1 : 0)).length;
+  const list = TPZ.map((q, i) => {
+    const sel = tpzState[i];
+    const cls = sel === null ? '' : sel === (q.a ? 1 : 0) ? ' correct done' : ' wrong done';
+    return `<div class="puzzle${cls}" style="flex-direction:column;align-items:stretch">
+      <div class="q" style="white-space:normal"><b>${i + 1}.</b> ${q.q}</div>
+      <div style="display:flex;gap:7px;margin-top:8px">
+        ${[['真', 1], ['假', 0]].map(([t, v]) => `<button class="sm" data-tpz="${i}:${v}"
+          style="${sel === null ? '' : v === (q.a ? 1 : 0) ? 'border-color:var(--ok-bd);background:var(--ok-bg)'
+            : v === sel ? 'border-color:var(--bad-bd);background:var(--bad-bg)' : 'opacity:.6'}">${t}</button>`).join('')}
+      </div>
+      <div class="exp"><span class="verdict">${sel === null ? '' : sel === (q.a ? 1 : 0) ? '✓ 正确' : '✗ 错误'}</span>
+        ${sel === null ? '' : `&nbsp;正确答案：<b>${q.a ? '真' : '假'}</b><br>`}${q.w}</div>
+    </div>`;
+  }).join('');
+  const answered = tpzState.filter(v => v !== null).length;
+  $('#tpzOut').innerHTML = list + (answered === 0 ? '' :
+    `<div class="box ${right === TPZ.length ? 'ok' : right >= TPZ.length / 2 ? 'warn' : 'bad'}" style="margin-bottom:0">
+      <div class="t">已答 ${answered} / ${TPZ.length} 题，答对 ${right} 题</div>
+      ${answered === TPZ.length ? '全部答完 —— 解析里给了每题的课件出处。' : '继续答题，每题立刻判定并给出依据。'}
+    </div>`);
+}
+
+/* ============================================================
+   4.2 系统调用速查器
+   ============================================================ */
+function renderSc() {
+  const q = $('#scIn').value;
+  const r = syscallLookup(q);
+  if (r.miss) { $('#scOut').innerHTML = badBox(r.miss + '。课件的表里只有：' + SYSCALLS.map(s => s.n + ' ' + s.name).join('、') + '。'); return; }
+  const asm = syscallAsm(r.n);
+  const rows = SYSCALLS.map(s => `<tr${s.n === r.n ? ' style="background:var(--accent-soft)"' : ''}>
+    <td class="mono">${s.n}</td><td class="mono"><b>${esc(s.name)}</b></td><td>${esc(s.dn)}</td></tr>`).join('');
+  $('#scOut').innerHTML = `
+    <div class="grid g2">
+      <div>
+        <div class="readout">
+          <dt>编号</dt><dd><b>${r.n}</b></dd>
+          <dt>名字</dt><dd class="mono">${esc(r.name)}</dd>
+          <dt>描述</dt><dd>${esc(r.dn)}</dd>
+        </div>
+        <div class="box" style="margin-bottom:0"><div class="t">调用它要写两条指令（原第 15 页）</div>
+          <div class="formula" style="text-align:left;margin:8px 0 0;font-size:14px">
+            <div>${esc(asm.movBytes)}&nbsp;&nbsp;${esc(asm.mov)}&nbsp;&nbsp;&nbsp;# 编号 ${r.n} = ${r.name}</div>
+            <div>0f 05&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;${esc(asm.syscall)}&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;# 返回值在 %rax</div>
+          </div>
+        </div>
+      </div>
+      <div class="tbl-wrap"><table class="tbl">
+        <tr><th>编号</th><th>名字</th><th>描述</th></tr>
+        ${rows}
+      </table></div>
+    </div>
+    <div class="box ok" style="margin-bottom:0"><div class="t">返回值的约定</div>
+      返回值在 <code>%rax</code>；<b>负值表示出错</b>，其绝对值对应负的 <code>errno</code>（原第 15 页）。其余参数按顺序放在 <code>%rdi</code>、<code>%rsi</code>、<code>%rdx</code>、<code>%r10</code>、<code>%r8</code>、<code>%r9</code>。
+    </div>`;
+}
+
+/* ============================================================
+   4.3 函数调用 vs 系统调用
+   ============================================================ */
+const CMP_ROWS = [
+  { k: '控制怎么转移', fn: '指令里的目标地址 + <code>call</code> 指令', sys: '执行 <code>syscall</code> 指令，控制转移到<b>内核</b>；跳到哪由异常表决定',
+    same: true, note: '两边都是「转移控制」——这一点相同（原第 16 页）。' },
+  { k: '返回哪里', fn: '返回到调用点的下一条指令（<code>ret</code>）', sys: '返回到 <code>syscall</code> 的下一条指令',
+    same: true, note: '课件原话：On return, executes next instruction。' },
+  { k: '参数怎么传', fn: '<code>%rdi</code>、<code>%rsi</code>、<code>%rdx</code>…（调用约定）', sys: '<code>%rdi</code>、<code>%rsi</code>、<code>%rdx</code>、<code>%r10</code>、<code>%r8</code>、<code>%r9</code>',
+    same: true, note: '课件原话：Passes arguments using calling convention。注意第 4 个参数在系统调用里是 <code>%r10</code> 而不是 <code>%rcx</code>。' },
+  { k: '结果在哪', fn: '返回值寄存器 <code>%rax</code>', sys: '返回值在 <code>%rax</code>（负值 = 出错）',
+    same: true, note: '课件原话：Gets result in %rax。' },
+  { k: '「被调用的东西」是什么', fn: '一段<b>用户态</b>代码，用地址指定', sys: '一段<b>内核</b>代码，用<b>编号</b>指定（放在 <code>%rax</code>）',
+    same: false, note: '课件点出的「One Important exception!」：<b>Executed by Kernel</b>，而且「『函数』的『地址』在 %rax 里」—— 其实是编号。' },
+  { k: '特权级', fn: '不变，仍在用户态', sys: '<b>不同</b>的特权级（内核态）',
+    same: false, note: '课件原话：Different set of privileges。' },
+  { k: '出错怎么表示', fn: '返回值 / 标准库约定', sys: '返回负的 <code>errno</code>；库函数这边用全局变量 <code>errno</code>',
+    same: false, note: '课件原话：Uses errno。第 8.1 节会讲怎么检查。' },
+];
+let cmpCur = 'fn';
+function renderCmp() {
+  const both = cmpCur === 'both';
+  const rows = CMP_ROWS.map(r => `<tr>
+    <td><b>${r.k}</b></td>
+    <td class="${cmpCur === 'sys' && !both ? '' : ''}" style="${both ? '' : cmpCur === 'fn' ? '' : 'opacity:.45'}">${r.fn}</td>
+    <td style="${both ? '' : cmpCur === 'sys' ? '' : 'opacity:.45'}">${r.sys}</td>
+    <td style="font-size:13px;color:var(--muted)">${r.note}</td>
+  </tr>`).join('');
+  const same = CMP_ROWS.filter(r => r.same).length;
+  $('#cmpOut').innerHTML = `
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>对比项</th><th>函数调用</th><th>系统调用</th><th>说明</th></tr>
+      ${rows}
+    </table></div>
+    <div class="readout">
+      <dt>相同的方面</dt><dd>${same} / ${CMP_ROWS.length} 项（转移控制、返回下一条、调用约定传参、结果在 %rax）</dd>
+      <dt>关键差别</dt><dd>由<b>内核</b>执行、特权级不同、用<b>编号</b>而不是地址指定目标、错误用 <code>errno</code> 表示</dd>
+    </div>`;
+}
+
+/* ============================================================
+   5 缺页 / 非法地址模拟器
+   ============================================================ */
+let pfBase = 0x8049540n, pfIdx = 500, pfLen = 1000, pfWhere = 'disk';
+function renderPf() {
+  const w = pageWalk(pfBase, pfIdx, pfLen, pfWhere);
+  if (!w) { $('#pfOut').innerHTML = badBox('下标必须是 0 或正整数，基址写成 0x… 或十进制。'); return; }
+  const inRangeHtml = w.inRange
+    ? `是 —— 数组 <code>a[${pfLen}]</code> 的合法下标是 0 … ${pfLen - 1}`
+    : `否 —— 数组 <code>a[${pfLen}]</code> 的合法下标只到 ${pfLen - 1}`;
+  const trail = [];
+  trail.push(stepBox('① 执行这条指令', `movl&nbsp;&nbsp;$0xd,${w.addrHex}`, `有效地址 = 基址 ${hexAddr(pfBase)} + ${pfIdx} × 4 = ${w.addrHex}；对应源码 <code>a[${pfIdx}] = 13;</code>`));
+  trail.push(stepBox('② 地址合法吗', inRangeHtml, `数组占用 ${group(w.size)} 字节（${pfLen} × 4），最后一项在 ${w.lastAddrHex}。`));
+  if (w.verdict === 'segv') {
+    trail.push(stepBox('③ 异常：缺页', 'page fault', '访问的地址不属于本进程的合法地址空间。'));
+    trail.push(stepBox('④ 检测到非法地址', '处理器判定这是非法引用', '缺页处理器发现地址越界 —— 不是「页还没装入」那么简单。'));
+    trail.push(stepBox('⑤ 给进程发信号', '<b>SIGSEGV</b>', '课件原文：Sends SIGSEGV signal to user process。'));
+    trail.push(stepBox('⑥ 进程终止', 'user process exits with “segmentation fault”', '没有返回路径 —— 这一支属于「故障 → 终止」。'));
+  } else if (w.verdict === 'fault') {
+    trail.push(stepBox('③ 异常：缺页', `page fault（地址落在第 ${w.pageHex} 页，页内偏移 ${w.off}）`, '地址合法，但这段内存所在的<b>页当前还在磁盘上</b>。'));
+    trail.push(stepBox('④ 拷入内存', 'copy page from disk to memory', '缺页处理器把该页装入物理内存。'));
+    trail.push(stepBox('⑤ 返回并重新执行', 'return and reexecute movl', '返回给出错的那条指令（<code>I_current</code>）—— 不是下一条。'));
+    trail.push(stepBox('⑥ 第二次尝试成功', 'successful on second try', '这次页已在物理内存里，写内存照常完成。'));
+  } else {
+    trail.push(stepBox('③ 页已在内存', `第 ${w.pageHex} 页命中`, '没有异常发生 —— 这条指令直接完成。'));
+    trail.push(stepBox('④ 完成', 'a[' + pfIdx + '] = 13', '把开关改成「在磁盘上」就能看到缺页那条路径。'));
+  }
+  const pageInfo = `<div class="readout">
+      <dt>有效地址</dt><dd>${w.addrHex}（十进制 ${group(w.addr.toString())}）</dd>
+      <dt>页号</dt><dd>${w.pageHex}（÷ 4096 = ${w.pageHex}）</dd>
+      <dt>页内偏移</dt><dd>${w.off}（0x${w.off.toString(16).toUpperCase()}）</dd>
+      <dt>判定</dt><dd>${w.verdict === 'ok' ? chip('ok', '命中') : w.verdict === 'fault' ? chip('warn', '缺页 → 重执行') : chip('bad', '非法 → SIGSEGV')}</dd>
+      <dt>结论</dt><dd><b>${esc(w.title)}</b></dd>
+    </div>`;
+  const check = (pfIdx === 500 || pfIdx === 5000)
+    ? `<div class="box ok" style="margin-bottom:0"><div class="t">与课件对上了</div>
+        课件第 ${pfIdx === 500 ? '17' : '18'} 页的汇编写的是 <code>movl $0xd,${w.addrHex}</code>${pfIdx === 500 ? '（原文为 0x8049d10）' : '（原文为 0x804e360）'} —— 与页面按「基址 + 下标 × 4」算出的地址一致。</div>`
+    : '';
+  $('#pfOut').innerHTML = `${pageInfo}<h4 style="margin-top:6px">推演过程</h4>${trail.join('')}${check}`;
+}
+</script>
+</body>
+</html>

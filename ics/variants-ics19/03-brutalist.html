@@ -1,0 +1,2731 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-style="brutalist" data-deck="ics19">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>虚拟内存：概念（Virtual Memory: Concepts） · 交互式课件（中文）（新粗野版）</title>
+<style>
+/* ==========================================================================
+   base.css —— 结构基础样式（所有风格共用）
+   只使用 CSS 变量，不含任何具体配色；由各主题覆盖变量与少量结构规则。
+   ========================================================================== */
+
+:root{
+  /* 颜色（每个主题必须覆盖） */
+  --bg:#f6f7f9; --card:#fff; --ink:#15181d; --muted:#697586; --line:#e4e7ec;
+  --accent:#2563eb; --accent-ink:#fff; --accent-soft:#eaf1ff;
+  --sign:#e5484d; --exp:#0b7fd4; --frac:#18915a; --warn:#b45309;
+  --sign-bg:#fdecec; --sign-fg:#a3262b; --sign-bd:#f6cdcf;
+  --exp-bg:#e8f2fd;  --exp-fg:#0a5f9e;  --exp-bd:#c7ddf5;
+  --frac-bg:#e9f7ef; --frac-fg:#116b43; --frac-bd:#c8e8d5;
+  --ok-bg:#f2fbf6; --ok-bd:#9ed3b4; --bad-bg:#fff5f5; --bad-bd:#f1b5b8;
+  --warn-bg:#fffbeb; --gray-bg:#eef1f5; --gray-fg:#5b6472;
+  --paper-soft:#fcfdfe; --code-bg:#f1f3f7; --code-bd:#e6e9ef;
+  --tbl-head:#f7f9fc; --tbl-hover:#fafbfd;
+  --sel-bg:#eef1f5;
+
+  /* 字体 */
+  --font-sans:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",system-ui,sans-serif;
+  --font-mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+  --font-display:var(--font-sans);
+  --tracking-title:normal;
+
+  /* 形状 */
+  --radius:12px; --radius-sm:8px; --radius-pill:99px;
+  --border-w:1px; --shadow:0 1px 2px rgba(16,24,40,.06),0 1px 3px rgba(16,24,40,.1);
+  --shadow-card:none;
+  --card-border:var(--border-w) solid var(--line);
+
+  /* 布局 */
+  --page-max:1180px; --nav-w:236px; --gap:26px; --sec-pad:26px 28px;
+  --nav-sticky-top:64px; --anchor-offset:70px;
+  --font-size:16px; --line-height:1.75;
+}
+
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font-sans);
+  font-size:var(--font-size);line-height:var(--line-height);-webkit-font-smoothing:antialiased}
+img{max-width:100%}
+
+/* ---------- 顶栏 ---------- */
+.topbar{position:sticky;top:0;z-index:50;background:var(--card);border-bottom:1px solid var(--line)}
+.topbar-in{max-width:var(--page-max);margin:0 auto;padding:10px 22px;display:flex;align-items:center;gap:14px}
+.brand{font-weight:700;letter-spacing:var(--tracking-title);font-family:var(--font-display)}
+.brand small{font-weight:500;color:var(--muted);margin-left:8px;font-size:12.5px}
+.progress{margin-left:auto;display:flex;align-items:center;gap:10px;font-size:12.5px;color:var(--muted)}
+.progress .bar{width:150px;height:6px;border-radius:var(--radius-pill);background:var(--line);overflow:hidden}
+.progress .bar>i{display:block;height:100%;width:0;background:var(--accent);transition:width .25s}
+
+/* ---------- 主体布局 ---------- */
+.layout{max-width:var(--page-max);margin:0 auto;padding:22px;display:grid;
+  grid-template-columns:var(--nav-w) minmax(0,1fr);gap:var(--gap)}
+main{min-width:0}
+/* 长 URL / 长标识符没有断行点，会把容器整个撑破（窄屏尤其明显）。
+   只作用于文本容器；表格故意不加，让它走 .tbl-wrap 的横向滚动。 */
+main p,main li,main dd,main dt,main h2,main h3,main h4,main h5,
+main .box,main .card,main .readout,main .puzzle,main .step{overflow-wrap:anywhere}
+
+/* ---------- 目录 ---------- */
+nav.toc{position:sticky;top:var(--nav-sticky-top);align-self:start;max-height:calc(100vh - 84px);overflow:auto;padding-right:4px}
+nav.toc h4{margin:0 0 8px;font-size:12px;letter-spacing:.12em;color:var(--muted);text-transform:uppercase;font-weight:600}
+nav.toc a{display:block;padding:7px 11px;border-radius:var(--radius-sm);color:var(--ink);opacity:.78;
+  text-decoration:none;font-size:14.5px;border-left:2.5px solid transparent}
+nav.toc a:hover{background:var(--sel-bg);opacity:1}
+nav.toc a.active{background:var(--accent-soft);color:var(--accent);border-left-color:var(--accent);font-weight:600;opacity:1}
+nav.toc a .n{display:inline-block;min-width:20px;color:var(--muted);font-size:12.5px;font-variant-numeric:tabular-nums}
+nav.toc a.active .n{color:var(--accent)}
+nav.toc .sub{padding-left:26px;font-size:13.5px;opacity:.7}
+
+/* ---------- 章节 ---------- */
+section{background:var(--card);border:var(--card-border);border-radius:var(--radius);
+  padding:var(--sec-pad);margin-bottom:22px;box-shadow:var(--shadow);scroll-margin-top:var(--anchor-offset)}
+section>h2{margin:0 0 6px;font-size:25px;letter-spacing:-.01em;font-family:var(--font-display)}
+section>.lede{color:var(--muted);margin:0 0 20px;font-size:14.5px}
+h3{font-size:18.5px;margin:26px 0 10px;padding-left:11px;border-left:3.5px solid var(--accent);font-family:var(--font-display)}
+h4{font-size:16px;margin:18px 0 8px;font-family:var(--font-display)}
+h5{font-size:15px;font-family:var(--font-display)}
+p{margin:10px 0}
+ul,ol{margin:10px 0;padding-left:22px}
+li{margin:5px 0}
+code{font-family:var(--font-mono);font-size:.89em;background:var(--code-bg);border:1px solid var(--code-bd);border-radius:5px;padding:1px 5px}
+.mono{font-family:var(--font-mono)}
+a{color:var(--accent)}
+hr{border:0;border-top:1px dashed var(--line);margin:24px 0}
+.srcref{font-size:11.5px;color:var(--muted);font-weight:500;font-family:var(--font-sans);margin-left:8px;vertical-align:middle;white-space:nowrap;opacity:.75}
+.en{color:var(--muted);font-size:.92em}
+
+/* ---------- 栅格与卡片 ---------- */
+.grid{display:grid;gap:14px}
+.g2{grid-template-columns:repeat(2,minmax(0,1fr))}
+.g3{grid-template-columns:repeat(3,minmax(0,1fr))}
+/* 窄屏单列：必须用 minmax(0,1fr)。写成 1fr 时轨道最小宽度是 auto，
+   单元格里只要有长代码行（<pre>）就撑破容器，整页横向溢出。 */
+@media(max-width:820px){.g2,.g3{grid-template-columns:minmax(0,1fr)}}
+.card{border:var(--card-border);border-radius:var(--radius-sm);padding:15px 17px;background:var(--paper-soft);box-shadow:var(--shadow-card)}
+.card h5{margin:0 0 7px}
+.card.pad0{padding:0;overflow:hidden}
+
+/* ---------- 提示框 ---------- */
+.box{border:1px solid var(--line);border-left:4px solid var(--accent);background:var(--accent-soft);
+  border-radius:var(--radius-sm);padding:12px 16px;margin:14px 0}
+.box.warn{border-left-color:var(--warn);background:var(--warn-bg)}
+.box.bad{border-left-color:var(--sign);background:var(--bad-bg)}
+.box.ok{border-left-color:var(--frac);background:var(--ok-bg)}
+.box .t{font-weight:650;font-size:14.5px;margin-bottom:2px}
+
+/* ---------- 公式 ---------- */
+.formula{font-family:var(--font-mono);background:var(--paper-soft);border:1px solid var(--line);
+  border-radius:var(--radius-sm);padding:14px 17px;margin:14px 0;font-size:16.5px;text-align:center;overflow-x:auto}
+.formula.big{font-size:20px}
+
+/* ---------- 表格 ---------- */
+table.tbl{width:100%;border-collapse:collapse;font-size:14.5px;margin:14px 0}
+table.tbl th,table.tbl td{border:1px solid var(--line);padding:8px 11px;text-align:left;vertical-align:top}
+table.tbl th{background:var(--tbl-head);font-weight:650;font-size:13.5px;white-space:nowrap}
+table.tbl td.mono,table.tbl th.mono{font-family:var(--font-mono);font-size:13.5px}
+table.tbl tr:hover td{background:var(--tbl-hover)}
+/* 当前行高亮：interactive 表格用它标出「正在看的那一行」。
+   注意 --tbl-hover 是悬停色，深色皮肤下故意比底色亮，所以 hl 用同一套变量。 */
+table.tbl tr.hl td{background:var(--sel-bg)}
+.tbl-wrap{overflow-x:auto}
+
+/* ---------- 位串控件 ---------- */
+.fw{display:flex;flex-wrap:wrap;gap:8px 18px;align-items:flex-start;margin:4px 0 2px;min-width:0}
+.fgrp{min-width:0}
+.fcap{font-size:12px;color:var(--muted);margin-bottom:4px;font-weight:600}
+.fcap b{font-family:var(--font-mono);font-size:12.5px}
+.bits{display:flex;flex-wrap:wrap;gap:2px;font-family:var(--font-mono);margin:4px 0}
+.bits .b{width:25px;height:33px;display:flex;align-items:center;justify-content:center;
+  border-radius:6px;font-size:15px;cursor:pointer;user-select:none;border:1px solid transparent;
+  transition:transform .06s,background .12s;font-weight:600}
+.bits .b:hover{transform:translateY(-2px)}
+.bits .b.s{background:var(--sign-bg);color:var(--sign-fg);border-color:var(--sign-bd)}
+.bits .b.e{background:var(--exp-bg);color:var(--exp-fg);border-color:var(--exp-bd)}
+.bits .b.f{background:var(--frac-bg);color:var(--frac-fg);border-color:var(--frac-bd)}
+.bits .b.sel{outline:2px solid var(--ink);outline-offset:1px}
+.bits.sm .b{width:19px;height:26px;font-size:12px;border-radius:4px}
+.fgrp .bits{flex-wrap:wrap;max-width:100%;gap:2px}
+.fgrp.ge .bits{max-width:300px}
+
+/* ---------- 读数表 ---------- */
+.readout{display:grid;grid-template-columns:auto 1fr;gap:4px 16px;font-size:14.5px;margin:12px 0}
+.readout dt{color:var(--muted);font-weight:600;font-family:var(--font-mono);font-size:13.5px;padding-top:2px}
+.readout dd{margin:0;font-family:var(--font-mono)}
+
+/* ---------- 小标签 ---------- */
+.chip{display:inline-block;font-size:12.5px;padding:2px 9px;border-radius:var(--radius-pill);
+  background:var(--accent-soft);color:var(--accent);font-weight:600}
+.chip.ok{background:var(--frac-bg);color:var(--frac-fg)}
+.chip.bad{background:var(--sign-bg);color:var(--sign-fg)}
+.chip.warn{background:var(--warn-bg);color:var(--warn)}
+.chip.gray{background:var(--gray-bg);color:var(--gray-fg)}
+.kbd{font-family:var(--font-mono);font-size:13px;background:var(--code-bg);border:1px solid var(--code-bd);
+  border-bottom-width:2px;border-radius:6px;padding:1px 7px}
+
+/* ---------- 控件 ---------- */
+.ctrls{display:flex;flex-wrap:wrap;gap:9px;align-items:center;margin:12px 0}
+label.fld{display:inline-flex;align-items:center;gap:7px;font-size:14px;color:var(--ink);max-width:100%;flex-wrap:wrap;min-width:0}
+label.fld select,label.fld input{min-width:0;max-width:100%}
+input[type=text],input[type=number],select{font-family:var(--font-mono);font-size:14px;padding:6px 10px;
+  border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--card);color:var(--ink)}
+input[type=text]:focus,input[type=number]:focus,select:focus{outline:2px solid var(--accent-soft);border-color:var(--accent)}
+button{font-family:var(--font-sans);font-size:14px;font-weight:600;padding:7px 15px;border-radius:var(--radius-sm);
+  border:1px solid var(--line);background:var(--card);color:var(--ink);cursor:pointer}
+button:hover{background:var(--sel-bg)}
+button.p{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+button.sm{padding:4px 10px;font-size:13px}
+button.pill{border-radius:var(--radius-pill)}
+/* 按钮组默认不换行：项一多就会把 .ctrls 撑破。允许它缩到容器宽度并横向滚动。 */
+.seg{display:inline-flex;max-width:100%;border:1px solid var(--line);
+  border-radius:var(--radius-sm);overflow-x:auto;overflow-y:hidden}
+.seg button{border:0;border-radius:0;border-right:1px solid var(--line);padding:6px 13px}
+.seg button:last-child{border-right:0}
+.seg button.on{background:var(--accent);color:var(--accent-ink)}
+
+/* ---------- 分步演示 ---------- */
+/* .steps 是 .step 的包裹层（skill 词汇表里列了但一直没定义）——
+   仅给一点上下留白，步骤块自己的边距由 .step 负责。 */
+.steps{margin:12px 0}
+.step{border:1px solid var(--line);border-radius:var(--radius-sm);padding:11px 15px;margin:9px 0;
+  background:var(--paper-soft);opacity:.42;transition:opacity .2s}
+.step.on{opacity:1;background:var(--card)}
+.step .h{font-size:13px;font-weight:700;color:var(--accent);letter-spacing:.02em;margin-bottom:3px}
+.step .m{font-family:var(--font-mono);font-size:14.5px;overflow-x:auto}
+.step .e{font-size:13.5px;color:var(--muted);margin-top:3px}
+
+/* ---------- 折叠与答案 ---------- */
+.reveal{border:1px solid var(--line);border-radius:var(--radius-sm);padding:11px 15px;margin:8px 0;background:var(--paper-soft)}
+.reveal summary{cursor:pointer;font-weight:600;font-size:14.5px}
+.reveal[open]{background:var(--card)}
+.ans{margin-top:8px;padding-top:8px;border-top:1px dashed var(--line);font-size:14.5px}
+
+/* ---------- 判断题 ---------- */
+.puzzle{border:1px solid var(--line);border-radius:var(--radius-sm);padding:12px 15px;margin:9px 0;
+  display:flex;gap:13px;align-items:flex-start;background:var(--paper-soft)}
+.puzzle .q{font-family:var(--font-mono);font-size:15px;flex:1;min-width:0;overflow-x:auto;white-space:nowrap}
+.puzzle .q small{font-family:var(--font-sans);color:var(--muted);display:block;white-space:normal}
+.puzzle .btns{display:flex;gap:6px;flex-shrink:0}
+.puzzle.correct{border-color:var(--ok-bd);background:var(--ok-bg)}
+.puzzle.wrong{border-color:var(--bad-bd);background:var(--bad-bg)}
+.puzzle .exp{margin-top:9px;padding-top:9px;border-top:1px dashed var(--line);font-size:14.5px;
+  display:none;white-space:normal;font-family:var(--font-sans)}
+.puzzle.done .exp{display:block}
+.puzzle .exp .verdict{font-weight:700}
+
+/* ---------- 分布图 ---------- */
+.tick{stroke:#94a3b8;stroke-width:1.4}
+.tick.dn{stroke:var(--exp)}
+.tick.nm{stroke:var(--frac)}
+.ticklabel{font-size:9.5px;fill:var(--muted);font-family:var(--font-mono)}
+.axisline{stroke:var(--line);stroke-width:1.2}
+.axislabel{font-size:11px;fill:var(--muted)}
+
+/* ---------- 页脚 / 回到顶部 ---------- */
+.footer{max-width:var(--page-max);margin:0 auto;padding:8px 22px 40px;color:var(--muted);font-size:13px}
+.totop{position:fixed;right:22px;bottom:22px;z-index:40;box-shadow:var(--shadow);display:none}
+
+/* ---------- 响应式 ---------- */
+@media(max-width:960px){
+  .layout{grid-template-columns:1fr;padding:16px}
+  nav.toc{position:static;max-height:none;display:flex;flex-wrap:wrap;gap:6px;
+    background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:10px}
+  nav.toc h4{width:100%;margin-bottom:2px}
+  nav.toc a{border-left:0;padding:5px 10px;font-size:13px}
+  nav.toc .sub{display:none}
+  section{padding:20px 17px}
+}
+@media print{
+  nav.toc,.topbar,.totop{display:none}
+  .layout{display:block}
+  section{break-inside:avoid;box-shadow:none}
+}
+
+/* ==========================================================================
+   风格 C · 新粗野主义（Neo-brutalism）
+   厚黑描边 · 硬投影 · 高饱和色块 · 顶部大字报 + 药丸导航
+   ========================================================================== */
+
+:root{
+  --bg:#fdf3d7; --card:#fffdf5; --ink:#111111; --muted:#5b564a; --line:#111111;
+  --accent:#ff3d68; --accent-ink:#fff; --accent-soft:#ffe3ea;
+  --sign:#e01b24; --exp:#0b6fd4; --frac:#0f9d58; --warn:#c2410c;
+  --sign-bg:#ffdfe0; --sign-fg:#b3141c; --sign-bd:#111;
+  --exp-bg:#dcecff;  --exp-fg:#0a5aa8;  --exp-bd:#111;
+  --frac-bg:#dcf7e5; --frac-fg:#0b7a45; --frac-bd:#111;
+  --ok-bg:#e3fbe9; --ok-bd:#111; --bad-bg:#ffe6e6; --bad-bd:#111;
+  --warn-bg:#fff0d6; --gray-bg:#efe9d8; --gray-fg:#4a463c;
+  --paper-soft:#fffdf5; --code-bg:#fff8e1; --code-bd:#111;
+  --tbl-head:#ffe9a8; --tbl-hover:#fffbe8;
+  --sel-bg:#ffe9a8;
+
+  --font-sans:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",system-ui,sans-serif;
+  --font-mono:ui-monospace,"SF Mono",Menlo,Consolas,"Liberation Mono",monospace;
+  --font-display:var(--font-sans);
+  --tracking-title:-.02em;
+
+  --radius:4px; --radius-sm:4px; --radius-pill:99px;
+  --border-w:2px;
+  --shadow:5px 5px 0 var(--line); --shadow-card:4px 4px 0 var(--line);
+  --card-border:2px solid var(--line);
+
+  --page-max:1200px; --nav-w:auto; --gap:0px;
+  --sec-pad:24px 26px; --nav-sticky-top:0px; --anchor-offset:150px;
+  --font-size:16px; --line-height:1.72;
+}
+
+body{background:
+  repeating-linear-gradient(45deg, rgba(17,17,17,.028) 0 12px, transparent 12px 24px),
+  var(--bg)}
+
+/* ---------- 顶栏：大字报（不吸顶，避免与吸顶药丸导航重叠） ---------- */
+.topbar{position:static;background:var(--accent);border-bottom:3px solid var(--line);color:#fff}
+.topbar-in{padding:12px 22px;max-width:var(--page-max)}
+.brand{font-weight:900;font-size:22px;letter-spacing:var(--tracking-title);
+  text-transform:none;text-shadow:2px 2px 0 rgba(17,17,17,.55)}
+.brand small{color:#fff;opacity:.9;font-weight:700;font-size:12px;letter-spacing:.02em}
+.progress{color:#fff;font-weight:700;font-size:12.5px}
+.progress .bar{width:150px;height:12px;border-radius:0;background:#fff;border:2px solid var(--line);overflow:hidden}
+.progress .bar>i{background:repeating-linear-gradient(45deg,#111 0 6px,#ffd93d 6px 12px)}
+
+/* ---------- 导航：横排药丸，吸顶 ---------- */
+.layout{display:block;max-width:var(--page-max);padding:0 22px 26px}
+nav.toc{position:sticky;top:0;z-index:45;display:flex;flex-wrap:wrap;gap:6px;align-items:center;
+  max-height:none;overflow:visible;padding:10px 0;margin:0 0 18px;
+  background:var(--bg);border-bottom:3px solid var(--line)}
+nav.toc h4{width:100%;margin:0 0 2px;font-size:11px;letter-spacing:.16em;color:var(--muted)}
+nav.toc a{border:2px solid var(--line);border-radius:var(--radius-pill);background:var(--card);
+  padding:4px 11px;font-size:12px;font-weight:700;border-left-width:2px;white-space:nowrap;
+  box-shadow:2px 2px 0 var(--line)}
+nav.toc a:hover{background:var(--sel-bg);transform:translate(1px,1px);box-shadow:1px 1px 0 var(--line)}
+nav.toc a.active{background:var(--ink);color:#ffd93d;box-shadow:1px 1px 0 var(--line)}
+nav.toc a .n{color:inherit;opacity:.6;font-weight:800;min-width:auto;margin-right:5px}
+nav.toc .sub{display:none}
+
+/* ---------- 章节：粗框卡片 ---------- */
+section{box-shadow:var(--shadow);margin-bottom:26px;background:var(--card)}
+section>h2{font-size:27px;font-weight:900;display:inline-block;background:var(--ink);color:#ffd93d;
+  padding:3px 14px;margin:0 0 12px;border-radius:2px}
+section>h2 .srcref{color:#ffd93d;opacity:.65}
+section>.lede{font-weight:600;color:var(--muted);margin-bottom:18px}
+h3{font-size:19px;font-weight:900;border-left:0;padding:0 0 0 14px;position:relative;margin-top:28px}
+h3::before{content:"";position:absolute;left:0;top:.28em;width:8px;height:.95em;background:var(--accent);
+  border:2px solid var(--line)}
+h4,h5{font-weight:800}
+code{background:var(--code-bg);border:2px solid var(--line);border-radius:3px;font-weight:600}
+
+/* ---------- 卡片 / 盒：硬投影 + 位移 hover ---------- */
+.card{box-shadow:var(--shadow-card);border-radius:var(--radius);transition:transform .08s,box-shadow .08s}
+.card:hover{transform:translate(2px,2px);box-shadow:2px 2px 0 var(--line)}
+.box{border:2px solid var(--line);border-left-width:8px;border-radius:var(--radius);background:var(--accent-soft);
+  box-shadow:var(--shadow-card)}
+.box.warn{background:var(--warn-bg)}
+.box.bad{background:var(--bad-bg)}
+.box.ok{background:var(--ok-bg)}
+.box .t{font-weight:900;font-size:15px}
+
+.formula{background:#fff;border:2px solid var(--line);border-radius:var(--radius);font-weight:700;
+  box-shadow:var(--shadow-card)}
+.formula.big{font-size:21px}
+
+/* ---------- 表格：粗网格 ---------- */
+table.tbl th,table.tbl td{border:2px solid var(--line);padding:8px 12px}
+table.tbl th{background:var(--tbl-head);font-weight:900;font-size:13px}
+table.tbl tbody tr:nth-child(even) td{background:#fffdf0}
+table.tbl tr:hover td{background:var(--tbl-hover)}
+
+/* ---------- 位视图：色块方格 ---------- */
+.fw{gap:10px 20px;padding:14px;border:2px dashed var(--line);border-radius:var(--radius);background:#fff}
+.fcap{font-weight:800;font-size:11.5px;letter-spacing:.06em;text-transform:uppercase}
+.bits{gap:3px}
+.bits .b{width:26px;height:32px;border-radius:3px;border:2px solid var(--line);font-weight:900}
+.bits .b.s{background:var(--sign-bg);color:var(--sign-fg)}
+.bits .b.e{background:var(--exp-bg);color:var(--exp-fg)}
+.bits .b.f{background:var(--frac-bg);color:var(--frac-fg)}
+.bits .b:hover{transform:translate(1px,1px)}
+.bits .b.sel{outline:3px solid var(--accent);outline-offset:0}
+.bits.sm .b{width:20px;height:26px;font-size:11.5px}
+
+.readout dt{color:var(--muted);font-weight:800}
+
+/* ---------- 控件：可按的实体按钮 ---------- */
+input[type=text],input[type=number],select{border:2px solid var(--line);border-radius:var(--radius);
+  background:#fff;font-weight:700}
+input:focus,select:focus{outline:none;box-shadow:3px 3px 0 var(--line)}
+button{border:2px solid var(--line);border-radius:var(--radius);font-weight:800;background:#fff;
+  box-shadow:3px 3px 0 var(--line);transition:transform .08s,box-shadow .08s}
+button:hover{background:var(--sel-bg);transform:translate(1px,1px);box-shadow:2px 2px 0 var(--line)}
+button.p{background:var(--accent);color:#fff}
+button.p:hover{background:#ff2456}
+button:active{transform:translate(3px,3px);box-shadow:0 0 0 var(--line)}
+.chip{border:2px solid var(--line);border-radius:var(--radius-pill);background:#fff;color:var(--ink);
+  font-weight:800;font-size:12px}
+.chip.ok{background:var(--frac-bg);color:var(--frac-fg)}
+.chip.bad{background:var(--sign-bg);color:var(--sign-fg)}
+.chip.warn{background:var(--warn-bg);color:var(--warn)}
+.chip.gray{background:var(--gray-bg)}
+.seg{border:2px solid var(--line);border-radius:var(--radius);box-shadow:3px 3px 0 var(--line)}
+.seg button{border-right:2px solid var(--line);box-shadow:none;border:0;border-radius:0}
+.seg button:hover{transform:none}
+.seg button.on{background:var(--ink);color:#ffd93d}
+
+/* ---------- 分步演示 ---------- */
+.step{border:2px solid var(--line);border-radius:var(--radius);background:#fff;box-shadow:3px 3px 0 var(--line)}
+.step.on{background:#fffdf5}
+.step .h{color:var(--accent);font-weight:900;font-size:13px;letter-spacing:.02em}
+.step .m{font-weight:600}
+.step .e{color:var(--muted)}
+
+/* ---------- 判断题 ---------- */
+.puzzle{border:2px solid var(--line);border-radius:var(--radius);background:#fff}
+.puzzle.correct{background:var(--ok-bg)}
+.puzzle.wrong{background:var(--bad-bg)}
+.puzzle .q{font-weight:700}
+.reveal{border:2px solid var(--line);border-radius:var(--radius);background:#fff;
+  box-shadow:3px 3px 0 var(--line)}
+.reveal[open]{background:#fffdf5}
+
+.totop{border:2px solid var(--line);box-shadow:4px 4px 0 var(--line);background:#ffd93d;font-weight:900}
+.tick{stroke:#7a6f52}
+.tick.nm{stroke:var(--frac)}
+.tick.dn{stroke:var(--exp)}
+.axisline{stroke:var(--line)}
+
+/* ---------- 响应式 ---------- */
+@media(max-width:960px){
+  .topbar-in{padding:10px 16px}
+  .brand{font-size:18px}
+  .layout{padding:0 16px 20px}
+  nav.toc{gap:6px;padding:10px 0}
+  nav.toc a{padding:4px 10px;font-size:12px}
+  section{padding:20px 16px}
+  section>h2{font-size:22px}
+  .progress .bar{width:90px}
+}
+
+
+/* ---------- 风格切换条（构建时注入，各主题通用） ---------- */
+.stylebar{max-width:var(--page-max);margin:0 auto;padding:14px 22px 0;display:flex;gap:8px;
+  flex-wrap:wrap;align-items:center;font-size:12.5px;color:var(--muted)}
+.stylebar>span{font-weight:600}
+.stylebar a{text-decoration:none;padding:4px 11px;border:1px solid var(--line);border-radius:var(--radius-pill);
+  color:var(--muted);background:var(--card);font-weight:600}
+.stylebar a:hover{border-color:var(--accent);color:var(--accent)}
+.stylebar a.cur{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.stylebar>span{flex:0 0 auto}
+@media(max-width:960px){.stylebar{padding:12px 16px 0}}
+/* 25 讲之后药丸很多：窄屏折行会吃掉大半屏，改成单行横滑 */
+@media(max-width:820px){.stylebar{flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;
+  scrollbar-width:thin}.stylebar a{flex:0 0 auto;font-size:12px;padding:4px 10px}}
+
+</style>
+</head>
+<body>
+
+<header class="topbar"><div class="topbar-in">
+  <div class="brand">虚拟内存：概念 Virtual Memory: Concepts<small>《计算机系统导论》第 19 讲 · 新粗野版</small></div>
+  <div class="progress"><span id="pgText">学习进度 0%</span><span class="bar"><i id="pgBar"></i></span></div>
+</div></header>
+
+<div class="stylebar">
+  <span>风格：</span>
+  <a href="../ics19-zh.html">清爽蓝（原版）</a>
+  <a href="01-academic.html">学术讲义</a>
+  <a href="02-terminal.html">深色终端</a>
+  <a href="04-glass.html">柔和玻璃</a>
+  <a href="index.html">◧ 全部预览</a>
+  <span style="opacity:.5">|</span>
+  <a href="../variants-ics01/index.html">↗ 第 1 讲 · 课程概述</a>
+  <a href="../variants-bits/index.html">↗ 第 2 讲 · 位、字节与整数</a>
+  <a href="../variants/index.html">↗ 第 3 讲 · 浮点数</a>
+  <a href="../variants-ics04/index.html">↗ 第 4 讲 · 机器级编程 I：基础</a>
+  <a href="../variants-ics05/index.html">↗ 第 5 讲 · 机器级编程 II：控制</a>
+  <a href="../variants-ics06/index.html">↗ 第 6 讲 · 机器级编程 III：过程</a>
+  <a href="../variants-ics07/index.html">↗ 第 7 讲 · 机器级编程 IV：数据</a>
+  <a href="../variants-ics08/index.html">↗ 第 8 讲 · 机器级编程 V：高级</a>
+  <a href="../variants-ics09/index.html">↗ 第 9 讲 · 处理器体系结构：ISA 与逻辑</a>
+  <a href="../variants-ics10/index.html">↗ 第 10 讲 · 处理器体系结构：顺序实现</a>
+  <a href="../variants-ics11/index.html">↗ 第 11 讲 · 处理器体系结构：流水线</a>
+  <a href="../variants-ics12/index.html">↗ 第 12 讲 · 存储层次结构</a>
+  <a href="../variants-ics13/index.html">↗ 第 13 讲 · 缓存存储器</a>
+  <a href="../variants-ics14/index.html">↗ 第 14 讲 · 代码优化</a>
+  <a href="../variants-ics15/index.html">↗ 第 15 讲 · 链接</a>
+  <a href="../variants-ics16/index.html">↗ 第 16 讲 · 异常控制流 I</a>
+  <a href="../variants-ics17/index.html">↗ 第 17 讲 · 异常控制流 II</a>
+  <a href="../variants-ics18/index.html">↗ 第 18 讲 · 系统级 I/O</a>
+  <a href="../variants-ics20/index.html">↗ 第 20 讲 · 虚拟内存 II</a>
+  <a href="../variants-ics21/index.html">↗ 第 21 讲 · 动态内存分配</a>
+  <a href="../variants-ics22/index.html">↗ 第 22 讲 · 网络基础</a>
+  <a href="../variants-ics23/index.html">↗ 第 23 讲 · 网络编程</a>
+  <a href="../variants-ics24/index.html">↗ 第 24 讲 · 并发编程</a>
+  <a href="../variants-ics25/index.html">↗ 第 25 讲 · 同步</a>
+  <a href="../variants-lab/index.html">↗ Data Lab 实验</a>
+</div>
+
+<div class="layout">
+
+<nav class="toc">
+  <h4>目录</h4>
+  <a href="#s0"><span class="n">0</span>课程导览</a>
+  <a href="#s1"><span class="n">1</span>地址与地址空间</a>
+  <a href="#s2"><span class="n">2</span>VM 作为缓存工具</a>
+  <a href="#s3"><span class="n">3</span>页命中与缺页</a>
+  <a href="#s4"><span class="n">4</span>VM 与内存管理</a>
+  <a href="#s5"><span class="n">5</span>VM 与内存保护</a>
+  <a href="#s6"><span class="n">6</span>地址翻译基础</a>
+  <a href="#s7"><span class="n">7</span>翻译全流程</a>
+  <a href="#s8"><span class="n">8</span>TLB 加速翻译</a>
+  <a href="#s9"><span class="n">9</span>多级页表</a>
+  <a href="#s10"><span class="n">10</span>总结与测验</a>
+</nav>
+
+<main>
+<!-- ================= 0 ================= -->
+  <section id="s0">
+    <h2>课程导览<span class="srcref">原第 1–3、13、27、31、33 页</span></h2>
+    <p class="lede">北京大学《计算机系统导论》第 19 讲：<b>虚拟内存：概念（Virtual Memory: Concepts）</b>。这一讲把第 6 页那一串设问全部回答掉：「32 位地址有 40 亿个、64 位地址有 1.8×10<sup>19</sup> 个 —— 内存怎么装得下？程序该用哪一块？<code>fork()</code> 之后怎么办？别的进程往你的内存里写数据怎么办？」答案只有一句话：<b>加一层间接（add a level of indirection）</b>。</p>
+
+    <div class="grid g3">
+      <div class="card"><h5>本讲提纲</h5>
+        <ol style="margin:0;padding-left:20px;font-size:14.5px">
+          <li>地址空间：物理寻址 vs 虚拟寻址</li>
+          <li>VM 作为<b>缓存</b>工具：页、页表、页命中与缺页</li>
+          <li>VM 作为<b>内存管理</b>工具：简化分配、共享、链接与加载</li>
+          <li>VM 作为<b>内存保护</b>工具：PTE 权限位</li>
+          <li>地址翻译：VA → PA 的位段拆分与页表查表</li>
+          <li>TLB：把翻译本身也缓存起来</li>
+          <li>多级页表：把 512 GB 的单级页表变小</li>
+        </ol>
+      </div>
+      <div class="card"><h5>一句话核心</h5>
+        <p style="margin:0;font-size:14.5px">每个进程拿到一份<b>私有的虚拟地址空间</b>，硬件在<b>每一次 load / store</b> 时把虚拟地址翻译成物理地址。于是一个「映射函数」同时解决了三件事：<b>装得下</b>（DRAM 当作磁盘的缓存）、<b>好管理</b>（每个进程的地址空间长得一样）、<b>互不干扰</b>（权限位拦在不该碰的页前面）。</p>
+      </div>
+      <div class="card"><h5>和前后讲的衔接</h5>
+        <p style="margin:0;font-size:14.5px">第 5 讲讲过 <code>fork()</code> 之后父子进程各有独立地址空间，第 6–8 讲讲过 <code>malloc</code> 与 <code>brk</code> —— 当时都只当结论用。这一讲讲它们<b>为什么成立</b>。下一讲（虚拟内存 II）继续讲内存映射、动态内存分配与地址翻译的硬件细节。</p>
+      </div>
+    </div>
+
+    <h3>0.1 章节与原页码</h3>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>章节</th><th>主题</th><th>原课件页码</th><th>要回答的问题</th></tr>
+      <tr><td><b>1</b></td><td>地址与地址空间</td><td class="mono">4–12</td><td>程序凭什么用一个「不存在的」地址访问内存？物理寻址与虚拟寻址差在哪？</td></tr>
+      <tr><td><b>2</b></td><td>VM 作为缓存工具</td><td class="mono">14–16</td><td>磁盘上的 N 字节数组怎么被 DRAM 缓存？页表这个数据结构长什么样？</td></tr>
+      <tr><td><b>3</b></td><td>页命中与缺页</td><td class="mono">17–26</td><td>命中时省了什么？缺失时那七个步骤分别发生什么？局部性为什么能救命？</td></tr>
+      <tr><td><b>4</b></td><td>VM 与内存管理</td><td class="mono">28–30</td><td>为什么每个进程的地址空间可以长得一样？共享库怎么做到只留一份？</td></tr>
+      <tr><td><b>5</b></td><td>VM 与内存保护</td><td class="mono">32</td><td>PTE 里的权限位怎么让 MMU 在每次访问时拦下非法操作？</td></tr>
+      <tr><td><b>6</b></td><td>地址翻译基础</td><td class="mono">34–36</td><td>VA 怎么拆成 VPN + VPO？查完页表怎么拼出 PA？</td></tr>
+      <tr><td><b>7</b></td><td>翻译全流程</td><td class="mono">37–39</td><td>页命中五步、缺页七步分别是谁在干活？VM 与 L1 缓存怎么串起来？</td></tr>
+      <tr><td><b>8</b></td><td>TLB 加速翻译</td><td class="mono">40–44</td><td>翻译本身也要访存，那怎么办？TLBT / TLBI 怎么算？</td></tr>
+      <tr><td><b>9</b></td><td>多级页表</td><td class="mono">45–47</td><td>48 位地址 + 4 KB 页为什么要 512 GB 页表？两级怎么把它压下来？</td></tr>
+      <tr><td><b>10</b></td><td>总结与测验</td><td class="mono">48</td><td>把「程序员视角」与「系统视角」各收成一句话。</td></tr>
+    </table></div>
+    <p class="en">课件第 3、13、27、31、33 页是同一张 <b>Today</b> 提纲页重复出现五次 —— 每讲完一个大主题就插一次，用来定位进度。它们与第 1 页封面一起并入本导览，不单列章节。</p>
+
+    <div class="box"><div class="t">本页使用说明</div>
+      标有 <span class="chip gray">可交互</span> 的地方都能点击或输入，所有计算都在浏览器里实时完成。<a href="#s6">第 6 节的地址翻译器</a>、<a href="#s8">第 8 节的 TLB 查询模拟器</a>、<a href="#s9">第 9 节的两级页表翻译器</a>最值得反复玩：它们的判分基准已用一份独立的 Python 参考实现逐地址交叉验证（几十万条输入，0 项不一致）。所有地址运算<b>全程 BigInt</b>，64 位地址不会掉精度。
+    </div>
+  </section>
+
+  <!-- ================= 1 ================= -->
+  <section id="s1">
+    <h2>1. 地址与地址空间<span class="srcref">原第 4–12 页</span></h2>
+    <p class="lede">先回到最朴素的模型：<b>程序用地址引用数据</b>。第 4–5 页把「地址」重新定义一遍，第 6 页抛出四个看似无解的问题，第 7–8 页给出唯一的招数，第 9–10 页对比物理寻址与虚拟寻址，第 11–12 页把它形式化成「地址空间」。</p>
+
+    <h3>1.1 字节寻址与两种寻址方式<span class="srcref">原第 4–5 页</span></h3>
+    <div class="grid g2">
+      <div class="card"><h5>地址是什么</h5>
+        <ul style="margin:0;padding-left:20px;font-size:14.5px">
+          <li>概念上，内存是<b>一个极大的字节数组</b>，地址就是这个数组的<b>下标</b>；</li>
+          <li>现实中并不是，但完全可以这样想；</li>
+          <li><b>指针变量存的就是地址</b>。</li>
+        </ul>
+      </div>
+      <div class="card"><h5>两种简单的寻址方式</h5>
+        <p style="margin:0 0 6px;font-size:14.5px"><b>Normal</b> <span class="mono">(R)</span> → <span class="mono">Mem[Reg[R]]</span>：寄存器 R 直接给出内存地址。</p>
+        <p class="mono" style="margin:0 0 10px;font-size:13px">movl (%ecx),%eax</p>
+        <p style="margin:0 0 6px;font-size:14.5px"><b>Displacement</b> <span class="mono">D(R)</span> → <span class="mono">Mem[Reg[R]+D]</span>：R 给出区域起点，常量 D 给出偏移。</p>
+        <p class="mono" style="margin:0;font-size:13px">movl 8(%ebp),%edx</p>
+      </div>
+    </div>
+    <p>注意这里已经埋下了本讲的伏笔：<b>程序给出的地址（如 <code>%ecx</code> 里的值）到底是物理地址还是别的什么？</b> 课件第 9、10 页分别演示了这两种可能。</p>
+
+    <h3>1.2 四个问题：内存怎么够用<span class="srcref">原第 6 页</span></h3>
+    <p>课件把地址空间的规模摆在一起，问题立刻就出来了：</p>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>问题</th><th>课件原文的展开</th></tr>
+      <tr><td><b>怎么装得下？</b></td><td>32 位地址：约 4,000,000,000（40 亿）字节；64 位地址：约 16,000,000,000,000,000,000（16 quintillion）字节</td></tr>
+      <tr><td><b>程序怎么决定用哪块内存？</b></td><td>那 <code>fork()</code> 之后呢？</td></tr>
+      <tr><td><b>别的进程往你的内存里写数据怎么办？</b></td><td>那你还怎么调试程序？</td></tr>
+    </table></div>
+
+    <div class="box warn"><div class="t">勘误：2<sup>64</sup> 约等于 18.4 quintillion，不是 16 quintillion</div>
+      课件第 6 页写「64-bit addresses: ~16,000,000,000,000,000,000 (16 quintillion) bytes」。按 <code>2<sup>64</sup></code> 现算应为 <b>18,446,744,073,709,551,616</b> ≈ <b>1.84 × 10<sup>19</sup></b>，也就是约 <b>18.4 quintillion</b>（quintillion = 10<sup>18</sup>）。课件的数量级没错（都是 10<sup>19</sup> 量级），但有效数字差了约 13%。本页一律按现算值给出 —— 下面第 1.5 节的尺寸计算器可以自己验。
+    </div>
+
+    <h3>1.3 唯一的招数：加一层间接<span class="srcref">原第 7–8 页</span></h3>
+    <div class="formula">MAP : 虚拟地址 → 物理地址 &nbsp;&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)">（每次 load / store 都做一次）</span></div>
+    <ul>
+      <li>每个进程拿到<b>自己的一份私有内存映像</b>，看上去是一整段「完整大小」的私有内存；</li>
+      <li>这解决了「怎么选」与「别人不该动你的东西」；<b>出乎意料的是，它也解决了「怎么装得下」</b>；</li>
+      <li>实现方式：<b>透明地翻译地址</b> —— 加一个映射函数，把私有地址映射到物理地址。</li>
+    </ul>
+
+    <h3>1.4 物理寻址 vs 虚拟寻址<span class="srcref">原第 9–10 页</span></h3>
+    <p>课件用两张对比图说明这两种系统。第 9 页的物理寻址系统里，CPU 直接把物理地址送上总线；第 10 页的虚拟寻址系统在 CPU 与内存之间插了一个 MMU。</p>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：两种寻址系统逐步走一遍</span>
+        <div class="seg" id="psSeg">
+          <button data-ps="phys" class="on">物理寻址</button>
+          <button data-ps="virt">虚拟寻址</button>
+          <button data-ps="cmp">对照</button>
+        </div>
+        <label class="fld">地址 <input type="text" id="psAddr" value="4100" size="8" spellcheck="false"></label>
+        <button class="sm" data-psaddr="4100">课件例：4100 → 4</button>
+        <button class="sm" data-psaddr="0x8049d10">触发缺页那条：0x8049d10</button>
+      </div>
+      <div id="psOut"></div>
+    </div>
+
+    <div class="box"><div class="t">课件第 10 页的结论（原文）</div>
+      虚拟寻址<b>用在所有现代服务器、笔记本电脑与智能手机里</b>，并且是「<b>计算机科学中最伟大的思想之一</b>」（one of the great ideas in computer science）。反过来，物理寻址只出现在「简单系统」中 —— 课件举的例子是汽车、电梯、数码相框里的嵌入式微控制器。它们不跑多用户操作系统，也就不需要隔离。
+    </div>
+
+    <h3>1.5 地址空间<span class="srcref">原第 11 页</span></h3>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>概念</th><th>定义（课件原文）</th><th>记法</th></tr>
+      <tr><td><b>线性地址空间</b></td><td>有序的、连续的非负整数地址集合</td><td class="mono">{0, 1, 2, 3 … }</td></tr>
+      <tr><td><b>虚拟地址空间</b></td><td>N 个虚拟地址的集合</td><td class="mono">N = 2<sup>n</sup>，{0 … N−1}</td></tr>
+      <tr><td><b>物理地址空间</b></td><td>M 个物理地址的集合</td><td class="mono">M = 2<sup>m</sup>，{0 … M−1}</td></tr>
+    </table></div>
+    <p>课件在这里点出了三句关键的话：<b>数据（字节）与它的属性（地址）被干净地分开了</b>；因此<b>同一个数据可以有多个地址</b>；主存里的每个字节都有 —— <b>一个物理地址，一个（或多个）虚拟地址</b>。</p>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：地址空间尺寸计算器 —— 给定位数，实时换算</span>
+        <label class="fld">虚拟地址位数 n <input type="text" id="asN" value="32" size="4" spellcheck="false"></label>
+        <label class="fld">物理地址位数 m <input type="text" id="asM" value="32" size="4" spellcheck="false"></label>
+        <label class="fld">页内偏移位数 p <input type="text" id="asP" value="12" size="4" spellcheck="false"></label>
+        <button class="p" id="asGo">换算</button>
+        <button class="sm" data-as="32,32,12">32 位 / 4 KB 页</button>
+        <button class="sm" data-as="48,52,12">64 位（48 位 VA / 52 位 PA）</button>
+        <button class="sm" data-as="64,64,12">64 位全宽</button>
+        <button class="sm" data-as="32,32,10">p = 10（1 KB 页）</button>
+      </div>
+      <div id="asOut"></div>
+    </div>
+
+    <h3>1.6 为什么需要虚拟内存<span class="srcref">原第 12 页</span></h3>
+    <div class="grid g3">
+      <div class="card"><h5>高效使用主存</h5><p style="margin:0;font-size:14.5px">把 DRAM 当作虚拟地址空间各部分的<b>缓存</b> —— 用得多的页留在内存，用不到的留在磁盘。</p></div>
+      <div class="card"><h5>简化内存管理</h5><p style="margin:0;font-size:14.5px">每个进程拿到<b>同样整齐的线性地址空间</b>，链接器与加载器不用再操心「谁占了哪块」。</p></div>
+      <div class="card"><h5>隔离地址空间</h5><p style="margin:0;font-size:14.5px">一个进程碰不到另一个进程的内存；用户程序也<b>无法访问内核的私有信息与代码</b>。</p></div>
+    </div>
+    <p class="en">这三条正好对应本讲后面的三大节：缓存工具（第 2–3 节）、内存管理工具（第 4 节）、保护工具（第 5 节）。</p>
+  </section>
+
+  <!-- ================= 2 ================= -->
+  <section id="s2">
+    <h2>2. VM 作为缓存工具<span class="srcref">原第 14–16 页</span></h2>
+    <p class="lede">这一节把虚拟内存<b>当成一层缓存</b>看：缓存的对象是磁盘上的字节，缓存块叫<b>页（page）</b>，缓存本身是物理内存（DRAM），而记帐用的数据结构是<b>页表（page table）</b>。</p>
+
+    <h3>2.1 概念模型：磁盘数组 + DRAM 缓存<span class="srcref">原第 14 页</span></h3>
+    <p>课件原话：<b>虚拟内存在概念上是存放在磁盘上的、N 个连续字节组成的数组</b>。这个数组的内容被缓存在物理内存（DRAM 缓存）里；这些缓存块就叫<b>页</b>（page），大小为 <code>P = 2<sup>p</sup></code> 字节。</p>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>术语</th><th>英文</th><th>状态（课件第 14 页给出的三种）</th></tr>
+      <tr><td><b>虚拟页</b> VP</td><td class="en">virtual page</td><td>未分配（unallocated，空，不占磁盘也不占内存）· 已缓存（cached，在 DRAM 里）· 未缓存（uncached，在磁盘上）</td></tr>
+      <tr><td><b>物理页</b> PP</td><td class="en">physical page</td><td>已缓存（存放着某个 VP 的内容）· 空（empty）</td></tr>
+    </table></div>
+    <p>第 14 页的图把两个空间并排画出来：左边一列 VP 0 … <code>2<sup>n−p</sup>−1</code>「存在磁盘上」，右边一列 PP 0 … <code>2<sup>m−p</sup>−1</code>「缓存在 DRAM 里」。<b>注意两边页数不一样</b> —— 虚拟页数 <code>2<sup>n−p</sup></code>、物理页数 <code>2<sup>m−p</sup></code>，前者一般远大于后者，这正是「装不下」被化解的方式。</p>
+
+    <h3>2.2 DRAM 缓存的组织<span class="srcref">原第 15 页</span></h3>
+    <p>为什么虚拟内存这套缓存长得跟 L1/L2 完全不一样？因为<b>失效代价太大</b>：</p>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>代价</th><th>课件给的量级</th></tr>
+      <tr><td>DRAM 比 SRAM 慢</td><td>约 <b>10×</b></td></tr>
+      <tr><td>磁盘比 DRAM 慢</td><td>约 <b>10,000×</b></td></tr>
+      <tr><td>从磁盘载入一个块</td><td class="mono">&gt; 1 ms（&gt; 100 万个时钟周期）</td></tr>
+    </table></div>
+    <p class="en">课件的两个括号说法在 <b>1 GHz</b> 主频下正好自洽：1 ms × 1 GHz = 10<sup>6</sup> 个时钟周期。主频越高，同样的 1 ms 里时钟周期越多 —— 所以「&gt; 100 万个周期」是相当保守的下界。</p>
+    <p>课件补了一句反过来的话：这段时间里 <b>CPU 可以做完大量计算</b>。于是结论是四条：</p>
+    <ul>
+      <li><b>页（块）很大</b>：典型 4 KB；Linux 的「大页（huge pages）」是 2 MB（默认）到 1 GB；</li>
+      <li><b>全相联（fully associative）</b>：任何一个 VP 都能放进任何一个 PP —— 因此需要一个「很大的映射函数」，这与普通缓存完全不同；</li>
+      <li><b>替换算法极其精细且昂贵</b>：复杂到无法用硬件实现（所以留给操作系统软件做）；</li>
+      <li><b>写回（write-back）而不是写直达（write-through）</b>。</li>
+    </ul>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：页尺寸与页表规模 —— 一个参数改动，全局跟着变</span>
+        <label class="fld">虚拟地址位数 n <input type="text" id="dcN" value="32" size="4" spellcheck="false"></label>
+        <label class="fld">页大小 <select id="dcP">
+          <option value="12">4 KB = 4096 B（课件默认）</option>
+          <option value="21">2 MB（Linux 大页默认）</option>
+          <option value="30">1 GB（Linux 大页上限）</option>
+        </select></label>
+        <label class="fld">PTE 字节数 <input type="text" id="dcE" value="4" size="4" spellcheck="false"></label>
+        <button class="p" id="dcGo">计算</button>
+        <button class="sm" data-dc="32,12,4">课件第 46 页：32 位 / 4 KB / 4 B</button>
+        <button class="sm" data-dc="48,12,8">课件第 45 页：48 位 / 4 KB / 8 B</button>
+        <button class="sm" data-dc="48,21,8">48 位 + 2 MB 大页</button>
+      </div>
+      <div id="dcOut"></div>
+    </div>
+    <p class="en">这一格算出来的「单级页表要多少字节」就是第 9 节那句「512 GB」的来源；把它留在这里，是为了让两个数字前后对得上。</p>
+
+    <h3>2.3 使能的数据结构：页表<span class="srcref">原第 16 页</span></h3>
+    <p>页表是<b>一个 PTE（page table entry，页表项）组成的数组，把虚拟页映射到物理页</b>。它是<b>每个进程一份的内核数据结构</b>，放在 DRAM 里。每个 PTE 的内容是二者之一：</p>
+    <div class="formula" style="text-align:left">
+      <div><b>有效位 = 1</b> → 后面跟着<b>物理页号（PPN, physical page number）</b>，说明这一页在 DRAM 里；</div>
+      <div><b>有效位 = 0</b> → 后面是<b>磁盘地址</b>（或 null），说明这一页不在内存里 —— 引用它就是<b>缺页（page fault）</b>。</div>
+    </div>
+    <p>课件第 16–25 页反复使用同一张 8 项页表演示各种事件。下面这个浏览器把那张表做成可点的：<b>点任意一行 PTE</b>，看它指向的虚拟页此刻在 DRAM 里还是磁盘上。</p>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：页表浏览器 —— 点击 PTE，看它的三个状态</span>
+        <label class="fld">页表状态 <select id="ptPreset">
+          <option value="init">课件初始状态（第 16–20 页）</option>
+          <option value="faulted">缺页处理后（第 22–25 页：VP 4 被换出、VP 3 换入）</option>
+          <option value="allvalid">全部有效（练手用）</option>
+        </select></label>
+        <button class="sm" id="ptFault">演示缺页：换出 VP 4 → 换入 VP 3</button>
+        <button class="sm" id="ptReset">回到初始状态</button>
+      </div>
+      <div id="ptOut"></div>
+    </div>
+
+    <div class="box ok"><div class="t">这张表就是课件第 16–25 页那张表的逐项还原</div>
+      有效位与 PPN 都能从课件图里读出来：VP 1 → PP 0、VP 2 → PP 1、VP 7 → PP 2、VP 4 → PP 3；<b>VP 0 与 VP 5 是「未分配」</b>（PTE 有效位 0、指针 null）；<b>VP 3 与 VP 6 是「未缓存」</b>（有效位 0、磁盘地址有效）。第 21–24 页演示的缺页事件里，被换出的牺牲页是 <b>VP 4</b>、被换入的是 <b>VP 3</b> —— 点上面那个「演示缺页」按钮，会看到 PTE 3 与 PTE 4 一起变化，这正是「更新 PTE」那一步。
+    </div>
+  </section>
+
+  <!-- ================= 3 ================= -->
+  <section id="s3">
+    <h2>3. 页命中与缺页<span class="srcref">原第 17–26 页</span></h2>
+    <p class="lede">这是本讲最长的一段（课件用了 10 页）。核心只有两个事件：<b>页命中（page hit）</b>与<b>缺页（page fault）</b>；其余篇幅都在展开「缺页之后那七个步骤」。最后用<b>局部性</b>解释这套看似低效的机制为什么真的能跑。</p>
+
+    <h3>3.1 页命中<span class="srcref">原第 17 页</span></h3>
+    <p><b>页命中</b>：引用的 VM 字<b>就在物理内存里</b>（DRAM 缓存命中）。CPU 送出虚拟地址，MMU 查页表拿到 PPN，拼出物理地址去读 —— 全程不碰磁盘。</p>
+
+    <h3>3.2 缺页<span class="srcref">原第 18 页</span></h3>
+    <p><b>缺页</b>：引用的 VM 字<b>不在物理内存里</b>（DRAM 缓存缺失）。页表里对应的 PTE 有效位为 0，MMU 只能触发异常。注意课件这里的措辞：页命中与缺页的<b>图完全相同</b>，唯一的区别是那个 PTE 的有效位。</p>
+
+    <h3>3.3 缺页是怎么被触发的<span class="srcref">原第 19 页</span></h3>
+    <p>课件给了一个具体到字节的例子：用户往内存写一个值。</p>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>步骤</th><th>课件原文</th></tr>
+      <tr><td>① 用户写内存</td><td class="mono">80483b7: c7 05 10 9d 04 08 0d &nbsp; movl $0xd,0x8049d10</td></tr>
+      <tr><td>② 那一页不在内存</td><td>用户内存的这一部分（页）当前在磁盘上</td></tr>
+      <tr><td>③ MMU 触发缺页异常</td><td>把特权级提升到<b>内核态（supervisor mode）</b>，进而调用软件里的<b>缺页处理程序（page fault handler）</b></td></tr>
+    </table></div>
+    <p class="en">对应的 C 代码是 <code>int a[1000]; main(){ a[500] = 13; }</code> —— 第 500 个 int 落在哪个页上，就是哪一页缺页。课件括注「更多细节在后面的讲座」，本讲只讲到「异常 → 处理程序 → 返回」为止。</p>
+
+    <h3>3.4 缺页的七个步骤<span class="srcref">原第 20–24 页</span></h3>
+    <p>课件第 37 页（命中）列了 5 步、第 38 页（缺页）列了 7 步。缺页的七步是：</p>
+    <ol>
+      <li>处理器把虚拟地址送给 MMU；</li>
+      <li>MMU 从内存里的页表取出 PTE（第 37 页把这两步合并写作 <b>2–3)</b>）；</li>
+      <li>（同上，取 PTE 的访存）；</li>
+      <li><b>有效位是 0，于是 MMU 触发缺页异常</b>；</li>
+      <li>处理程序选出<b>牺牲页</b>（如果它是脏页，先写回磁盘）；</li>
+      <li>处理程序把新页<b>换入</b>，并<b>更新内存里的 PTE</b>；</li>
+      <li>处理程序返回原进程，<b>重新执行</b>那条出错的指令。</li>
+    </ol>
+    <p>课件第 20–23 页用四张图把这段演了一遍（本例中牺牲页是 <b>VP 4</b>），第 24 页补上最后一步：处理程序执行 <code>iret</code>（interrupt return）——「像 <code>ret</code> 一样，但还会恢复特权级」，返回到<b>造成缺页的那条指令</b>，而这一次不会再缺页了。</p>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：缺页处理七步 —— 逐步推进，页表跟着变</span>
+        <label class="fld">本次引用的虚拟页 <select id="pfVpn">
+          <option value="3">VP 3（课件第 20–25 页的例子）</option>
+          <option value="6">VP 6（另一个未缓存页）</option>
+          <option value="0">VP 0（未分配 —— 会触发段错误）</option>
+        </select></label>
+        <button class="p" id="pfNext">下一步 →</button>
+        <button class="sm" id="pfAll">一次走完</button>
+        <button class="sm" id="pfReset">重置</button>
+      </div>
+      <div id="pfOut"></div>
+    </div>
+
+    <div class="box"><div class="t">按需分页（demand paging）</div>
+      课件第 23 页把整段话的要点提炼成一句：<b>等到真的发生缺失才把页复制进 DRAM，这叫做按需分页</b>。第 25 页接着说「分配页」：给某个虚拟页分配内存时（本例分配 <b>VP 5</b>），页表里创建一个指向 null 的 PTE；<b>下一次缺失才会真正把它带进内存</b>。所以「<code>malloc</code> 一块很大的内存」这件事本身几乎不花时间 —— 物理页是后来缺页时才一页一页补上的。
+    </div>
+
+    <h3>3.5 局部性又一次救场<span class="srcref">原第 26 页</span></h3>
+    <p>课件自己先承认：「虚拟内存看起来糟糕透顶地低效，但它能工作，<b>靠的是局部性</b>」。在任意时刻，程序倾向于访问一组<b>活跃的虚拟页</b>，叫做<b>工作集（working set）</b>：</p>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>条件</th><th>后果</th></tr>
+      <tr><td class="mono">工作集大小 &lt; 主存大小</td><td>单个进程性能良好（熬过冷启动的那些缺失之后）；时间局部性越好，工作集越小</td></tr>
+      <tr><td class="mono">工作集大小 &gt; 主存大小</td><td><b>抖动（thrashing）</b>：性能崩塌 —— 页被连续不断地换进换出</td></tr>
+      <tr><td>多进程同时跑，且<b>总</b>工作集 &gt; 主存</td><td>同样抖动：这时的「工作集」要按所有进程加总来算</td></tr>
+    </table></div>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：工作集与抖动判据</span>
+        <label class="fld">进程 1 工作集 <input type="text" id="wsA" value="1" size="6" spellcheck="false"> MB</label>
+        <label class="fld">进程 2 工作集 <input type="text" id="wsB" value="1" size="6" spellcheck="false"> MB</label>
+        <label class="fld">进程 3 工作集 <input type="text" id="wsC" value="0" size="6" spellcheck="false"> MB</label>
+        <label class="fld">物理主存 <input type="text" id="wsMem" value="4" size="6" spellcheck="false"> MB</label>
+        <button class="p" id="wsGo">判定</button>
+        <button class="sm" data-ws="1,1,0,4">三个进程各 1 MB / 主存 4 MB</button>
+        <button class="sm" data-ws="1.5,1.5,1.5,4">各 1.5 MB / 主存 4 MB</button>
+        <button class="sm" data-ws="0.1,0.1,0.1,4">各 100 KB / 主存 4 MB</button>
+      </div>
+      <div id="wsOut"></div>
+    </div>
+
+    <div class="box warn"><div class="t">注意：页是按整页算的</div>
+      页是<b>整页</b>换进换出的 —— 一个「1.1 MB 的工作集」在 4 KB 页的系统上实际要占 <b>282 页</b>（1.1 MB ÷ 4 KB = 281.6，向上取整）。上面的计算器按整页算，所以你会看到判定结果在临界点上与「按字节比大小」不同。
+    </div>
+  </section>
+
+  <!-- ================= 4 ================= -->
+  <section id="s4">
+    <h2>4. VM 作为内存管理工具<span class="srcref">原第 28–30 页</span></h2>
+    <p class="lede">把虚拟内存当成缓存用，收益是「装得下」；把它当成<b>内存管理</b>工具用，收益是「每个进程看到的地址空间长得一模一样」—— 链接器、加载器、<code>fork()</code>、共享库全都因此变简单。</p>
+
+    <h3>4.1 每个进程一份虚拟地址空间<span class="srcref">原第 28 页</span></h3>
+    <ul>
+      <li><b>核心思想</b>：每个进程有自己的虚拟地址空间；</li>
+      <li>因此它可以<b>把内存看成一个简单的线性数组</b>（第 4 页的那个模型又回来了）；</li>
+      <li>映射函数把地址<b>打散</b>到物理内存各处 —— 相邻的虚拟页不一定要相邻存放；</li>
+      <li><b>选得好的映射能改善局部性</b>（这一点在第 5 讲缓存里已经用过）。</li>
+    </ul>
+
+    <h3>4.2 简化分配，并让进程共享<span class="srcref">原第 29 页</span></h3>
+    <div class="grid g2">
+      <div class="card"><h5>简化内存分配</h5>
+        <ul style="margin:0;padding-left:20px;font-size:14.5px">
+          <li>每个虚拟页都可以映射到<b>任意</b>物理页；</li>
+          <li>同一个虚拟页<b>在不同时刻可以存放在不同的物理页</b>里 —— 换页时不必搬数据，只要改 PTE。</li>
+        </ul>
+      </div>
+      <div class="card"><h5>在进程间共享代码与数据</h5>
+        <p style="margin:0;font-size:14.5px">把不同进程的虚拟页映射到<b>同一个物理页</b>（课件举的例子是 PP 6）。只读的库代码就是这么做到「内存里只留一份、每个进程都看得见」的。</p>
+      </div>
+    </div>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：两个进程的页映射 —— 开关「共享只读库」看物理页省了多少</span>
+        <div class="seg" id="mmSeg">
+          <button data-mm="shared" class="on">共享只读库代码</button>
+          <button data-mm="private">各自一份私有副本</button>
+        </div>
+      </div>
+      <div id="mmOut"></div>
+    </div>
+
+    <h3>4.3 简化链接与加载<span class="srcref">原第 30 页</span></h3>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th></th><th>课件原文</th><th>展开</th></tr>
+      <tr><td><b>链接<br>Linking</b></td><td>每个程序都有相似的虚拟地址空间；代码、数据与堆<b>总是从同样的地址开始</b></td>
+        <td>所以目标文件里不必为「运行时它会被放在哪」留后路 —— 链接器可以按固定布局生成地址。</td></tr>
+      <tr><td><b>加载<br>Loading</b></td><td><code>execve</code> 为 <code>.text</code> 与 <code>.data</code> 段分配虚拟页，并创建<b>标记为无效（invalid）</b> 的 PTE</td>
+        <td>加载时只建 PTE（且都标成无效）、不读盘；段的实际内容<b>按需</b>一页一页复制进来。</td></tr>
+      <tr><td><b>按需分页</b></td><td><code>.text</code> 与 <code>.data</code> 段由虚拟内存系统<b>按需（on demand）</b>逐页复制</td>
+        <td>这就是第 3.4 节那个「先建无效 PTE、访问时才缺页换入」的机制在程序启动时的第一次应用。</td></tr>
+    </table></div>
+    <p>课件第 30 页右侧画的就是 x86-64 Linux 进程的地址空间布局（同一张图也出现在第 2 页的「这到底是怎么做到的？！」那一页）。下面按它重建，<b>点任意一段</b>看说明：</p>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：进程地址空间布局（点段看说明）</span>
+        <span style="font-size:13px;color:var(--muted)">示意图，各段高度不代表实际比例</span>
+      </div>
+      <div id="mlOut"></div>
+    </div>
+
+    <div class="box"><div class="t">为什么「代码、数据、堆总是从同样的地址开始」这么重要</div>
+      因为它让<b>地址在链接时就能定下来</b>。课件第 30 页用一行常量把这件事钉住：文本段从 <code>0x400000</code> 开始（图中左下角那个 <code>0x400000</code>），而地址空间底部 <code>0</code> 到它之间的区域是 <code>Unused</code>。于是「可执行文件里写死的地址」在运行时依然有效 —— 代价是每个进程的地址空间不能随意重排（这也是 ASLR 要额外补课的原因，本讲不涉及）。
+    </div>
+  </section>
+
+  <!-- ================= 5 ================= -->
+  <section id="s5">
+    <h2>5. VM 作为内存保护工具<span class="srcref">原第 32 页</span></h2>
+    <p class="lede">第 11 页说「数据与它的属性（地址）被分开了」。这一节利用这个分离做一件很划算的事：<b>给 PTE 再加几个权限位，MMU 每次访问都检查一遍</b> —— 保护不需要额外的比较逻辑，只要在页表里多写几位。</p>
+
+    <h3>5.1 PTE 里的权限位<span class="srcref">原第 32 页</span></h3>
+    <div class="formula">SUP &nbsp;|&nbsp; READ &nbsp;|&nbsp; WRITE &nbsp;|&nbsp; EXEC &nbsp;&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)">（课件第 32 页的四个位；SUP = 需要内核态）</span></div>
+    <ul>
+      <li><b>扩展 PTE 加上权限位</b>；</li>
+      <li><b>MMU 在每次访问时检查这些位</b>。</li>
+    </ul>
+    <p>课件给出的两个进程的页表如下（<code>SUP: requires kernel mode</code>）：</p>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>进程</th><th class="mono">SUP</th><th class="mono">READ</th><th class="mono">WRITE</th><th class="mono">EXEC</th><th>物理页</th></tr>
+      <tr><td class="mono">进程 i / VP 0</td><td class="mono">No</td><td class="mono">Yes</td><td class="mono">No</td><td class="mono">Yes</td><td class="mono">PP 6</td></tr>
+      <tr><td class="mono">进程 i / VP 1</td><td class="mono">No</td><td class="mono">Yes</td><td class="mono">Yes</td><td class="mono">Yes</td><td class="mono">PP 4</td></tr>
+      <tr><td class="mono">进程 i / VP 2</td><td class="mono">Yes</td><td class="mono">Yes</td><td class="mono">Yes</td><td class="mono">No</td><td class="mono">PP 2</td></tr>
+      <tr><td class="mono">进程 j / VP 0</td><td class="mono">No</td><td class="mono">Yes</td><td class="mono">No</td><td class="mono">Yes</td><td class="mono">PP 9</td></tr>
+      <tr><td class="mono">进程 j / VP 1</td><td class="mono">Yes</td><td class="mono">Yes</td><td class="mono">Yes</td><td class="mono">Yes</td><td class="mono">PP 6</td></tr>
+      <tr><td class="mono">进程 j / VP 2</td><td class="mono">No</td><td class="mono">Yes</td><td class="mono">Yes</td><td class="mono">Yes</td><td class="mono">PP 11</td></tr>
+    </table></div>
+    <p class="en">这张表里有两处很值得盯一眼：</p>
+    <ul>
+      <li>进程 i 的 VP 0 与进程 j 的 VP 0 权限<b>完全相同</b>（只读可执行），却指向<b>不同的物理页</b>（PP 6 / PP 9）—— 私有代码，各写各的。</li>
+      <li>反过来，<b>PP 6 同时出现在两个进程里</b>（进程 i 的 VP 0 与进程 j 的 VP 1），而两条映射的权限位<b>并不一样</b>（i 只读可执行；j 可写、且需要内核态）。结论：保护挂在<b>映射（PTE）</b>上，而不是挂在物理页上 —— 同一份数据可以给一个进程只读、给另一个进程可写。</li>
+    </ul>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：权限检查器 —— 换进程、换页、换操作，看 MMU 放不放行</span>
+        <label class="fld">进程 <select id="mpProc">
+          <option value="i">进程 i</option><option value="j">进程 j</option></select></label>
+        <label class="fld">虚拟页 <select id="mpVp">
+          <option value="0">VP 0</option><option value="1">VP 1</option><option value="2">VP 2</option></select></label>
+        <div class="seg" id="mpSeg">
+          <button data-mp="r" class="on">读</button>
+          <button data-mp="w">写</button>
+          <button data-mp="x">执行</button>
+          <button data-mp="s">内核态读</button>
+        </div>
+        <label class="fld">当前特权级 <select id="mpMode">
+          <option value="user">用户态（user）</option>
+          <option value="kernel">内核态（kernel / supervisor）</option></select></label>
+      </div>
+      <div id="mpOut"></div>
+    </div>
+
+    <div class="box ok"><div class="t">为什么这一点值得单独讲一页</div>
+      课件第 48 页把它写进总结：「通过提供一个方便的<b>插入点（interpositioning point）</b>来检查权限，从而简化了保护」。也就是说 —— 保护检查不是散落在 CPU 各处的 if 语句，而是<b>全都挂在页表翻译这一个点上</b>。加一条规则 = 加一个位；要拦住一整类访问 = 把对应位清零。
+    </div>
+  </section>
+
+  <!-- ================= 6 ================= -->
+  <section id="s6">
+    <h2>6. 地址翻译基础<span class="srcref">原第 34–36 页</span></h2>
+    <p class="lede">从这里开始，虚拟内存从「概念」变成「一串位运算」。三页讲清一件事：<b>虚拟地址被切成 VPN 与 VPO，VPN 去查页表换回 PPN，PPN 与 VPO 拼成物理地址</b>。</p>
+
+    <h3>6.1 MAP 函数的形式定义<span class="srcref">原第 34 页</span></h3>
+    <div class="formula">MAP : V → P ∪ {∅}</div>
+    <ul>
+      <li>虚拟地址空间 <code>V = {0, 1, …, N−1}</code>，物理地址空间 <code>P = {0, 1, …, M−1}</code>；</li>
+      <li>对虚拟地址 <code>a</code>：若 <code>a</code> 处的数据在物理地址 <code>a'</code>，则 <code>MAP(a) = a'</code>；</li>
+      <li>若 <code>a</code> 处的数据<b>不在物理内存里</b>，则 <code>MAP(a) = ∅</code> —— <b>要么非法，要么存在磁盘上</b>。</li>
+    </ul>
+    <p class="en">最后那句「Either invalid or stored on disk」是本讲后面所有判定的依据：PTE 有效位为 0 时，要么是「在磁盘上」（可以换入），要么是「从来没分配过」（换不了，只能报错）。</p>
+
+    <h3>6.2 符号表<span class="srcref">原第 35、41 页</span></h3>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>符号</th><th>全称</th><th>含义</th><th>位数</th></tr>
+      <tr><td class="mono">N</td><td class="en">—</td><td>虚拟地址空间里的地址数</td><td class="mono">N = 2<sup>n</sup></td></tr>
+      <tr><td class="mono">M</td><td class="en">—</td><td>物理地址空间里的地址数</td><td class="mono">M = 2<sup>m</sup></td></tr>
+      <tr><td class="mono">P</td><td class="en">—</td><td>页大小（字节）</td><td class="mono">P = 2<sup>p</sup></td></tr>
+      <tr><td class="mono">VPO</td><td class="en">Virtual Page Offset</td><td>虚拟页内偏移</td><td class="mono">p 位</td></tr>
+      <tr><td class="mono">VPN</td><td class="en">Virtual Page Number</td><td>虚拟页号</td><td class="mono">n − p 位</td></tr>
+      <tr><td class="mono">PPO</td><td class="en">Physical Page Offset</td><td>物理页内偏移，<b>与 VPO 相同</b></td><td class="mono">p 位</td></tr>
+      <tr><td class="mono">PPN</td><td class="en">Physical Page Number</td><td>物理页号</td><td class="mono">m − p 位</td></tr>
+      <tr><td class="mono">TLBI</td><td class="en">TLB Index</td><td>TLB 索引（第 41 页新增）</td><td class="mono">t 位</td></tr>
+      <tr><td class="mono">TLBT</td><td class="en">TLB Tag</td><td>TLB 标记（第 41 页新增）</td><td class="mono">n − p − t 位</td></tr>
+    </table></div>
+    <p class="en">课件第 35 页只列到 PPO/PPN；第 41 页把同一张表重印一遍，加了 TLBI 与 TLBT 两行 —— 那是第 8 节的内容，这里先记住它们的位置。</p>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：符号速查 —— 改 n / m / p，实时看每个字段多少位</span>
+        <label class="fld">n <input type="text" id="symN" value="32" size="4" spellcheck="false"></label>
+        <label class="fld">m <input type="text" id="symM" value="32" size="4" spellcheck="false"></label>
+        <label class="fld">p <input type="text" id="symP" value="12" size="4" spellcheck="false"></label>
+        <button class="p" id="symGo">刷新</button>
+        <button class="sm" data-sym="32,32,12">课件第 36 页：32/32/12</button>
+        <button class="sm" data-sym="48,52,12">48 位 VA / 52 位 PA</button>
+      </div>
+      <div id="symOut"></div>
+    </div>
+
+    <h3>6.3 用页表翻译<span class="srcref">原第 36 页</span></h3>
+    <p>课件的位段图把这条流水线画得很直白：虚拟地址的高位是 <b>VPN</b>、低位是 <b>VPO</b>；VPN 作为下标去访问<b>页表</b>（基址由 <b>PTBR</b>，page table base register，给出）；取回的 PTE 里如果有效位是 1，就得到 <b>PPN</b>；PPN 与 <b>PPO</b>（就是原封不动的 VPO）拼成物理地址。若有效位是 0 就是<b>缺页</b>。</p>
+    <div class="formula" style="text-align:left">
+      <div>VA = [ VPN (n−p 位) | VPO (p 位) ]</div>
+      <div>PTE = 页表[VPN]&nbsp;&nbsp;→&nbsp;&nbsp;{ 有效位, PPN }</div>
+      <div>PA = [ PPN (m−p 位) | PPO (p 位) ]&nbsp;&nbsp;，其中 PPO = VPO</div>
+    </div>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：地址翻译器 —— 输入虚拟地址，逐位拆开、查表、拼回物理地址</span>
+        <label class="fld">虚拟地址 <input type="text" id="trVa" value="0x1004" size="12" spellcheck="false"></label>
+        <label class="fld">n <input type="text" id="trN" value="32" size="3" spellcheck="false"></label>
+        <label class="fld">m <input type="text" id="trM" value="32" size="3" spellcheck="false"></label>
+        <label class="fld">p <input type="text" id="trP" value="12" size="3" spellcheck="false"></label>
+        <button class="p" id="trGo">翻译</button>
+        <button class="sm" data-tr="0x1004">课件第 10 页：4100 → 4</button>
+        <button class="sm" data-tr="0x2004">VP 2（命中，PP 1）</button>
+        <button class="sm" data-tr="0x3000">VP 3（缺页 —— 第 18 页）</button>
+        <button class="sm" data-tr="0x0000">VP 0（未分配）</button>
+      </div>
+      <div id="trOut"></div>
+    </div>
+
+    <div class="box"><div class="t">页表可以改</div>
+      上面这个翻译器用的是课件第 16–25 页那张 8 项页表。想试别的映射，直接点左边页表里的行 —— 每点一次就翻转那一项的有效位（无效时给一个 PPN），右边的翻译结果会立刻跟着变。第 7 节和第 8 节的组件用的是同一份页表状态。
+    </div>
+  </section>
+
+  <!-- ================= 7 ================= -->
+  <section id="s7">
+    <h2>7. 翻译全流程<span class="srcref">原第 37–39 页</span></h2>
+    <p class="lede">课件用三页把 MMU 内部的数据通路画完：<b>第 37 页页命中五步</b>、<b>第 38 页缺页七步</b>、<b>第 39 页把 VM 与 L1 缓存串起来</b>。这一节把三步并成一个可步进的通路图。</p>
+
+    <h3>7.1 页命中：五步<span class="srcref">原第 37 页</span></h3>
+    <ol>
+      <li>处理器把<b>虚拟地址</b>送给 MMU；</li>
+      <li>MMU <b>从内存里的页表取出 PTE</b>（课件把 2、3 两步合并写成「2-3)」——因为取 PTE 本身就是一次访存）；</li>
+      <li>（同上）；</li>
+      <li>MMU 把<b>物理地址</b>送给 cache / memory；</li>
+      <li>cache / memory 把<b>数据字</b>送回处理器。</li>
+    </ol>
+    <p class="en">注意第 2–3 步那个标注：<b>翻译本身要花一次访存</b>。第 8 节的 TLB 就是为了省掉这一次。</p>
+
+    <h3>7.2 缺页：七步<span class="srcref">原第 38 页</span></h3>
+    <p>与第 3.4 节同一个七步，这里从「数据通路」的角度看它 —— 多出来的第 5、6 步发生在<b>磁盘</b>上：处理程序让牺牲页（脏则写回）下盘，再把新页读进来，然后改写 PTE。第 7 步返回后重新执行那条指令，此时走的就是上面那五步了。</p>
+
+    <h3>7.3 把 VM 与缓存串起来<span class="srcref">原第 39 页</span></h3>
+    <p>第 39 页的图是本讲的「全景」：<b>MMU 里只有 TLB，页表在内存里，L1 数据缓存也在同一条通路上</b>。PTE 自己也是普通的内存字，所以它同样会被 L1 缓存 —— 于是 PTEA（PTE 的地址）也有命中与缺失之分。课件在这张图的底部写下了四个缩写的定义：</p>
+    <div class="formula">VA: 虚拟地址 &nbsp;·&nbsp; PA: 物理地址 &nbsp;·&nbsp; PTE: 页表项 &nbsp;·&nbsp; <b>PTEA = PTE address</b>（页表项的地址）</div>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：通路步进 —— 选一条路径，逐步看信号在哪一段上跑</span>
+        <div class="seg" id="wkSeg">
+          <button data-wk="hit" class="on">页命中（5 步）</button>
+          <button data-wk="fault">页缺页（7 步）</button>
+          <button data-wk="cache">整合 L1 缓存（第 39 页）</button>
+        </div>
+        <label class="fld">虚拟地址 <input type="text" id="wkVa" value="0x1004" size="12" spellcheck="false"></label>
+        <label class="fld">PTBR <input type="text" id="wkBase" value="0x1000" size="10" spellcheck="false"></label>
+        <button class="p" id="wkGo">计算 PTEA 并重放</button>
+        <button class="sm" id="wkStep">下一步 →</button>
+        <button class="sm" id="wkReset">重置</button>
+      </div>
+      <div id="wkOut"></div>
+    </div>
+
+    <div class="box ok"><div class="t">PTEA 是怎么算出来的</div>
+      <code>PTEA = PTBR + VPN × PTE 大小</code>。课件第 37 页图上那条标着序号 2 的箭头写着 <code>PTEA</code>，就是从 MMU 指向页表的；标着 3 的箭头从页表回到 MMU，带着 <code>PTE</code>。上面的计算器把这两个数都算出来，默认值取 <code>PTBR = 0x1000</code>（示意值，课件未给具体读数）、PTE 大小 4 字节 —— 与第 2.2、第 9 节用的 4 字节 PTE 保持一致。
+    </div>
+  </section>
+
+  <!-- ================= 8 ================= -->
+  <section id="s8">
+    <h2>8. TLB：把翻译本身也缓存起来<span class="srcref">原第 40–44 页</span></h2>
+    <p class="lede">第 7 节留下了一个尾巴：<b>每翻译一个地址都要多访存一次去取 PTE</b>。课件第 40 页先承认这个问题（PTE 也是普通内存字，会被别的数据挤走；就算还在 L1 里也仍有一小段延迟），然后给出答案：在 MMU 里放一个专门缓存 PTE 的小硬件 —— <b>TLB（Translation Lookaside Buffer，旁路转换缓冲）</b>。</p>
+
+    <h3>8.1 为什么需要 TLB<span class="srcref">原第 40 页</span></h3>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>问题</th><th>课件原文</th></tr>
+      <tr><td>PTE 和其他内存字一样被缓存在 L1 里</td><td>PTEs are cached in L1 like any other memory word</td></tr>
+      <tr><td>但也一样会被挤出</td><td>PTEs may be evicted by other data references</td></tr>
+      <tr><td>就算没被挤出，还是要等</td><td>PTE hit still requires a small L1 delay</td></tr>
+    </table></div>
+    <p>解法（第 40 页）：<b>TLB</b> ——</p>
+    <ul>
+      <li>MMU 里一个<b>小型组相联（set-associative）硬件缓存</b>；</li>
+      <li>把<b>虚拟页号映射到物理页号</b>；</li>
+      <li>里面装着<b>少数几个页的完整页表项</b>。</li>
+    </ul>
+
+    <h3>8.2 TLB 里的字段<span class="srcref">原第 41 页</span></h3>
+    <p>课件第 41 页把第 35 页那张符号表重印了一遍，只加了两行：<b>TLBI（TLB index，TLB 索引）</b>与 <b>TLBT（TLB tag，TLB 标记）</b>。它们都是从 VPN 里切出来的：</p>
+    <div class="formula">VPN = [ TLBT（高位） | TLBI（低位，t 位） ] &nbsp;&nbsp;→&nbsp;&nbsp; 组数 <b>T = 2<sup>t</sup></b></div>
+
+    <h3>8.3 怎么访问 TLB<span class="srcref">原第 42 页</span></h3>
+    <ol>
+      <li>MMU 用虚拟地址的 <b>VPN 部分</b>去访问 TLB；</li>
+      <li><b>TLBI 选出组</b>（Set 0 … Set T−1）；</li>
+      <li>在该组内用 <b>TLBT 逐行比较 tag</b>；命中则该行里的 PTE 直接给出 PPN。</li>
+    </ol>
+    <p class="en">第 42 页的图上每组画了两行（v / tag / PTE）—— 也就是 2 路组相联的示意；组数标为 <code>T = 2<sup>t</sup></code>。</p>
+
+    <h3>8.4 命中与未命中<span class="srcref">原第 43–44 页</span></h3>
+    <div class="grid g2">
+      <div class="card"><h5>TLB 命中（第 43 页）</h5>
+        <p style="margin:0;font-size:14.5px">课件原话：<b>一次 TLB 命中免掉了一次 cache/memory 访问</b>（A TLB hit eliminates a cache/memory access）。MMU 不必再去内存里读 PTE，手里直接就拿到了 PPN。</p>
+      </div>
+      <div class="card"><h5>TLB 未命中（第 44 页）</h5>
+        <p style="margin:0;font-size:14.5px">课件原话：<b>一次 TLB 未命中要额外付一次访存（取 PTE）</b>（A TLB miss incurs an additional memory access）。注意它<b>不等于缺页</b> —— 页表里 PTE 有效时，照样能拼出物理地址。</p>
+      </div>
+    </div>
+
+    <div class="box"><div class="t">课件留下的设问：TLB 未命中为什么很少见？</div>
+      第 44 页原文：「Fortunately, TLB misses are rare. <b>Why?</b>」<br>
+      <details class="reveal"><summary>自己想过再看（两层提示）</summary>
+        <div class="ans">
+          <p style="margin:4px 0"><b>提示一</b>：TLB 的一个条目覆盖多大的一块内存？一个条目对应一页 —— 4 KB。那 64 个条目覆盖多少？</p>
+          <p style="margin:4px 0"><b>提示二</b>：程序在同一小段时间里会反复访问多少个不同的页？（第 3.5 节把这个问题叫「工作集」）</p>
+          <p style="margin:4px 0"><b>钥匙</b>：<b>时间局部性</b>。程序的工作集通常只有几十到几百页，而 TLB 有几十到几千个条目 —— 装得下。再加上<b>空间局部性</b>：同一页里的成千上万次访问共用同一个 TLB 条目。翻页频率一旦低于「每页 1 次」，TLB 就几乎总能命中。</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：TLB 查询模拟器 —— 拆位、选组、比 tag、给物理地址</span>
+        <label class="fld">虚拟地址 <input type="text" id="tlbVa" value="0x1004" size="12" spellcheck="false"></label>
+        <label class="fld">n <input type="text" id="tlbN" value="32" size="3" spellcheck="false"></label>
+        <label class="fld">m <input type="text" id="tlbM" value="32" size="3" spellcheck="false"></label>
+        <label class="fld">p <input type="text" id="tlbP" value="12" size="3" spellcheck="false"></label>
+        <label class="fld">组数位数 t <input type="text" id="tlbT" value="2" size="3" spellcheck="false"></label>
+        <label class="fld">路数 E <select id="tlbE">
+          <option value="1">1 路（直接映射）</option>
+          <option value="2" selected>2 路（课件第 42 页画法）</option>
+          <option value="4">4 路</option>
+        </select></label>
+        <button class="p" id="tlbGo">查询 TLB</button>
+        <button class="sm" data-tlbva="0x1004">VPN 1（命中）</button>
+        <button class="sm" data-tlbva="0x2004">VPN 2（命中）</button>
+        <button class="sm" data-tlbva="0x3000">VPN 3（缺页）</button>
+        <button class="sm" data-tlbva="0x4000">VPN 4（命中）</button>
+        <button class="sm" id="tlbClear">清空 TLB</button>
+        <button class="sm" id="tlbSeed">按页表重填</button>
+      </div>
+      <div id="tlbOut"></div>
+    </div>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：TLB 参数 —— 多少条目、覆盖多大范围</span>
+        <label class="fld">组数位数 t <input type="text" id="tcT" value="2" size="3" spellcheck="false"></label>
+        <label class="fld">路数 E <input type="text" id="tcE" value="2" size="3" spellcheck="false"></label>
+        <label class="fld">页大小位数 p <input type="text" id="tcP" value="12" size="3" spellcheck="false"></label>
+        <button class="p" id="tcGo">计算</button>
+        <button class="sm" data-tc="2,2,12">课件示意：4 组 × 2 路 / 4 KB</button>
+        <button class="sm" data-tc="6,4,12">64 组 × 4 路 / 4 KB</button>
+      </div>
+      <div id="tlbCfgOut"></div>
+    </div>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：三道判断题 —— TLB 与页表的易错点</span>
+        <button class="sm" id="pzTlbReset">重来</button>
+      </div>
+      <div id="pzTlbOut"></div>
+    </div>
+  </section>
+
+  <!-- ================= 9 ================= -->
+  <section id="s9">
+    <h2>9. 多级页表<span class="srcref">原第 45–47 页</span></h2>
+    <p class="lede">第 2.2 节已经埋好了这颗雷：页表的大小随地址位数<b>指数级</b>膨胀。课件第 45 页把它算出来 —— <b>48 位地址空间 + 4 KB 页 + 8 字节 PTE，一张单级页表要 512 GB</b>。第 46–47 页给出解法：<b>把页表本身也分页，做成多级</b>。</p>
+
+    <h3>9.1 问题：512 GB 的页表<span class="srcref">原第 45 页</span></h3>
+    <div class="formula big">2<sup>48</sup> × 2<sup>−12</sup> × 2<sup>3</sup> = 2<sup>39</sup> 字节 = 512 GB</div>
+    <p>三个因子的含义（按课件的假设：4 KB = 2<sup>12</sup> 页大小、48 位地址空间、8 字节 PTE）：</p>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>因子</th><th>含义</th><th>来源</th></tr>
+      <tr><td class="mono">2<sup>48</sup></td><td>虚拟地址空间里的字节数</td><td>48 位地址空间</td></tr>
+      <tr><td class="mono">2<sup>−12</sup></td><td>换算成页数（每页 2<sup>12</sup> 字节）</td><td>4 KB 页</td></tr>
+      <tr><td class="mono">2<sup>3</sup></td><td>每个 PTE 8 字节</td><td>8 字节 PTE</td></tr>
+    </table></div>
+    <p>而单级页表的每一页都要能在内存里被随机访问 —— 也就是说<b>每个进程在它整个生命周期里都得常驻 512 GB 页表</b>，这显然不行。</p>
+    <div class="box ok"><div class="t">常见解法：多级页表<span class="srcref">原第 45 页</span></div>
+      课件给出的两级方案分工很明确：<b>一级表（Level 1）的每个 PTE 指向一张页表 —— 它总是常驻内存</b>；<b>二级表（Level 2）的每个 PTE 指向一个页 —— 它像其他数据一样会被换进换出</b>。省内存的关键在于：一级表里那些 <b>null</b> 的项，代表整块虚拟地址区域从未被分配 —— <b>对应的二级表根本不必创建</b>。
+    </div>
+
+    <h3>9.2 一个两级层次结构的例子<span class="srcref">原第 46 页</span></h3>
+    <p>课件第 46 页的例子：<b>32 位地址、4 KB 页、4 字节 PTE</b>。于是 VPN 有 20 位，切成 <b>10 + 10</b>：一级索引 10 位（1024 项）、二级索引 10 位（1024 项）、页内偏移 12 位。</p>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>图里的标注</th><th>含义</th></tr>
+      <tr><td>2K allocated VM pages for code and data</td><td>代码与数据占了 2 K = 2048 个已分配的虚拟页（VP 0 … 2047）</td></tr>
+      <tr><td>Gap / 6K unallocated VM pages</td><td>中间一整段 6 K = 6144 个页未分配（VP 2048 … 8191）</td></tr>
+      <tr><td>1 allocated VM page for the stack（VP 9215）</td><td>栈只占 1 个页，位置在地址空间的最高处</td></tr>
+      <tr><td>1023 unallocated pages</td><td>栈所在二级表里，除它之外的那 1023 项都是空的</td></tr>
+    </table></div>
+    <p>下面这个翻译器就按这套参数与分配情况建模（<b>2K 代码数据 + 6K 空洞 + 栈那 1 页</b>）。你可以直接改虚拟地址，看它逐级走到哪张表：</p>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：两级页表翻译器 —— 32 位地址 / 4 KB 页 / 4 字节 PTE</span>
+        <label class="fld">虚拟地址 <input type="text" id="ml2Va" value="0x1004" size="12" spellcheck="false"></label>
+        <button class="p" id="ml2Go">翻译</button>
+        <button class="sm" data-ml2="0x00000000">VP 0（代码段首页）</button>
+        <button class="sm" data-ml2="0x003FF004">VP 1023（一级表第 0 项最后一页）</button>
+        <button class="sm" data-ml2="0x00400000">VP 1024（换到一级表第 1 项）</button>
+        <button class="sm" data-ml2="0x007FF000">VP 2047（已分配区最后一页）</button>
+        <button class="sm" data-ml2="0xBB8000">VP 3000（6K 空洞里 —— null 的一级项）</button>
+        <button class="sm" data-ml2="0x23FF000">VP 9215（栈的那一页）</button>
+      </div>
+      <div id="ml2Out"></div>
+    </div>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：页表内存占用 —— 单级 vs 两级，参数与分配情况都能改</span>
+        <label class="fld">虚拟地址位数 n <input type="text" id="ptzN" value="32" size="4" spellcheck="false"></label>
+        <label class="fld">页大小位数 p <input type="text" id="ptzP" value="12" size="4" spellcheck="false"></label>
+        <label class="fld">PTE 字节数 <input type="text" id="ptzE" value="4" size="4" spellcheck="false"></label>
+        <label class="fld">非空二级表数 <input type="text" id="ptzK" value="3" size="4" spellcheck="false"></label>
+        <button class="p" id="ptzGo">对比</button>
+        <button class="sm" data-ptz="32,12,4,3">课件第 46 页：32/4KB/4B/3 张</button>
+        <button class="sm" data-ptz="48,12,8,3">课件第 45 页：48 位 / 4 KB / 8 B</button>
+      </div>
+      <div id="ptSzOut"></div>
+    </div>
+
+    <h3>9.3 k 级页表的翻译<span class="srcref">原第 47 页</span></h3>
+    <p>第 47 页把两级推广到 k 级：虚拟地址被切成 <code>VPN 1 | VPN 2 | … | VPN k | VPO</code>，从一级表开始<b>一级一级往下走</b>，每一级用对应那段 VPN 做下标；最后一级的 PTE 给出 <b>PPN</b>，再拼上原封不动的 <b>PPO</b> 得到物理地址。</p>
+    <div class="formula">VA = [ VPN 1 | VPN 2 | … | VPN k | VPO ] &nbsp;→&nbsp; 逐级查表 &nbsp;→&nbsp; [ PPN | PPO ] = PA</div>
+    <p class="en">注意每一级多出来的访存都要真的读到内存（第 7 节说过取 PTE 要访存）—— 所以 k 级页表是<b>用时间换空间</b>：页表小了几个数量级，代价是翻译一条地址要 k 次访存。TLB（第 8 节）正是用来把这 k 次访存藏掉的。</p>
+  </section>
+
+  <!-- ================= 10 ================= -->
+  <section id="s10">
+    <h2>10. 总结与测验<span class="srcref">原第 48 页</span></h2>
+    <p class="lede">课件第 48 页把整讲收成三句话：程序员的视角、系统的视角、以及「硬件 + 软件一起实现」。做完下面两组题，这一讲就闭环了。</p>
+
+    <h3>10.1 课件第 48 页的总结</h3>
+    <div class="grid g3">
+      <div class="card"><h5>程序员的视角</h5>
+        <ul style="margin:0;padding-left:20px;font-size:14.5px">
+          <li>每个进程有自己的<b>私有线性地址空间</b>；</li>
+          <li><b>不会被其他进程破坏</b>。</li>
+        </ul>
+      </div>
+      <div class="card"><h5>系统的视角</h5>
+        <ul style="margin:0;padding-left:20px;font-size:14.5px">
+          <li>通过缓存虚拟内存页来<b>高效利用内存</b>；</li>
+          <li>高效的原因只有一条：<b>局部性</b>；</li>
+          <li>简化了内存管理与编程；</li>
+          <li>通过提供方便的<b>插入点</b>来检查权限，从而简化保护。</li>
+        </ul>
+      </div>
+      <div class="card"><h5>怎么实现的</h5>
+        <ul style="margin:0;padding-left:20px;font-size:14.5px">
+          <li><b>硬件</b>：MMU、TLB、异常处理机制；</li>
+          <li><b>软件</b>：缺页处理程序、TLB 管理。</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：六道选择题（提交后逐题判分并给解析）</span>
+        <button class="sm" id="qzReset">重来</button>
+      </div>
+      <div id="qzOut"></div>
+    </div>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：四道判断题（答完显示反例或依据）</span>
+        <button class="sm" id="pzSumReset">重来</button>
+      </div>
+      <div id="pzSumOut"></div>
+    </div>
+
+    <div class="box ok"><div class="t">下一讲</div>
+      这一讲把<b>机制</b>讲完了（页、页表、TLB、多级页表、权限位）。下一讲（虚拟内存 II）接着讲<b>用法</b>：内存映射（<code>mmap</code>）、动态内存分配（<code>malloc</code> 那一族）、以及地址翻译的更多硬件细节（例如第 46 页那个「二级表会被换进换出」到底怎么发生）。
+    </div>
+  </section>
+</main>
+
+</div>
+
+<div class="footer">
+  本页由原课件 PDF 翻译整理而成 · 数值计算与可视化均为页面内实时计算 · 可对照原课件页码阅读。
+</div>
+<button class="totop" id="toTop">↑ 顶部</button>
+
+<script>
+"use strict";
+/* ============================================================
+   虚拟内存：概念（Virtual Memory: Concepts）· 交互式课件 —— 全部逻辑
+   约定：所有计算在页面内实时完成；无效输入必须给出提示而不是抛错。
+   地址一律用 BigInt（32/48/64 位虚拟地址都远超 Number 的安全整数范围，
+   而移位与掩码一旦混用 BigInt 与 Number 会直接抛
+   "Cannot mix BigInt and other types"）。
+   顶层以 function 声明的
+     vmSplitVA / vmTranslate / vmTlbSplit / vmTlbAccess /
+     vmSplitTwoLevel / vmTranslateTwoLevel / vmSingleTableBytes
+   是判分基准，由 tools/verify_ics19.js 与一份独立的 Python 参考实现
+   逐地址比对（几十万条输入，要求 0 项不一致）。
+   ============================================================ */
+
+const $  = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const badBox = msg => `<div class="box bad"><div class="t">输入无效</div>${esc(msg)}</div>`;
+
+/* ---------- 数字解析与格式化 ---------- */
+
+/** 解析地址：0x… / 0b… / 十进制 / 下划线分隔 → BigInt；认不出返回 null */
+function vmParseAddr(str) {
+  const t = String(str).trim().replace(/[_,\s]/g, '');
+  if (!t) return null;
+  try {
+    if (/^0[xX][0-9a-fA-F]+$/.test(t)) return BigInt(t);
+    if (/^0[bB][01]+$/.test(t))        return BigInt(t);
+    if (/^[0-9]+$/.test(t))            return BigInt(t);
+    return null;
+  } catch (e) { return null; }
+}
+
+/** 解析小的位宽/个数：只收十进制 0–64，返回 Number；否则 null */
+function vmParseBits(str, lo, hi) {
+  const t = String(str).trim();
+  if (!/^[0-9]+$/.test(t)) return null;
+  const v = Number(t);
+  if (!Number.isSafeInteger(v) || v < lo || v > hi) return null;
+  return v;
+}
+
+const vmHex = (v, bits) => '0x' + (BigInt(v) & ((1n << BigInt(bits)) - 1n))
+  .toString(16).toUpperCase().padStart(Math.ceil(bits / 4), '0');
+const vmBin = (v, bits) => BigInt(v).toString(2).padStart(bits, '0');
+/** 二进制串按组加空格：groupBits(('10110011'), 4) → '1011 0011' */
+const vmGroupBin = (s, n) => s.replace(new RegExp(`\\B(?=(.{${n}})+$)`, 'g'), ' ');
+const vmThousands = v => BigInt(v).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+
+/** BigInt 字节数 → 人类可读（1024 进制，保留两位小数），同时给出精确字节数 */
+function vmSizeStr(bytes) {
+  const b = BigInt(bytes);
+  const u = ['B', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB'];
+  if (b < 1024n) return vmThousands(b) + ' B';
+  let v = b, i = 0;
+  while (v >= 1024n && i < u.length - 1) { v /= 1024n; i++; }
+  const rem = b % (1024n ** BigInt(i));
+  const frac = (rem * 100n) / (1024n ** BigInt(i));
+  return `${v}.${String(frac).padStart(2, '0')} ${u[i]}`;
+}
+const vmSizeBoth = bytes => `${vmSizeStr(bytes)}（${vmThousands(bytes)} B）`;
+
+/* ============================================================
+   判分基准 1：地址翻译（页表）
+   页面模型与课件第 34–36 页一致：
+     VA 拆成 VPN（高位）与 VPO（低 p 位）
+     查 PTE：有效位 0 → 缺页；有效位 1 → 取出 PPN
+     PA = PPN << p | VPO（VPO 原样复制成 PPO）
+   pt 的形式：[{ v: 0|1, ppn: BigInt|null }, …]，下标就是 VPN。
+   ============================================================ */
+
+/** VA → { vpn, vpo }（都为 BigInt） */
+function vmSplitVA(va, p) {
+  const vaB = BigInt(va), pB = BigInt(p);
+  return { vpn: vaB >> pB, vpo: vaB & ((1n << pB) - 1n) };
+}
+
+/** 一次完整的翻译。返回 { kind, reason, va, vpn, vpo, pte, ppn, pa }
+ *  kind: 'hit' 命中 / 'fault' 缺页 / 'invalid' 地址或页表越界、PPN 越界 */
+function vmTranslate(va, n, m, p, pt) {
+  const vaB = BigInt(va), nB = BigInt(n), mB = BigInt(m), pB = BigInt(p);
+  const vaTop = 1n << nB;
+  if (vaB < 0n || vaB >= vaTop) return { kind: 'invalid', reason: 'va_out_of_range', va: vaB };
+  const { vpn, vpo } = vmSplitVA(vaB, pB);
+  const ptTop = BigInt(pt.length);
+  if (vpn >= ptTop) return { kind: 'invalid', reason: 'vpn_out_of_range', va: vaB, vpn: vpn, vpo: vpo };
+  const pte = pt[Number(vpn)];
+  if (!pte || !pte.v) return { kind: 'fault', reason: 'not_in_memory', va: vaB, vpn: vpn, vpo: vpo, pte: pte || null };
+  const ppn = BigInt(pte.ppn);
+  const ppnBits = mB - pB;
+  if (ppnBits <= 0n || ppn >= (1n << ppnBits)) {
+    return { kind: 'invalid', reason: 'ppn_out_of_range', va: vaB, vpn: vpn, vpo: vpo, pte: pte, ppn: ppn };
+  }
+  return { kind: 'hit', va: vaB, vpn: vpn, vpo: vpo, pte: pte, ppn: ppn, pa: (ppn << pB) | vpo };
+}
+
+/* ============================================================
+   判分基准 2：TLB（课件第 41–42 页）
+   VPN 再拆成 TLBT | TLBI：TLBI 是最低的 t 位（t 满足组数 T = 2^t），
+   高位是 TLBT。组内逐路比较 tag。
+   lines 用扁平数组：[{ set, tag, v, ppn }, …]（set/tag 为 BigInt）
+   ============================================================ */
+
+/** VA → { tlbt, tlbi, vpo }（BigInt） */
+function vmTlbSplit(va, p, t) {
+  const vaB = BigInt(va), pB = BigInt(p), tB = BigInt(t);
+  const vpn = vaB >> pB;
+  return {
+    vpo:  vaB & ((1n << pB) - 1n),
+    tlbi: vpn & ((1n << tB) - 1n),
+    tlbt: vpn >> tB,
+  };
+}
+
+/** TLB 查询 + 必要时回页表。
+ *  kind: 'hit'（TLB 直接给出 PPN）/ 'miss_hit'（TLB 缺失，但页表有效，多一次访存）
+ *        / 'miss_fault'（TLB 缺失且页表无效 → 缺页）/ 'invalid'（越界）
+ *  命中时以 TLB 行里的 PPN 为准（课件没有涉及 TLB 一致性，模型里两者一致）。 */
+function vmTlbAccess(va, n, m, p, t, lines, pt) {
+  const vaB = BigInt(va), nB = BigInt(n), mB = BigInt(m), pB = BigInt(p);
+  if (vaB < 0n || vaB >= (1n << nB)) return { kind: 'invalid', reason: 'va_out_of_range', va: vaB };
+  const s = vmTlbSplit(vaB, pB, t);
+  const line = lines.find(l => BigInt(l.set) === s.tlbi && BigInt(l.tag) === s.tlbt);
+  if (line && line.v) {
+    const ppn = BigInt(line.ppn);
+    if (mB - pB <= 0n || ppn >= (1n << (mB - pB))) {
+      return { kind: 'invalid', reason: 'ppn_out_of_range', va: vaB, tlb: s, line: line, ppn: ppn };
+    }
+    return { kind: 'hit', va: vaB, tlb: s, line: line, ppn: ppn, pa: (ppn << pB) | s.vpo };
+  }
+  const tr = vmTranslate(vaB, nB, mB, pB, pt);
+  if (tr.kind === 'hit') return { kind: 'miss_hit', va: vaB, tlb: s, line: null, ppn: tr.ppn, pa: tr.pa, trans: tr };
+  return { kind: tr.kind === 'fault' ? 'miss_fault' : 'invalid', reason: tr.reason, va: vaB, tlb: s, line: null, trans: tr };
+}
+
+/* ============================================================
+   判分基准 3：多级页表（课件第 45–47 页）
+   VA = VPN1 | VPN2 | VPO；L1 的第 vpn1 项要么是 null（整块未分配，
+   连二级表都不存在），要么指向一张二级表。
+   l1[i] = null | [{ v, ppn }, …]
+   ============================================================ */
+
+/** VA → { vpn1, vpn2, vpo }；k2 为二级索引位数（p 为偏移位数） */
+function vmSplitTwoLevel(va, p, k2) {
+  const vaB = BigInt(va), pB = BigInt(p), kB = BigInt(k2);
+  return {
+    vpo:  vaB & ((1n << pB) - 1n),
+    vpn2: (vaB >> pB) & ((1n << kB) - 1n),
+    vpn1: vaB >> (pB + kB),
+  };
+}
+
+/** 两级翻译。kind: 'hit' / 'fault'（reason: null_l1 / not_in_memory / vpn2_out_of_range）
+ *                          / 'invalid'（va_out_of_range / vpn1_out_of_range / ppn_out_of_range） */
+function vmTranslateTwoLevel(va, n, m, p, k2, l1) {
+  const vaB = BigInt(va), nB = BigInt(n), mB = BigInt(m), pB = BigInt(p), kB = BigInt(k2);
+  if (vaB < 0n || vaB >= (1n << nB)) return { kind: 'invalid', reason: 'va_out_of_range', va: vaB };
+  const s = vmSplitTwoLevel(vaB, pB, kB);
+  if (s.vpn1 >= BigInt(l1.length)) {
+    return { kind: 'invalid', reason: 'vpn1_out_of_range', va: vaB, vpn1: s.vpn1, vpn2: s.vpn2, vpo: s.vpo };
+  }
+  const l2 = l1[Number(s.vpn1)];
+  if (l2 === null || l2 === undefined) {
+    return { kind: 'fault', reason: 'null_l1', va: vaB, vpn1: s.vpn1, vpn2: s.vpn2, vpo: s.vpo };
+  }
+  if (s.vpn2 >= BigInt(l2.length)) {
+    return { kind: 'fault', reason: 'vpn2_out_of_range', va: vaB, vpn1: s.vpn1, vpn2: s.vpn2, vpo: s.vpo };
+  }
+  const pte = l2[Number(s.vpn2)];
+  if (!pte || !pte.v) {
+    return { kind: 'fault', reason: 'not_in_memory', va: vaB, vpn1: s.vpn1, vpn2: s.vpn2, vpo: s.vpo, pte: pte || null };
+  }
+  const ppn = BigInt(pte.ppn);
+  if (mB - pB <= 0n || ppn >= (1n << (mB - pB))) {
+    return { kind: 'invalid', reason: 'ppn_out_of_range', va: vaB, vpn1: s.vpn1, vpn2: s.vpn2, vpo: s.vpo, ppn: ppn };
+  }
+  return { kind: 'hit', va: vaB, vpn1: s.vpn1, vpn2: s.vpn2, vpo: s.vpo, pte: pte, ppn: ppn, pa: (ppn << pB) | s.vpo };
+}
+
+/* ============================================================
+   判分基准 4：页表尺寸（课件第 45–46 页）
+   ============================================================ */
+
+/** 单级页表字节数 = 2^vpnBits × pteBytes（vpnBits 为 BigInt） */
+function vmSingleTableBytes(vpnBits, pteBytes) {
+  return (1n << BigInt(vpnBits)) * BigInt(pteBytes);
+}
+/** 两级页表字节数 = 一张一级表 + nonNullL2 张二级表 */
+function vmTwoLevelBytes(vpnBits, pteBytes, nonNullL2) {
+  const k1 = BigInt(vpnBits) / 2n;
+  const per = (1n << k1) * BigInt(pteBytes);
+  return per + BigInt(nonNullL2) * per;
+}
+
+/* ============================================================
+   课件里的那块页表（第 16–25 页逐项还原）
+   ============================================================ */
+
+const VM_PT_INIT = [
+  { v: 0, ppn: null, onDisk: false }, // PTE 0：VP 0 未分配（空）
+  { v: 1, ppn: 0n,   onDisk: false }, // PTE 1：VP 1 → PP 0
+  { v: 1, ppn: 1n,   onDisk: false }, // PTE 2：VP 2 → PP 1
+  { v: 0, ppn: null, onDisk: true  }, // PTE 3：VP 3 未缓存（在磁盘上）
+  { v: 1, ppn: 3n,   onDisk: false }, // PTE 4：VP 4 → PP 3
+  { v: 0, ppn: null, onDisk: false }, // PTE 5：VP 5 未分配（空）
+  { v: 0, ppn: null, onDisk: true  }, // PTE 6：VP 6 未缓存（在磁盘上）
+  { v: 1, ppn: 2n,   onDisk: false }, // PTE 7：VP 7 → PP 2
+];
+const vmPtCopy = pt => pt.map(e => ({ v: e.v, ppn: e.ppn, onDisk: !!e.onDisk }));
+/** 课件第 22–25 页的缺页事件：换出牺牲页 VP 4（PP 3），换入 VP 3（占用 PP 3） */
+function vmPtAfterFault(pt) {
+  const out = vmPtCopy(pt);
+  out[3] = { v: 1, ppn: out[4].ppn, onDisk: false }; // VP 3 换入牺牲页的物理页
+  out[4] = { v: 0, ppn: null, onDisk: true };        // VP 4 被换出到磁盘
+  return out;
+}
+/** 从页表反推物理内存里放着哪些页（不写死，直接扫描有效 PTE） */
+function vmPhysicalOwners(pt) {
+  const owners = {};
+  pt.forEach((e, i) => { if (e.v) owners[Number(e.ppn)] = i; });
+  return owners;
+}
+const VM_PTE_STATE = e => !e ? '空 PTE'
+  : e.v ? `已缓存 → PP ${e.ppn}`
+  : (e.onDisk ? '未缓存（在磁盘上）' : '未分配（指针为 null）');
+/* tr.hl 在 styles/base.css 里并没有定义（六份既有课件都在用它，属于历史约定），
+   所以这里同时给一个用 CSS 变量的内联底色，保证四套皮肤下都真的看得见高亮 */
+const vmHl = on => on ? ' class="hl" style="background:var(--accent-soft)"' : '';
+const vmPteChip = e => !e ? '<span class="chip gray">无</span>'
+  : e.v ? `<span class="chip ok">有效 → PP ${e.ppn}</span>`
+  : (e.onDisk ? '<span class="chip warn">有效位 0 · 在磁盘</span>' : '<span class="chip gray">有效位 0 · 未分配</span>');
+
+/* 生成页表的小型可点表格（页表浏览器与地址翻译器共用） */
+function vmPtTableHtml(pt, sel, attrs) {
+  const A = attrs || {};
+  const owners = vmPhysicalOwners(pt);
+  const rows = pt.map((e, i) => {
+    const cls = vmHl(i === sel);
+    const click = A.click ? ` data-${A.click}="${i}" style="cursor:pointer"` : '';
+    return `<tr${cls}${click}><td class="mono">PTE ${i}</td><td class="mono">${e.v}</td>` +
+      `<td class="mono">${e.v ? 'PPN ' + e.ppn : (e.onDisk ? '磁盘地址' : 'null')}</td>` +
+      `<td>${vmPteChip(e)}</td><td class="en" style="font-size:13px">${A.vpLabel ? A.vpLabel(e, i) : ''}</td></tr>`;
+  }).join('');
+  return `<div class="tbl-wrap"><table class="tbl">
+      <tr><th class="mono">页表项</th><th class="mono">有效位</th><th>PPN / 磁盘地址</th><th>状态</th><th>说明</th></tr>
+      ${rows}
+    </table></div>
+    <p class="en" style="margin:6px 0 0;font-size:13px">DRAM 里此刻放着：${Object.keys(owners).length
+      ? Object.keys(owners).map(pp => `PP ${pp} ← VP ${owners[pp]}`).join(' · ')
+      : '（空）'}。</p>`;
+}
+
+/* ============================================================
+   1.4 物理寻址 vs 虚拟寻址
+   ============================================================ */
+let vmPsMode = 'phys';
+
+function vmRenderPs() {
+  const raw = $('#psAddr').value;
+  const a = vmParseAddr(raw);
+  if (a === null) { $('#psOut').innerHTML = badBox('地址请写成 0x… / 0b… / 十进制整数。'); return; }
+  const P_MODE = { phys: '物理寻址系统中 CPU 直接把地址送上总线', virt: '虚拟寻址系统中 MMU 先翻译再送上总线' };
+  const title = {
+    phys: '物理寻址（physical addressing）',
+    virt: '虚拟寻址（virtual addressing）',
+    cmp:  '两者对照',
+  };
+  const box = (t, body) => `<div class="card"><h5>${t}</h5><div style="font-size:14.5px">${body}</div></div>`;
+
+  if (vmPsMode === 'cmp') {
+    $('#psOut').innerHTML = `<div class="grid g2" style="margin-top:12px">
+      ${box('物理寻址', `<p style="margin:0 0 8px">CPU 执行一条 <span class="mono">movl</span> 时，直接把<b>物理地址</b>送上内存总线。内存按这个地址取回数据字。</p>
+        <p class="mono" style="margin:0;font-size:13px">CPU ——[ PA = ${esc(raw)} ]——&gt; Main memory</p>
+        <p style="margin:8px 0 0;color:var(--muted)">用在「简单系统」：汽车、电梯、数码相框里的嵌入式微控制器。</p>`)}
+      ${box('虚拟寻址', `<p style="margin:0 0 8px">CPU 把<b>虚拟地址</b>交给片上的 <b>MMU</b>（Memory Management Unit），MMU 查页表得到物理地址，再送上内存总线。</p>
+        <p class="mono" style="margin:0;font-size:13px">CPU ——[ VA = ${esc(raw)} ]——&gt; MMU ——[ PA ]——&gt; Main memory</p>
+        <p style="margin:8px 0 0;color:var(--muted)">用在所有现代服务器、笔记本与智能手机。</p>`)}
+    </div>
+    <div class="box ok" style="margin-bottom:0"><div class="t">课件的判断</div>
+      物理寻址只活在不需要隔离的单用户小设备里；虚拟寻址是「计算机科学中最伟大的思想之一」。差别不在性能，而在<b>多出来的那一层间接</b>带来的三个能力（缓存、管理、保护，见本章 1.6）。</div>`;
+    return;
+  }
+
+  const split = vmSplitVA(a, 12);
+  const tr = vmTranslate(a, 32, 32, 12, VM_PT_INIT);
+  const steps = vmPsMode === 'phys'
+    ? [['① CPU 取到一条访存指令', `地址来自寄存器或指令里的常量：<span class="mono">${esc(raw)}</span>`],
+       ['② 直接送上地址总线', `不做任何翻译 —— 这个数的二进制就是内存条上的位置：<span class="mono">${vmBin(a & 0xFFFFn, 16)}</span>`],
+       ['③ 内存返回数据字', '内存控制器按物理地址取回一个字，交回 CPU。']]
+    : [['① CPU 送出虚拟地址（VA）', `<span class="mono">${esc(raw)}</span> = <span class="mono">${vmHex(a, 32)}</span>`],
+       ['② MMU 把 VA 拆成 VPN + VPO', `按 4 KB 页（p = 12）：VPN = <b>${split.vpn}</b>，VPO = <b>${split.vpo}</b>`],
+       ['③ MMU 查页表取 PTE', (tr.kind === 'hit'
+          ? `PTE ${split.vpn} 有效，PPN = <b>${tr.ppn}</b> → 物理地址 <span class="mono">${vmHex(tr.pa, 32)}</span>（= ${tr.pa}）`
+          : `PTE ${split.vpn} 有效位为 0 —— <b>缺页</b>，需要走异常处理路径（见第 3 节）`)],
+       ['④ MMU 把物理地址交给内存', '此后的读数据与物理寻址系统一模一样。']];
+  $('#psOut').innerHTML = `<div style="margin-top:12px">
+    ${box(title[vmPsMode], `<ol style="margin:0;padding-left:20px">${steps.map(s =>
+      `<li style="margin:8px 0"><b>${s[0]}</b><br><span style="color:var(--muted)">${s[1]}</span></li>`).join('')}</ol>`)}
+    <div class="box ${tr.kind === 'hit' ? 'ok' : 'warn'}" style="margin:12px 0 0"><div class="t">对照课件第 9–10 页的同一份数据</div>
+      物理寻址那张图里，CPU 送出的地址是 <b>4</b>；虚拟寻址那张图里，同一个数据字被程序用虚拟地址 <b>4100</b> 访问，MMU 把它翻译成 <b>4</b>。<br>
+      用页表算一遍：4100 = <span class="mono">0x1004</span> → VPN = <b>1</b>、VPO = <b>4</b>；课件的页表里 PTE 1 =（有效 1，PPN 0）→ PA = 0 × 4096 + 4 = <b>4</b>。两页对上了。
+    </div></div>`;
+}
+
+/* ============================================================
+   1.5 地址空间尺寸计算器
+   ============================================================ */
+function vmRenderAS() {
+  const n = vmParseBits($('#asN').value, 1, 64);
+  const m = vmParseBits($('#asM').value, 1, 64);
+  const p = vmParseBits($('#asP').value, 4, 30);
+  if (n === null) { $('#asOut').innerHTML = badBox('虚拟地址位数 n 请填 1–64 的整数。'); return; }
+  if (m === null) { $('#asOut').innerHTML = badBox('物理地址位数 m 请填 1–64 的整数。'); return; }
+  if (p === null) { $('#asOut').innerHTML = badBox('页内偏移位数 p 请填 4–30 的整数。'); return; }
+  if (p >= n) { $('#asOut').innerHTML = badBox(`页内偏移位数 p = ${p} 不能 ≥ 虚拟地址位数 n = ${n}（那样整个地址都是偏移，没有 VPN）。`); return; }
+  if (p >= m) { $('#asOut').innerHTML = badBox(`页内偏移位数 p = ${p} 不能 ≥ 物理地址位数 m = ${m}。`); return; }
+
+  const N = 1n << BigInt(n), M = 1n << BigInt(m), P = 1n << BigInt(p);
+  const vpnBits = n - p, ppnBits = m - p;
+  const vPages = 1n << BigInt(vpnBits), pPages = 1n << BigInt(ppnBits);
+  const row = (a, b, c) => `<tr><td>${a}</td><td class="mono">${b}</td><td class="mono">${c}</td></tr>`;
+  const ratio = pPages === 0n ? '—' : (vPages / pPages);
+  $('#asOut').innerHTML = `
+    <div class="tbl-wrap"><table class="tbl" style="margin-top:8px">
+      <tr><th>量</th><th>记法</th><th>数值</th></tr>
+      ${row('虚拟地址空间里的地址数', `N = 2<sup>${n}</sup>`, `${vmThousands(N)} 个`)}
+      ${row('物理地址空间里的地址数', `M = 2<sup>${m}</sup>`, `${vmThousands(M)} 个`)}
+      ${row('页大小', `P = 2<sup>${p}</sup>`, vmSizeBoth(P))}
+      ${row('虚拟页号 VPN 的位数', `n − p = ${vpnBits}`, `${vpnBits} 位`)}
+      ${row('物理页号 PPN 的位数', `m − p = ${ppnBits}`, `${ppnBits} 位`)}
+      ${row('虚拟页数', `2<sup>${vpnBits}</sup>`, `${vmThousands(vPages)} 页`)}
+      ${row('物理页数（页框数）', `2<sup>${ppnBits}</sup>`, `${vmThousands(pPages)} 页`)}
+    </table></div>
+    <div class="readout" style="margin-top:10px">
+      <dt>虚拟空间 / 物理空间</dt><dd>${vPages} : ${pPages}（${vpnBits > ppnBits ? `每 2<sup>${vpnBits - ppnBits}</sup> 个虚拟页摊到一个物理页框` : vpnBits === ppnBits ? '虚拟页数与物理页框数相同' : `虚拟页数比物理页框还少 2<sup>${ppnBits - vpnBits}</sup> 倍`}）</dd>
+      <dt>地址位段</dt><dd>VA：[ VPN ${vpnBits} 位 | VPO ${p} 位 ] &nbsp;&nbsp; PA：[ PPN ${ppnBits} 位 | PPO ${p} 位 ]</dd>
+      <dt>单级页表</dt><dd>${vmThousands(vPages)} 项 × PTE 字节数 = 见第 2.2 节的规模计算器</dd>
+    </div>
+    <p class="en" style="font-size:13px;margin:8px 0 0">课件第 11 页的记法：${vpnBits} 位 VPN 与 ${p} 位 VPO 拼起来正好是 ${n} 位虚拟地址；物理地址那边同理，<b>VPO 与 PPO 位数相同、内容相同</b>（第 36 页会用到这一点）。</p>`;
+}
+
+/* ============================================================
+   2.2 页尺寸与页表规模
+   ============================================================ */
+function vmRenderDC() {
+  const n = vmParseBits($('#dcN').value, 8, 64);
+  const p = Number($('#dcP').value);
+  const esz = vmParseBits($('#dcE').value, 1, 64);
+  if (n === null) { $('#dcOut').innerHTML = badBox('虚拟地址位数 n 请填 8–64 的整数。'); return; }
+  if (esz === null) { $('#dcOut').innerHTML = badBox('PTE 字节数请填 1–64 的整数。'); return; }
+  if (p >= n) { $('#dcOut').innerHTML = badBox(`页大小的位数 p = ${p} 不能 ≥ n = ${n}。`); return; }
+  const vpnBits = n - p;
+  const pages = 1n << BigInt(vpnBits);
+  const size1 = vmSingleTableBytes(BigInt(vpnBits), BigInt(esz));
+  $('#dcOut').innerHTML = `
+    <div class="grid g3" style="margin-top:10px">
+      <div class="card"><h5>页大小</h5><p class="mono" style="margin:0;font-size:14px">2<sup>${p}</sup> = ${vmThousands(1n << BigInt(p))} B</p>
+        <p class="en" style="margin:6px 0 0;font-size:13px">${vmSizeStr(1n << BigInt(p))}${p === 12 ? ' —— 课件默认' : p === 21 ? ' —— Linux 大页默认' : p === 30 ? ' —— Linux 大页上限' : ''}</p></div>
+      <div class="card"><h5>VPN / PPN 位数</h5><p class="mono" style="margin:0;font-size:14px">n − p = ${vpnBits}</p>
+        <p class="en" style="margin:6px 0 0;font-size:13px">虚拟页数 ${vmThousands(pages)}，即 ${vmSizeStr(pages * (1n << BigInt(p)))} 的虚拟空间</p></div>
+      <div class="card"><h5>单级页表</h5><p class="mono" style="margin:0;font-size:14px">2<sup>${vpnBits}</sup> × ${esz} B</p>
+        <p class="en" style="margin:6px 0 0;font-size:13px">= ${vmSizeBoth(size1)}</p></div>
+    </div>
+    <div class="box ${size1 > (32n << 20n) ? 'warn' : 'ok'}" style="margin-bottom:0">
+      <div class="t">${size1 > (32n << 20n) ? '这就是「页表太大」的问题' : '这个尺寸还能接受'}</div>
+      ${vmSizeStr(size1)} —— ${size1 > (32n << 20n)
+        ? `每创建<b>一个</b>进程就要一张这么大的连续页表，且必须常驻内存。课件第 45 页说 48 位地址空间 + 4 KB 页要 <b>512 GB</b>：<span class="mono">2<sup>48</sup> × 2<sup>−12</sup> × 2<sup>3</sup> = 2<sup>39</sup></span> 字节 —— 把 n 改成 48、PTE 改成 8 试试。`
+        : '把 n 调大或把页调小，会看到它迅速爆炸（页数按 2 的幂增长）。'}
+    </div>`;
+}
+
+/* ============================================================
+   2.3 页表浏览器
+   ============================================================ */
+let vmPtView = 'init', vmPtSel = 1;
+
+function vmCurrentPt() {
+  if (vmPtView === 'faulted') return vmPtAfterFault(vmPtCopy(VM_PT_INIT));
+  if (vmPtView === 'allvalid') return VM_PT_INIT.map((e, i) => ({ v: 1, ppn: BigInt(i % 4), onDisk: false }));
+  return vmPtCopy(VM_PT_INIT);
+}
+function vmRenderPt() {
+  const pt = vmCurrentPt();
+  const sel = Math.min(vmPtSel, pt.length - 1);
+  vmPtSel = sel;
+  const e = pt[sel];
+  const owners = vmPhysicalOwners(pt);
+  const detail = e.v
+    ? `<div class="box ok" style="margin:0"><div class="t">PTE ${sel}：有效位 1，PPN = ${e.ppn}</div>
+        引用 VP ${sel} 就是<b>页命中</b>。VA 的低 p 位（VPO）原样成为 PPO，拼出的物理地址落在 PP ${e.ppn} 上：<br>
+        <span class="mono">PA = PPN × 2<sup>p</sup> + VPO = ${e.ppn} × 4096 + VPO</span></div>`
+    : e.onDisk
+      ? `<div class="box warn" style="margin:0"><div class="t">PTE ${sel}：有效位 0，磁盘地址有效</div>
+          这一页<b>已分配但不在内存里</b>（未缓存）。引用 VP ${sel} 就是<b>缺页</b>，处理程序要从磁盘把它换入。</div>`
+      : `<div class="box bad" style="margin:0"><div class="t">PTE ${sel}：有效位 0，指针为 null</div>
+          这一页<b>从未被分配</b>。课件第 34 页把这个情况与「在磁盘上」并列：MAP(a) = ∅，<b>要么非法，要么存在磁盘上</b> —— 指向 null 的这一种属于「非法」，处理程序会报段错误而不是换页。</div>`;
+  $('#ptOut').innerHTML = `<div class="grid g2" style="margin-top:10px;align-items:start">
+      <div>${vmPtTableHtml(pt, sel, { click: 'pts' })}</div>
+      <div>${detail}
+        <div class="card" style="margin-top:12px"><h5>怎么读这张表</h5>
+          <p style="margin:0;font-size:14px">页表的下标就是 VPN。课件第 16 页：<b>一个 PTE 数组，把虚拟页映射到物理页</b>；每个进程一份，放在 DRAM 里。右边那列「说明」是由 PTE 现算的，不是抄来的。</p>
+          <p style="margin:8px 0 0;font-size:14px">DRAM 里此刻放着 ${Object.keys(owners).length} 个页：${Object.keys(owners).map(pp => `PP ${pp} ← VP ${owners[pp]}`).join(' · ')}。</p>
+        </div>
+      </div>
+    </div>`;
+}
+
+/* ============================================================
+   3.4 缺页七步演示
+   ============================================================ */
+let vmPfStep = 0, vmPfVpn = 3;
+
+/** 课件第 38 页的七步（拆开 2–3） */
+const VM_PF_STEPS = [
+  ['① 处理器把虚拟地址送给 MMU', 'CPU 执行出错的访存指令，把 VA 送上 MMU。'],
+  ['② MMU 算出 PTE 的地址（PTEA）', 'PTEA = 页表基址寄存器 PTBR + VPN × PTE 大小。'],
+  ['③ MMU 从内存里的页表取出 PTE', '这一次访存本身要走内存 —— 第 37 页把它并进第 2 步写作「2–3)」。'],
+  ['④ 有效位是 0 → 触发缺页异常', 'MMU 发现 PTE 有效位为 0，触发<b>缺页异常</b>，把特权级提到内核态。'],
+  ['⑤ 处理程序选出牺牲页', '本例牺牲页是 <b>VP 4</b>（占着 PP 3）。如果它是脏页，先写回磁盘。'],
+  ['⑥ 换入新页并更新内存里的 PTE', '从磁盘把新的 VP 读进刚才腾空的物理页，然后更新 PTE（valid→1、PPN 改新值，牺牲页 PTE 的 valid→0）。'],
+  ['⑦ 返回原进程，重新执行出错指令', '处理程序执行 <i>iret</i>（像 ret，但还会恢复特权级）。这一次同一条指令不再是缺页 —— 它是<b>页命中</b>了。'],
+];
+
+function vmRenderPf() {
+  const base = vmPtCopy(VM_PT_INIT);
+  const vpn = vmPfVpn;
+  const unalloc = !base[vpn].v && !base[vpn].onDisk;
+  let pt = base, steps = VM_PF_STEPS, fatal = false;
+  if (unalloc) {
+    fatal = true;
+    steps = [
+      ['① 处理器把虚拟地址送给 MMU', 'CPU 把 VA 送上 MMU。'],
+      ['② MMU 算出 PTE 的地址（PTEA）', 'PTEA = PTBR + VPN × PTE 大小。'],
+      ['③ MMU 从内存里的页表取出 PTE', '取出 PTE 后发现有效位为 0。'],
+      ['④ 有效位是 0 → 触发缺页异常', 'MMU 触发缺页异常，进入内核态。'],
+      [`⑤ 处理程序发现 PTE ${vpn} 的指针是 null`, `这一页<b>从未分配过</b>：不在磁盘上的任何地方，也就没有「换入」可言。课件第 34 页把 MAP(a) = ∅ 的两种可能并列 —— <b>要么非法，要么存在磁盘上</b>；这是前者。`],
+      ['⑥ 判定为非法引用', '处理程序不会去动磁盘，而是给进程发一个段错误（SIGSEGV）信号，进程被终止。'],
+      ['⑦ 不会再有「重新执行」', '这条路走不到第 7 步 —— 这也是 null 指针解引用崩得快的原因。'],
+    ];
+  } else if (vmPfStep >= 6) {
+    pt = vmPtAfterFault(base);
+  }
+  const maxStep = vmPfStep;
+  const rows = steps.map((s, i) => `<div class="step${i < maxStep ? ' on' : ''}">
+      <div class="h">${s[0]}</div><div class="e">${s[1]}</div>
+      ${i === maxStep - 1 ? '<div style="margin-top:6px"><span class="chip">← 当前这一步</span></div>' : ''}
+    </div>`).join('');
+  const done = vmPfStep >= steps.length;
+  $('#pfOut').innerHTML = `<div class="grid g2" style="margin-top:10px;align-items:start">
+      <div>${rows}</div>
+      <div>${vmPtTableHtml(pt, vpn, {})}
+        <div class="box ${fatal ? 'bad' : (done ? 'ok' : '')}" style="margin:12px 0 0">
+          <div class="t">${fatal ? '这一页不可换入' : done ? '七步走完：现在它是页命中' : `第 ${vmPfStep} / ${steps.length} 步`}</div>
+          ${fatal
+            ? `VP ${vpn} 的 PTE 指针为 null，处理程序判定为非法引用。`
+            : done
+              ? `PTE ${vpn} 现在有效（PPN ${pt[vpn].ppn}），而 VP 4 的 PTE 已经被置为「在磁盘上」—— 牺牲页被换出了。下一次访问 VP ${vpn} 就是<b>页命中</b>。`
+              : '点「下一步」推进；走到第 6 步时会看到右边这张页表被改写。'}
+        </div>
+      </div>
+    </div>`;
+}
+
+/* ============================================================
+   3.5 工作集 / 抖动判据
+   ============================================================ */
+function vmRenderWs() {
+  const vals = ['#wsA', '#wsB', '#wsC'].map(id => $(id).value.trim());
+  const memRaw = $('#wsMem').value.trim();
+  const nums = [];
+  for (let i = 0; i < 3; i++) {
+    const t = vals[i] === '' ? '0' : vals[i];
+    if (!/^[0-9]+(\.[0-9]+)?$/.test(t)) { $('#wsOut').innerHTML = badBox(`进程 ${i + 1} 的工作集请填非负的 MB 数（可带小数）。`); return; }
+    nums.push(Number(t));
+  }
+  if (!/^[0-9]+(\.[0-9]+)?$/.test(memRaw)) { $('#wsOut').innerHTML = badBox('物理主存请填正的 MB 数。'); return; }
+  const mem = Number(memRaw);
+  if (mem <= 0) { $('#wsOut').innerHTML = badBox('物理主存必须大于 0。'); return; }
+  const PAGE = 4096, MB = 1048576;
+  const pages = nums.map(mb => mb <= 0 ? 0 : Math.ceil(mb * MB / PAGE));
+  const usedPages = pages.reduce((a, b) => a + b, 0);
+  const memPages = Math.floor(mem * MB / PAGE);
+  const overBytes = BigInt(usedPages) * 4096n, memBytes = BigInt(memPages) * 4096n;
+  const active = nums.filter(x => x > 0).length;
+  const thrash = usedPages > memPages;
+  $('#wsOut').innerHTML = `
+    <div class="tbl-wrap"><table class="tbl" style="margin-top:8px">
+      <tr><th>进程</th><th>工作集</th><th>需要页数（4 KB 页，向上取整）</th></tr>
+      ${nums.map((v, i) => `<tr${v > 0 ? '' : ' style="opacity:.55"'}><td>进程 ${i + 1}</td>
+         <td class="mono">${v} MB → ${vmThousands(BigInt(Math.round(v * MB)))} B</td>
+         <td class="mono">${v > 0 ? pages[i] + ' 页' : '不活跃'}</td></tr>`).join('')}
+      <tr${vmHl(true)}><td><b>合计</b></td><td class="mono">${nums.reduce((a, b) => a + b, 0).toFixed(2)} MB</td>
+        <td class="mono"><b>${usedPages} 页</b> = ${vmSizeStr(overBytes)}</td></tr>
+      <tr><td>物理主存</td><td class="mono">${mem} MB</td><td class="mono">${memPages} 页 = ${vmSizeStr(memBytes)}</td></tr>
+    </table></div>
+    <div class="box ${thrash ? 'bad' : 'ok'}" style="margin-bottom:0">
+      <div class="t">${thrash ? '抖动（thrashing）：性能崩塌' : '可以正常跑'}</div>
+      ${thrash
+        ? `合计工作集 <b>${usedPages} 页 &gt; ${memPages} 页</b>物理主存 —— 页会被连续不断地换进换出。课件第 26 页：${active > 1 ? '多进程同时跑时，只要<b>总</b>工作集超过主存就会抖动。' : '单个进程的工作集超过主存就会抖动。'}`
+        : `合计工作集 <b>${usedPages} 页 ≤ ${memPages} 页</b>主存 —— 熬过冷启动的那些缺失之后，性能良好。余量 ${memPages - usedPages} 页。`}
+      <br><span class="en" style="font-size:13px">课件第 26 页的两条判据：工作集 &lt; 主存 → 好性能；工作集 &gt; 主存 → 抖动。时间局部性越好，工作集越小。</span>
+    </div>`;
+}
+
+/* ============================================================
+   4.2 两个进程的页映射 / 共享只读库
+   ============================================================ */
+let vmMmMode = 'shared';
+/* 课件第 28–29 页：两个进程各自的虚拟页映射到物理页 PP 2 / PP 8 / PP 6 … */
+const VM_MM_P1 = [ { vp: 0, name: '代码页', ppPriv: 2n, lib: false }, { vp: 1, name: '只读库代码', ppPriv: 6n, lib: true }, { vp: 2, name: '数据页', ppPriv: 4n, lib: false } ];
+const VM_MM_P2 = [ { vp: 0, name: '代码页', ppPriv: 8n, lib: false }, { vp: 1, name: '只读库代码', ppPriv: 3n, lib: true }, { vp: 2, name: '数据页', ppPriv: 5n, lib: false } ];
+
+function vmRenderMm() {
+  const shared = vmMmMode === 'shared';
+  const rows = [[VM_MM_P1, '进程 1'], [VM_MM_P2, '进程 2']];
+  const pps = new Set();
+  rows.forEach(([m]) => m.forEach(e => pps.add(String(e.lib && shared ? 6n : e.ppPriv))));
+  const libPp = shared ? 6n : null;
+  const side = (m, title) => `<div class="card"><h5>${title}</h5>
+      <p class="en" style="margin:0 0 6px;font-size:13px">虚拟地址空间（每个进程一份）</p>
+      ${m.map(e => {
+        const pp = e.lib && shared ? 6n : e.ppPriv;
+        const hi = (e.lib && shared) ? ';border-color:var(--frac);background:var(--frac-bg)' : '';
+        return `<div style="padding:5px 8px;border-radius:6px;border:1px solid var(--line);margin:4px 0${hi}">
+          <span class="mono" style="font-size:13.5px">VP ${e.vp} → PP ${pp}</span>
+          <span class="en" style="font-size:12.5px;margin-left:8px">${e.name}${e.lib && shared ? ' · 与另一进程共享同一物理页' : ''}</span></div>`;
+      }).join('')}
+    </div>`;
+  $('#mmOut').innerHTML = `<div class="grid g2" style="margin-top:10px;align-items:start">
+      ${side(VM_MM_P1, '进程 1 的虚拟地址空间')}
+      ${side(VM_MM_P2, '进程 2 的虚拟地址空间')}
+    </div>
+    <div class="box ${shared ? 'ok' : 'warn'}" style="margin-bottom:0">
+      <div class="t">${shared ? '共享：内存里只留一份' : '各自私有副本'}</div>
+      ${shared
+        ? `两个进程的 VP 0 映射到<b>不同的</b>物理页（PP 2 / PP 8），但它们读同一份库代码的那个页都指向 <b>PP 6</b> —— 无论有多少个进程用这个库，内存里都只有这一份。`
+        : `关掉共享后，库代码页在两个进程里各占一个物理页（PP 6 / PP 3）—— 同样的字节在内存里存了两份。`}
+      本次用到的物理页：${Array.from(pps).sort((a, b) => Number(a) - Number(b)).map(p => 'PP ' + p).join(' · ')}
+      —— 共 <b>${pps.size}</b> 个物理页（${vmSizeStr(BigInt(pps.size) * 4096n)}）。
+      ${shared && libPp !== null ? `共享省下 <b>1</b> 个物理页：换成一个进程用 3 个页、两个进程合起来用 5 个页。` : ''}
+    </div>`;
+}
+
+/* ============================================================
+   4.3 进程地址空间布局（重建课件第 2、30 页那张图）
+   ============================================================ */
+const VM_SEGS = [
+  { k: 'kernel', name: '内核虚拟内存', en: 'Kernel virtual memory', addr: '0x00007FFFFFFFFFFF 之上',
+    color: 'var(--exp-bg)', fg: 'var(--exp-fg)', note: '对用户代码不可见（memory invisible to user code）。用户程序不能访问内核的私有信息与代码 —— 这是第 1.6 节「隔离地址空间」的另一半。' },
+  { k: 'stack', name: '用户栈', en: 'User stack', addr: '由 0x00007FFFFFFFFFFF 向下增长',
+    color: 'var(--accent-soft)', fg: 'var(--accent)', note: '运行时创建（created at runtime）。%rsp 指向栈顶；函数调用越深，栈越往低地址走。' },
+  { k: 'libs', name: '共享库的内存映射区', en: 'Memory-mapped region for shared libraries', addr: '栈下方',
+    color: 'var(--frac-bg)', fg: 'var(--frac-fg)', note: '共享库被映射到这一段 —— 第 4.2 节那张「两个进程指向同一个 PP 6」的图说的就是这里的页。' },
+  { k: 'heap', name: '运行时堆', en: 'Run-time heap', addr: 'brk 指向堆顶',
+    color: 'var(--frac-bg)', fg: 'var(--frac-fg)', note: '由 malloc 创建（created by malloc）。brk 是堆的当前顶端 —— 第 6 讲里 malloc 增长的就是它。' },
+  { k: 'data', name: '读 / 写段', en: 'Read/write segment (.data, .bss)', addr: '从可执行文件加载',
+    color: 'var(--sign-bg)', fg: 'var(--sign-fg)', note: '已初始化的全局/静态变量（.data）与未初始化变量（.bss），可读写。' },
+  { k: 'text', name: '只读段', en: 'Read-only segment (.init, .text, .rodata)', addr: '0x400000 起',
+    color: 'var(--warn-bg)', fg: 'var(--warn)', note: '代码与只读数据。因为这一段只读，所以 PTE 的 WRITE 位是 0 —— 写它就会落到第 5 节的权限检查上。' },
+  { k: 'unused', name: '未使用', en: 'Unused', addr: '0x00000000 起',
+    color: 'var(--gray-bg)', fg: 'var(--gray-fg)', note: '地址空间最底部这一大段是空的 —— 因此解引用空指针一定落在没有任何映射的地址上，硬件能立刻抓住它。' },
+];
+let vmSegSel = 'text';
+
+function vmRenderMl() {
+  const rows = VM_SEGS.map(s => {
+    const on = s.k === vmSegSel;
+    return `<div data-seg="${s.k}" style="cursor:pointer;margin:3px 0;padding:8px 12px;border-radius:8px;
+        border:1px solid var(--line);${on ? 'outline:2px solid var(--accent);outline-offset:1px;' : ''}
+        background:${s.color};color:${s.fg}">
+      <span style="font-weight:650;font-size:14px">${s.name}</span>
+      <span class="en" style="font-size:12.5px;margin-left:8px;color:inherit;opacity:.8">${s.en}</span>
+      <span class="mono" style="font-size:12.5px;margin-left:8px;opacity:.85">${s.addr}</span>
+    </div>`;
+  }).join('');
+  const seg = VM_SEGS.find(s => s.k === vmSegSel) || VM_SEGS[3];
+  $('#mlOut').innerHTML = `<div class="grid g2" style="margin-top:10px;align-items:start">
+      <div>
+        <p class="en" style="margin:0 0 6px;font-size:12.5px">高地址 ↑</p>
+        ${rows}
+        <p class="en" style="margin:6px 0 0;font-size:12.5px">↓ 低地址（0）</p>
+      </div>
+      <div class="card">
+        <h5>${seg.name} <span class="en" style="font-size:12.5px">${seg.en}</span></h5>
+        <p style="margin:0 0 8px;font-size:14.5px">${seg.note}</p>
+        <p class="mono" style="margin:0;font-size:13px">${seg.addr}</p>
+      </div>
+    </div>
+    <p class="en" style="font-size:13px;margin:10px 0 0">课件第 30 页把「可执行文件里被加载的部分」括起来标注为 <b>Loaded from the executable file</b> —— 就是右边的读/写段与只读段这两块；页面的上半部分（栈、共享库、堆）都是运行时才出现的。</p>`;
+}
+
+/* ============================================================
+   5.1 权限检查器
+   ============================================================ */
+const VM_PERM = {
+  i: [ { vp: 0, pp: 6n, sup: 0, r: 1, w: 0, x: 1 }, { vp: 1, pp: 4n, sup: 0, r: 1, w: 1, x: 1 }, { vp: 2, pp: 2n, sup: 1, r: 1, w: 1, x: 0 } ],
+  j: [ { vp: 0, pp: 9n, sup: 0, r: 1, w: 0, x: 1 }, { vp: 1, pp: 6n, sup: 1, r: 1, w: 1, x: 1 }, { vp: 2, pp: 11n, sup: 0, r: 1, w: 1, x: 1 } ],
+};
+let vmMpOp = 'r';
+const VM_OP_NAME = { r: '读（READ）', w: '写（WRITE）', x: '取指执行（EXEC）', s: '内核态读（READ）' };
+
+function vmRenderMp() {
+  const proc = $('#mpProc').value, vp = Number($('#mpVp').value), mode = $('#mpMode').value;
+  const e = VM_PERM[proc][vp];
+  const needKernel = e.sup === 1 && mode === 'user';
+  const needBit = vmMpOp === 'r' || vmMpOp === 's' ? e.r : vmMpOp === 'w' ? e.w : e.x;
+  const bitName = vmMpOp === 'x' ? 'EXEC' : vmMpOp === 'w' ? 'WRITE' : 'READ';
+  const ok = !needKernel && needBit === 1;
+  const bitChip = (label, v) => `<span class="chip ${v ? 'ok' : 'bad'}" style="margin-right:6px">${label} = ${v ? 'Yes' : 'No'}</span>`;
+  const why = ok ? '四个位都放行 —— MMU 按这个 PTE 完成翻译，访问继续。'
+    : needKernel ? `这一页的 <b>SUP = Yes</b>，而 CPU 现在跑在<b>用户态</b>：需要内核态才能访问，MMU 直接拒绝。`
+    : `这一页的 <b>${bitName} = No</b>，本次操作正需要它，MMU 拒绝访问。`;
+  $('#mpOut').innerHTML = `<div style="margin-top:12px">
+      <div class="card"><h5>进程 ${proc} / VP ${vp} → PP ${e.pp}</h5>
+        ${bitChip('SUP', e.sup)}${bitChip('READ', e.r)}${bitChip('WRITE', e.w)}${bitChip('EXEC', e.x)}
+        <p style="margin:8px 0 0;font-size:14px">当前特权级：<b>${mode === 'user' ? '用户态' : '内核态'}</b>，操作：<b>${VM_OP_NAME[vmMpOp]}</b></p>
+      </div>
+      <div class="box ${ok ? 'ok' : 'bad'}" style="margin-bottom:0">
+        <div class="t">${ok ? '允许访问' : '拒绝访问（保护异常）'}</div>${why}
+      </div>
+      <p class="en" style="font-size:13px;margin:10px 0 0">自己核对一遍课件的表：进程 i 的 VP 0 是「No / Yes / No / Yes」（只读可执行）—— 所以写它会失败；进程 i 的 VP 2 是「Yes / Yes / Yes / No」—— 所以用户态连读都读不了。把上面的下拉框逐个试一遍就能对上。</p>
+    </div>`;
+}
+
+/* ============================================================
+   6.2 符号速查（位段可视化）
+   ============================================================ */
+function vmRenderSym() {
+  const n = vmParseBits($('#symN').value, 4, 64);
+  const m = vmParseBits($('#symM').value, 4, 64);
+  const p = vmParseBits($('#symP').value, 2, 30);
+  if (n === null || m === null) { $('#symOut').innerHTML = badBox('n 与 m 请填 4–64 的整数。'); return; }
+  if (p === null || p >= n) { $('#symOut').innerHTML = badBox(`p 请填 2–30 且小于 n 的整数。`); return; }
+  const vpnBits = n - p, ppnBits = m - p;
+  const bar = (parts, base) => {
+    const total = parts.reduce((a, b) => a + b.bits, 0);
+    return `${parts.map(pt => `<div style="flex:${pt.bits} 1 0;min-width:0;background:${pt.bg};color:${pt.fg};
+        border:1px solid var(--line);border-right:0;padding:6px 8px;font-size:12.5px;text-align:center">
+        ${pt.name} <span class="mono">${pt.bits} 位</span><br><span class="en" style="font-size:11.5px;color:inherit;opacity:.8">bit ${pt.hi}–${pt.lo}</span>
+      </div>`).join('')}<div style="width:1px;background:var(--line)"></div>`;
+  };
+  const vaParts = [
+    { name: 'VPN', bits: vpnBits, hi: n - 1, lo: p, bg: 'var(--exp-bg)', fg: 'var(--exp-fg)' },
+    { name: 'VPO', bits: p, hi: p - 1, lo: 0, bg: 'var(--frac-bg)', fg: 'var(--frac-fg)' },
+  ];
+  const paParts = [
+    { name: 'PPN', bits: ppnBits, hi: m - 1, lo: p, bg: 'var(--sign-bg)', fg: 'var(--sign-fg)' },
+    { name: 'PPO = VPO', bits: p, hi: p - 1, lo: 0, bg: 'var(--frac-bg)', fg: 'var(--frac-fg)' },
+  ];
+  $('#symOut').innerHTML = `<div style="margin-top:12px">
+      <p class="fcap" style="margin-bottom:4px">虚拟地址 VA（共 ${n} 位）</p>
+      <div style="display:flex;border-radius:8px;overflow:hidden">${bar(vaParts)}</div>
+      <p class="fcap" style="margin:14px 0 4px">物理地址 PA（共 ${m} 位）</p>
+      <div style="display:flex;border-radius:8px;overflow:hidden">${bar(paParts)}</div>
+      <div class="tbl-wrap"><table class="tbl" style="margin-top:14px">
+        <tr><th>字段</th><th>位数</th><th>取值范围</th><th>一句话</th></tr>
+        <tr><td class="mono">VPO</td><td class="mono">${p}</td><td class="mono">0 … ${vmThousands((1n << BigInt(p)) - 1n)}</td><td>页内偏移，共 ${vmSizeStr(1n << BigInt(p))} 的空间</td></tr>
+        <tr><td class="mono">VPN</td><td class="mono">${vpnBits}</td><td class="mono">0 … ${vmThousands((1n << BigInt(vpnBits)) - 1n)}</td><td>页表的下标，共 ${vmThousands(1n << BigInt(vpnBits))} 个虚拟页</td></tr>
+        <tr><td class="mono">PPO</td><td class="mono">${p}</td><td class="mono">同 VPO</td><td>物理页内偏移 —— <b>与 VPO 完全相同</b>，翻译时原样照抄</td></tr>
+        <tr><td class="mono">PPN</td><td class="mono">${ppnBits}</td><td class="mono">0 … ${vmThousands((1n << BigInt(ppnBits)) - 1n)}</td><td>页表里存的就是它（有效时）</td></tr>
+        <tr><td class="mono">TLBT / TLBI</td><td class="mono">${Math.max(vpnBits - 2, 0)} / 2</td><td class="mono">—</td><td>仅当 t = 2 时；改第 8 节的 t 再回来看这一行</td></tr>
+      </table></div>
+      <p class="en" style="font-size:13px;margin:8px 0 0">两条总位宽必须对上：<span class="mono">${vpnBits} + ${p} = ${n}</span>（VA），<span class="mono">${ppnBits} + ${p} = ${m}</span>（PA）。</p>
+    </div>`;
+}
+
+/* ============================================================
+   6.3 地址翻译器（核心）
+   ============================================================ */
+let vmTrPt = vmPtCopy(VM_PT_INIT);
+
+/** 翻转一个 PTE 的有效位（无效→有效时补一个 PPN）—— 供翻译器交互用 */
+function vmTogglePte(pt, i) {
+  const out = vmPtCopy(pt);
+  const e = out[i];
+  const ppn = (e.ppn === null || e.ppn === undefined) ? BigInt(i % 4) : BigInt(e.ppn);
+  out[i] = { v: e.v ? 0 : 1, ppn: ppn, onDisk: false };
+  return out;
+}
+
+function vmRenderTr() {
+  const raw = $('#trVa').value;
+  const a = vmParseAddr(raw);
+  const n = vmParseBits($('#trN').value, 4, 64);
+  const m = vmParseBits($('#trM').value, 4, 64);
+  const p = vmParseBits($('#trP').value, 2, 30);
+  if (a === null) { $('#trOut').innerHTML = badBox('虚拟地址请写成 0x… / 0b… / 十进制整数。'); return; }
+  if (n === null || m === null) { $('#trOut').innerHTML = badBox('n 与 m 请填 4–64 的整数。'); return; }
+  if (p === null || p >= n) { $('#trOut').innerHTML = badBox('p 请填 2–30 且小于 n 的整数。'); return; }
+
+  const inRange = a < (1n << BigInt(n));
+  const split = inRange ? vmSplitVA(a, p) : { vpn: null, vpo: null };
+  const tr = vmTranslate(a, n, m, p, vmTrPt);
+  const ptRows = vmTrPt.length;
+
+  /* 位段：VPN 与 VPO 分色显示 */
+  const bin = inRange ? vmBin(a, n) : '';
+  const vpnStr = inRange ? bin.slice(0, n - p) : '';
+  const vpoStr = inRange ? bin.slice(n - p) : '';
+  const vpnHex = inRange ? '0x' + split.vpn.toString(16).toUpperCase() : '—';
+  const vpoHex = inRange ? '0x' + split.vpo.toString(16).toUpperCase() : '—';
+
+  let verdict;
+  if (tr.kind === 'hit') {
+    verdict = `<div class="box ok" style="margin:0"><div class="t">页命中 → 物理地址 ${vmHex(tr.pa, m)}</div>
+      PTE ${tr.vpn} 的有效位为 1，PPN = <b>${tr.ppn}</b>。把 PPN 与 PPO（= VPO）拼起来：
+      <div class="formula" style="text-align:left;margin:10px 0 0">
+        <div>PA = PPN &lt;&lt; p | PPO = ${tr.ppn} &lt;&lt; ${p} | ${tr.vpo} = <b>${tr.pa}</b></div>
+        <div>十六进制：<span class="mono">${vmHex(tr.pa, m)}</span>；二进制 PPN|PPO：<span class="mono">${vmBin(tr.ppn, m - p)}</span> | <span class="mono">${vmBin(tr.vpo, p)}</span></div>
+      </div></div>`;
+  } else if (tr.kind === 'fault') {
+    verdict = `<div class="box warn" style="margin:0"><div class="t">缺页（page fault）</div>
+      PTE ${tr.vpn} 的有效位为 <b>0</b> —— PP 里没有这一页。课件第 34 页：此时 <code>MAP(a) = ∅</code>，<b>要么非法、要么存在磁盘上</b>。<br>
+      下面这个翻译器里的页表把 PTE ${tr.vpn} 记成「${VM_PTE_STATE(vmTrPt[Number(tr.vpn)])}」：${vmTrPt[Number(tr.vpn)] && vmTrPt[Number(tr.vpn)].onDisk
+        ? '在磁盘上 —— 可以换入（走第 3.4 节的七步）。' : '指针为 null —— <b>从未分配</b>，处理程序会判定为非法引用。'}</div>`;
+  } else if (tr.reason === 'va_out_of_range') {
+    verdict = `<div class="box bad" style="margin:0"><div class="t">地址超出虚拟地址空间</div>
+      ${esc(raw)} ≥ ${vmThousands(1n << BigInt(n))} = 2<sup>${n}</sup> —— ${n} 位地址装不下它。把 n 调大或改一个更小的地址。</div>`;
+  } else {
+    const why = tr.reason === 'vpn_out_of_range'
+      ? `VPN = ${tr.vpn} ≥ 页表项数 ${ptRows} —— 这张页表里没有这一项。`
+      : `PTE 里的 PPN = ${tr.ppn} 超出了物理地址空间能表示的范围（m − p = ${m - p} 位，最多 ${vmThousands((1n << BigInt(m - p)) - 1n)}）。`;
+    verdict = `<div class="box bad" style="margin:0"><div class="t">无法翻译</div>${why}</div>`;
+  }
+
+  $('#trOut').innerHTML = `<div class="grid g2" style="margin-top:10px;align-items:start">
+      <div>
+        <p class="fcap">虚拟地址的位段（n = ${n}，p = ${p}）</p>
+        <div class="tbl-wrap" style="border-radius:8px;overflow:hidden">
+          <div style="display:flex">
+            <div style="flex:${n - p} 1 0;min-width:0;background:var(--exp-bg);color:var(--exp-fg);border:1px solid var(--line);border-right:0;padding:6px 8px;text-align:center;font-size:12.5px">
+               VPN <span class="mono">${n - p} 位</span></div>
+            <div style="flex:${p} 1 0;min-width:0;background:var(--frac-bg);color:var(--frac-fg);border:1px solid var(--line);padding:6px 8px;text-align:center;font-size:12.5px">
+               VPO <span class="mono">${p} 位</span></div>
+          </div>
+        </div>
+        <div class="tbl-wrap mono" style="font-size:12.5px;line-height:1.9;margin-top:8px">
+          ${inRange ? `<div>VA = <span style="background:var(--exp-bg)">${vmGroupBin(vpnStr, 4)}</span> <span style="background:var(--frac-bg)">${vmGroupBin(vpoStr, 4)}</span></div>` : '<div>（地址越界，无位段可显示）</div>'}
+        </div>
+        <div class="readout" style="margin-top:12px">
+          <dt>VA</dt><dd>${inRange ? vmHex(a, n) + `（十进制 ${vmThousands(a)}）` : esc(raw) + ' ← 越界'}</dd>
+          <dt>VPN</dt><dd>${split.vpn === null ? '—' : `十进制 ${split.vpn} · ${vpnHex}`}</dd>
+          <dt>VPO</dt><dd>${split.vpo === null ? '—' : `十进制 ${split.vpo} · ${vpoHex}`}</dd>
+          <dt>PTE</dt><dd>${tr.vpn === undefined || tr.vpn === null ? '—' : (vmTrPt[Number(tr.vpn)] ? `有效位 ${vmTrPt[Number(tr.vpn)].v}${vmTrPt[Number(tr.vpn)].v ? '，PPN ' + vmTrPt[Number(tr.vpn)].ppn : ''}` : '（页表里没有这一项）')}</dd>
+          <dt>结果</dt><dd>${tr.kind === 'hit' ? vmHex(tr.pa, m) + `（十进制 ${vmThousands(tr.pa)}）` : tr.kind === 'fault' ? '缺页 MAP(a) = ∅' : '无法翻译'}</dd>
+        </div>
+        ${verdict}
+      </div>
+      <div>
+        <p class="fcap">页表（点任意一行翻转它的有效位）</p>
+        ${vmPtTableHtml(vmTrPt, tr.vpn === undefined || tr.vpn === null ? -1 : Number(tr.vpn), { click: 'trt' })}
+      </div>
+    </div>
+    <div class="box" style="margin-bottom:0"><div class="t">PTEA（页表项的地址）</div>
+      取 PTE 本身也是一次访存，它的地址是
+      <span class="mono">PTEA = PTBR + VPN × PTE大小</span>。设 <span class="mono">PTBR = 0x1000</span>、PTE 4 字节：
+      ${tr.vpn === undefined || tr.vpn === null ? '（无 VPN）'
+        : `<span class="mono">PTEA = 0x1000 + ${tr.vpn} × 4 = ${vmHex(0x1000n + tr.vpn * 4n, 32)}</span>`} —— 第 7 节的通路图会把这条箭头画出来。
+    </div>`;
+}
+
+/* ============================================================
+   7 通路步进（页命中 / 缺页 / 整合 L1）
+   ============================================================ */
+let vmWkMode = 'hit', vmWkStep = 0;
+
+function vmWkSteps() {
+  const raw = $('#wkVa').value;
+  const a = vmParseAddr(raw);
+  const base = vmParseAddr($('#wkBase').value);
+  if (a === null || base === null) return null;
+  const n = 32, m = 32, p = 12;
+  const split = vmSplitVA(a, p);
+  const tr = vmTranslate(a, n, m, p, vmTrPt);
+  const ptea = base + split.vpn * 4n;
+  const paTxt = tr.kind === 'hit' ? vmHex(tr.pa, m) : '（直到命中才有）';
+  const common = `VA = <span class="mono">${vmHex(a, 32)}</span>（VPN ${split.vpn} / VPO ${split.vpo}）`;
+  const hitSteps = [
+    ['1) 处理器把虚拟地址送给 MMU', common],
+    ['2–3) MMU 从内存里的页表取出 PTE', `PTEA = PTBR + VPN × 4 = ${vmHex(base, 32)} + ${split.vpn} × 4 = <span class="mono">${vmHex(ptea, 32)}</span>，取回 PTE ${split.vpn}：${tr.kind === 'hit' ? `有效位 1、PPN ${tr.ppn}` : '有效位 0 —— 这条路径会变成缺页'}`],
+    ['3)（同上 —— 取 PTE 的那次访存本身也要走内存）', '课件第 37 页把 2、3 两步合并写，正是因为这两步是同一次访存。第 8 节的 TLB 就是为省掉它而存在。'],
+    ['4) MMU 把物理地址送给 cache / memory', `PA = PPN &lt;&lt; 12 | PPO = <span class="mono">${paTxt}</span>${tr.kind === 'hit' ? `（PPN ${tr.ppn} / PPO ${tr.vpo}）` : ''}`],
+    ['5) cache / memory 把数据字送回处理器', `处理器拿到 ${vmHex(a, 32)} 处的那一个字 —— 程序完全不知道中间发生过翻译。`],
+  ];
+  const faultSteps = [
+    ['1) 处理器把虚拟地址送给 MMU', common],
+    ['2–3) MMU 从内存里的页表取出 PTE', `PTEA = <span class="mono">${vmHex(ptea, 32)}</span>，取回 PTE ${split.vpn}，有效位为 <b>0</b>`],
+    ['4) 有效位是 0，MMU 触发缺页异常', '把特权级提到内核态，转去执行软件里的缺页处理程序。'],
+    ['5) 处理程序选出牺牲页（脏则写回磁盘）', '本例的牺牲页是 VP 4（第 3.4 节的七步演示里会看到 PTE 4 被改成「在磁盘上」）。'],
+    ['6) 处理程序换入新页并更新内存里的 PTE', `把 VP ${split.vpn} 从磁盘读进腾空的物理页，PTE 的 PPN 指向它、有效位置 1。`],
+    ['7) 处理程序返回，重新执行出错指令', `iret 回到原进程 —— 这一次走的是上面那五步，结果是页命中（PA = ${tr.kind === 'hit' ? vmHex(tr.pa, m) : '见第 6 节翻译器的当前页表'}）。`],
+  ];
+  const cacheSteps = [
+    ['1) CPU 把 VA 送进 MMU', common + '（第 39 页的图里，这一步标着 1）。'],
+    ['2) MMU 生成 PTEA 并送进 L1', `箭头 2 带的是 <span class="mono">PTEA = ${vmHex(ptea, 32)}</span>。`],
+    ['3) L1 里的 PTE 命中或缺失', '第 39 页在这条箭头上标了 <b>PTEA hit / PTEA miss</b> 两个分支：PTE 本身也是普通内存字，同样被 L1 缓存。'],
+    ['4) MMU 拿到 PTE，拼出物理地址 PA', tr.kind === 'hit' ? `PA = <span class="mono">${vmHex(tr.pa, m)}</span>（PPN ${tr.ppn} / PPO ${tr.vpo}）` : 'PTE 无效 —— 走到这里会变成缺页，而不是继续往下。'],
+    ['5) PA 进 L1 数据缓存', '第 39 页在这条箭头上标了 <b>PA hit / PA miss</b>：命中就直接给数据，缺失才回内存。注意进缓存的已经是<b>物理地址</b>了。'],
+    ['6) 数据字回到 CPU', '课件第 39 页的 <b>Data</b> 箭头 —— 整条通路走完。'],
+  ];
+  const steps = vmWkMode === 'hit' ? hitSteps : vmWkMode === 'fault' ? faultSteps : cacheSteps;
+  return { steps: steps, ptea: ptea, tr: tr, split: split, a: a };
+}
+
+function vmRenderWk() {
+  const w = vmWkSteps();
+  if (!w) { $('#wkOut').innerHTML = badBox('虚拟地址与 PTBR 请写成 0x… / 0b… / 十进制整数。'); return; }
+  const rows = w.steps.map((s, i) => `<div class="step${i < vmWkStep ? ' on' : ''}">
+      <div class="h">${s[0]}</div><div class="e">${s[1]}</div>
+      ${i === vmWkStep - 1 ? '<div style="margin-top:6px"><span class="chip">← 当前这一步</span></div>' : ''}
+    </div>`).join('');
+  $('#wkOut').innerHTML = `<div class="grid g2" style="margin-top:10px;align-items:start">
+      <div>${rows}
+        <p class="en" style="margin:6px 0 0;font-size:13px">第 ${vmWkStep} / ${w.steps.length} 步</p></div>
+      <div>
+        <div class="card"><h5>这条地址现在会怎么走</h5>
+          <div class="readout" style="margin:0">
+            <dt>VA</dt><dd>${vmHex(w.a, 32)}</dd>
+            <dt>VPN / VPO</dt><dd>${w.split.vpn} / ${w.split.vpo}</dd>
+            <dt>PTEA</dt><dd>${vmHex(w.ptea, 32)}</dd>
+            <dt>PTE</dt><dd>有效位 ${vmTrPt[Number(w.split.vpn)] ? vmTrPt[Number(w.split.vpn)].v : '（无此项）'}${w.tr.kind === 'hit' ? '，PPN ' + w.tr.ppn : ''}</dd>
+            <dt>PA</dt><dd>${w.tr.kind === 'hit' ? vmHex(w.tr.pa, 32) : '—（' + (w.tr.kind === 'fault' ? '缺页' : '越界') + '）'}</dd>
+          </div>
+        </div>
+        <div class="box ${w.tr.kind === 'hit' ? 'ok' : 'warn'}" style="margin-bottom:0">
+          <div class="t">${w.tr.kind === 'hit' ? '当前页表下：页命中' : '当前页表下：' + (w.tr.kind === 'fault' ? '缺页' : '无法翻译')}</div>
+          第 6 节的翻译器改过页表的话，这里的判定会跟着变 —— 两者用的是同一份状态。
+        </div>
+      </div>
+    </div>`;
+}
+
+/* ============================================================
+   8.4 TLB 查询模拟器
+   ============================================================ */
+let vmTlbLines = [], vmTlbT = 2, vmTlbE = 2, vmTlbFirst = true, vmTlbLast = null;
+
+function vmTlbSeed(t, E) {
+  const out = [];
+  VM_PT_INIT.forEach((e, vpn) => {
+    if (!e.v) return;
+    const set = BigInt(vpn) & ((1n << BigInt(t)) - 1n);
+    const tag = BigInt(vpn) >> BigInt(t);
+    if (out.filter(l => Number(l.set) === Number(set)).length >= E) return;
+    out.push({ set: set, tag: tag, v: 1, ppn: BigInt(e.ppn) });
+  });
+  return out;
+}
+/** 往 TLB 里插入一行：同组同 tag 覆盖；组满则淘汰该组最先进入的一行（FIFO） */
+function vmTlbInsert(lines, set, tag, ppn, E) {
+  const out = lines.map(l => ({ set: BigInt(l.set), tag: BigInt(l.tag), v: l.v, ppn: l.ppn === null ? null : BigInt(l.ppn) }));
+  const setB = BigInt(set), tagB = BigInt(tag);
+  const idx = out.findIndex(l => l.set === setB && l.tag === tagB);
+  if (idx >= 0) { out[idx] = { set: setB, tag: tagB, v: 1, ppn: BigInt(ppn) }; return out; }
+  const inSet = out.filter(l => l.set === setB);
+  if (inSet.length >= E) out.splice(out.indexOf(inSet[0]), 1);
+  out.push({ set: setB, tag: tagB, v: 1, ppn: BigInt(ppn) });
+  return out;
+}
+
+function vmRenderTlb() {
+  const raw = $('#tlbVa').value;
+  const a = vmParseAddr(raw);
+  const n = vmParseBits($('#tlbN').value, 4, 64);
+  const m = vmParseBits($('#tlbM').value, 4, 64);
+  const p = vmParseBits($('#tlbP').value, 2, 30);
+  const t = vmParseBits($('#tlbT').value, 0, 10);
+  const E = Number($('#tlbE').value);
+  if (a === null) { $('#tlbOut').innerHTML = badBox('虚拟地址请写成 0x… / 0b… / 十进制整数。'); return; }
+  if (n === null || m === null) { $('#tlbOut').innerHTML = badBox('n 与 m 请填 4–64 的整数。'); return; }
+  if (p === null || p >= n) { $('#tlbOut').innerHTML = badBox('p 请填 2–30 且小于 n 的整数。'); return; }
+  if (t === null || p + t > n) { $('#tlbOut').innerHTML = badBox(`t 请填 0–10 的整数，且满足 p + t ≤ n（现在 p + t = ${p + (t ?? 0)} > ${n}）。`); return; }
+  vmTlbT = t; vmTlbE = E;
+  if (vmTlbFirst) { vmTlbLines = vmTlbSeed(t, E); vmTlbFirst = false; }
+
+  const res = vmTlbAccess(a, n, m, p, t, vmTlbLines, vmTrPt);
+  vmTlbLast = res;
+  const s = res.tlb;
+  const T = 1 << t;
+  const bin = vmBin(a, n);
+  const tlbtStr = bin.slice(0, n - p - t), tlbiStr = bin.slice(n - p - t, n - p), vpoStr = bin.slice(n - p);
+  const findLine = l => Number(l.set) === Number(s.tlbi) && BigInt(l.tag) === s.tlbt;
+
+  /* TLB 表：行 = 组，列 = 路 */
+  const header = `<tr><th class="mono">组</th>${Array.from({ length: E }, (_, w) => `<th>第 ${w + 1} 路</th>`).join('')}</tr>`;
+  const body = Array.from({ length: T }, (_, set) => {
+    const inSet = vmTlbLines.filter(l => Number(l.set) === set);
+    const cells = Array.from({ length: E }, (_, w) => {
+      const l = inSet[w];
+      if (!l) return '<td class="en" style="font-size:12.5px">（空）</td>';
+      const isHit = res.kind === 'hit' && findLine(l);
+      return `<td class="${isHit ? 'mono' : ''}"${isHit ? ' style="background:var(--ok-bg);font-weight:650"' : ''}>
+        <span class="mono" style="font-size:12.5px">v=${l.v} tag=${l.tag} → PP ${l.ppn}</span></td>`;
+    }).join('');
+    const sel = Number(s.tlbi) === set;
+    return `<tr${vmHl(sel)}><td class="mono">Set ${set}${sel ? ' ← TLBI' : ''}</td>${cells}</tr>`;
+  }).join('');
+
+  let verdict;
+  if (res.kind === 'hit') {
+    verdict = `<div class="box ok" style="margin:0"><div class="t">TLB 命中 → 物理地址 ${vmHex(res.pa, m)}</div>
+      组 ${s.tlbi} 里有一行的 tag = <b>${s.tlbt}</b> 与 TLBT 相同 —— 它的 PTE 直接给出 PPN = <b>${res.ppn}</b>。
+      <b>省掉了一次取 PTE 的访存</b>（课件第 43 页：A TLB hit eliminates a cache/memory access）。<br>
+      <span class="mono">PA = PPN &lt;&lt; p | PPO = ${res.ppn} × 2<sup>${p}</sup> + ${s.vpo} = ${res.pa}</span></div>`;
+  } else if (res.kind === 'miss_hit') {
+    verdict = `<div class="box warn" style="margin:0"><div class="t">TLB 未命中，但页表说这一页在内存里</div>
+      组 ${s.tlbi} 里没有 tag = ${s.tlbt} 的行 —— <b>要额外付一次访存去读 PTE</b>（课件第 44 页：A TLB miss incurs an additional memory access）。<br>
+      页表给的 PPN = <b>${res.ppn}</b>，所以翻译仍然成功：<span class="mono">PA = ${vmHex(res.pa, m)}</span>。
+      <b>TLB 未命中 ≠ 缺页</b> —— 这是最容易混的一处。
+      <div style="margin-top:8px"><button class="sm" id="tlbFill">把这条 PTE 填进 TLB</button></div></div>`;
+  } else if (res.kind === 'miss_fault') {
+    verdict = `<div class="box bad" style="margin:0"><div class="t">TLB 缺失 + 页表有效位为 0 → 缺页</div>
+      组 ${s.tlbi} 里没有 tag = ${s.tlbt} 的行，回页表取 PTE 后发现有效位是 0 —— 这一次是真的缺页，
+      交给缺页处理程序（第 3.4 节的七步）。<br>
+      <span class="en" style="font-size:13px">顺带一提：处理程序换入新页并更新 PTE 之后，TLB 里对应的旧条目（如果有）需要被作废 —— 课件本讲没有展开 TLB 一致性，只讲到「TLB 管理由软件负责」（第 48 页）。</span></div>`;
+  } else {
+    verdict = `<div class="box bad" style="margin:0"><div class="t">无法翻译</div>
+      ${res.reason === 'va_out_of_range' ? `地址超出 ${n} 位虚拟地址空间。` : `PPN 超出物理地址空间能表示的范围。`}</div>`;
+  }
+
+  $('#tlbOut').innerHTML = `<div class="grid g2" style="margin-top:10px;align-items:start">
+      <div>
+        <p class="fcap">VPN 再拆成 TLBT | TLBI（t = ${t}，共 T = 2<sup>${t}</sup> = ${T} 组）</p>
+        <div class="tbl-wrap" style="border-radius:8px;overflow:hidden">
+          <div style="display:flex">
+            <div style="flex:${Math.max(n - p - t, 1)} 1 0;min-width:0;background:var(--exp-bg);color:var(--exp-fg);border:1px solid var(--line);border-right:0;padding:5px 6px;text-align:center;font-size:12px">TLBT <span class="mono">${n - p - t} 位</span></div>
+            <div style="flex:${Math.max(t, 1)} 1 0;min-width:0;background:var(--sign-bg);color:var(--sign-fg);border:1px solid var(--line);border-right:0;padding:5px 6px;text-align:center;font-size:12px">TLBI <span class="mono">${t} 位</span></div>
+            <div style="flex:${p} 1 0;min-width:0;background:var(--frac-bg);color:var(--frac-fg);border:1px solid var(--line);padding:5px 6px;text-align:center;font-size:12px">VPO <span class="mono">${p} 位</span></div>
+          </div>
+        </div>
+        <div class="tbl-wrap mono" style="font-size:12.5px;line-height:1.9;margin-top:8px">
+          <div>VA = <span style="background:var(--exp-bg)">${vmGroupBin(tlbtStr, 4) || '—'}</span> <span style="background:var(--sign-bg)">${vmGroupBin(tlbiStr, 4) || '—'}</span> <span style="background:var(--frac-bg)">${vmGroupBin(vpoStr, 4)}</span></div>
+        </div>
+        <div class="readout" style="margin-top:12px">
+          <dt>VPN</dt><dd>${vmSplitVA(a, p).vpn}</dd>
+          <dt>TLBT</dt><dd>${s.tlbt}（十进制）</dd>
+          <dt>TLBI</dt><dd>${s.tlbi} → 查 Set ${s.tlbi}</dd>
+          <dt>VPO</dt><dd>${s.vpo}</dd>
+          <dt>TLB 行数</dt><dd>${vmTlbLines.length} / ${T * E}（${T} 组 × ${E} 路）</dd>
+        </div>
+        ${verdict}
+      </div>
+      <div>
+        <p class="fcap">TLB 内容（高亮行 = TLBI 选中的组）</p>
+        <div class="tbl-wrap"><table class="tbl">${header}${body}</table></div>
+        <p class="en" style="font-size:12.5px;margin:6px 0 0">课件第 42 页：MMU 用虚拟地址的 VPN 部分访问 TLB —— <b>TLBI 选组、TLBT 比 tag</b>。每组能放几行由路数 E 决定，本页 E = ${E}。</p>
+      </div>
+    </div>`;
+}
+
+/* ============================================================
+   8.x TLB 参数
+   ============================================================ */
+function vmRenderTlbCfg() {
+  const t = vmParseBits($('#tcT').value, 0, 12);
+  const E = vmParseBits($('#tcE').value, 1, 16);
+  const p = vmParseBits($('#tcP').value, 2, 30);
+  if (t === null || E === null) { $('#tlbCfgOut').innerHTML = badBox('t 请填 0–12 的整数，路数 E 请填 1–16 的整数。'); return; }
+  if (p === null) { $('#tlbCfgOut').innerHTML = badBox('p 请填 2–30 的整数。'); return; }
+  const T = 1n << BigInt(t);
+  const entries = T * BigInt(E);
+  const cover = entries * (1n << BigInt(p));
+  $('#tlbCfgOut').innerHTML = `
+    <div class="tbl-wrap"><table class="tbl" style="margin-top:8px">
+      <tr><th>量</th><th>计算</th><th>结果</th></tr>
+      <tr><td>组数</td><td class="mono">T = 2<sup>${t}</sup></td><td class="mono">${vmThousands(T)} 组</td></tr>
+      <tr><td>每组行数（路数）</td><td class="mono">E</td><td class="mono">${E} 路</td></tr>
+      <tr><td>TLB 总条目</td><td class="mono">T × E</td><td class="mono">${vmThousands(entries)} 条</td></tr>
+      <tr><td>一条能覆盖的地址范围</td><td class="mono">1 页 = 2<sup>${p}</sup></td><td class="mono">${vmSizeStr(1n << BigInt(p))}</td></tr>
+      <tr${vmHl(true)}><td><b>整个 TLB 覆盖的范围</b></td><td class="mono">T × E × 页大小</td><td class="mono"><b>${vmSizeBoth(cover)}</b></td></tr>
+    </table></div>
+    <div class="box ok" style="margin-bottom:0"><div class="t">这个数字就是第 8.4 节那个设问的答案</div>
+      TLB 只有 ${vmThousands(entries)} 个条目，却能一次性记住 ${vmSizeStr(cover)} 范围内<b>任意</b> ${vmThousands(entries)} 个页的翻译。
+      只要程序当前的<b>工作集</b>（第 3.5 节）不超过 ${vmThousands(entries)} 个页，翻译就基本全在 TLB 里完成 —— 这就是
+      「TLB 未命中很少见」的原因：<b>靠的还是局部性</b>。<br>
+      <span class="en" style="font-size:13px">反过来算：把 t 从 2 调到 6，组数从 ${vmThousands(2n ** 2n)} 变成 ${vmThousands(2n ** 6n)}，覆盖范围也涨 16 倍 —— 而 TLB 是片上硬件，条目不可能无限加，真实系统的取值就在「命中率」与「面积」之间折中。</span>
+    </div>`;
+}
+
+/* ============================================================
+   8.x TLB 判断题
+   ============================================================ */
+const VM_PUZ_TLB = [
+  { q: 'TLB 未命中一定会导致缺页。', a: 0,
+    exp: 'TLB 未命中只是「翻译不在缓存里」，MMU 还要多访存一次去读 PTE。只要那个 PTE 的有效位是 1，翻译照样成功、物理地址照样拼得出来（第 44 页）。真正导致缺页的是 <b>PTE 有效位为 0</b>。' },
+  { q: '一次 TLB 命中免掉了一次 cache/memory 访问。', a: 1,
+    exp: '课件第 43 页原话：A TLB hit eliminates a cache/memory access. 省掉的正是「取 PTE」那一次访存。' },
+  { q: 'TLB 索引（TLBI）取的是虚拟地址最低的 t 位。', a: 0,
+    exp: '不是。最低的 p 位是 <b>VPO</b>（页内偏移，不参与 TLB 查表）。TLBI 取的是 <b>VPN 的最低 t 位</b>，也就是整条虚拟地址第 p … p+t−1 位；比它更高的 n−p−t 位才是 TLBT。' },
+  { q: 'TLB 条目里存的是 PTE 的地址（PTEA）。', a: 0,
+    exp: '存的是<b>完整的页表项</b>（课件第 40 页：contains complete page table entries for small number of pages），也就是 tag + 有效位 + PPN 这一组映射本身。PTEA 是「页表项在内存里的地址」，是查表时临时算出来的，不是 TLB 里存的内容。' },
+];
+let vmPzTlbState = VM_PUZ_TLB.map(() => null);
+
+function vmRenderPzTlb() {
+  const done = vmPzTlbState.filter(v => v !== null).length;
+  const right = VM_PUZ_TLB.filter((p, i) => vmPzTlbState[i] === p.a).length;
+  const html = VM_PUZ_TLB.map((p, i) => {
+    const s = vmPzTlbState[i];
+    const cls = s === null ? '' : (s === p.a ? ' correct done' : ' wrong done');
+    return `<div class="puzzle${cls}">
+      <div class="q" style="white-space:normal">${esc(p.q)}</div>
+      <div class="btns">
+        <button class="sm" data-pzt="${i}:1" ${s !== null ? 'disabled style="opacity:.55"' : ''}>真</button>
+        <button class="sm" data-pzt="${i}:0" ${s !== null ? 'disabled style="opacity:.55"' : ''}>假</button>
+      </div>
+      <div class="exp"><span class="verdict">${s === null ? '' : s === p.a ? '✓ 答对了' : '✗ 答错了'}</span>
+        &nbsp;正确答案：<b>${p.a ? '真' : '假'}</b><br>${p.exp}</div>
+    </div>`;
+  }).join('');
+  const score = done === 0 ? '' : `<div class="box ${right === VM_PUZ_TLB.length ? 'ok' : right >= VM_PUZ_TLB.length / 2 ? 'warn' : 'bad'}" style="margin-bottom:0">
+    <div class="t">已答 ${done} / ${VM_PUZ_TLB.length}，答对 ${right} 题</div>
+    ${done === VM_PUZ_TLB.length ? (right === VM_PUZ_TLB.length ? '全对 —— TLB 的四个易错点都避开了。' : '错题解析在上方，回第 8.2–8.4 节再核一遍。') : '继续，答完显示小结。'}</div>`;
+  $('#pzTlbOut').innerHTML = html + score;
+}
+
+/* ============================================================
+   9.2 两级页表翻译器
+   ============================================================ */
+const VM_L2_K2 = 10;    // 二级索引位数
+const VM_L2_K1 = 10;    // 一级索引位数
+const VM_L2_N = 32, VM_L2_P = 12, VM_L2_M = 32;
+
+/** 课件第 46 页的分配情况：2K 页代码/数据 + 6K 空洞 + 栈 1 页（VP 9215） */
+function vmBuildTwoLevel() {
+  const l1 = new Array(1 << VM_L2_K1).fill(null);
+  for (const i of [0, 1]) {
+    const t = new Array(1 << VM_L2_K2);
+    for (let j = 0; j < t.length; j++) t[j] = { v: 1, ppn: BigInt(((i << VM_L2_K2) + j) % 1024) };
+    l1[i] = t;
+  }
+  const st = new Array(1 << VM_L2_K2);
+  for (let j = 0; j < st.length; j++) st[j] = { v: 0, ppn: null };
+  st[st.length - 1] = { v: 1, ppn: 0n };   // VP 9215 = 8×1024 + 1023
+  l1[8] = st;
+  return l1;   // l1[2..7] 与 l1[9..1023] 保持 null
+}
+const VM_L2 = vmBuildTwoLevel();
+const VM_L2_NONNULL = VM_L2.filter(x => x !== null).length;
+
+function vmRenderMl2() {
+  const raw = $('#ml2Va').value;
+  const a = vmParseAddr(raw);
+  if (a === null) { $('#ml2Out').innerHTML = badBox('虚拟地址请写成 0x… / 0b… / 十进制整数。'); return; }
+  const tr = vmTranslateTwoLevel(a, VM_L2_N, VM_L2_M, VM_L2_P, VM_L2_K2, VM_L2);
+  const inRange = a < (1n << 32n);
+  const s = inRange ? vmSplitTwoLevel(a, VM_L2_P, VM_L2_K2) : null;
+  const bin = inRange ? vmBin(a, 32) : '';
+  const f1 = bin.slice(0, VM_L2_K1), f2 = bin.slice(VM_L2_K1, VM_L2_K1 + VM_L2_K2), f3 = bin.slice(VM_L2_K1 + VM_L2_K2);
+
+  let walk, verdict;
+  if (!inRange) {
+    walk = '<p>地址超出 32 位空间。</p>';
+    verdict = `<div class="box bad" style="margin:0"><div class="t">地址越界</div>32 位地址空间的最大值是 0xFFFFFFFF。</div>`;
+  } else {
+    const l2 = VM_L2[Number(s.vpn1)];
+    walk = `<div class="step on"><div class="h">第 1 步：一级表[VPN 1] = 一级表[${s.vpn1}]</div>
+        <div class="m">${l2 === null ? '→ <b>null</b>！这一整块 4 MB 区域从未被分配' : `→ 指向一张二级表（1024 个 PTE，每项 ${4} 字节）`}</div>
+        <div class="e">${l2 === null
+          ? '翻译到此结束：连二级表都不存在，不必再往下走 —— 这正是多级页表省内存的地方。'
+          : '一级表的 1024 项大部分是 null，所以一个进程只需要几 KB 的一级表 + 实际用到的几张二级表。'}</div></div>
+      ${l2 === null ? '' : `<div class="step on"><div class="h">第 2 步：二级表[VPN 2] = 二级表[${s.vpn2}]</div>
+        <div class="m">${l2[Number(s.vpn2)] && l2[Number(s.vpn2)].v ? `→ 有效位 1，PPN = <b>${l2[Number(s.vpn2)].ppn}</b>` : '→ 有效位 0（这一页未分配）'}</div>
+        <div class="e">二级表的每一项指向一个 4 KB 的页 —— 课件第 45 页说它「像其他数据一样会被换进换出」。</div></div>`}
+      ${(l2 !== null && l2[Number(s.vpn2)] && l2[Number(s.vpn2)].v) ? `<div class="step on"><div class="h">第 3 步：拼出物理地址</div>
+        <div class="m">PA = PPN &lt;&lt; 12 | PPO = ${l2[Number(s.vpn2)].ppn} × 4096 + ${s.vpo} = <b>${tr.pa}</b>（${vmHex(tr.pa, 32)}）</div>
+        <div class="e">PPO 就是 VPO 原样照抄 —— 这一点和多级与否无关。</div></div>` : ''}`;
+    verdict = tr.kind === 'hit'
+      ? `<div class="box ok" style="margin:0"><div class="t">翻译成功 → ${vmHex(tr.pa, 32)}</div>
+         一级索引 ${s.vpn1}、二级索引 ${s.vpn2}、页内偏移 ${s.vpo}。整个过程中真正被访问的内存是<b>两张表各一次</b>（一级表 + 二级表），不像单级页表那样只要一次 —— 时间换空间。</div>`
+      : tr.reason === 'null_l1'
+        ? `<div class="box warn" style="margin:0"><div class="t">缺页，而且是最省事的一种</div>
+           一级表第 ${s.vpn1} 项是 <b>null</b>：这一整块 4 MB 的虚拟区域从未被分配。课件第 46 页图上那段 <b>Gap / 6K unallocated VM pages</b> 就是这个意思 —— 它对应的二级表<b>根本没有被创建</b>。如果这一块是用不到的地址，处理程序会按非法引用处理。</div>`
+        : `<div class="box warn" style="margin:0"><div class="t">缺页（二级表里这一项有效位为 0）</div>
+           一级表走到了第 ${s.vpn1} 项、二级表也在，但二级表第 ${s.vpn2} 项的有效位是 0 —— 页在磁盘上（或未分配），走第 3.4 节的缺页七步。</div>`;
+  }
+
+  /* 一级表的切片：0–9 与 1023 */
+  const l1Row = i => {
+    const on = inRange && Number(s.vpn1) === i;
+    const l2 = VM_L2[i];
+    return `<tr${vmHl(on)}><td class="mono">${i}</td>
+      <td class="mono">${l2 === null ? 'null' : '→ 二级表'}</td>
+      <td class="en" style="font-size:13px">${l2 === null ? '整块 4 MB 未分配' : (i === 8 ? '栈所在的二级表' : '代码 / 数据的二级表')}</td></tr>`;
+  };
+  const idxs = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 1023];
+  let l2Slice = '';
+  if (inRange && VM_L2[Number(s.vpn1)] !== null) {
+    const l2 = VM_L2[Number(s.vpn1)], c = Number(s.vpn2);
+    const lo = Math.max(0, Math.min(c - 2, l2.length - 6)), hi = Math.min(l2.length - 1, lo + 4);
+    let rows = '';
+    for (let j = lo; j <= hi; j++) {
+      const e = l2[j], on = j === c;
+      rows += `<tr${vmHl(on)}><td class="mono">${j}</td><td class="mono">${e.v ? e.ppn : '—'}</td>
+        <td>${e.v ? '<span class="chip ok">有效</span>' : '<span class="chip gray">有效位 0</span>'}</td></tr>`;
+    }
+    l2Slice = `<p class="fcap" style="margin:14px 0 4px">二级表 ${s.vpn1} 的切片（第 ${lo}–${hi} 项）</p>
+      <div class="tbl-wrap"><table class="tbl">
+        <tr><th class="mono">VPN 2</th><th class="mono">PPN</th><th>状态</th></tr>${rows}</table></div>`;
+  }
+
+  $('#ml2Out').innerHTML = `<div class="grid g2" style="margin-top:10px;align-items:start">
+      <div>
+        <p class="fcap">虚拟地址的三个字段（32 位 = 10 + 10 + 12）</p>
+        <div class="tbl-wrap" style="border-radius:8px;overflow:hidden">
+          <div style="display:flex">
+            <div style="flex:10 1 0;min-width:0;background:var(--exp-bg);color:var(--exp-fg);border:1px solid var(--line);border-right:0;padding:5px 6px;text-align:center;font-size:12px">VPN 1 <span class="mono">10 位</span></div>
+            <div style="flex:10 1 0;min-width:0;background:var(--warn-bg);color:var(--warn);border:1px solid var(--line);border-right:0;padding:5px 6px;text-align:center;font-size:12px">VPN 2 <span class="mono">10 位</span></div>
+            <div style="flex:12 1 0;min-width:0;background:var(--frac-bg);color:var(--frac-fg);border:1px solid var(--line);padding:5px 6px;text-align:center;font-size:12px">VPO <span class="mono">12 位</span></div>
+          </div>
+        </div>
+        <div class="tbl-wrap mono" style="font-size:12.5px;line-height:1.9;margin-top:8px">
+          ${inRange ? `<div>VA = <span style="background:var(--exp-bg)">${f1}</span> <span style="background:var(--warn-bg)">${f2}</span> <span style="background:var(--frac-bg)">${f3}</span></div>` : ''}
+        </div>
+        <div class="readout" style="margin-top:12px">
+          <dt>VPN 1</dt><dd>${s ? s.vpn1 : '—'}</dd>
+          <dt>VPN 2</dt><dd>${s ? s.vpn2 : '—'}</dd>
+          <dt>VPO</dt><dd>${s ? s.vpo : '—'}</dd>
+          <dt>虚拟页号</dt><dd>${s ? s.vpo === null ? '—' : vmThousands((a >> 12n)) : '—'}（VA &gt;&gt; 12）</dd>
+        </div>
+        ${walk}
+        ${verdict}
+      </div>
+      <div>
+        <p class="fcap">一级表（1024 项，只列出前 10 项与最后一项）</p>
+        <div class="tbl-wrap"><table class="tbl">
+          <tr><th class="mono">一级索引</th><th>内容</th><th>说明</th></tr>
+          ${idxs.map(l1Row).join('')}
+        </table></div>
+        ${l2Slice}
+        <div class="box" style="margin-bottom:0"><div class="t">这张表值多少内存</div>
+          一级表 1024 × 4 B = <b>${vmSizeStr(1024n * 4n)}</b>，二级表每张 1024 × 4 B = <b>${vmSizeStr(1024n * 4n)}</b>。
+          课件第 46 页这个例子只有 <b>${VM_L2_NONNULL}</b> 张非空二级表，合计 <b>${vmSizeBoth(vmTwoLevelBytes(20n, 4n, BigInt(VM_L2_NONNULL)))}</b>；
+          换成单级页表则是 2<sup>20</sup> × 4 B = <b>${vmSizeBoth(vmSingleTableBytes(20n, 4n))}</b> —— 差 ${vmThousands(vmSingleTableBytes(20n, 4n) / vmTwoLevelBytes(20n, 4n, BigInt(VM_L2_NONNULL)))} 倍。
+          表格与倍率都是按上面的索引现算的（把地址换成 0xBB8000 那种落在 Gap 里的，二级表切片会消失）。</div>
+      </div>
+    </div>`;
+}
+
+/* ============================================================
+   9.2b 页表内存占用对比
+   ============================================================ */
+function vmRenderPtSz() {
+  const n = vmParseBits($('#ptzN').value, 8, 64);
+  const p = vmParseBits($('#ptzP').value, 2, 30);
+  const esz = vmParseBits($('#ptzE').value, 1, 64);
+  const K = vmParseBits($('#ptzK').value, 0, 1 << 20);
+  if (n === null || p === null || p >= n) { $('#ptSzOut').innerHTML = badBox('n 请填 8–64、p 请填 2–30 且小于 n 的整数。'); return; }
+  if (esz === null) { $('#ptSzOut').innerHTML = badBox('PTE 字节数请填 1–64 的整数。'); return; }
+  if (K === null) { $('#ptSzOut').innerHTML = badBox('非空二级表数请填 0–1048576 的整数。'); return; }
+  const vpnBits = n - p;
+  const k1 = Math.ceil(vpnBits / 2), k2 = Math.floor(vpnBits / 2);
+  const single = vmSingleTableBytes(BigInt(vpnBits), BigInt(esz));
+  const two = vmTwoLevelBytes(BigInt(vpnBits), BigInt(esz), BigInt(K));
+  const ratio = two === 0n ? '—' : Number(single / two);
+  $('#ptSzOut').innerHTML = `
+    <div class="tbl-wrap"><table class="tbl" style="margin-top:8px">
+      <tr><th>方案</th><th>怎么算</th><th>大小</th></tr>
+      <tr><td><b>单级页表</b></td><td class="mono">2<sup>${vpnBits}</sup> × ${esz} B</td><td class="mono"><b>${vmSizeBoth(single)}</b></td></tr>
+      <tr><td>一级表（总是常驻）</td><td class="mono">2<sup>${k1}</sup> × ${esz} B</td><td class="mono">${vmSizeBoth(vmSingleTableBytes(BigInt(k1), BigInt(esz)))}</td></tr>
+      <tr><td>二级表 × ${K}</td><td class="mono">${K} × 2<sup>${k2}</sup> × ${esz} B</td><td class="mono">${vmSizeBoth(BigInt(K) * vmSingleTableBytes(BigInt(k2), BigInt(esz)))}</td></tr>
+      <tr${vmHl(true)}><td><b>两级合计</b></td><td class="mono">一级 + ${K} 张二级</td><td class="mono"><b>${vmSizeBoth(two)}</b></td></tr>
+    </table></div>
+    <div class="box ${two < single ? 'ok' : 'warn'}" style="margin-bottom:0">
+      <div class="t">${two < single ? `两级页表只要单级的 1 / ${ratio >= 1 ? ratio.toFixed(1) : '1'} —— 省下 ${vmSizeStr(single - two)}` : '参数这样取时两级反而更大'}</div>
+      ${two < single
+        ? `VP 的 ${vpnBits} 位切成 ${k1} + ${k2}，一级表只占 ${vmSizeStr(vmSingleTableBytes(BigInt(k1), BigInt(esz)))} —— 但它覆盖的地址范围和单级表一样大。
+           <b>代价</b>：翻译一条地址要多访存 ${k1 === k2 ? '1' : ''} 次（逐级读表），所以真实系统里 TLB 不是可选项。`
+        : `非空二级表数 K 太大时，两级页表的好处会被吃掉（极端情况每个一级项都指向一张二级表，合计正好等于单级表加一张一级表）。课件第 45 页之所以敢用两级，是因为<b>进程真正用到的虚拟地址只有那几个 STACK / heap / text 段</b>，绝大多数一级项是 null。`}
+    </div>`;
+}
+
+/* ============================================================
+   10 测验
+   ============================================================ */
+const VM_QUIZ = [
+  { q: 'MMU 判断「这次访问是页命中」的依据是什么？',
+    opts: ['物理地址落在 DRAM 里', 'PTE 的有效位为 1', 'L1 缓存里有这个地址', 'TLB 里有这个 VPN'],
+    a: 1,
+    exp: '课件第 17、18 两页的图完全一样，唯一的区别就是那个 PTE 的有效位：为 1 是页命中，为 0 是缺页。物理地址是翻译的<b>结果</b>，不是判据。' },
+  { q: '一次 TLB 命中，省掉的是下面哪一次访存？',
+    opts: ['取指令的那一次', '取数据字的那一次', '取 PTE 的那一次', '写回脏页的那一次'],
+    a: 2,
+    exp: '课件第 43 页：A TLB hit eliminates a cache/memory access. TLB 里装着完整的页表项，所以 MMU 不必再去内存里读 PTE。取数据字的访存照样要发生。' },
+  { q: '48 位地址空间、4 KB 页、8 字节 PTE，单级页表有多大？',
+    opts: ['4 MB', '512 MB', '4 GB', '512 GB'],
+    a: 3,
+    exp: '课件第 45 页：2<sup>48</sup> × 2<sup>−12</sup> × 2<sup>3</sup> = 2<sup>39</sup> 字节 = 512 GB。用第 9.2 节的对比器可以把 n 改成 48、PTE 改成 8 复核一遍。' },
+  { q: '为什么每个进程的代码、数据、堆可以从「同样的地址」开始，却互不干扰？',
+    opts: ['因为每个进程有独立的虚拟地址空间与页表，同样的虚拟地址映射到不同的物理页', '因为操作系统在切换进程时会搬移内存', '因为编译器给每个进程生成了不同的地址', '因为物理内存足够大'],
+    a: 0,
+    exp: '课件第 28、30 页：每个进程有自己的虚拟地址空间，映射函数负责把它打散到物理内存。同样的虚拟地址 → 不同的物理页（也可以故意指向同一个物理页，那就是第 4.2 节的共享）。' },
+  { q: '某进程的工作集是 6 MB，物理主存只有 4 MB，会发生什么？',
+    opts: ['程序启动变慢，之后正常', '页被连续换进换出，性能崩塌（抖动）', 'MMU 会自动压缩工作集', '缺页异常会被忽略'],
+    a: 1,
+    exp: '课件第 26 页：工作集 &gt; 主存 → <b>thrashing（抖动）</b>，性能崩塌；多个进程同时跑时按<b>总</b>工作集判断。用第 3.5 节的工作集计算器可以自己试。' },
+  { q: '翻译一个虚拟地址时，VPO 发生了什么？',
+    opts: ['被加到 PPN 上', '被页表重新映射', '原样成为 PPO', '被丢弃'],
+    a: 2,
+    exp: '课件第 35 页写得很明确：PPO = Physical Page Offset <b>(same as VPO)</b>。页是整页映射的，所以页内偏移不需要翻译 —— 这也是 P = 2<sup>p</sup> 必须是 2 的幂的原因。' },
+];
+let vmQzState = VM_QUIZ.map(() => null);
+
+function vmRenderQz() {
+  const done = vmQzState.filter(v => v !== null).length;
+  const right = VM_QUIZ.filter((p, i) => vmQzState[i] === p.a).length;
+  const html = VM_QUIZ.map((p, i) => {
+    const s = vmQzState[i];
+    const cls = s === null ? '' : (s === p.a ? ' correct done' : ' wrong done');
+    const opts = p.opts.map((o, j) => {
+      const chosen = s === j;
+      const good = s !== null && j === p.a;
+      return `<div style="margin:5px 0;font-size:14.5px;${good ? 'font-weight:650' : ''}${chosen && !good ? 'text-decoration:line-through;opacity:.7' : ''}">
+        <button class="sm" data-qzo="${i}:${j}" ${s !== null ? 'disabled style="opacity:.55"' : ''}>${'ABCD'[j]}</button>
+        &nbsp;${esc(o)} ${good ? '<span class="chip ok">正确</span>' : ''}${chosen && !good ? '<span class="chip bad">你选的</span>' : ''}</div>`;
+    }).join('');
+    return `<div class="puzzle${cls}" style="display:block">
+      <div class="q" style="white-space:normal"><b>${i + 1}.</b> ${esc(p.q)}</div>
+      <div style="margin-top:8px">${opts}</div>
+      <div class="exp" style="display:${s === null ? 'none' : 'block'}"><span class="verdict">${s === null ? '' : s === p.a ? '✓ 答对了' : '✗ 答错了'}</span>
+        &nbsp;正确答案：<b>${'ABCD'[p.a]}</b><br>${p.exp}</div>
+    </div>`;
+  }).join('');
+  const score = done === 0 ? '' : `<div class="box ${right === VM_QUIZ.length ? 'ok' : right >= VM_QUIZ.length / 2 ? 'warn' : 'bad'}" style="margin-bottom:0">
+    <div class="t">已答 ${done} / ${VM_QUIZ.length}，答对 ${right} 题</div>
+    ${done === VM_QUIZ.length ? (right === VM_QUIZ.length ? '六题全对 —— 这一讲可以收工了。' : '错题解析在上方；地址翻译部分回第 6、8 节把位段再拆一遍。') : '继续，答完显示小结。'}</div>`;
+  $('#qzOut').innerHTML = html + score;
+}
+
+/* ============================================================
+   10 总结判断题
+   ============================================================ */
+const VM_PUZ_SUM = [
+  { q: 'PTE 的有效位是 0，就一定说明这一页在磁盘上。', a: 0,
+    exp: '课件第 34 页把 MAP(a) = ∅ 的两种可能并列：<b>要么非法，要么存在磁盘上</b>。指针为 null 的 PTE（课件第 16 页的 VP 0 与 VP 5）属于「非法」—— 从未分配，换不进来。' },
+  { q: '页表是每个进程独立一份的内核数据结构，放在 DRAM 里。', a: 1,
+    exp: '课件第 16 页原文：Per-process kernel data structure in DRAM。它在 DRAM 里，所以 MMU 取 PTE 本身也是一次访存。' },
+  { q: '多级页表比单级页表更省内存，代价是翻译一条地址要访存更多次。', a: 1,
+    exp: '正是如此。可以这样理解：单级页表「只查一次但要一直占着 512 GB」，多级页表「每次多跑几级但只建真正用到的表」。TLB（第 8 节）就是为了把这多出来的几次访存藏掉。' },
+  { q: '用户程序可以直接读写内核虚拟内存那一段。', a: 0,
+    exp: '课件第 30 页把那段标成 memory invisible to user code，第 32 页的权限位又补一道锁：把那类页的 SUP 位置 1，用户态访问直接拒绝。用户程序碰不到内核的私有信息与代码 —— 这正是第 1.6 节「隔离地址空间」的第二半。' },
+];
+let vmPzSumState = VM_PUZ_SUM.map(() => null);
+
+function vmRenderPzSum() {
+  const done = vmPzSumState.filter(v => v !== null).length;
+  const right = VM_PUZ_SUM.filter((p, i) => vmPzSumState[i] === p.a).length;
+  const html = VM_PUZ_SUM.map((p, i) => {
+    const s = vmPzSumState[i];
+    const cls = s === null ? '' : (s === p.a ? ' correct done' : ' wrong done');
+    return `<div class="puzzle${cls}">
+      <div class="q" style="white-space:normal">${esc(p.q)}</div>
+      <div class="btns">
+        <button class="sm" data-pzs="${i}:1" ${s !== null ? 'disabled style="opacity:.55"' : ''}>真</button>
+        <button class="sm" data-pzs="${i}:0" ${s !== null ? 'disabled style="opacity:.55"' : ''}>假</button>
+      </div>
+      <div class="exp"><span class="verdict">${s === null ? '' : s === p.a ? '✓ 答对了' : '✗ 答错了'}</span>
+        &nbsp;正确答案：<b>${p.a ? '真' : '假'}</b><br>${p.exp}</div>
+    </div>`;
+  }).join('');
+  const score = done === 0 ? '' : `<div class="box ${right === VM_PUZ_SUM.length ? 'ok' : right >= VM_PUZ_SUM.length / 2 ? 'warn' : 'bad'}" style="margin-bottom:0">
+    <div class="t">已答 ${done} / ${VM_PUZ_SUM.length}，答对 ${right} 题</div>
+    ${done === VM_PUZ_SUM.length ? (right === VM_PUZ_SUM.length ? '全对。' : '错题解析在上方。') : '继续，答完显示小结。'}</div>`;
+  $('#pzSumOut').innerHTML = html + score;
+}
+
+/* ============================================================
+   初始化
+   ============================================================ */
+function initAll() {
+  /* 全局点击：所有 data-* 快捷按钮（事件委托，动态生成的按钮也能用） */
+  document.addEventListener('click', e => {
+    const pts = e.target.closest('[data-pts]');
+    if (pts) { vmPtSel = Number(pts.dataset.pts); vmRenderPt(); return; }
+    const seg = e.target.closest('[data-seg]');
+    if (seg) { vmSegSel = seg.dataset.seg; vmRenderMl(); return; }
+    const trt = e.target.closest('[data-trt]');
+    if (trt) { vmTrPt = vmTogglePte(vmTrPt, Number(trt.dataset.trt)); vmRenderTr(); vmRenderWk(); vmRenderTlb(); return; }
+    const pzt = e.target.closest('[data-pzt]');
+    if (pzt) {
+      const [i, v] = pzt.dataset.pzt.split(':').map(Number);
+      if (vmPzTlbState[i] === null) { vmPzTlbState[i] = v; vmRenderPzTlb(); }
+      return;
+    }
+    const qzo = e.target.closest('[data-qzo]');
+    if (qzo) {
+      const [i, j] = qzo.dataset.qzo.split(':').map(Number);
+      if (vmQzState[i] === null) { vmQzState[i] = j; vmRenderQz(); }
+      return;
+    }
+    const pzs = e.target.closest('[data-pzs]');
+    if (pzs) {
+      const [i, v] = pzs.dataset.pzs.split(':').map(Number);
+      if (vmPzSumState[i] === null) { vmPzSumState[i] = v; vmRenderPzSum(); }
+      return;
+    }
+    if (e.target.closest('#tlbFill') && vmTlbLast && vmTlbLast.kind === 'miss_hit') {
+      vmTlbLines = vmTlbInsert(vmTlbLines, vmTlbLast.tlb.tlbi, vmTlbLast.tlb.tlbt, vmTlbLast.ppn, vmTlbE);
+      vmRenderTlb();
+      return;
+    }
+  });
+
+  /* --- 1.4 物理/虚拟寻址 --- */
+  $$('#psSeg button').forEach(b => b.addEventListener('click', () => {
+    $$('#psSeg button').forEach(x => x.classList.remove('on'));
+    b.classList.add('on');
+    vmPsMode = b.dataset.ps;
+    vmRenderPs();
+  }));
+  $('#psAddr').addEventListener('keydown', e => { if (e.key === 'Enter') vmRenderPs(); });
+  $('#psAddr').addEventListener('change', vmRenderPs);
+  $$('[data-psaddr]').forEach(b => b.addEventListener('click', () => {
+    $('#psAddr').value = b.dataset.psaddr;
+    vmRenderPs();
+  }));
+  vmRenderPs();
+
+  /* --- 1.5 地址空间计算器 --- */
+  $('#asGo').addEventListener('click', vmRenderAS);
+  ['#asN', '#asM', '#asP'].forEach(id => $(id).addEventListener('keydown', e => { if (e.key === 'Enter') vmRenderAS(); }));
+  $$('[data-as]').forEach(b => b.addEventListener('click', () => {
+    const [n, m, p] = b.dataset.as.split(',');
+    $('#asN').value = n; $('#asM').value = m; $('#asP').value = p;
+    vmRenderAS();
+  }));
+  vmRenderAS();
+
+  /* --- 2.2 页尺寸与页表规模 --- */
+  $('#dcGo').addEventListener('click', vmRenderDC);
+  $('#dcN').addEventListener('keydown', e => { if (e.key === 'Enter') vmRenderDC(); });
+  $('#dcE').addEventListener('keydown', e => { if (e.key === 'Enter') vmRenderDC(); });
+  $('#dcP').addEventListener('change', vmRenderDC);
+  $$('[data-dc]').forEach(b => b.addEventListener('click', () => {
+    const [n, p, e] = b.dataset.dc.split(',');
+    $('#dcN').value = n; $('#dcP').value = p; $('#dcE').value = e;
+    vmRenderDC();
+  }));
+  vmRenderDC();
+
+  /* --- 2.3 页表浏览器 --- */
+  $('#ptPreset').addEventListener('change', () => { vmPtView = $('#ptPreset').value; vmRenderPt(); });
+  $('#ptFault').addEventListener('click', () => {
+    vmPtView = 'faulted'; $('#ptPreset').value = 'faulted'; vmPtSel = 3; vmRenderPt();
+  });
+  $('#ptReset').addEventListener('click', () => {
+    vmPtView = 'init'; $('#ptPreset').value = 'init'; vmPtSel = 1; vmRenderPt();
+  });
+  vmRenderPt();
+
+  /* --- 3.4 缺页七步 --- */
+  $('#pfVpn').addEventListener('change', () => {
+    vmPfVpn = Number($('#pfVpn').value); vmPfStep = 0; vmRenderPf();
+  });
+  $('#pfNext').addEventListener('click', () => {
+    const total = 7;
+    vmPfStep = Math.min(vmPfStep + 1, total);
+    vmRenderPf();
+  });
+  $('#pfAll').addEventListener('click', () => {
+    vmPfStep = 7;               // 七步一次走完（未分配的页也在第 7 步停下说明走不通）
+    vmRenderPf();
+  });
+  $('#pfReset').addEventListener('click', () => { vmPfStep = 0; vmRenderPf(); });
+  vmRenderPf();
+
+  /* --- 3.5 工作集 --- */
+  $('#wsGo').addEventListener('click', vmRenderWs);
+  ['#wsA', '#wsB', '#wsC', '#wsMem'].forEach(id => $(id).addEventListener('keydown', e => { if (e.key === 'Enter') vmRenderWs(); }));
+  $$('[data-ws]').forEach(b => b.addEventListener('click', () => {
+    const [a, bb, c, mem] = b.dataset.ws.split(',');
+    $('#wsA').value = a; $('#wsB').value = bb; $('#wsC').value = c; $('#wsMem').value = mem;
+    vmRenderWs();
+  }));
+  vmRenderWs();
+
+  /* --- 4.2 两个进程的页映射 --- */
+  $$('#mmSeg button').forEach(b => b.addEventListener('click', () => {
+    $$('#mmSeg button').forEach(x => x.classList.remove('on'));
+    b.classList.add('on');
+    vmMmMode = b.dataset.mm;
+    vmRenderMm();
+  }));
+  vmRenderMm();
+
+  /* --- 4.3 地址空间布局 --- */
+  vmRenderMl();
+
+  /* --- 5.1 权限检查器 --- */
+  ['#mpProc', '#mpVp', '#mpMode'].forEach(id => $(id).addEventListener('change', vmRenderMp));
+  $$('#mpSeg button').forEach(b => b.addEventListener('click', () => {
+    $$('#mpSeg button').forEach(x => x.classList.remove('on'));
+    b.classList.add('on');
+    vmMpOp = b.dataset.mp;
+    vmRenderMp();
+  }));
+  vmRenderMp();
+
+  /* --- 6.2 符号速查 --- */
+  $('#symGo').addEventListener('click', vmRenderSym);
+  ['#symN', '#symM', '#symP'].forEach(id => $(id).addEventListener('keydown', e => { if (e.key === 'Enter') vmRenderSym(); }));
+  $$('[data-sym]').forEach(b => b.addEventListener('click', () => {
+    const [n, m, p] = b.dataset.sym.split(',');
+    $('#symN').value = n; $('#symM').value = m; $('#symP').value = p;
+    vmRenderSym();
+  }));
+  vmRenderSym();
+
+  /* --- 6.3 地址翻译器 --- */
+  $('#trGo').addEventListener('click', vmRenderTr);
+  ['#trVa', '#trN', '#trM', '#trP'].forEach(id => $(id).addEventListener('keydown', e => { if (e.key === 'Enter') vmRenderTr(); }));
+  $$('[data-tr]').forEach(b => b.addEventListener('click', () => {
+    $('#trVa').value = b.dataset.tr;
+    vmRenderTr();
+  }));
+  vmRenderTr();
+
+  /* --- 7 通路步进 --- */
+  $$('#wkSeg button').forEach(b => b.addEventListener('click', () => {
+    $$('#wkSeg button').forEach(x => x.classList.remove('on'));
+    b.classList.add('on');
+    vmWkMode = b.dataset.wk;
+    vmWkStep = 0;
+    vmRenderWk();
+  }));
+  $('#wkGo').addEventListener('click', () => { vmWkStep = 0; vmRenderWk(); });
+  ['#wkVa', '#wkBase'].forEach(id => $(id).addEventListener('keydown', e => { if (e.key === 'Enter') { vmWkStep = 0; vmRenderWk(); } }));
+  $('#wkStep').addEventListener('click', () => {
+    const w = vmWkSteps();
+    if (w) { vmWkStep = Math.min(vmWkStep + 1, w.steps.length); vmRenderWk(); }
+  });
+  $('#wkReset').addEventListener('click', () => { vmWkStep = 0; vmRenderWk(); });
+  vmRenderWk();
+
+  /* --- 8.4 TLB 查询 --- */
+  $('#tlbGo').addEventListener('click', vmRenderTlb);
+  ['#tlbVa', '#tlbN', '#tlbM', '#tlbP', '#tlbT'].forEach(id =>
+    $(id).addEventListener('keydown', e => { if (e.key === 'Enter') vmRenderTlb(); }));
+  $('#tlbE').addEventListener('change', () => { vmTlbLines = vmTlbSeed(Number($('#tlbT').value) || 0, Number($('#tlbE').value)); vmRenderTlb(); });
+  $('#tlbT').addEventListener('change', () => { vmTlbLines = vmTlbSeed(vmParseBits($('#tlbT').value, 0, 10) || 0, Number($('#tlbE').value)); vmRenderTlb(); });
+  $$('[data-tlbva]').forEach(b => b.addEventListener('click', () => {
+    $('#tlbVa').value = b.dataset.tlbva;
+    vmRenderTlb();
+  }));
+  $('#tlbClear').addEventListener('click', () => { vmTlbLines = []; vmRenderTlb(); });
+  $('#tlbSeed').addEventListener('click', () => {
+    const t = vmParseBits($('#tlbT').value, 0, 10) || 0;
+    vmTlbLines = vmTlbSeed(t, Number($('#tlbE').value));
+    vmRenderTlb();
+  });
+  vmRenderTlb();
+
+  /* --- 8.x TLB 参数 --- */
+  $('#tcGo').addEventListener('click', vmRenderTlbCfg);
+  ['#tcT', '#tcE', '#tcP'].forEach(id => $(id).addEventListener('keydown', e => { if (e.key === 'Enter') vmRenderTlbCfg(); }));
+  $$('[data-tc]').forEach(b => b.addEventListener('click', () => {
+    const [t, E, p] = b.dataset.tc.split(',');
+    $('#tcT').value = t; $('#tcE').value = E; $('#tcP').value = p;
+    vmRenderTlbCfg();
+  }));
+  vmRenderTlbCfg();
+  vmRenderPzTlb();
+  $('#pzTlbReset').addEventListener('click', () => { vmPzTlbState = VM_PUZ_TLB.map(() => null); vmRenderPzTlb(); });
+
+  /* --- 9.2 两级页表翻译器 --- */
+  $('#ml2Go').addEventListener('click', vmRenderMl2);
+  $('#ml2Va').addEventListener('keydown', e => { if (e.key === 'Enter') vmRenderMl2(); });
+  $$('[data-ml2]').forEach(b => b.addEventListener('click', () => {
+    $('#ml2Va').value = b.dataset.ml2;
+    vmRenderMl2();
+  }));
+  vmRenderMl2();
+
+  /* --- 9.2b 页表内存占用对比 --- */
+  $('#ptzGo').addEventListener('click', vmRenderPtSz);
+  ['#ptzN', '#ptzP', '#ptzE', '#ptzK'].forEach(id => $(id).addEventListener('keydown', e => { if (e.key === 'Enter') vmRenderPtSz(); }));
+  $$('[data-ptz]').forEach(b => b.addEventListener('click', () => {
+    const [n, p, e, k] = b.dataset.ptz.split(',');
+    $('#ptzN').value = n; $('#ptzP').value = p; $('#ptzE').value = e; $('#ptzK').value = k;
+    vmRenderPtSz();
+  }));
+  vmRenderPtSz();
+
+  /* --- 10 测验 --- */
+  vmRenderQz();
+  $('#qzReset').addEventListener('click', () => { vmQzState = VM_QUIZ.map(() => null); vmRenderQz(); });
+  vmRenderPzSum();
+  $('#pzSumReset').addEventListener('click', () => { vmPzSumState = VM_PUZ_SUM.map(() => null); vmRenderPzSum(); });
+}
+
+document.addEventListener('DOMContentLoaded', initAll);
+</script>
+</body>
+</html>

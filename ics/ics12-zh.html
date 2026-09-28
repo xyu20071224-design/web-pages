@@ -1,0 +1,2809 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-deck="ics12">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>存储层次结构（The Memory Hierarchy） · 交互式课件（中文）</title>
+<style>
+/* ==========================================================================
+   base.css —— 结构基础样式（所有风格共用）
+   只使用 CSS 变量，不含任何具体配色；由各主题覆盖变量与少量结构规则。
+   ========================================================================== */
+
+:root{
+  /* 颜色（每个主题必须覆盖） */
+  --bg:#f6f7f9; --card:#fff; --ink:#15181d; --muted:#697586; --line:#e4e7ec;
+  --accent:#2563eb; --accent-ink:#fff; --accent-soft:#eaf1ff;
+  --sign:#e5484d; --exp:#0b7fd4; --frac:#18915a; --warn:#b45309;
+  --sign-bg:#fdecec; --sign-fg:#a3262b; --sign-bd:#f6cdcf;
+  --exp-bg:#e8f2fd;  --exp-fg:#0a5f9e;  --exp-bd:#c7ddf5;
+  --frac-bg:#e9f7ef; --frac-fg:#116b43; --frac-bd:#c8e8d5;
+  --ok-bg:#f2fbf6; --ok-bd:#9ed3b4; --bad-bg:#fff5f5; --bad-bd:#f1b5b8;
+  --warn-bg:#fffbeb; --gray-bg:#eef1f5; --gray-fg:#5b6472;
+  --paper-soft:#fcfdfe; --code-bg:#f1f3f7; --code-bd:#e6e9ef;
+  --tbl-head:#f7f9fc; --tbl-hover:#fafbfd;
+  --sel-bg:#eef1f5;
+
+  /* 字体 */
+  --font-sans:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",system-ui,sans-serif;
+  --font-mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+  --font-display:var(--font-sans);
+  --tracking-title:normal;
+
+  /* 形状 */
+  --radius:12px; --radius-sm:8px; --radius-pill:99px;
+  --border-w:1px; --shadow:0 1px 2px rgba(16,24,40,.06),0 1px 3px rgba(16,24,40,.1);
+  --shadow-card:none;
+  --card-border:var(--border-w) solid var(--line);
+
+  /* 布局 */
+  --page-max:1180px; --nav-w:236px; --gap:26px; --sec-pad:26px 28px;
+  --nav-sticky-top:64px; --anchor-offset:70px;
+  --font-size:16px; --line-height:1.75;
+}
+
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font-sans);
+  font-size:var(--font-size);line-height:var(--line-height);-webkit-font-smoothing:antialiased}
+img{max-width:100%}
+
+/* ---------- 顶栏 ---------- */
+.topbar{position:sticky;top:0;z-index:50;background:var(--card);border-bottom:1px solid var(--line)}
+.topbar-in{max-width:var(--page-max);margin:0 auto;padding:10px 22px;display:flex;align-items:center;gap:14px}
+.brand{font-weight:700;letter-spacing:var(--tracking-title);font-family:var(--font-display)}
+.brand small{font-weight:500;color:var(--muted);margin-left:8px;font-size:12.5px}
+.progress{margin-left:auto;display:flex;align-items:center;gap:10px;font-size:12.5px;color:var(--muted)}
+.progress .bar{width:150px;height:6px;border-radius:var(--radius-pill);background:var(--line);overflow:hidden}
+.progress .bar>i{display:block;height:100%;width:0;background:var(--accent);transition:width .25s}
+
+/* ---------- 主体布局 ---------- */
+.layout{max-width:var(--page-max);margin:0 auto;padding:22px;display:grid;
+  grid-template-columns:var(--nav-w) minmax(0,1fr);gap:var(--gap)}
+main{min-width:0}
+/* 长 URL / 长标识符没有断行点，会把容器整个撑破（窄屏尤其明显）。
+   只作用于文本容器；表格故意不加，让它走 .tbl-wrap 的横向滚动。 */
+main p,main li,main dd,main dt,main h2,main h3,main h4,main h5,
+main .box,main .card,main .readout,main .puzzle,main .step{overflow-wrap:anywhere}
+
+/* ---------- 目录 ---------- */
+nav.toc{position:sticky;top:var(--nav-sticky-top);align-self:start;max-height:calc(100vh - 84px);overflow:auto;padding-right:4px}
+nav.toc h4{margin:0 0 8px;font-size:12px;letter-spacing:.12em;color:var(--muted);text-transform:uppercase;font-weight:600}
+nav.toc a{display:block;padding:7px 11px;border-radius:var(--radius-sm);color:var(--ink);opacity:.78;
+  text-decoration:none;font-size:14.5px;border-left:2.5px solid transparent}
+nav.toc a:hover{background:var(--sel-bg);opacity:1}
+nav.toc a.active{background:var(--accent-soft);color:var(--accent);border-left-color:var(--accent);font-weight:600;opacity:1}
+nav.toc a .n{display:inline-block;min-width:20px;color:var(--muted);font-size:12.5px;font-variant-numeric:tabular-nums}
+nav.toc a.active .n{color:var(--accent)}
+nav.toc .sub{padding-left:26px;font-size:13.5px;opacity:.7}
+
+/* ---------- 章节 ---------- */
+section{background:var(--card);border:var(--card-border);border-radius:var(--radius);
+  padding:var(--sec-pad);margin-bottom:22px;box-shadow:var(--shadow);scroll-margin-top:var(--anchor-offset)}
+section>h2{margin:0 0 6px;font-size:25px;letter-spacing:-.01em;font-family:var(--font-display)}
+section>.lede{color:var(--muted);margin:0 0 20px;font-size:14.5px}
+h3{font-size:18.5px;margin:26px 0 10px;padding-left:11px;border-left:3.5px solid var(--accent);font-family:var(--font-display)}
+h4{font-size:16px;margin:18px 0 8px;font-family:var(--font-display)}
+h5{font-size:15px;font-family:var(--font-display)}
+p{margin:10px 0}
+ul,ol{margin:10px 0;padding-left:22px}
+li{margin:5px 0}
+code{font-family:var(--font-mono);font-size:.89em;background:var(--code-bg);border:1px solid var(--code-bd);border-radius:5px;padding:1px 5px}
+.mono{font-family:var(--font-mono)}
+a{color:var(--accent)}
+hr{border:0;border-top:1px dashed var(--line);margin:24px 0}
+.srcref{font-size:11.5px;color:var(--muted);font-weight:500;font-family:var(--font-sans);margin-left:8px;vertical-align:middle;white-space:nowrap;opacity:.75}
+.en{color:var(--muted);font-size:.92em}
+
+/* ---------- 栅格与卡片 ---------- */
+.grid{display:grid;gap:14px}
+.g2{grid-template-columns:repeat(2,minmax(0,1fr))}
+.g3{grid-template-columns:repeat(3,minmax(0,1fr))}
+/* 窄屏单列：必须用 minmax(0,1fr)。写成 1fr 时轨道最小宽度是 auto，
+   单元格里只要有长代码行（<pre>）就撑破容器，整页横向溢出。 */
+@media(max-width:820px){.g2,.g3{grid-template-columns:minmax(0,1fr)}}
+.card{border:var(--card-border);border-radius:var(--radius-sm);padding:15px 17px;background:var(--paper-soft);box-shadow:var(--shadow-card)}
+.card h5{margin:0 0 7px}
+.card.pad0{padding:0;overflow:hidden}
+
+/* ---------- 提示框 ---------- */
+.box{border:1px solid var(--line);border-left:4px solid var(--accent);background:var(--accent-soft);
+  border-radius:var(--radius-sm);padding:12px 16px;margin:14px 0}
+.box.warn{border-left-color:var(--warn);background:var(--warn-bg)}
+.box.bad{border-left-color:var(--sign);background:var(--bad-bg)}
+.box.ok{border-left-color:var(--frac);background:var(--ok-bg)}
+.box .t{font-weight:650;font-size:14.5px;margin-bottom:2px}
+
+/* ---------- 公式 ---------- */
+.formula{font-family:var(--font-mono);background:var(--paper-soft);border:1px solid var(--line);
+  border-radius:var(--radius-sm);padding:14px 17px;margin:14px 0;font-size:16.5px;text-align:center;overflow-x:auto}
+.formula.big{font-size:20px}
+
+/* ---------- 表格 ---------- */
+table.tbl{width:100%;border-collapse:collapse;font-size:14.5px;margin:14px 0}
+table.tbl th,table.tbl td{border:1px solid var(--line);padding:8px 11px;text-align:left;vertical-align:top}
+table.tbl th{background:var(--tbl-head);font-weight:650;font-size:13.5px;white-space:nowrap}
+table.tbl td.mono,table.tbl th.mono{font-family:var(--font-mono);font-size:13.5px}
+table.tbl tr:hover td{background:var(--tbl-hover)}
+/* 当前行高亮：interactive 表格用它标出「正在看的那一行」。
+   注意 --tbl-hover 是悬停色，深色皮肤下故意比底色亮，所以 hl 用同一套变量。 */
+table.tbl tr.hl td{background:var(--sel-bg)}
+.tbl-wrap{overflow-x:auto}
+
+/* ---------- 位串控件 ---------- */
+.fw{display:flex;flex-wrap:wrap;gap:8px 18px;align-items:flex-start;margin:4px 0 2px;min-width:0}
+.fgrp{min-width:0}
+.fcap{font-size:12px;color:var(--muted);margin-bottom:4px;font-weight:600}
+.fcap b{font-family:var(--font-mono);font-size:12.5px}
+.bits{display:flex;flex-wrap:wrap;gap:2px;font-family:var(--font-mono);margin:4px 0}
+.bits .b{width:25px;height:33px;display:flex;align-items:center;justify-content:center;
+  border-radius:6px;font-size:15px;cursor:pointer;user-select:none;border:1px solid transparent;
+  transition:transform .06s,background .12s;font-weight:600}
+.bits .b:hover{transform:translateY(-2px)}
+.bits .b.s{background:var(--sign-bg);color:var(--sign-fg);border-color:var(--sign-bd)}
+.bits .b.e{background:var(--exp-bg);color:var(--exp-fg);border-color:var(--exp-bd)}
+.bits .b.f{background:var(--frac-bg);color:var(--frac-fg);border-color:var(--frac-bd)}
+.bits .b.sel{outline:2px solid var(--ink);outline-offset:1px}
+.bits.sm .b{width:19px;height:26px;font-size:12px;border-radius:4px}
+.fgrp .bits{flex-wrap:wrap;max-width:100%;gap:2px}
+.fgrp.ge .bits{max-width:300px}
+
+/* ---------- 读数表 ---------- */
+.readout{display:grid;grid-template-columns:auto 1fr;gap:4px 16px;font-size:14.5px;margin:12px 0}
+.readout dt{color:var(--muted);font-weight:600;font-family:var(--font-mono);font-size:13.5px;padding-top:2px}
+.readout dd{margin:0;font-family:var(--font-mono)}
+
+/* ---------- 小标签 ---------- */
+.chip{display:inline-block;font-size:12.5px;padding:2px 9px;border-radius:var(--radius-pill);
+  background:var(--accent-soft);color:var(--accent);font-weight:600}
+.chip.ok{background:var(--frac-bg);color:var(--frac-fg)}
+.chip.bad{background:var(--sign-bg);color:var(--sign-fg)}
+.chip.warn{background:var(--warn-bg);color:var(--warn)}
+.chip.gray{background:var(--gray-bg);color:var(--gray-fg)}
+.kbd{font-family:var(--font-mono);font-size:13px;background:var(--code-bg);border:1px solid var(--code-bd);
+  border-bottom-width:2px;border-radius:6px;padding:1px 7px}
+
+/* ---------- 控件 ---------- */
+.ctrls{display:flex;flex-wrap:wrap;gap:9px;align-items:center;margin:12px 0}
+label.fld{display:inline-flex;align-items:center;gap:7px;font-size:14px;color:var(--ink);max-width:100%;flex-wrap:wrap;min-width:0}
+label.fld select,label.fld input{min-width:0;max-width:100%}
+input[type=text],input[type=number],select{font-family:var(--font-mono);font-size:14px;padding:6px 10px;
+  border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--card);color:var(--ink)}
+input[type=text]:focus,input[type=number]:focus,select:focus{outline:2px solid var(--accent-soft);border-color:var(--accent)}
+button{font-family:var(--font-sans);font-size:14px;font-weight:600;padding:7px 15px;border-radius:var(--radius-sm);
+  border:1px solid var(--line);background:var(--card);color:var(--ink);cursor:pointer}
+button:hover{background:var(--sel-bg)}
+button.p{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+button.sm{padding:4px 10px;font-size:13px}
+button.pill{border-radius:var(--radius-pill)}
+/* 按钮组默认不换行：项一多就会把 .ctrls 撑破。允许它缩到容器宽度并横向滚动。 */
+.seg{display:inline-flex;max-width:100%;border:1px solid var(--line);
+  border-radius:var(--radius-sm);overflow-x:auto;overflow-y:hidden}
+.seg button{border:0;border-radius:0;border-right:1px solid var(--line);padding:6px 13px}
+.seg button:last-child{border-right:0}
+.seg button.on{background:var(--accent);color:var(--accent-ink)}
+
+/* ---------- 分步演示 ---------- */
+/* .steps 是 .step 的包裹层（skill 词汇表里列了但一直没定义）——
+   仅给一点上下留白，步骤块自己的边距由 .step 负责。 */
+.steps{margin:12px 0}
+.step{border:1px solid var(--line);border-radius:var(--radius-sm);padding:11px 15px;margin:9px 0;
+  background:var(--paper-soft);opacity:.42;transition:opacity .2s}
+.step.on{opacity:1;background:var(--card)}
+.step .h{font-size:13px;font-weight:700;color:var(--accent);letter-spacing:.02em;margin-bottom:3px}
+.step .m{font-family:var(--font-mono);font-size:14.5px;overflow-x:auto}
+.step .e{font-size:13.5px;color:var(--muted);margin-top:3px}
+
+/* ---------- 折叠与答案 ---------- */
+.reveal{border:1px solid var(--line);border-radius:var(--radius-sm);padding:11px 15px;margin:8px 0;background:var(--paper-soft)}
+.reveal summary{cursor:pointer;font-weight:600;font-size:14.5px}
+.reveal[open]{background:var(--card)}
+.ans{margin-top:8px;padding-top:8px;border-top:1px dashed var(--line);font-size:14.5px}
+
+/* ---------- 判断题 ---------- */
+.puzzle{border:1px solid var(--line);border-radius:var(--radius-sm);padding:12px 15px;margin:9px 0;
+  display:flex;gap:13px;align-items:flex-start;background:var(--paper-soft)}
+.puzzle .q{font-family:var(--font-mono);font-size:15px;flex:1;min-width:0;overflow-x:auto;white-space:nowrap}
+.puzzle .q small{font-family:var(--font-sans);color:var(--muted);display:block;white-space:normal}
+.puzzle .btns{display:flex;gap:6px;flex-shrink:0}
+.puzzle.correct{border-color:var(--ok-bd);background:var(--ok-bg)}
+.puzzle.wrong{border-color:var(--bad-bd);background:var(--bad-bg)}
+.puzzle .exp{margin-top:9px;padding-top:9px;border-top:1px dashed var(--line);font-size:14.5px;
+  display:none;white-space:normal;font-family:var(--font-sans)}
+.puzzle.done .exp{display:block}
+.puzzle .exp .verdict{font-weight:700}
+
+/* ---------- 分布图 ---------- */
+.tick{stroke:#94a3b8;stroke-width:1.4}
+.tick.dn{stroke:var(--exp)}
+.tick.nm{stroke:var(--frac)}
+.ticklabel{font-size:9.5px;fill:var(--muted);font-family:var(--font-mono)}
+.axisline{stroke:var(--line);stroke-width:1.2}
+.axislabel{font-size:11px;fill:var(--muted)}
+
+/* ---------- 页脚 / 回到顶部 ---------- */
+.footer{max-width:var(--page-max);margin:0 auto;padding:8px 22px 40px;color:var(--muted);font-size:13px}
+.totop{position:fixed;right:22px;bottom:22px;z-index:40;box-shadow:var(--shadow);display:none}
+
+/* ---------- 响应式 ---------- */
+@media(max-width:960px){
+  .layout{grid-template-columns:1fr;padding:16px}
+  nav.toc{position:static;max-height:none;display:flex;flex-wrap:wrap;gap:6px;
+    background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:10px}
+  nav.toc h4{width:100%;margin-bottom:2px}
+  nav.toc a{border-left:0;padding:5px 10px;font-size:13px}
+  nav.toc .sub{display:none}
+  section{padding:20px 17px}
+}
+@media print{
+  nav.toc,.topbar,.totop{display:none}
+  .layout{display:block}
+  section{break-inside:avoid;box-shadow:none}
+}
+
+/* ---------- 风格切换条（各主题通用） ---------- */
+.stylebar{max-width:var(--page-max);margin:0 auto;padding:14px 22px 0;display:flex;gap:8px;
+  flex-wrap:wrap;align-items:center;font-size:12.5px;color:var(--muted)}
+.stylebar>span{font-weight:600}
+.stylebar a{text-decoration:none;padding:4px 11px;border:1px solid var(--line);border-radius:var(--radius-pill);
+  color:var(--muted);background:var(--card);font-weight:600}
+.stylebar a:hover{border-color:var(--accent);color:var(--accent)}
+.stylebar a.cur{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.stylebar>span{flex:0 0 auto}
+@media(max-width:960px){.stylebar{padding:12px 16px 0}}
+/* 25 讲之后药丸很多：窄屏折行会吃掉大半屏，改成单行横滑 */
+@media(max-width:820px){.stylebar{flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;
+  scrollbar-width:thin}.stylebar a{flex:0 0 auto;font-size:12px;padding:4px 10px}}
+
+</style>
+</head>
+<body>
+
+<div class="topbar"><div class="topbar-in">
+  <div class="brand">存储层次结构 The Memory Hierarchy<small>《计算机系统导论》第 12 讲 · 中文交互版</small></div>
+  <div class="progress"><span id="pgText">学习进度 0%</span><span class="bar"><i id="pgBar"></i></span></div>
+</div></div>
+<div class="stylebar">
+  <span>课件：</span>
+  <a href="ics01-zh.html" title="第 1 讲 · 课程概述">第 1 讲</a>
+  <a href="bits-bytes-ints-zh.html" title="第 2 讲 · 位、字节与整数">第 2 讲</a>
+  <a href="floating-point-zh.html" title="第 3 讲 · 浮点数">第 3 讲</a>
+  <a href="ics04-zh.html" title="第 4 讲 · 机器级编程 I：基础">第 4 讲</a>
+  <a href="ics05-zh.html" title="第 5 讲 · 机器级编程 II：控制">第 5 讲</a>
+  <a href="ics06-zh.html" title="第 6 讲 · 机器级编程 III：过程">第 6 讲</a>
+  <a href="ics07-zh.html" title="第 7 讲 · 机器级编程 IV：数据">第 7 讲</a>
+  <a href="ics08-zh.html" title="第 8 讲 · 机器级编程 V：高级">第 8 讲</a>
+  <a href="ics09-zh.html" title="第 9 讲 · 处理器体系结构：ISA 与逻辑">第 9 讲</a>
+  <a href="ics10-zh.html" title="第 10 讲 · 处理器体系结构：顺序实现">第 10 讲</a>
+  <a href="ics11-zh.html" title="第 11 讲 · 处理器体系结构：流水线">第 11 讲</a>
+  <a href="ics12-zh.html" class="cur" onclick="return false" title="第 12 讲 · 存储层次结构">第 12 讲 · 存储层次结构（当前）</a>
+  <a href="ics13-zh.html" title="第 13 讲 · 缓存存储器">第 13 讲</a>
+  <a href="ics14-zh.html" title="第 14 讲 · 代码优化">第 14 讲</a>
+  <a href="ics15-zh.html" title="第 15 讲 · 链接">第 15 讲</a>
+  <a href="ics16-zh.html" title="第 16 讲 · 异常控制流 I">第 16 讲</a>
+  <a href="ics17-zh.html" title="第 17 讲 · 异常控制流 II">第 17 讲</a>
+  <a href="ics18-zh.html" title="第 18 讲 · 系统级 I/O">第 18 讲</a>
+  <a href="ics19-zh.html" title="第 19 讲 · 虚拟内存 I">第 19 讲</a>
+  <a href="ics20-zh.html" title="第 20 讲 · 虚拟内存 II">第 20 讲</a>
+  <a href="ics21-zh.html" title="第 21 讲 · 动态内存分配">第 21 讲</a>
+  <a href="ics22-zh.html" title="第 22 讲 · 网络基础">第 22 讲</a>
+  <a href="ics23-zh.html" title="第 23 讲 · 网络编程">第 23 讲</a>
+  <a href="ics24-zh.html" title="第 24 讲 · 并发编程">第 24 讲</a>
+  <a href="ics25-zh.html" title="第 25 讲 · 同步">第 25 讲</a>
+  <a href="datalab-zh.html" title="Data Lab 实验">Data Lab 实验</a>
+  <a href="variants-ics12/index.html">◧ 全部预览</a>
+</div>
+<div class="layout">
+  <nav class="toc">
+    <h4>目录</h4>
+    <a href="#s0"><span class="n">0</span>课程导览</a>
+    <a href="#s1"><span class="n">1</span>总线与读写事务</a>
+    <a href="#s2"><span class="n">2</span>RAM：主存的积木</a>
+    <a href="#s3"><span class="n">3</span>磁盘几何与容量</a>
+    <a href="#s4"><span class="n">4</span>磁盘访问与服务时间</a>
+    <a href="#s5"><span class="n">5</span>I/O 总线与 DMA</a>
+    <a href="#s6"><span class="n">6</span>固态盘（SSD）</a>
+    <a href="#s7"><span class="n">7</span>CPU–内存差距与趋势</a>
+    <a href="#s8"><span class="n">8</span>引用局部性</a>
+    <a href="#s9"><span class="n">9</span>存储层次结构</a>
+    <a href="#s10"><span class="n">10</span>缓存与三类缺失</a>
+    <a href="#s11"><span class="n">11</span>总结与测验</a>
+  </nav>
+
+  <main>
+<!-- ================= 0 ================= -->
+  <section id="s0">
+    <h2>课程导览<span class="srcref">原第 1–2 页</span></h2>
+    <p class="lede">北京大学《计算机系统导论》第 12 讲：<b>存储层次结构（The Memory Hierarchy）</b>。这一讲回答两个问题：<b>为什么一台计算机需要一整套从小到大、从快到慢的存储设备？</b>以及<b>程序自身的什么性质，让这套看似「重复」的结构真的有效？</b>答案的两半 —— 硬件侧的存储技术，软件侧的局部性 —— 在本讲各占一半篇幅，最后用「缓存」把它们缝在一起。</p>
+
+    <div class="grid g3">
+      <div class="card"><h5>本讲提纲（课件第 2 页原文）</h5>
+        <ol style="margin:0;padding-left:20px;font-size:14.5px">
+          <li>内存抽象（The memory abstraction）</li>
+          <li>RAM：主存的积木</li>
+          <li>存储技术与趋势</li>
+          <li>引用局部性（Locality of reference）</li>
+          <li>存储层次中的缓存</li>
+        </ol>
+      </div>
+      <div class="card"><h5>一句话核心</h5>
+        <p style="margin:0;font-size:14.5px">从寄存器到远端服务器的每一层存储，<b>都是下一层的缓存</b>：更小、更快、更贵的那一层，缓存更大、更慢、更便宜的一层里的一小部分数据。之所以能这样干，是因为程序<b>不会均匀地访问内存</b> —— 它总在反复用最近用过的数据和它附近的数据。这就是<b>局部性</b>。</p>
+      </div>
+      <div class="card"><h5>这一讲在课程里的位置</h5>
+        <p style="margin:0;font-size:14.5px">第 6–8 讲把 CPU 造出来了（SEQ），但机器一条指令一个周期，慢得不能实用。原因不在 CPU，而在<b>它要等内存</b>。这一讲先把「内存」这一侧讲透：内存与磁盘的真实速度、容量、代价；再给出解决方案的钥匙 —— 局部性；最后给出方案本身 —— 存储层次与缓存。下一讲（缓存存储器）把这一讲的缓存模型落到真实的 cache 几何上。</p>
+      </div>
+    </div>
+
+    <h3>0.1 五大主题与原页码</h3>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>主题</th><th>原课件页码</th><th>要回答的问题</th></tr>
+      <tr><td><b>内存抽象</b></td><td class="mono">3–9</td><td>CPU 眼里内存是一个大字节数组，这个抽象在硬件上是怎么实现成总线上的一次次读/写事务的？</td></tr>
+      <tr><td><b>RAM：主存的积木</b></td><td class="mono">11–19</td><td>SRAM 与 DRAM 差在哪？DRAM 芯片内部怎么组织、怎么寻址？8 个芯片怎么拼成一个 64 位宽的内存条？</td></tr>
+      <tr><td><b>存储技术与趋势</b></td><td class="mono">21–51</td><td>磁盘与 SSD 的容量、访问时间怎么算？CPU 与存储之间的速度差距在怎样扩大？</td></tr>
+      <tr><td><b>引用局部性</b></td><td class="mono">53–57</td><td>时间局部性与空间局部性分别是什么？怎样看一眼代码就判断它的局部性好不好？</td></tr>
+      <tr><td><b>存储层次中的缓存</b></td><td class="mono">60–66</td><td>缓存的工作原理（命中 / 缺失 / 放置 / 替换）与三类缺失；从寄存器到 Web 缓存的全景表。</td></tr>
+      <tr><td>补充页（选读）</td><td class="mono">68–70</td><td>1985–2015 的存储趋势原始数据与 CPU 时钟数据 —— 本页第 7 节把它们做成了可重算的表。</td></tr>
+    </table></div>
+
+    <h3>0.2 一条主线：差距 → 局部性 → 层次</h3>
+    <p>课件第 50、51、58 页把全讲串成一句话：<b>CPU 与存储的速度差距在持续扩大（第 50 页）→ 但程序有局部性（第 51 页）→ 所以可以把存储组织成层次，让便宜的容量配快速的性能（第 58 页）</b>。本页各节都挂在这条线上：第 1–7 节讲「差距」的两端（内存 / 磁盘 / SSD 的真实数字），第 8 节讲「局部性」，第 9–10 节讲「层次与缓存」。</p>
+    <div class="box"><div class="t">本页使用说明</div>
+      标有 <span class="chip gray">可交互</span> 的地方都能点击或输入，所有计算都在浏览器里实时完成：磁盘容量、磁盘访问时间、SSD 吞吐、循环顺序的局部性、缓存命中率都由页面现算，不写死结果。<a href="#s4">第 4 节的磁盘访问时间计算器</a>、<a href="#s8">第 8 节的循环顺序评测器</a>、<a href="#s10">第 10 节的缓存模拟器</a>最值得反复玩。页面里所有「判对错」的基准（地址拆分、容量公式、访问时间公式、局部性统计、缓存模拟与缺失分类）都用独立参考实现逐项交叉验证过。
+    </div>
+  </section>
+
+  <!-- ================= 1 ================= -->
+  <section id="s1">
+    <h2>1. 内存抽象：总线与读写事务<span class="srcref">原第 3–9 页</span></h2>
+    <p class="lede">「内存是一个很大的字节数组」是给程序员看的抽象。硬件看到的是另一幅图：<b>CPU 与内存在一条总线上对话</b>。课件用整整七页（原第 3–9 页）把一次读和一次写各拆成三步 —— 这是理解「内存访问为什么有代价」的起点。</p>
+
+    <h3>1.1 总线：一组并行导线<span class="srcref">原第 3 页</span></h3>
+    <ul>
+      <li><b>总线（bus）</b>是一组并行导线，传送<b>地址、数据与控制信号</b>；</li>
+      <li>总线通常被<b>多个设备共享</b>；</li>
+      <li>课件图里的层次是：CPU 芯片（内含寄存器堆、ALU、总线接口）→ <b>系统总线</b> → I/O 桥 → <b>内存总线</b> → 主存；I/O 桥的另一侧接 <b>I/O 总线</b>（USB 控制器、图形适配器、磁盘控制器，还有扩展槽）。</li>
+    </ul>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：总线结构漫游 —— 点部件看它在数据通路上干什么</span>
+      </div>
+      <div id="busOut"></div>
+    </div>
+
+    <h3>1.2 读事务：三步<span class="srcref">原第 4–6 页</span></h3>
+    <p>课件把 <code>movq A, %rax</code>（load）拆成三张连续页：</p>
+    <div>
+      <div class="step on"><div class="h">第 1 步 · 原第 4 页</div><div class="m">CPU 把地址 A 放到内存总线上</div><div class="e">此时总线上跑的是「我要 A」这个请求，数据还没出现。</div></div>
+      <div class="step on"><div class="h">第 2 步 · 原第 5 页</div><div class="m">主存从内存总线读走 A，取出字 x，把它放回总线</div><div class="e">这一步的耗时就是 DRAM 的访问时间（本页第 7 节会给数字）。</div></div>
+      <div class="step on"><div class="h">第 3 步 · 原第 6 页</div><div class="m">CPU 从总线读走字 x，把它复制进寄存器 %rax</div><div class="e">抽象的 <code>movq A, %rax</code> 到此完成 —— 程序员只看到一行指令。</div></div>
+    </div>
+
+    <h3>1.3 写事务：也是三步<span class="srcref">原第 7–9 页</span></h3>
+    <p>课件把 <code>movq %rax, A</code>（store）同样拆成三步，注意第 1 步的细节 —— <b>地址先走，主存先等着，数据随后到</b>：</p>
+    <div>
+      <div class="step on"><div class="h">第 1 步 · 原第 7 页</div><div class="m">CPU 把地址 A 放到总线上；主存读走它，并等待对应的数据字到达</div><div class="e">「等待」是关键：总线协议允许地址与数据分两拍传。</div></div>
+      <div class="step on"><div class="h">第 2 步 · 原第 8 页</div><div class="m">CPU 把数据字 y 放到总线上</div><div class="e">y 来自 <code>%rax</code>（原图里寄存器堆中写着 y）。</div></div>
+      <div class="step on"><div class="h">第 3 步 · 原第 9 页</div><div class="m">主存从总线上读走数据字 y，把它存到地址 A</div><div class="e">写事务结束 —— 内存数组里 A 处的值变成 y。</div></div>
+    </div>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：读写事务分步器 —— 切换读/写，逐步看总线上跑着什么</span>
+        <div class="seg" id="txSeg">
+          <button class="on" data-tx="r">读事务 movq A, %rax</button>
+          <button data-tx="w">写事务 movq %rax, A</button>
+        </div>
+        <div class="seg" id="txStepSeg">
+          <button class="on" data-txs="0">第 1 步</button>
+          <button data-txs="1">第 2 步</button>
+          <button data-txs="2">第 3 步</button>
+        </div>
+        <button class="sm" id="txPlay">自动播完三步</button>
+        <button class="sm" id="txReset">回到第 1 步</button>
+      </div>
+      <div id="txOut"></div>
+    </div>
+
+    <div class="box ok"><div class="t">内存抽象的两半</div>
+      程序员那一半：内存是一个很大的<b>字节数组</b>，每个字节有地址；<code>movq A, %rax</code> 里的 <code>A</code> 是<b>地址</b>，不是数据。硬件那一半：每个 load/store 都变成总线上的<b>一次事务（transaction）</b>，地址、数据、控制信号分拍传送，事务有明确的开始与结束。第 5 节的 I/O 总线会把同一套「事务」思路扩展到磁盘控制器上。
+    </div>
+  </section>
+
+  <!-- ================= 2 ================= -->
+  <section id="s2">
+    <h2>2. RAM：主存的积木<span class="srcref">原第 11–19 页</span></h2>
+    <p class="lede">主存由 RAM 芯片搭出来。这一节先分清楚 SRAM 与 DRAM 两种芯片的脾气（原第 11–15 页），再拆开 DRAM 芯片看它内部怎么组织、怎么寻址（16–18），最后把 8 个芯片拼成一条 64 位宽的内存条（19）。</p>
+
+    <h3>2.1 RAM 的关键性质<span class="srcref">原第 11 页</span></h3>
+    <ul>
+      <li>RAM 传统上<b>封装成芯片</b>；</li>
+      <li>基本的存储单位通常是一个 <b>cell（单元），一个 cell 存一位</b>；</li>
+      <li><b>多个 RAM 芯片组成一个内存</b>（第 2.6 节会看到 8 个芯片拼成一条内存条）；</li>
+      <li>RAM 有两个品种：<b>SRAM</b>（静态 RAM）与 <b>DRAM</b>（动态 RAM）。</li>
+    </ul>
+
+    <h3>2.2 SRAM vs DRAM<span class="srcref">原第 12–13 页</span></h3>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th></th><th>每位晶体管数</th><th>访问时间</th><th>需要刷新？</th><th>需要 EDC？</th><th>成本</th><th>典型用途</th></tr>
+      <tr><td><b>SRAM</b></td><td class="mono">6 或 8</td><td class="mono">1×</td><td>不需要</td><td>可能需要</td><td class="mono">100×</td><td>cache（缓存）</td></tr>
+      <tr><td><b>DRAM</b></td><td class="mono">1</td><td class="mono">10×</td><td><b>需要</b></td><td><b>需要</b></td><td class="mono">1×</td><td>主存、帧缓冲</td></tr>
+    </table></div>
+    <p>（成本列是相对值：DRAM 为 1×，SRAM 约为它的 100 倍。EDC = 错误检测与纠正。）课件第 12 页把两者的物理差别画成两条：<b>DRAM 是「1 个晶体管 + 1 个电容 / 位」</b>，电容只能<b>竖直方向</b>做，而且电荷会漏，所以<b>必须周期性刷新</b>；<b>SRAM 是「6 个晶体管 / 位」</b>，只要通电就能<b>无限期保持状态</b>。为什么便宜的一定要刷新、贵的一定不刷新 —— 看的就是这两行。</p>
+
+    <h3>2.3 两条缩放趋势、增强型 DRAM 与非易失存储器<span class="srcref">原第 13–15 页</span></h3>
+    <p>课件第 13 页给出两条趋势：<b>SRAM 随半导体工艺一起缩小，但已接近极限</b>；<b>DRAM 的缩小受「最小电容」与「深宽比限制电容深度」两条物理约束，也已接近极限</b>。第 14、15 页继续给增强型 DRAM 与非易失存储器的名单：</p>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：存储技术速查 —— 点技术名，看它的机制、代价与出处</span>
+        <div class="seg" id="techSeg">
+          <button class="on" data-tech="sram">SRAM</button>
+          <button data-tech="dram">DRAM</button>
+          <button data-tech="sdram">SDRAM</button>
+          <button data-tech="ddr">DDR SDRAM</button>
+          <button data-tech="flash">Flash</button>
+          <button data-tech="xpoint">3D XPoint</button>
+        </div>
+      </div>
+      <div id="techOut"></div>
+    </div>
+
+    <h3>2.4 DRAM 芯片内部：d×w 与超级单元<span class="srcref">原第 16 页</span></h3>
+    <p>课件的说法（第 16 页原文）：<b>d×w 的 DRAM 由 d 个「超级单元（supercell）」组成，每个超级单元 w 位</b>。图里画的是 <b>16 × 8 的 DRAM 芯片</b>：4 行 × 4 列的超级单元阵列，每个超级单元 8 位，总共 16 × 8 = 128 位。一次访问只取<b>一个</b>超级单元 —— 所以<b>地址 4 位、数据 8 位</b>，地址被拆成<b>行选择与列选择</b>两半。</p>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：DRAM 地址拆分器 —— 输入地址，看它选中哪个超级单元</span>
+        <label class="fld">地址（十进制或 0x…） <input type="text" id="daIn" value="9" size="10" spellcheck="false"></label>
+        <label class="fld">阵列
+          <select id="daShape">
+            <option value="16">16 × 8（4 行 × 4 列，2+2 位）</option>
+            <option value="64">64 × 8（8 行 × 8 列，3+3 位）</option>
+            <option value="256">256 × 8（16 行 × 16 列，4+4 位）</option>
+          </select>
+        </label>
+        <button class="p" id="daGo">拆分</button>
+        <button class="sm" data-da="9">课件例：超级单元 (2,1)</button>
+        <button class="sm" data-da="0">地址 0</button>
+        <button class="sm" data-da="15">地址 15</button>
+      </div>
+      <div id="daOut"></div>
+    </div>
+
+    <div class="box"><div class="t">行、列谁占高位？</div>
+      课件第 16 页的图把 4 位地址分成两支各 2 位：<b>高位给行（RAS）、低位给列（CAS）</b>。真实芯片的行列位数由阵列形状决定（不是一个方阵就各占一半），但「地址先选行、再选列」这个两级结构是不变的 —— 下一页的 RAS / CAS 就是它的两个控制信号。
+    </div>
+
+    <h3>2.5 读一个超级单元：RAS 与 CAS<span class="srcref">原第 17–18 页</span></h3>
+    <p>课件用两页演完一次读操作。目标是超级单元 <b>(2,1)</b> —— 第 2 行第 1 列：</p>
+    <div>
+      <div class="step on"><div class="h">Step 1(a) · 原第 17 页</div><div class="m">行访问选通 RAS = 2：选中第 2 行</div><div class="e">RAS = Row Access Strobe。</div></div>
+      <div class="step on"><div class="h">Step 1(b) · 原第 17 页</div><div class="m">第 2 行从 DRAM 阵列复制到行缓冲（internal row buffer）</div><div class="e">整行被搬进缓冲 —— 这一步很贵。</div></div>
+      <div class="step on"><div class="h">Step 2(a) · 原第 18 页</div><div class="m">列访问选通 CAS = 1：选中第 1 列</div><div class="e">CAS = Column Access Strobe；此时数据已在缓冲里。</div></div>
+      <div class="step on"><div class="h">Step 2(b) · 原第 18 页</div><div class="m">超级单元 (2,1) 从缓冲复制到数据线，最终回到 CPU</div><div class="e">「8 位数据」从这里离开芯片。</div></div>
+    </div>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：读超级单元 —— 逐步执行 RAS / CAS，看图里高亮走到哪</span>
+        <div class="seg" id="drSeg">
+          <button class="on" data-dr="0">Step 1(a) RAS=2</button>
+          <button data-dr="1">Step 1(b) 复制到行缓冲</button>
+          <button data-dr="2">Step 2(a) CAS=1</button>
+          <button data-dr="3">Step 2(b) 送回 CPU</button>
+        </div>
+        <label class="fld">想读的行 <input type="text" id="drRow" value="2" size="4" spellcheck="false"></label>
+        <label class="fld">想读的列 <input type="text" id="drCol" value="1" size="4" spellcheck="false"></label>
+        <button class="p" id="drGo">按这个坐标重演</button>
+      </div>
+      <div id="drOut"></div>
+    </div>
+
+    <div class="box ok"><div class="t">行缓冲是「同一行连续访问便宜」的原因</div>
+      一次访问要先把<b>整行</b>搬进缓冲，再按列取其中的一个超级单元。如果接下来的访问还落在<b>同一行</b>，行那一步就省了 —— 这正是 SDRAM「复用行地址（RAS, CAS, CAS, CAS）」的动机（原第 14 页），也是 DRAM 里最基本的空间局部性来源。
+    </div>
+
+    <h3>2.6 内存模块：8 个 DRAM 拼成一个 64 位字<span class="srcref">原第 19 页</span></h3>
+    <p>课件第 19 页的模块是 <b>64 MB 的内存模块，由 8 个 8M × 8 的 DRAM 组成</b>：每个芯片存 8M 个 8 位超级单元，8 个芯片并联，一次访问各出一个超级单元，拼成一个 <b>64 位字</b>。8 个芯片收到的是<b>同一个地址</b>（同一个 (i, j)），差别只在于它们各自贡献这个字的哪 8 位 —— <b>DRAM i 提供第 8i 到 8i+7 位</b>。</p>
+
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>芯片</th><th class="mono">DRAM 0</th><th class="mono">DRAM 1</th><th class="mono">DRAM 2</th><th class="mono">DRAM 3</th><th class="mono">DRAM 4</th><th class="mono">DRAM 5</th><th class="mono">DRAM 6</th><th class="mono">DRAM 7</th></tr>
+      <tr><td>贡献的位</td><td class="mono">0–7</td><td class="mono">8–15</td><td class="mono">16–23</td><td class="mono">24–31</td><td class="mono">32–39</td><td class="mono">40–47</td><td class="mono">48–55</td><td class="mono">56–63</td></tr>
+    </table></div>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：内存模块映射 —— 点一个字节，看它由哪个芯片供出</span>
+        <label class="fld">64 位字（按字节从高到低写，每字节 2 位十六进制） <input type="text" id="mmIn" value="0123456789abcdef" size="20" spellcheck="false"></label>
+        <div class="seg" id="mmByteSeg">
+          <button data-mm="0">字节 0（最低）</button>
+          <button class="on" data-mm="1">字节 1</button>
+          <button data-mm="4">字节 4</button>
+          <button data-mm="7">字节 7（最高）</button>
+        </div>
+      </div>
+      <div id="mmOut"></div>
+    </div>
+
+    <div class="box"><div class="t">为什么内存条要做成「8 芯片并联」</div>
+      因为 DRAM 芯片的位宽（w = 8）追不上 CPU 的数据总线宽度（一次要 64 位）。把 8 个芯片并排、地址并联、数据错开接总线，就得到一个「一次出 64 位」的部件 —— 代价是<b>每次访问 8 个芯片全都要动</b>，所以一次主存访问消耗的能量与时间，是 8 个 DRAM 一起工作的时间。
+    </div>
+  </section>
+
+  <!-- ================= 3 ================= -->
+  <section id="s3">
+    <h2>3. 磁盘：几何、容量与记录区<span class="srcref">原第 21–27 页</span></h2>
+    <p class="lede">主存再往外是外存。课件第 21–27 页把机械磁盘从头讲一遍：它由什么组成、几何上怎么组织、容量怎么算、为什么要用「平均每道扇区数」。这些机械细节不是猎奇 —— 第 4 节的访问时间公式会逐项用到它们。</p>
+
+    <h3>3.1 两大类存储技术<span class="srcref">原第 21 页</span></h3>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th></th><th>磁介质存储器（Magnetic Disks）</th><th>非易失闪存（Flash Memory）</th></tr>
+      <tr><td>存储方式</td><td>存在<b>磁性介质</b>上</td><td>以<b>持久电荷</b>的形式存储</td></tr>
+      <tr><td>访问结构</td><td><b>机电式</b>（有运动部件）</td><td><b>3-D 单元阵列</b>，100+ 层</td></tr>
+      <tr><td>每单元位</td><td>—（按磁道/扇区组织）</td><td>每单元 <b>3 位</b>数据</td></tr>
+    </table></div>
+
+    <h3>3.2 磁盘驱动器里有什么<span class="srcref">原第 22 页</span></h3>
+    <p>课件第 22 页用一张照片标出六个部件（照片本身是 Seagate 的素材，这里按文字列出）：</p>
+    <div class="grid g3">
+      <div class="card"><h5>机械部分</h5>
+        <p style="margin:0;font-size:14.5px"><b>盘片（platters）</b>：真正存数据的地方，多个盘片叠在一根轴上；<b>主轴（spindle）</b>：带动盘片旋转；<b>磁臂（arm）</b>与<b>驱动器（actuator）</b>：把读写头在盘面上前后移动。</p>
+      </div>
+      <div class="card"><h5>电子部分</h5>
+        <p style="margin:0;font-size:14.5px"><b>电子部件（electronics）</b>：里面<b>含一个处理器和内存</b>；<b>SCSI 接口与连接器</b>：对外的通道。</p>
+      </div>
+      <div class="card"><h5>一句话</h5>
+        <p style="margin:0;font-size:14.5px">磁盘是一个<b>自带处理器与内存的完整子系统</b>，不是一根导线通到底的存储 —— 第 5、6 节会看到它的「盘控制器」「固件」在缓存与磨损均衡里扮演的角色。</p>
+      </div>
+    </div>
+
+    <h3>3.3 磁盘几何：面 → 磁道 → 扇区 → 柱面<span class="srcref">原第 23、24 页</span></h3>
+    <ul>
+      <li>磁盘由<b>盘片</b>组成，<b>每张盘片有两个面（surface）</b>；</li>
+      <li>每个面由<b>同心圆环磁道（track）</b>组成；</li>
+      <li>每条磁道由<b>扇区（sector）</b>组成，扇区之间由<b>间隙（gap）</b>隔开；</li>
+      <li>各盘面上<b>对齐的磁道</b>合起来叫一个<b>柱面（cylinder）</b>。</li>
+    </ul>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：磁盘几何 —— 切俯视图 / 柱面视图，看术语对应到哪一圈</span>
+        <div class="seg" id="geo">
+          <button class="on" data-geo="top">单面俯视图（磁道 / 扇区 / 间隙）</button>
+          <button data-geo="cyl">多盘片视图（柱面）</button>
+        </div>
+      </div>
+      <div id="geoOut"></div>
+    </div>
+
+    <h3>3.4 容量：公式与一个例子<span class="srcref">原第 25–27 页</span></h3>
+    <p>容量是<b>能存的最多位数</b>。厂商用 GB 表示，而 <b>1 GB = 10<sup>9</sup> 字节</b>（十进制，不是 2<sup>30</sup>）。容量由三个技术因子决定（第 25 页）：</p>
+    <div class="formula" style="text-align:left">
+      <div>每扇区字节数 × 平均每道扇区数 × 每面磁道数 × 每盘片面数 × 盘片数</div>
+    </div>
+    <ul>
+      <li><b>记录密度（bits/in）</b>：一英寸磁道段上能塞多少位；</li>
+      <li><b>道密度（tracks/in）</b>：一英寸半径段上能塞多少条磁道；</li>
+      <li><b>面密度（bits/in<sup>2</sup>）</b>：记录密度与道密度之积。</li>
+    </ul>
+    <p>为什么公式里写的是「<b>平均</b>每道扇区数」？因为现代磁盘把磁道分成若干<b>记录区（recording zones）</b>（第 26 页）：同一区内每条磁道的扇区数<b>相同</b>，由该区<b>最内圈</b>的周长决定；外圈的区因此每道扇区更多。于是不同区每道扇区数不同，算容量时只能用平均值。</p>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：磁盘容量计算器 —— 默认值就是课件第 27 页的例题</span>
+        <label class="fld">每扇区字节数 <input type="text" id="capSec" value="512" size="7" spellcheck="false"></label>
+        <label class="fld">平均每道扇区数 <input type="text" id="capSpt" value="300" size="7" spellcheck="false"></label>
+        <label class="fld">每面磁道数 <input type="text" id="capTps" value="20000" size="9" spellcheck="false"></label>
+        <label class="fld">每盘片面数 <input type="text" id="capSpf" value="2" size="4" spellcheck="false"></label>
+        <label class="fld">盘片数 <input type="text" id="capPpd" value="5" size="4" spellcheck="false"></label>
+        <button class="p" id="capGo">算容量</button>
+        <button class="sm" data-cap="512,300,20000,2,5">课件例题</button>
+        <button class="sm" data-cap="4096,600,100000,2,4">大容量例</button>
+      </div>
+      <div id="capOut"></div>
+    </div>
+
+    <div class="box"><div class="t">为什么「容量」这一页值得慢慢算</div>
+      容量公式是全讲里唯一一个能把几何量（扇区、磁道、面、盘片）变成字节数的式子。第 4 节的访问时间公式同样是从这些几何量里长出来的（<b>每道扇区数</b>决定转一个扇区要多久），所以这两页最好一起记。
+    </div>
+  </section>
+
+  <!-- ================= 4 ================= -->
+  <section id="s4">
+    <h2>4. 磁盘访问：从寻道到服务时间<span class="srcref">原第 28–42 页</span></h2>
+    <p class="lede">课件用了十几页讲一次磁盘访问：第 28–29 页先说清「盘面在转、磁头在飞」，第 31–38 页用八张连续的图演示「读蓝色扇区，再读红色扇区」，第 39–42 页把它压成<b>三段服务时间</b>和一个能手算的公式 —— 以及一个令人清醒的结论：磁盘比 SRAM 慢了好几个数量级。</p>
+
+    <h3>4.1 两个动作：旋转与寻道<span class="srcref">原第 28、29 页</span></h3>
+    <ul>
+      <li><b>旋转</b>：盘面以<b>固定转速</b>持续旋转（家用与服务器盘常见 7,200 RPM，第 40 页给数字）；</li>
+      <li><b>读写头装在磁臂末端，靠一层薄薄的气垫「飞」在盘面上方</b> —— 不接触盘面；</li>
+      <li><b>寻道（seek）</b>：磁臂沿半径方向移动，就能把读写头定位到任意一条磁道上方；</li>
+      <li>多盘片时，<b>所有读写头连在一起同进同出</b>，从一个柱面移到下一个柱面 —— 所以「换一条磁道」实际上是<b>换一个柱面</b>，这也解释了第 4.3 节的寻道时间为什么只算一次。</li>
+    </ul>
+
+    <h3>4.2 一次访问的九个步骤<span class="srcref">原第 30–38 页</span></h3>
+    <p>课件第 30 页先把俯视图画出来（<b>面由磁道组成，磁道切成扇区</b>），第 31–38 页用八页连续图演示一次访问：磁头在某条磁道上方 → 盘面逆时针转 → 即将读到蓝色扇区 → 蓝色读完 → 红色请求排队 → 寻道到红色的磁道 → 旋转等待红色转到磁头下 → 红色读完。读这八页只要抓住一件事：<b>每一次访问都要先定位（寻道 + 旋转等待），再传输，而只有传输那一段真正在搬数据</b>。</p>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：磁盘访问九步 —— 逐步看磁头、盘面与三段服务时间</span>
+        <div class="seg" id="dskSeg">
+          <button class="on" data-dsk="0">0 就位</button>
+          <button data-dsk="1">1 旋转方向</button>
+          <button data-dsk="2">2 读蓝前</button>
+          <button data-dsk="3">3 蓝读完</button>
+          <button data-dsk="4">4 红排队</button>
+          <button data-dsk="5">5 寻道</button>
+          <button data-dsk="6">6 旋转等待</button>
+          <button data-dsk="7">7 红读完</button>
+          <button data-dsk="8">8 服务时间构成</button>
+        </div>
+        <button class="sm" id="dskPlay">自动播完</button>
+      </div>
+      <div id="dskOut"></div>
+    </div>
+
+    <h3>4.3 服务时间的三个组成部分<span class="srcref">原第 39、40 页</span></h3>
+    <div class="formula">T<sub>access</sub> = T<sub>avg seek</sub> + T<sub>avg rotation</sub> + T<sub>avg transfer</sub></div>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>名称</th><th>含义</th><th>公式（课件第 40 页原文）</th><th>典型值</th></tr>
+      <tr><td><b>寻道时间</b><br><span class="en">T<sub>avg seek</sub></span></td><td>把磁头定位到目标扇区所在的<b>柱面</b>上所需的时间</td><td>（由机械结构决定，取平均）</td><td class="mono">3–9 ms</td></tr>
+      <tr><td><b>旋转延迟</b><br><span class="en">T<sub>avg rotation</sub></span></td><td>等目标扇区的<b>第一个位</b>转到读写头下面</td><td class="mono">1/2 × (60 / RPM) s</td><td class="mono">7,200 RPM → 4.17 ms</td></tr>
+      <tr><td><b>传输时间</b><br><span class="en">T<sub>avg transfer</sub></span></td><td>把目标扇区里的位全部读出来</td><td class="mono">(60 / RPM) × 1/(平均每道扇区数) s</td><td class="mono">400 扇区/道 → 0.021 ms</td></tr>
+    </table></div>
+    <p>公式里两个因子各有一句解释：<b>1/2</b> 是因为「目标扇区已经转到了头下」与「刚好错过、要再转一整圈」之间的平均等待是半圈；<b>1/(平均每道扇区数)</b> 是因为一整圈里平均分给每个扇区 1/(每道扇区数) 的时间。所以<b>每道扇区数越多，一个扇区转过去的越快，传输时间越短</b> —— 这就是第 3 节容量与第 4 节时间之间的那根线。</p>
+
+    <h3>4.4 例题：13.02 ms 是怎么来的<span class="srcref">原第 41、42 页</span></h3>
+    <p>课件给的三个输入是 7,200 RPM、平均寻道 9 ms、平均每道 400 个扇区。下面的计算器默认就是这组值 —— 改任何一项都会立刻看到它落在哪一段上。</p>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：磁盘访问时间计算器 —— 三段分别算，再相加</span>
+        <label class="fld">转速 RPM <input type="text" id="datRpm" value="7200" size="7" spellcheck="false"></label>
+        <label class="fld">平均寻道 ms <input type="text" id="datSeek" value="9" size="6" spellcheck="false"></label>
+        <label class="fld">平均每道扇区数 <input type="text" id="datSpt" value="400" size="7" spellcheck="false"></label>
+        <button class="p" id="datGo">算 T<sub>access</sub></button>
+        <button class="sm" data-dat="7200,9,400">课件例题（9 / 400）</button>
+        <button class="sm" data-dat="7200,3,300">寻道最快 3 ms</button>
+        <button class="sm" data-dat="15000,4,600">15,000 RPM 服务器盘</button>
+      </div>
+      <div id="datOut"></div>
+    </div>
+
+    <h3>4.5 与 SRAM / DRAM 的差距<span class="srcref">原第 41、42 页</span></h3>
+    <p>课件同一页还给了两个内存侧的参照：<b>SRAM 访问一个双字约 4 ns，DRAM 约 60 ns</b>。于是就能算出磁盘比它们慢多少 —— 这个比值正是第 7 节「CPU–内存差距」图里最高的那条线与最低那条线之间的距离。</p>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：差多少倍 —— 用上一节算出的 T<sub>access</sub> 与 SRAM / DRAM 相比</span>
+        <label class="fld">T<sub>access</sub> (ms) <input type="text" id="ratMs" value="13.02" size="8" spellcheck="false"></label>
+        <label class="fld">SRAM (ns/双字) <input type="text" id="ratSram" value="4" size="6" spellcheck="false"></label>
+        <label class="fld">DRAM (ns) <input type="text" id="ratDram" value="60" size="6" spellcheck="false"></label>
+        <button class="p" id="ratGo">比一比</button>
+        <button class="sm" data-rat="13.02,4,60">课件例题（13.02 ms）</button>
+        <button class="sm" data-rat="6.02,4,60">把寻道换成 3 ms</button>
+        <button class="sm" data-rat="13.02,0.33,20">用 2015 年的 SRAM / DRAM</button>
+      </div>
+      <div id="ratOut"></div>
+    </div>
+
+    <div class="box warn"><div class="t">勘误：课件印的 40,000 倍 / 2,500 倍与同一页的 4 ns / 60 ns 不自洽</div>
+      原课件这两页写的是「Disk is about <b>40,000</b> times slower than SRAM, <b>2,500</b> times slower then DRAM」。用同一页给的数字算一遍：<code>13.02 ms = 13,020,000 ns</code>，除以 <code>4 ns</code> 得 <b>约 326 万倍</b>，除以 <code>60 ns</code> 得 <b>约 21.7 万倍</b>。印出的两个倍数其实对应 <b>SRAM ≈ 325 ns、DRAM ≈ 5.2 µs</b> 的旧机器（<code>13.02 ms / 40,000 = 325.5 ns</code>、<code>13.02 ms / 2,500 = 5.2 µs</code>）—— 那是一二十年前的口径，与同页的 4 ns / 60 ns 不是同一次测量。本页按同一页的 4 ns / 60 ns 现算，并同时列出印出的数字供对照；<b>结论不变</b>：磁盘比内存慢 5–6 个数量级，这正是存储层次要存在的原因。
+    </div>
+  </section>
+
+  <!-- ================= 5 ================= -->
+  <section id="s5">
+    <h2>5. 读一个磁盘扇区：I/O 总线与 DMA<span class="srcref">原第 43–46 页</span></h2>
+    <p class="lede">第 1 节讲的是 CPU 与内存之间的总线；这一节把同一套「事务」思路接到 I/O 设备上。四页讲完一件事：<b>CPU 只发一条命令就撒手不管了，真正搬数据的是磁盘控制器，搬完再由中断把 CPU 叫回来</b>。</p>
+
+    <h3>5.1 I/O 总线：设备挂在哪儿<span class="srcref">原第 43 页</span></h3>
+    <ul>
+      <li>CPU 芯片经<b>系统总线</b>接到 <b>I/O 桥</b>；I/O 桥的另一侧是<b>内存总线</b>（通主存）与 <b>I/O 总线</b>；</li>
+      <li>挂在 I/O 总线上的设备：<b>USB 控制器</b>（接鼠标、键盘）、<b>图形适配器</b>（接显示器）、<b>磁盘控制器</b>（接磁盘），以及<b>扩展槽</b>（留给网卡这类其它设备）；</li>
+      <li>第 1 节讲过的规则在这里照样成立：<b>总线被多个设备共享</b>，一次只能有一个事务在跑。</li>
+    </ul>
+
+    <h3>5.2 三步读完一个扇区<span class="srcref">原第 44–46 页</span></h3>
+    <div>
+      <div class="step on"><div class="h">第 1 步 · 原第 44 页</div><div class="m">CPU 把「命令 + 逻辑块号 + 目标内存地址」写进磁盘控制器的一个端口（地址）</div><div class="e">CPU 只做这一件事，写完就转去做别的 —— 它<b>不参与搬运</b>。</div></div>
+      <div class="step on"><div class="h">第 2 步 · 原第 45 页</div><div class="m">磁盘控制器读出该扇区，并执行一次 <b>DMA</b>（直接存储器访问）传输把它送进主存</div><div class="e">DMA = Direct Memory Access：控制器自己当总线主设备，把数据直接写进内存，不经过 CPU 的寄存器。</div></div>
+      <div class="step on"><div class="h">第 3 步 · 原第 46 页</div><div class="m">DMA 传输完成时，磁盘控制器用<b>中断</b>通知 CPU（在 CPU 上拉一个专门的「中断」引脚）</div><div class="e">到这里 CPU 才知道「数据已经在你内存里了」。整个过程的代价是第 4 节算出的那 13 ms 量级。</div></div>
+    </div>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：谁在干活 —— 切换三步，看 CPU 与磁盘控制器各自的状态</span>
+        <div class="seg" id="dmaSeg">
+          <button class="on" data-dma="0">第 1 步 发命令</button>
+          <button data-dma="1">第 2 步 DMA</button>
+          <button data-dma="2">第 3 步 中断</button>
+        </div>
+      </div>
+      <div id="dmaOut"></div>
+    </div>
+
+    <div class="box ok"><div class="t">为什么要有 DMA 与中断</div>
+      如果让 CPU 一个字节一个字节地把扇区搬进内存（程序控制 I/O），那 13 ms 里 CPU 就全被占住了。<b>DMA 把「搬」这件事交给控制器</b>，<b>中断把「搬完了」这件事通知 CPU</b>：CPU 只在开头写一条命令、结尾处理一次中断，中间的搬运它完全不用管。这也是后面讲文件与 I/O 时的基本分工。
+    </div>
+  </section>
+
+  <!-- ================= 6 ================= -->
+  <section id="s6">
+    <h2>6. 固态盘（SSD）：闪存的脾气<span class="srcref">原第 47–49 页</span></h2>
+    <p class="lede">SSD 把第 2 节的闪存做成了「能顶替磁盘」的部件。它的接口看起来和磁盘一样（读写<b>逻辑块</b>），内部却完全是另一套规则：<b>读写的单位是页，擦除的单位是块，而写过的页必须先擦掉所在块才能再写</b>。这一节的三页都在讲这三条规则带来的后果。</p>
+
+    <h3>6.1 页、块与翻译层<span class="srcref">原第 47 页</span></h3>
+    <ul>
+      <li>SSD 由<b>闪存</b>与<b>闪存翻译层（flash translation layer, FTL）</b>组成；FTL 对外假装自己是一个「按逻辑块读写」的磁盘；</li>
+      <li>闪存按<b>页 page</b> 读写；若干页组成<b>块 block</b>（课件给的量级：<b>页 512 B–4 KB，块 32–128 页</b>）；</li>
+      <li><b>一页只能在它所在的块被擦除之后才能再写</b>；</li>
+      <li><b>一个块在约 10 万次重复写之后磨损</b>（第 15 页给过同一个数字）。</li>
+    </ul>
+    <div class="box warn"><div class="t">勘误：课件第 47 页把页大小印成「512KB to 4KB」</div>
+      原文是「Pages: <b>512KB</b> to 4KB, Blocks: 32 to 128 pages」。页比块还大是不可能的组合：若一页是 512 KB，那么 32 页的块就要 16 MB。闪存的页大小通行量级是 <b>512 B – 4 KB</b>（与课件第 66 页写的「Virtual Memory: 4-KB pages」同一量级），本页按 <b>512 B–4 KB</b> 呈现，并把「512KB」看作「512 B」的笔误 —— 下面 6.2 的写放大计算正是由「块 = 32–128 页」这个比例决定的。
+    </div>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：改写一页要动多少数据 —— 写放大与磨损的现算</span>
+        <label class="fld">页大小 (KB) <input type="text" id="ssdPage" value="4" size="5" spellcheck="false"></label>
+        <label class="fld">每块页数 <input type="text" id="ssdPpb" value="128" size="5" spellcheck="false"></label>
+        <label class="fld">要改写的页数 <input type="text" id="ssdN" value="1" size="5" spellcheck="false"></label>
+        <button class="p" id="ssdGo">算写放大</button>
+        <button class="sm" data-ssd="4,128,1">课件量级（4 KB / 128 页）</button>
+        <button class="sm" data-ssd="0.5,32,1">小页小盘（512 B / 32 页）</button>
+        <button class="sm" data-ssd="4,128,40">一页页改写 40 页</button>
+      </div>
+      <div id="ssdOut"></div>
+    </div>
+
+    <h3>6.2 性能：顺序快、随机慢、随机写更慢<span class="srcref">原第 48 页</span></h3>
+    <p>课件给的是三星 970 EVO Plus 250 GB 的基准（第 48 页的链接是这台盘的实测页）：<b>顺序读 2,126 MB/s、顺序写 1,880 MB/s、随机读 140 MB/s、随机写 59 MB/s</b>。三条解释也在同一页：</p>
+    <ul>
+      <li><b>顺序访问快于随机访问</b>（「存储层次里的共同主题」）；</li>
+      <li><b>随机写更慢</b>：擦一个块要很久（<b>约 1 ms</b>），而改写一个块里的一页需要<b>把其它页复制到新块</b>；</li>
+      <li>FTL 的对策是<b>先把一连串小写攒起来</b>，再一次性做块写入。</li>
+    </ul>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：吞吐量换算 —— 读/写 1 GiB 各要多久</span>
+        <label class="fld">数据量 GiB <input type="text" id="spGiB" value="1" size="6" spellcheck="false"></label>
+        <label class="fld">顺序读 MB/s <input type="text" id="spSeqR" value="2126" size="7" spellcheck="false"></label>
+        <label class="fld">随机读 MB/s <input type="text" id="spRndR" value="140" size="7" spellcheck="false"></label>
+        <label class="fld">随机写 MB/s <input type="text" id="spRndW" value="59" size="7" spellcheck="false"></label>
+        <button class="p" id="spGo">换算</button>
+        <button class="sm" data-sp="1,2126,140,59">课件 970 EVO Plus</button>
+        <button class="sm" data-sp="0.004,2126,140,59">一个 4 KB 页</button>
+        <button class="sm" data-sp="1000,2126,140,59">一整块 1 TB 盘</button>
+      </div>
+      <div id="ssdPerfOut"></div>
+    </div>
+
+    <h3>6.3 与旋转磁盘的取舍<span class="srcref">原第 49 页</span></h3>
+    <div class="grid g2">
+      <div class="card"><h5>优点</h5>
+        <ul style="margin:0;font-size:14.5px">
+          <li><b>没有机械部件</b> → 更快、更省电、更抗震；</li>
+          <li>顺序与随机的差距远小于磁盘（磁盘的随机访问要把寻道与旋转延迟付一遍又一遍）。</li>
+        </ul>
+      </div>
+      <div class="card"><h5>缺点</h5>
+        <ul style="margin:0;font-size:14.5px">
+          <li><b>会磨损</b>：靠 FTL 里的<b>磨损均衡（wear leveling）</b>逻辑缓解 —— 控制器会搬动数据，让各个块的擦除次数平均；</li>
+          <li>课件给的担保量级：一块盘可以写「<b>600 次 × 容量</b>」的字节数才磨损；</li>
+          <li>2019 年时每字节约<b>贵 4 倍</b>，且相对成本还在下降。</li>
+        </ul>
+      </div>
+    </div>
+    <p>应用：MP3 播放器、智能手机、笔记本；并<b>越来越多地出现在桌面与服务器</b>里。</p>
+    <div class="box warn"><div class="t">勘误：型号 940 EVO Plus 应为 970 EVO Plus</div>
+      课件第 48、49 页都写作「Samsung <b>940</b> EVO Plus」，但同一页给出的链接是 <code>…/Samsung-SSD-970-EVO-Plus-250GB</code>，三星也没有 940 这个型号。担保量「600 writes/byte」与 970 EVO Plus 250 GB 的 150 TBW 保修写入量正好对应（<code>600 × 250 GB = 150 TB</code>）。本页按 <b>970 EVO Plus 250 GB</b> 呈现。
+    </div>
+  </section>
+
+  <!-- ================= 7 ================= -->
+  <section id="s7">
+    <h2>7. CPU–内存差距与存储趋势<span class="srcref">原第 50、51、68–70 页</span></h2>
+    <p class="lede">这一节把前面六节的数字放到一张图上：<b>CPU 越快、内存与磁盘几乎没怎么快</b>，于是差距持续扩大（第 50 页）。第 51 页给出唯一的出路 —— 局部性。第 68–70 页是补充页里的原始数据表，本页把它们的倍数逐格现算。</p>
+
+    <h3>7.1 差距有多大<span class="srcref">原第 50 页</span></h3>
+    <p>课件第 50 页的图是<b>对数纵轴</b>（0.1 ns 到 100,000,000 ns），上面六条线：<b>磁盘寻道时间</b>、<b>SSD 访问时间</b>、<b>DRAM 访问时间</b>、<b>SRAM 访问时间</b>、<b>CPU 周期时间</b>、<b>有效 CPU 周期时间</b>（有效周期时间把多核也算进去 —— 见 7.3）。</p>
+    <p>原图是逐点曲线，课件文字里没有给出每一年的数值，所以本页<b>不重画那条曲线</b>，而是用第 69–70 页表格里有据可查的两端（1985 与 2015）做一张量级图 —— 差距的量级一目了然，且每个数字都能追到课件。</p>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：1985 与 2015 的量级图 —— 数据取自第 69、70 页的表</span>
+        <div class="seg" id="gapSeg">
+          <button class="on" data-gap="1985">1985 年</button>
+          <button data-gap="2015">2015 年</button>
+        </div>
+        <label class="fld">磁盘寻道 (ms) <input type="text" id="gapDisk" value="75" size="6" spellcheck="false"></label>
+        <label class="fld">DRAM (ns) <input type="text" id="gapDram" value="200" size="6" spellcheck="false"></label>
+        <label class="fld">SRAM (ns) <input type="text" id="gapSram" value="150" size="6" spellcheck="false"></label>
+        <label class="fld">CPU 周期 (ns) <input type="text" id="gapCpu" value="166" size="6" spellcheck="false"></label>
+        <button class="p" id="gapGo">重画</button>
+        <button class="sm" data-gap2="1985,75,200,150,166">1985 年（表值）</button>
+        <button class="sm" data-gap2="2015,3,20,1.3,0.33">2015 年（表值）</button>
+      </div>
+      <div id="gapOut"></div>
+    </div>
+
+    <h3>7.2 差距的解法：局部性<span class="srcref">原第 51 页</span></h3>
+    <div class="box"><div class="t">第 51 页只有一句话</div>
+      「The key to bridging this CPU-Memory gap is a fundamental property of computer programs known as <b>locality</b>.」这一页是全讲的转折：前面全在说「差距有多大」，从这里开始说「凭什么能弥补」。第 8 节讲局部性本身，第 9–10 节讲用它搭出来的存储层次。
+    </div>
+
+    <h3>7.3 补充页：1985–2015 的原始数据<span class="srcref">原第 68–70 页</span></h3>
+    <p>第 69 页是 SRAM / DRAM / 磁盘三张表，第 70 页是 CPU 时钟表。每张表的最后一列是<b>2015:1985 的倍数</b>：逐格核对可以看出它印的是<b>「改善了多少倍」= 大值 ÷ 小值</b>（成本、访问时间变小，容量、频率变大，两类都取大值 ÷ 小值），下面这个组件按这个口径现算每一格，并和课件印出来的数字对照。第 70 页还多两行：<b>核数</b>与<b>有效周期时间</b>，后者正是「周期时间 ÷ 核数」得到的。</p>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：趋势表现算倍数 —— 逐格验证课件印的 2015:1985</span>
+        <div class="seg" id="trSeg">
+          <button class="on" data-tr="sram">SRAM</button>
+          <button data-tr="dram">DRAM</button>
+          <button data-tr="disk">磁盘</button>
+          <button data-tr="cpu">CPU 时钟</button>
+        </div>
+      </div>
+      <div id="trOut"></div>
+    </div>
+
+    <div class="box warn"><div class="t">勘误：第 69 页 DRAM 表的「16.000」是「16,000」</div>
+      那一格写的是 DRAM 2015 年的典型容量 <code>16.000</code>（MB），但同一行的倍数写的是 <code>62,500</code>：只有取 <code>16,000 ÷ 0.256</code> 才得到 <code>62,500</code>；若真按 16 算，倍数是 62.5。同一列其它格用的是逗号千分位（如 <code>8,000</code>、<code>3,000</code>），所以这是小数点的笔误。本页按 <b>16,000 MB</b> 呈现。
+    </div>
+    <div class="box"><div class="t">表里最值得记的两件事</div>
+      <b>一是内存并没有变快多少</b>：SRAM 的访问时间从 150 ns 降到 1.3 ns 是 115 倍，DRAM 从 200 ns 到 20 ns 只有 10 倍，磁盘从 75 ms 到 3 ms 是 25 倍 —— 而 CPU 的时钟提高了 500 倍。<b>二是容量与单价的改善远大于速度</b>：磁盘每 GB 便宜了 300 万倍、DRAM 每 MB 便宜了 4.4 万倍。速度的差距只能靠局部性与层次结构来补，容量的富裕则让「多存一层」变得便宜。
+    </div>
+  </section>
+
+  <!-- ================= 8 ================= -->
+  <section id="s8">
+    <h2>8. 引用局部性（Locality）<span class="srcref">原第 52–57 页</span></h2>
+    <p class="lede">局部性是全讲的支点：<b>程序不会均匀地访问内存</b>，它刚刚用过的数据和它附近的数据，很可能马上又要用。课件用五页讲它 —— 两页讲原理，三页让你练「看一眼代码就知道局部性好不好」这项手艺。</p>
+
+    <h3>8.1 两条局部性<span class="srcref">原第 53 页</span></h3>
+    <div class="box"><div class="t">局部性原理（课件原文）</div>
+      Programs tend to use data and instructions with addresses <b>near or equal to</b> those they have used recently. —— 这一句里已经藏了两半：「<b>相等</b>」是时间局部性，「<b>相近</b>」是空间局部性。
+    </div>
+    <div class="grid g2">
+      <div class="card"><h5>时间局部性（temporal locality）</h5>
+        <p style="margin:0;font-size:14.5px"><b>刚被访问过的项，很可能在不久的将来再次被访问。</b>循环里的循环变量、累加器、反复调用的同一条指令都属于这一类。</p>
+      </div>
+      <div class="card"><h5>空间局部性（spatial locality）</h5>
+        <p style="margin:0;font-size:14.5px"><b>地址相邻的项，倾向于在时间上被集中访问。</b>顺序扫描数组、按顺序执行的指令序列都属于这一类 —— 它也解释了「块」为什么是缓存搬运的单位。</p>
+      </div>
+    </div>
+
+    <h3>8.2 一眼看出一段代码的局部性<span class="srcref">原第 54 页</span></h3>
+    <p>课件的例题是一段求和循环，然后逐条指出它的局部性来源：</p>
+    <div class="formula" style="text-align:left">
+      <div class="mono">sum = 0;</div>
+      <div class="mono">for (i = 0; i &lt; n; i++)</div>
+      <div class="mono">&nbsp;&nbsp;sum += a[i];</div>
+      <div class="mono">return sum;</div>
+    </div>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>引用的是什么</th><th>怎么引用</th><th>得到哪种局部性</th></tr>
+      <tr><td>数组元素 <code>a[i]</code></td><td>依次引用数组元素（<b>stride-1 模式</b>）</td><td><b>空间局部性</b></td></tr>
+      <tr><td>变量 <code>sum</code></td><td>每次迭代都引用一次</td><td><b>时间局部性</b></td></tr>
+      <tr><td>指令</td><td>按顺序引用指令</td><td><b>空间局部性</b></td></tr>
+      <tr><td>指令</td><td>反复循环执行同一段</td><td><b>时间局部性</b></td></tr>
+    </table></div>
+    <p>课件第 55 页把话说得更直白：<b>能看一眼代码就说出它的局部性好不好，是专业程序员的关键技能</b>。下面的三小节就是课件的三道练习题，页面把它们做成了可以换参数重算的工具。</p>
+
+    <h3>8.3 练习一：行优先扫描（答案是「好」）<span class="srcref">原第 55 页</span></h3>
+    <div class="formula" style="text-align:left">
+      <div class="mono">int sum_array_rows(int a[M][N])</div>
+      <div class="mono">{</div>
+      <div class="mono">&nbsp;&nbsp;int i, j, sum = 0;</div>
+      <div class="mono">&nbsp;&nbsp;for (i = 0; i &lt; M; i++)</div>
+      <div class="mono">&nbsp;&nbsp;&nbsp;&nbsp;for (j = 0; j &lt; N; j++)</div>
+      <div class="mono">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;sum += a[i][j];</div>
+      <div class="mono">&nbsp;&nbsp;return sum;</div>
+      <div class="mono">}</div>
+    </div>
+    <p>内层循环变的是最后一个下标 <code>j</code>，而 C 的二维数组是<b>行优先</b>存放的（<code>a[i][j]</code> 的线性地址是 <code>i*N + j</code>），所以访问是 stride-1 —— <b>空间局部性好</b>。课件第 56 页又给了它的反面。</p>
+
+    <h3>8.4 练习二：列优先扫描（答案是「不好」）<span class="srcref">原第 56 页</span></h3>
+    <div class="formula" style="text-align:left">
+      <div class="mono">int sum_array_cols(int a[M][N])</div>
+      <div class="mono">{ /* 循环顺序换成 for (j…) for (i…) */ }</div>
+    </div>
+    <p>课件给的答案（第 56 页原文）是 <b>Answer: no, unless… M is very small</b> —— 列优先扫描时相邻两次访问在地址上相隔 <code>N</code> 个元素，同一个块里的其它元素要等很久才会被用到。至于「除非 M 很小」：M 很小时整个数组的工作集很小，块即使被很早取进来也还留在缓存里，坏处就显不出来了。</p>
+
+    <h3>8.5 练习三：三维数组的循环排列（答案是「把 j 放到最内层」）<span class="srcref">原第 57 页</span></h3>
+    <div class="formula" style="text-align:left">
+      <div class="mono">int sum_array_3d(int a[M][N][N])</div>
+      <div class="mono">{</div>
+      <div class="mono">&nbsp;&nbsp;int i, j, k, sum = 0;</div>
+      <div class="mono">&nbsp;&nbsp;for (i = 0; i &lt; M; i++)</div>
+      <div class="mono">&nbsp;&nbsp;&nbsp;&nbsp;for (j = 0; j &lt; N; j++)</div>
+      <div class="mono">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;for (k = 0; k &lt; N; k++)</div>
+      <div class="mono">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;sum += a[k][i][j];</div>
+      <div class="mono">&nbsp;&nbsp;return sum;</div>
+      <div class="mono">}</div>
+    </div>
+    <p>课件的问题：<b>能不能重排循环，让这个函数以 stride-1 扫描三维数组？</b>答案（第 57 页原文）：<b>Answer: make j the inner loop</b> —— 因为 <code>a[k][i][j]</code> 里最后一个下标是 <code>j</code>，只有让 <code>j</code> 在内层以 1 递增，地址才会连续。</p>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：循环顺序评测器 —— 换循环顺序，看访问序列的步长</span>
+        <div class="seg" id="lpSeg">
+          <button class="on" data-lp="2d">二维 a[M][N]</button>
+          <button data-lp="3d">三维 a[M][N][N]</button>
+        </div>
+        <label class="fld">M <input type="text" id="lpM" value="4" size="4" spellcheck="false"></label>
+        <label class="fld">N <input type="text" id="lpN" value="4" size="4" spellcheck="false"></label>
+        <label class="fld">块大小（元素） <input type="text" id="lpB" value="4" size="4" spellcheck="false"></label>
+        <button class="p" id="lpGo">评测</button>
+        <button class="sm" data-lp2="2d,i,j,4,4,4">课件练习一：for i, for j（好）</button>
+        <button class="sm" data-lp2="2d,j,i,4,4,4">课件练习二：for j, for i（不好）</button>
+        <button class="sm" data-lp2="3d,i,j,k,4,4,4">课件练习三：原顺序 i, j, k（不好）</button>
+        <button class="sm" data-lp2="3d,k,i,j,4,4,4">课件答案：j 放最内层（好）</button>
+      </div>
+      <div id="lpOut"></div>
+    </div>
+
+    <div class="box"><div class="t">课件没给 M、N 与块大小，这里怎么选</div>
+      原课件三道题都只写了 <code>M</code>、<code>N</code>，没有具体数值，也没有说缓存块多大。本页默认 <b>M = N = 4</b>、<b>块 = 4 个元素</b>（一个块装得下一行），这样访问序列与块的对应关系一眼能数清；两个值都可以改 —— 把 N 调大，再对比两种循环顺序，「同一块被用到的间隔差多远」会变得非常直观。
+    </div>
+  </section>
+
+  <!-- ================= 9 ================= -->
+  <section id="s9">
+    <h2>9. 存储层次结构<span class="srcref">原第 58–61 页</span></h2>
+    <p class="lede">第 7 节说差距在扩大，第 8 节说程序有局部性。第 58–61 页把两件事拼起来：<b>把存储组织成一系列层次，每一层缓存下一层的一小部分</b> —— 于是便宜的大容量配上了接近最快那一层的速度。</p>
+
+    <h3>9.1 三条基本性质<span class="srcref">原第 58 页</span></h3>
+    <ul>
+      <li><b>越快的存储技术，每字节越贵、容量越小、功耗（发热）越高</b>；</li>
+      <li><b>CPU 与主存之间的速度差距在持续扩大</b>；</li>
+      <li><b>写得好的程序往往有良好的局部性</b>。</li>
+    </ul>
+    <p>课件用一句话概括后两条的关系：这些性质 <b>complement each other beautifully</b>（互补得天衣无缝）—— 局部性意味着「快的那一小层够用」，速度差距意味着「必须要有那一小层」。于是自然得到<b>存储层次</b>的组织方式。</p>
+
+    <h3>9.2 L0–L6：每一层都在缓存下一层<span class="srcref">原第 60 页</span></h3>
+    <p>课件的层次图把整条链路画成一条「谁从谁那里取数据」的链子：寄存器从 L1 取，L1 从 L2 取，L2 从 L3 取，L3 从主存取，主存从本地磁盘取，本地磁盘从远端服务器取。点击下面图里的每一层，可以看到它缓存的是什么、从哪里取。</p>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：层次漫游 —— 点一层，看它缓存谁的数据</span>
+      </div>
+      <div id="hierOut"></div>
+    </div>
+
+    <h3>9.3 缓存与「大想法」<span class="srcref">原第 61 页</span></h3>
+    <div class="box"><div class="t">缓存（cache）的定义（课件原文）</div>
+      A <b>cache</b>: a smaller, faster storage device that acts as a <b>staging area</b> for a subset of the data in a larger, slower device. （更小更快的存储设备，为更大更慢设备里的<b>一部分</b>数据充当暂存区。）
+    </div>
+    <ul>
+      <li><b>存储层次的根本思想</b>：对每一个 <code>k</code>，第 <code>k</code> 层那个更快更小的设备，充当第 <code>k+1</code> 层那个更大更慢设备的缓存；</li>
+      <li><b>它为什么有效</b>：因为局部性的存在，程序访问第 <code>k</code> 层数据的次数<b>远多于</b>访问第 <code>k+1</code> 层的次数 —— 所以第 <code>k+1</code> 层可以更慢，也因此可以更大、每字节更便宜；</li>
+      <li><b>大想法（理想情形）</b>：存储层次造出一个大容量存储池，它的<b>价格接近最底下那层便宜存储</b>，而<b>给程序供货的速度接近最顶上那层快速存储</b>。</li>
+    </ul>
+    <div class="box ok"><div class="t">这句话拆开就是本讲全部的设计目标</div>
+      「容量按最便宜的算，速度按最快的算」不是魔法，而是<b>局部性 + 逐层缓存</b>两步换来的：外层提供容量，内层提供速度，中间每一层都要有命中率兜底。第 10 节把中间那一层单独拿出来讲 —— 缓存到底怎么工作。
+    </div>
+  </section>
+
+  <!-- ================= 10 ================= -->
+  <section id="s10">
+    <h2>10. 缓存：命中、缺失与三类缺失<span class="srcref">原第 62–66 页</span></h2>
+    <p class="lede">课件的缓存模型刻意做得很小：缓存里只有 4 个槽，内存里只有 16 个块 —— 小到可以一格一格数。第 62–64 页讲命中与缺失，第 65 页把缺失分成三类，第 66 页把整张层次表上的缓存逐个列出来。</p>
+
+    <h3>10.1 缓存与内存的基本图景<span class="srcref">原第 62 页</span></h3>
+    <ul>
+      <li>上面是<b>更小、更快、更贵</b>的缓存：它装着下面那层里<b>一部分块的副本</b>；</li>
+      <li>下面是<b>更大、更慢、更便宜</b>的内存：可以看作被划分成了一块一块；</li>
+      <li>数据以<b>块（block）为传输单位</b>在两层之间搬 —— 不是按字节搬，这是整个缓存机制的关键设定；</li>
+      <li>课件第 62 页画的缓存里放着块 <b>8、9、14、3</b>，并用两个箭头说明一次块级搬运：<b>块 4</b> 从内存拷进缓存（占掉槽 0 里原来的 8），<b>块 10</b> 从缓存拷回内存（离开槽 2）。</li>
+    </ul>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：缓存模拟器 —— 直接映射 / 全相联，逐次访问看命中与缺失</span>
+        <label class="fld">槽数 <input type="text" id="cchSlots" value="4" size="4" spellcheck="false"></label>
+        <label class="fld">访问序列（块号） <input type="text" id="cchReq" value="14 12" size="22" spellcheck="false"></label>
+        <div class="seg" id="cchSeg">
+          <button class="on" data-cch="direct">直接映射</button>
+          <button data-cch="assoc">全相联（LRU）</button>
+        </div>
+        <button class="p" id="cchGo">模拟</button>
+        <button class="sm" data-cch2="4,direct,14 12">课件例：14 命中、12 缺失</button>
+        <button class="sm" data-cch2="4,direct,0 8 0 8 0 8 0 8">冲突缺失：0 8 交替</button>
+        <button class="sm" data-cch2="4,assoc,0 1 2 3 4 5 0 1">容量缺失：工作集超容量</button>
+      </div>
+      <div id="cchOut"></div>
+    </div>
+
+    <h3>10.2 命中与缺失<span class="srcref">原第 63、64 页</span></h3>
+    <div class="grid g2">
+      <div class="card"><h5>命中（hit）</h5>
+        <p style="margin:0;font-size:14.5px">要的数据块 <code>b</code> 已经在缓存里（第 63 页的例子：请求块 <b>14</b>，缓存的四个槽里正好有它）→ <b>Hit!</b>，直接从缓存取，不碰下一层。</p>
+      </div>
+      <div class="card"><h5>缺失（miss）</h5>
+        <p style="margin:0;font-size:14.5px">块 <code>b</code> 不在缓存里（第 64 页的例子：请求块 <b>12</b>）→ 从内存把块取上来，再放进缓存。<b>放进哪个位置（放置策略）</b>与<b>换掉哪一个（替换策略，被换掉的那块叫 victim）</b>由缓存的规则决定。</p>
+      </div>
+    </div>
+
+    <h3>10.3 三类缺失<span class="srcref">原第 65 页</span></h3>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>缺失类型</th><th>为什么会发生</th><th>课件给的说法</th></tr>
+      <tr><td><b>冷缺失</b><br><span class="en">cold / compulsory</span></td><td>这个块<b>从来没被访问过</b>，缓存里当然没有</td><td class="mono">Cold misses occur because the cache is empty.</td></tr>
+      <tr><td><b>冲突缺失</b><br><span class="en">conflict</span></td><td>缓存<b>容量足够</b>，但多个数据对象映射到了<b>同一个槽</b></td><td class="mono">Block i at level k+1 must be placed in block (i mod 4) at level k. … Referencing blocks 0, 8, 0, 8, 0, 8, … would miss every time.</td></tr>
+      <tr><td><b>容量缺失</b><br><span class="en">capacity</span></td><td>活跃块的集合（<b>工作集</b>）<b>大于缓存容量</b>，装不下</td><td class="mono">Occurs when the set of active cache blocks (working set) is larger than the cache.</td></tr>
+    </table></div>
+    <p>课件的冲突缺失例子值得单独算一遍：映射规则是「第 <code>i</code> 个块放在第 <code>i mod 4</code> 个位置」，于是块 <b>0</b> 与块 <b>8</b> 永远抢同一个槽 —— <code>0, 8, 0, 8, 0, 8, …</code> 这样的引用序列会<b>每次都缺失</b>，尽管缓存里一直有 3 个空槽。<b>把「槽数」改成 2、再点一次上面的模拟器</b>，就能看到三类缺失的分布跟着变。</p>
+    <div class="box warn"><div class="t">一个容易判错的细节：第一次访问某个块永远是冷缺失</div>
+      要看到<b>容量缺失</b>，序列里必须<b>重复访问</b>同一个块，而且两次访问之间工作集已经把缓存撑满 —— 例如 4 个槽、序列 <code>0 1 2 3 4 5 0 1</code>：前六个都是冷缺失（块 0…5 都是第一次出现），末尾的 0、1 才是容量缺失（访问过，但全相联也留不住）。所以「工作集大于缓存」描述的是<b>重复访问时的命中失败</b>，不是第一次访问。</div>
+
+    <h3>10.4 层次结构里到底有多少层缓存在干活<span class="srcref">原第 66 页</span></h3>
+    <p>课件最后一张表把从寄存器到 Web 缓存的所有「缓存」列了一遍。下面这份表逐行可点：点一行会告诉你它缓存的<b>单位</b>是什么、以及它比寄存器慢多少倍 —— 倍数由页面用同一行里的延迟数字现算。</p>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：缓存阶梯 —— 点一行看它的缓存单位与相对延迟</span>
+        <div class="seg" id="latSeg">
+          <button class="on" data-lat="cyc">按周期数（对数条）</button>
+          <button data-lat="who">按管理者分组</button>
+        </div>
+      </div>
+      <div id="latOut"></div>
+    </div>
+  </section>
+
+  <!-- ================= 11 ================= -->
+  <section id="s11">
+    <h2>11. 总结与测验<span class="srcref">原第 67 页</span></h2>
+    <p class="lede">第 67 页只有三句话，却是整讲的骨架：<b>差距在扩大 → 程序有局部性 → 用基于缓存的存储层次把差距补上</b>。三句话分别对应第 1–7 节、第 8 节、第 9–10 节。</p>
+
+    <h3>11.1 三句话的展开<span class="srcref">原第 67 页</span></h3>
+    <div class="grid g3">
+      <div class="card"><h5>差距在扩大</h5>
+        <p style="margin:0;font-size:14.5px">CPU 与内存、大容量存储之间的速度差距<b>持续变大</b>：2015 年的 CPU 时钟是 1985 年的 500 倍，而 DRAM 的访问时间只改善了 10 倍、磁盘 25 倍。</p>
+      </div>
+      <div class="card"><h5>程序有局部性</h5>
+        <p style="margin:0;font-size:14.5px">写得好的程序会表现出<b>时间局部性</b>与<b>空间局部性</b>：反复用最近用过的项，也倾向于用地址相近的项。</p>
+      </div>
+      <div class="card"><h5>用层次补差距</h5>
+        <p style="margin:0;font-size:14.5px">基于缓存的<b>存储层次</b>利用局部性把差距补上：每一层缓存下一层的一小部分，于是容量按最便宜的算、速度按最快的算。</p>
+      </div>
+    </div>
+
+    <h3>11.2 判断题<span class="srcref">综合本讲</span></h3>
+    <p>每道题点「真」「假」立即判定，并给出依据所在的小节。</p>
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：本讲判断题</span>
+        <button class="sm" id="pzReset">重来</button>
+      </div>
+      <div id="pzOut"></div>
+    </div>
+
+    <h3>11.3 测验<span class="srcref">10 题</span></h3>
+    <p>选完立刻判分并给解析。错题的解析里都写了回到本页哪一节。</p>
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：本讲测验</span>
+        <button class="sm" id="qzReset">重来</button>
+      </div>
+      <div id="qzOut"></div>
+    </div>
+  </section>
+  </main>
+</div>
+
+<div class="footer">
+本页由 <code>slides/ICS12-memory-hierarchy-20251027.pdf</code> 翻译整理而成 · 容量、访问时间、写放大、局部性统计与缓存模拟的全部数值均为页面内实时计算，判分基准已用独立参考实现交叉验证（0 项不一致）。
+</div>
+<button class="totop" id="toTop">↑ 顶部</button>
+
+<script>
+"use strict";
+/* ============================================================
+   存储层次结构（The Memory Hierarchy）· 第 12 讲 —— 交互式课件全部逻辑
+   约定：所有计算在页面内实时完成；无效输入必须给出提示而不是抛错。
+   顶层的
+     dramSplit / moduleByteInfo / diskCapacity / diskAccessTimes /
+     ssdDuration / trendVerify / loopSeq / loopStats / cacheSimulate /
+     missClass
+   是判分基准，由 tools/verify_ics12.js 与独立参考实现逐项比对。
+   页面不产生判分行为的部分（分步演示、图表、术语表）只做呈现。
+   ============================================================ */
+
+const $  = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const badBox = msg => `<div class="box bad"><div class="t">输入无效</div>${esc(msg)}</div>`;
+
+/* ---------- 数字格式化与解析（一律显式转换，避免 BigInt / Number 混算） ---------- */
+const group3 = s => String(s).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+const fmtNum = v => group3(String(v));
+/** BigInt → 带千分位的十进制字符串 */
+function fmtBig(v) { return group3(v.toString()); }
+/** 去掉多余小数位（最多 d 位）；只在有小数点时去掉尾随的 0，
+    否则 d = 0 会把整数末尾的 0 也吃掉（7200 → 72）。 */
+function fmtF(x, d = 3) {
+  if (!isFinite(x)) return String(x);
+  let s = x.toFixed(d);
+  if (s.indexOf('.') >= 0) s = s.replace(/\.?0+$/, '');
+  return s === '' || s === '-' || s === '-0' ? '0' : s;
+}
+/** 十进制整数字符串 / 0x… → BigInt；非法返回 null */
+function parseBig(str) {
+  const t = String(str).trim().replace(/[_,\s]/g, '');
+  if (!t) return null;
+  try {
+    if (/^0[xX][0-9a-fA-F]+$/.test(t)) return BigInt(t);
+    if (/^[0-9]+$/.test(t)) return BigInt(t);
+    return null;
+  } catch (e) { return null; }
+}
+/** 非负整数（十进制）→ Number；非法返回 null */
+function parseCount(str, max = 1e9) {
+  const b = parseBig(str);
+  if (b === null || b < 0n) return null;
+  if (b > BigInt(Math.floor(max))) return null;
+  return Number(b);
+}
+/** 正浮点数（用于 RPM / MB/s 这类）→ Number；非法返回 null */
+function parsePos(str) {
+  const t = String(str).trim().replace(/[_,\s]/g, '');
+  if (!/^[0-9]+(\.[0-9]+)?$/.test(t)) return null;
+  const v = Number(t);
+  return (isFinite(v) && v > 0) ? v : null;
+}
+/** 非负十进制小数（允许 0）→ Number；非法返回 null */
+function parseDec(str, max = 1e12) {
+  const t = String(str).trim().replace(/[_,\s]/g, '');
+  if (!/^[0-9]+(\.[0-9]+)?$/.test(t)) return null;
+  const v = Number(t);
+  return (isFinite(v) && v >= 0 && v <= max) ? v : null;
+}
+/** BigInt 字节数 → 人类可读（十进制 GB + 二进制 GiB 都给出，因为课件明确 1 GB = 10^9 B） */
+function fmtBytes(b) {
+  const dec = Number(b) / 1e9;
+  const bin = Number(b) / (1024 ** 3);
+  const gb = dec >= 1 ? `${fmtF(dec, 3)} GB（十进制，1 GB = 10<sup>9</sup> B）` : `${fmtF(Number(b) / 1e6, 3)} MB`;
+  const gib = bin >= 1 ? `${fmtF(bin, 3)} GiB（1 GiB = 2<sup>30</sup> B）` : `${fmtF(Number(b) / (1024 ** 2), 3)} MiB`;
+  return { gb, gib };
+}
+
+/* ============================================================
+   判分基准 1：DRAM 地址拆分（课件第 16–18 页）
+   d×w 芯片：d 个超级单元排成 √d 行 × √d 列，地址高半给行（RAS）、
+   低半给列（CAS）。返回 {addrBits,rowBits,colBits,row,col,sup}。
+   ============================================================ */
+function dramSplit(addr, d) {
+  const side = Math.round(Math.sqrt(d));
+  if (side * side !== d) return null;
+  const bits = Math.log2(side);
+  if (!Number.isInteger(bits)) return null;
+  if (!Number.isInteger(addr) || addr < 0 || addr >= d) return null;
+  const rowBits = bits, colBits = bits;
+  const row = addr >>> colBits;
+  const col = addr & (side - 1);
+  return { addrBits: rowBits + colBits, rowBits, colBits, side, row, col, sup: `(${row},${col})` };
+}
+
+/* ============================================================
+   判分基准 2：内存模块的字节归属（课件第 19 页）
+   8 个 DRAM 并联，DRAM i 提供 64 位字的第 8i…8i+7 位。
+   byteIdx 0 = 最低字节。
+   ============================================================ */
+function moduleByteInfo(word, byteIdx) {
+  if (!Number.isInteger(byteIdx) || byteIdx < 0 || byteIdx > 7) return null;
+  const b = BigInt(word);
+  const shift = BigInt(8 * byteIdx);
+  const byteVal = Number((b >> shift) & 0xffn);
+  return { dram: byteIdx, lo: 8 * byteIdx, hi: 8 * byteIdx + 7, byteVal };
+}
+
+/* ============================================================
+   判分基准 3：磁盘容量（课件第 27 页）
+   Capacity = 每扇区字节 × 平均每道扇区数 × 每面磁道数 × 每盘片面数 × 盘片数
+   全部用 BigInt 精确算（厂商用十进制 GB，1 GB = 10^9 字节）。
+   ============================================================ */
+function diskCapacity(p) {
+  const bytes = BigInt(p.bytesPerSector) * BigInt(p.sectorsPerTrack) * BigInt(p.tracksPerSurface)
+              * BigInt(p.surfacesPerPlatter) * BigInt(p.platters);
+  return { bytes, gb: Number(bytes) / 1e9, gbStr: fmtF(Number(bytes) / 1e9, 4) };
+}
+
+/* ============================================================
+   判分基准 4：磁盘访问时间（课件第 40–42 页）
+   T_access = T_avg_seek + T_avg_rotation + T_avg_transfer，单位 ms
+     rotation = 1/2 × (60s / RPM) × 1000ms
+     transfer = (60s / RPM) × (1 / 平均每道扇区数) × 1000ms
+   ============================================================ */
+function diskAccessTimes(p) {
+  const rotPerMin = 60 / p.rpm;                       // 秒/转
+  return {
+    rotation: 0.5 * rotPerMin * 1000,
+    transfer: rotPerMin * (1 / p.sectorsPerTrack) * 1000,
+    seek: p.seekMs,
+    total: p.seekMs + 0.5 * rotPerMin * 1000 + rotPerMin * (1 / p.sectorsPerTrack) * 1000,
+  };
+}
+
+/* ============================================================
+   判分基准 5：SSD / 存储吞吐的时间换算（课件第 48 页）
+   MB 按十进制（1 MB = 10^6 字节），与课件给吞吐量的口径一致。
+   ============================================================ */
+function ssdDuration(bytes, mbPerSec) {
+  return { seconds: Number(bytes) / (mbPerSec * 1e6) };
+}
+
+/* ============================================================
+   判分基准 6：趋势表的 2015:1985 倍数（课件第 69–70 页）
+   课件末列印的是「改善了多少倍」。逐行核对可知它 = 大值 ÷ 小值：
+   成本与访问时间变小（SRAM $/MB 2900 → 25 印 116），容量与频率变大
+   （DRAM typical size 0.256 → 16,000 印 62,500）—— 两类都取大值 ÷ 小值。
+   判定分三档：完全相等 / 在 1% 内（印出的首末两列本身被四舍五入过）/
+   超出 1%（视为不一致，需要核实）。
+   ============================================================ */
+function trendVerify(v1985, v2015, printed) {
+  const hi = Math.max(v1985, v2015), lo = Math.min(v1985, v2015);
+  const exact = hi / lo;
+  const diff = Math.abs(exact - printed);
+  const tol = Math.max(1, printed * 0.01);
+  let verdict;
+  if (diff <= 1e-9 * Math.max(1, printed)) verdict = '一致';
+  else if (diff <= tol) verdict = '四舍五入后一致';
+  else verdict = '不一致';
+  return { exact, printed, diff, tol, verdict };
+}
+
+/* ============================================================
+   判分基准 7：循环顺序的局部性（课件第 54–57 页）
+   行优先布局：
+     int a[M][N]     → a[i][j]   的线性下标 = i*N + j
+     int a[M][N][N]  → a[k][i][j] 的线性下标 = k*N*N + i*N + j
+   loopSeq 按给定循环顺序生成访问序列；loopStats 统计相邻步长、
+   stride-1 比例与触及的缓存块数（块 = blockElem 个元素）。
+   ============================================================ */
+function loopSeq(mode, order, M, N) {
+  const seq = [];
+  if (mode === '2d') {
+    if (new Set(order).size !== 2) return null;
+    for (const v of order) if (v !== 'i' && v !== 'j') return null;
+    if (!(M > 0) || !(N > 0)) return null;
+    const lim = { i: M, j: N };
+    const rec = (lv, acc) => {
+      if (lv === order.length) { seq.push(acc.i * N + acc.j); return; }   // int a[M][N] → i*N + j
+      const name = order[lv];
+      for (let v = 0; v < lim[name]; v++) { acc[name] = v; rec(lv + 1, acc); }
+    };
+    rec(0, { i: 0, j: 0 });
+    return seq;
+  }
+  if (mode === '3d') {
+    if (new Set(order).size !== 3) return null;
+    for (const v of order) if (v !== 'i' && v !== 'j' && v !== 'k') return null;
+    if (!(M > 0) || !(N > 0)) return null;
+    const lim = { i: M, j: N, k: N };
+    const rec = (lv, acc) => {
+      if (lv === order.length) { seq.push((acc.k * N + acc.i) * N + acc.j); return; }  // a[k][i][j]
+      const name = order[lv];
+      for (let v = 0; v < lim[name]; v++) { acc[name] = v; rec(lv + 1, acc); }
+    };
+    rec(0, { i: 0, j: 0, k: 0 });
+    return seq;
+  }
+  return null;
+}
+
+function loopStats(seq, blockElem) {
+  const n = seq.length;
+  const hist = {};
+  let stride1 = 0, sameBlock = 0, total = 0;
+  const blocks = new Set();
+  const lastAt = new Map();                 // 块 → 上一次访问它的步号
+  const use = new Map();                    // 块 → 被访问次数
+  let gapSum = 0, gapMax = 0, gapCnt = 0;   // 同一个块两次访问之间隔了几次访问
+  for (let x = 0; x < n; x++) {
+    const blk = Math.floor(seq[x] / blockElem);
+    blocks.add(blk);
+    use.set(blk, (use.get(blk) || 0) + 1);
+    if (lastAt.has(blk)) {
+      const gap = x - lastAt.get(blk) - 1;
+      gapSum += gap; gapCnt++;
+      if (gap > gapMax) gapMax = gap;
+    }
+    lastAt.set(blk, x);
+    if (x === 0) continue;
+    const d = Math.abs(seq[x] - seq[x - 1]);
+    hist[d] = (hist[d] || 0) + 1;
+    if (d === 1) stride1++;
+    if (blk === Math.floor(seq[x - 1] / blockElem)) sameBlock++;
+    total++;
+  }
+  return { n, stride1, stride1Ratio: total ? stride1 / total : 0, sameBlock, sameBlockRatio: total ? sameBlock / total : 0,
+           blocks: blocks.size, use, reuse: n / Math.max(1, blocks.size),
+           gapAvg: gapCnt ? gapSum / gapCnt : 0, gapMax, hist };
+}
+
+/* ============================================================
+   判分基准 8：缓存模拟 + 缺失分类（课件第 61–65 页）
+   slots 个槽位；mode 'direct' = 直接映射（块 i → 槽 i mod slots，第 65 页规则）；
+   mode 'assoc'  = 全相联 + LRU（第 64 页的「替换策略」在这里才起作用）。
+   缺失分类按经典定义（与第 65 页三种缺失一一对应）：
+     cold     —— 这个块从来没被访问过（缓存里当然没有）；
+     conflict —— 同一个容量做成全相联就不会缺（影子全相联 LRU 里有它）；
+     capacity —— 全相联也缺（工作集超过缓存容量）。
+   影子缓存 = 与主缓存同容量（slots 个块）的全相联 LRU，只用来做分类判决。
+   ============================================================ */
+function missClass(blk, seenBefore, shadowHasIt) {
+  if (!seenBefore) return 'cold';
+  return shadowHasIt ? 'conflict' : 'capacity';
+}
+
+function cacheSimulate(reqs, opt) {
+  const slots = (opt && opt.slots) || 4;
+  const mode = (opt && opt.mode) || 'direct';
+  const cache = new Array(slots).fill(null);      // 槽 → 块号（null = 空）
+  const lru = [];                                 // assoc 模式：队首最久未用、队尾最近用过
+  const shadow = [];                              // 影子全相联 LRU（分类用）
+  const seen = new Set();
+  const rows = [];
+  const stat = { hit: 0, cold: 0, conflict: 0, capacity: 0, miss: 0 };
+  /* 课件第 62–64 页的初始状态：缓存里已有块 8、9、14、3
+     （直接映射下 8→槽0、9→槽1、14→槽2、3→槽3，正好各占一个槽）。 */
+  if (opt && opt.start) {
+    opt.start.slice(0, slots).forEach((b, i) => {
+      cache[i] = b; lru.push(b); shadow.push(b); seen.add(b);
+    });
+  }
+  const touch = (list, b) => {
+    const at = list.indexOf(b);
+    if (at >= 0) list.splice(at, 1);
+    list.push(b);
+    while (list.length > slots) list.shift();
+  };
+  reqs.forEach(req => {
+    const b = req.blk;
+    const slot = mode === 'direct' ? (b % slots) : null;
+    const shadowHad = shadow.indexOf(b) >= 0;     // 访问前的影子状态
+    const seenBefore = seen.has(b);
+    let hit, slotUsed, victim = null, type;
+    if (mode === 'direct') {
+      hit = cache[slot] === b;
+      slotUsed = slot;
+      if (!hit) { victim = cache[slot]; cache[slot] = b; }
+    } else {
+      hit = lru.indexOf(b) >= 0;
+      if (hit) {
+        slotUsed = cache.indexOf(b);
+      } else {
+        slotUsed = cache.indexOf(null);
+        if (slotUsed < 0) {                        // 满了：淘汰 LRU
+          victim = lru[0];
+          slotUsed = cache.indexOf(victim);
+          cache[slotUsed] = null;
+        }
+        cache[slotUsed] = b;
+      }
+    }
+    if (hit) { stat.hit++; type = 'hit'; }
+    else { type = missClass(b, seenBefore, shadowHad); stat[type]++; stat.miss++; }
+    seen.add(b);
+    if (mode === 'assoc') touch(lru, b);          // 命中 = 移到队尾；缺失 = 入队尾并挤掉队首
+    touch(shadow, b);
+    rows.push({ blk: b, slot: slotUsed, hit, type, victim, snap: cache.slice(), shadow: shadow.slice() });
+  });
+  const tot = reqs.length || 1;
+  return { rows, stat, slots, mode, hitRate: stat.hit / tot, missRate: stat.miss / tot };
+}
+
+/* ============================================================
+   判分基准 9：磁盘访问时间与 SRAM / DRAM 的倍数（课件第 41、42 页）
+   课件印出的两个倍数是 40,000（对 SRAM）与 2,500（对 DRAM）；
+   页面按同一页的 4 ns / 60 ns 现算并给出「印出的倍数对应多大的 SRAM/DRAM」。
+   ============================================================ */
+function diskRatios(accessMs, sramNs, dramNs, printedSram, printedDram) {
+  const ns = accessMs * 1e6;
+  return {
+    ns,
+    sramTimes: ns / sramNs,
+    dramTimes: ns / dramNs,
+    printedSram: printedSram,
+    printedDram: printedDram,
+    sramImplied: ns / printedSram,        // 印出的 40,000× 反推出的 SRAM 访问时间
+    dramImplied: ns / printedDram,        // 印出的 2,500× 反推出的 DRAM 访问时间
+  };
+}
+
+/* ============================================================
+   判分基准 10：SSD 的写放大与磨损（课件第 47、48 页）
+   改写一个块里的 n 页（0 < n ≤ ppb）：其余 (ppb − n) 页要复制到新块，
+   再写这 n 页 —— 物理页写入 = ppb，于是写放大 = ppb / n，块擦除一次。
+   ============================================================ */
+function ssdWriteCost(pageKB, ppb, n) {
+  const phys = ppb;                       // 每次操作实际写进闪存的页数
+  return {
+    pageKB, ppb, n,
+    blockKB: pageKB * ppb,
+    physPages: phys,
+    amp: phys / n,
+    logicalKB: pageKB * n,
+    physKB: pageKB * phys,
+    // 一块可承受约 10 万次擦除（第 47 页）：每次操作擦一次
+    opsPerBlock: 100000,
+    logicalMBPerBlock: (pageKB * n * 100000) / 1000,
+  };
+}
+
+/* ============================================================
+   1. 总线结构漫游（课件第 3、43 页）
+   ============================================================ */
+const BUS_PARTS = {
+  cpu:    { n: 'CPU 芯片',        t: 'CPU 芯片内部只有三样东西与内存有关：寄存器堆、ALU、总线接口。它通过总线接口把 load/store 变成总线上的事务。', p: '原第 3 页' },
+  regf:   { n: '寄存器堆',        t: 'CPU 内部唯一「随手可用」的存储 —— 第 9 节的层次结构里它是 L0。读/写它不需要总线。', p: '原第 3 页' },
+  alu:    { n: 'ALU',             t: '算术逻辑单元。它需要的数据来自寄存器；只有数据不在寄存器里时才产生内存访问。', p: '原第 3 页' },
+  busif:  { n: '总线接口',        t: 'CPU 与总线之间的翻译层：把内部的 load/store 请求变成地址 / 数据 / 控制信号，放上总线并等待应答。', p: '原第 3 页' },
+  sysbus: { n: '系统总线',        t: 'CPU 与 I/O 桥之间的总线。课件第 4–9 页的读/写事务就发生在这条线上（图里「内存总线」是它的另一端）。', p: '原第 3–9 页' },
+  bridge: { n: 'I/O 桥',          t: '把系统总线、内存总线、I/O 总线接在一起。它是流量枢纽：CPU 访存走它，I/O 设备访存也走它。', p: '原第 3、43 页' },
+  membus: { n: '内存总线',        t: 'I/O 桥到主存之间的总线。CPU 的一次读事务，地址与数据都要从这条线上走一个来回。', p: '原第 3 页' },
+  mem:    { n: '主存（DRAM）',    t: '层次结构里的 L4：存着从本地磁盘取来的磁盘块。第 2 节讲它由什么芯片组成。', p: '原第 3、60 页' },
+  iobus:  { n: 'I/O 总线',        t: '各种 I/O 设备挂在这条总线上：第 43 页的图里有 USB 控制器、图形适配器、磁盘控制器，以及留给其它设备（如网卡）的扩展槽。', p: '原第 43 页' },
+  usb:    { n: 'USB 控制器',      t: '挂在 I/O 总线上的设备之一，接鼠标、键盘这类低速外设。', p: '原第 43 页' },
+  gfx:    { n: '图形适配器',      t: '挂在 I/O 总线上的设备。它也有自己的帧缓冲内存 —— 第 13 页的 DRAM 应用一栏写着「主存、帧缓冲」。', p: '原第 43、13 页' },
+  disk:   { n: '磁盘控制器',      t: '磁盘与主机之间的接口。第 5 节会看到它如何用 DMA 把扇区直接搬进主存，再用中断通知 CPU。', p: '原第 43–46 页' },
+  slots:  { n: '扩展槽',          t: '留给其它设备（如网络适配器）的插槽。它们共享同一条 I/O 总线。', p: '原第 43 页' },
+};
+let busSel = 'sysbus';
+function renderBus() {
+  const blk = (key, x, y, w, h, label, kind, fs) => {
+    const sel = busSel === key;
+    /* kind: 'b' 蓝色芯片内构件 / 'g' 灰色 I/O 设备 / 'x' 透明热区（只用来接收点击） */
+    const fill = kind === 'x' ? 'transparent' : kind === 'b' ? 'var(--exp-bg)' : kind === 'g' ? 'var(--gray-bg)' : 'var(--card)';
+    const stroke = kind === 'x' ? 'none' : kind === 'b' ? 'var(--exp-bd)' : kind === 'g' ? 'var(--line)' : 'var(--line)';
+    const fg = kind === 'b' ? 'var(--exp-fg)' : kind === 'g' ? 'var(--gray-fg)' : 'var(--ink)';
+    return `<g data-bus="${key}" style="cursor:pointer">
+      <rect x="${x}" y="${y}" width="${w}" height="${h}" rx="6" fill="${fill}" stroke="${sel ? 'var(--accent)' : stroke}" stroke-width="${sel ? 2.6 : 1.3}"/>
+      <text x="${x + w / 2}" y="${y + h / 2 + 4}" text-anchor="middle" font-size="${fs || 12}" font-weight="650" fill="${fg}">${label}</text></g>`;
+  };
+  const line = (x1, y1, x2, y2, label, lx, ly, dashed) =>
+    `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="var(--muted)" stroke-width="1.5"${dashed ? ' stroke-dasharray="5 3"' : ''}/>
+     ${label ? `<text x="${lx}" y="${ly}" font-size="10.5" fill="var(--muted)">${label}</text>` : ''}`;
+  const info = BUS_PARTS[busSel];
+  $('#busOut').innerHTML = `
+  <div class="fw" style="align-items:flex-start">
+    <svg viewBox="0 0 660 350" style="width:min(560px,100%);height:auto" font-family="var(--font-sans)">
+      <rect x="20" y="18" width="250" height="150" rx="9" fill="none" stroke="var(--line)" stroke-dasharray="6 4"/>
+      <text x="30" y="34" font-size="10.5" fill="var(--muted)">CPU 芯片</text>
+      ${blk('cpu', 34, 44, 218, 104, '', 'x', 1)}
+      ${blk('regf', 34, 44, 104, 42, '寄存器堆', 'b', 12)}
+      ${blk('alu', 152, 44, 100, 42, 'ALU', 'b', 12)}
+      ${blk('busif', 34, 102, 218, 46, '总线接口', 'b', 12.5)}
+      ${line(270, 125, 356, 125, '系统总线', 282, 118)}
+      ${blk('bridge', 356, 96, 96, 60, 'I/O 桥', 'g', 12.5)}
+      ${line(452, 112, 556, 112, '内存总线', 466, 105)}
+      ${blk('mem', 556, 88, 90, 48, '主存', 'b', 12.5)}
+      ${line(404, 156, 404, 246, '', 0, 0)}
+      <text x="410" y="200" font-size="10.5" fill="var(--muted)">I/O 总线</text>
+      ${blk('usb', 96, 262, 104, 44, 'USB 控制器', 'g', 11.5)}
+      ${blk('gfx', 216, 262, 104, 44, '图形适配器', 'g', 11.5)}
+      ${blk('disk', 336, 262, 104, 44, '磁盘控制器', 'g', 11.5)}
+      ${blk('slots', 456, 262, 128, 44, '扩展槽（网卡…）', 'g', 11)}
+      <line x1="96" y1="286" x2="404" y2="286" stroke="var(--muted)" stroke-width="1.5"/>
+    </svg>
+    <div style="flex:1;min-width:230px">
+      <div class="box" style="margin-top:0"><div class="t">${esc(info.n)}<span class="srcref">${esc(info.p)}</span></div>${esc(info.t)}</div>
+      <div class="box ok" style="margin-bottom:0"><div class="t">点图里的方块切换说明</div>
+        这是<b>简化重建</b>：只保留与内存访问路径有关的部件。课件第 3 页的图还画出了总线上的信号分类（地址 / 数据 / 控制）并注明「总线通常被多个设备共享」；第 43 页的图把 I/O 一侧展开成 USB、图形、磁盘三个控制器与扩展槽。</div>
+    </div>
+  </div>`;
+}
+
+/* ============================================================
+   2. 读写事务分步器（课件第 4–9 页）
+   ============================================================ */
+const TX = {
+  r: [
+    { h: '第 1 步 · 原第 4 页', bus: 'A', mem: '0', reg: '—', d: 'CPU 把地址 A 放到内存总线上。', e: '总线上现在跑的是地址；主存还没开始干活。' },
+    { h: '第 2 步 · 原第 5 页', bus: 'A → x', mem: 'x', reg: '—', d: '主存从内存总线读走 A，取出字 x，把它放回总线。', e: '这一步的延迟就是 DRAM 的访问时间。' },
+    { h: '第 3 步 · 原第 6 页', bus: 'x', mem: 'x', reg: 'x', d: 'CPU 从总线读走字 x，复制进寄存器 %rax。', e: 'movq A, %rax 完成。' },
+  ],
+  w: [
+    { h: '第 1 步 · 原第 7 页', bus: 'A', mem: '0（等待数据）', reg: 'y', d: 'CPU 把地址 A 放到总线上；主存读走它，并等待对应的数据字到达。', e: '地址与数据分两拍传 —— 主存必须先知道你写哪里。' },
+    { h: '第 2 步 · 原第 8 页', bus: 'A, y', mem: '0（等待数据）', reg: 'y', d: 'CPU 把数据字 y 放到总线上。', e: 'y 来自 %rax。' },
+    { h: '第 3 步 · 原第 9 页', bus: 'y', mem: 'y', reg: 'y', d: '主存从总线上读走数据字 y，把它存到地址 A。', e: 'movq %rax, A 完成；内存数组里 A 处的值变成 y。' },
+  ],
+};
+const tx = { kind: 'r', step: 0 };
+function renderTx() {
+  const f = TX[tx.kind][tx.step];
+  const wire = (y, on, label, color) =>
+    `<line x1="150" y1="${y}" x2="430" y2="${y}" stroke="${on ? (color || 'var(--accent)') : 'var(--line)'}" stroke-width="${on ? 3 : 1.4}"/>
+     <text x="440" y="${y + 4}" font-size="11" font-family="var(--font-mono)" fill="${on ? 'var(--ink)' : 'var(--muted)'}">${label}</text>`;
+  $('#txOut').innerHTML = `
+  <div class="fw" style="align-items:flex-start">
+    <svg viewBox="0 0 620 210" style="width:min(560px,100%);height:auto" font-family="var(--font-sans)">
+      <rect x="16" y="40" width="120" height="120" rx="8" fill="var(--exp-bg)" stroke="var(--exp-bd)"/>
+      <text x="76" y="62" text-anchor="middle" font-size="12" font-weight="650" fill="var(--exp-fg)">CPU</text>
+      <text x="76" y="86" text-anchor="middle" font-size="11" fill="var(--exp-fg)">寄存器堆</text>
+      <text x="76" y="108" text-anchor="middle" font-size="11" font-family="var(--font-mono)" fill="var(--exp-fg)">%rax = ${esc(f.reg)}</text>
+      <text x="76" y="132" text-anchor="middle" font-size="11" fill="var(--exp-fg)">总线接口</text>
+      <rect x="380" y="40" width="150" height="120" rx="8" fill="var(--gray-bg)" stroke="var(--line)"/>
+      <text x="455" y="62" text-anchor="middle" font-size="12" font-weight="650" fill="var(--gray-fg)">主存</text>
+      <text x="455" y="86" text-anchor="middle" font-size="11" font-family="var(--font-mono)" fill="var(--gray-fg)">A → ${esc(f.mem)}</text>
+      <rect x="150" y="150" width="280" height="30" rx="6" fill="var(--card)" stroke="var(--line)"/>
+      <text x="290" y="169" text-anchor="middle" font-size="11.5" fill="var(--ink)">内存总线</text>
+      ${wire(78, tx.step === 0, '地址 A', 'var(--accent)')}
+      ${wire(110, (tx.step === 1), tx.kind === 'r' ? '数据 x' : '数据 y', 'var(--frac)')}
+      <text x="150" y="34" font-size="11" fill="var(--muted)">高亮 = 本步总线上正在传送的东西</text>
+    </svg>
+    <div style="flex:1;min-width:250px">
+      <div class="box" style="margin-top:0"><div class="t">${esc(f.h)}</div>
+        <b>${esc(f.d)}</b><br>${esc(f.e)}</div>
+      <div class="box ${tx.step === 2 ? 'ok' : ''}" style="margin-bottom:0"><div class="t">三步总览（${tx.kind === 'r' ? '读' : '写'}事务）</div>
+        ${TX[tx.kind].map((s, i) => `${i + 1}. ${esc(s.d)}${i === tx.step ? ' <span class="chip">← 当前</span>' : ''}`).join('<br>')}</div>
+    </div>
+  </div>`;
+}
+
+/* ============================================================
+   3. 存储技术速查（课件第 11–15 页）
+   ============================================================ */
+const TECHS = {
+  sram: { n: 'SRAM（静态 RAM）', p: '原第 11–13 页', rows: [
+    ['机制', '6 个晶体管 / 位，只要通电就无限期保持状态'],
+    ['需要刷新吗', '不需要'],
+    ['访问时间', '1×（快）'], ['成本', '100×（贵）'], ['需要 EDC', '可能需要'],
+    ['典型用途', 'cache 缓存'],
+    ['趋势', '随半导体工艺一起缩小，但已接近极限'],
+  ] },
+  dram: { n: 'DRAM（动态 RAM）', p: '原第 11–13 页', rows: [
+    ['机制', '1 个晶体管 + 1 个电容 / 位，电容只能竖直方向做，电荷会漏'],
+    ['需要刷新吗', '必须周期性刷新'],
+    ['访问时间', '10×（慢）'], ['成本', '1×（便宜）'], ['需要 EDC', '需要'],
+    ['典型用途', '主存、帧缓冲'],
+    ['趋势', '受「最小电容」与深宽比限制，也在接近极限'],
+  ] },
+  sdram: { n: 'SDRAM（同步 DRAM）', p: '原第 14 页', rows: [
+    ['机制', 'DRAM 核心 + 更好的接口逻辑与更快的 I/O'],
+    ['关键区别', '用常规时钟信号代替异步控制'],
+    ['为什么重要', '允许复用行地址：RAS, CAS, CAS, CAS …'],
+    ['出处', '原第 14 页：「Uses a conventional clock signal instead of asynchronous control」「Allows reuse of the row addresses」'],
+  ] },
+  ddr: { n: 'DDR SDRAM（双倍数据率同步 DRAM）', p: '原第 14 页', rows: [
+    ['机制', '双沿时钟（double edge clocking）：每个时钟周期每个引脚送两位'],
+    ['分类依据', '小预取缓冲（prefetch buffer）的大小'],
+    ['各类预取', 'DDR（2 位）、DDR2（4 位）、DDR3（8 位）、DDR4（16 位）'],
+    ['普及程度', '到 2010 年，已是大多数服务器与桌面系统的标准'],
+    ['课件举例', 'Intel Core i7 支持 DDR3 与 DDR4 SDRAM'],
+  ] },
+  flash: { n: 'Flash（闪存）', p: '原第 15、47 页', rows: [
+    ['类别', 'EEPROM 的变体，具备块级（block-level）擦除能力，非易失'],
+    ['寿命', '大约 10 万次擦除后磨损（原第 15 页；第 47 页说「约 10 万次重复写」）'],
+    ['用途', '固件（BIOS、磁盘/网卡/显卡控制器）、固态硬盘、U 盘、手机、平板、笔记本、磁盘缓存'],
+    ['为什么能替代磁盘', '非易失 + 无机械部件 —— 第 6 节整节讲它'],
+  ] },
+  xpoint: { n: '3D XPoint（Intel Optane）与新兴 NVM', p: '原第 15、21 页', rows: [
+    ['机制', '以持久电荷形式存储；用 3-D 单元阵列实现'],
+    ['结构', '100+ 层单元，每单元 3 位数据'],
+    ['定位', '新兴的非易失存储（emerging NVMs），新材料的代表'],
+  ] },
+};
+let techSel = 'sram';
+function renderTech() {
+  const t = TECHS[techSel];
+  $('#techOut').innerHTML = `<div class="box pad0" style="border:0;background:none;margin:0">
+    <div class="t">${esc(t.n)}<span class="srcref">${esc(t.p)}</span></div>
+    <div class="tbl-wrap"><table class="tbl" style="margin:6px 0 0">
+      ${t.rows.map(r => `<tr><th style="white-space:normal;width:130px">${esc(r[0])}</th><td>${r[1]}</td></tr>`).join('')}
+    </table></div></div>`;
+}
+
+/* ============================================================
+   4. DRAM 地址拆分器（课件第 16 页）
+   ============================================================ */
+function renderDramAddr() {
+  const shape = parseInt($('#daShape').value, 10);
+  const addr = parseCount($('#daIn').value, 1e6);
+  if (addr === null) { $('#daOut').innerHTML = badBox('地址请给一个非负整数（十进制或 0x…）。'); return; }
+  const s = dramSplit(addr, shape);
+  if (s === null) {
+    $('#daOut').innerHTML = `<div class="box bad"><div class="t">超出阵列范围</div>
+      这个 ${shape} × 8 的芯片只有 ${shape} 个超级单元，地址必须在 0 – ${shape - 1} 之间（共 ${Math.log2(shape)} 位）。
+      原课件画的是 16 × 8：地址 4 位，高 2 位选行、低 2 位选列。</div>`;
+    return;
+  }
+  const bin = addr.toString(2).padStart(s.addrBits, '0');
+  const rowB = bin.slice(0, s.rowBits), colB = bin.slice(s.rowBits);
+  const txt = `<div class="readout">
+    <dt>地址</dt><dd>${addr} = 0b${bin}（${s.addrBits} 位）</dd>
+    <dt>RAS（行）</dt><dd>高 ${s.rowBits} 位 = <b>0b${rowB}</b> = ${s.row}</dd>
+    <dt>CAS（列）</dt><dd>低 ${s.colBits} 位 = <b>0b${colB}</b> = ${s.col}</dd>
+    <dt>超级单元</dt><dd>(${s.row}, ${s.col}) —— 第 ${s.row} 行第 ${s.col} 列</dd>
+    <dt>数据宽度</dt><dd>w = 8 位（每次只送出这一个超级单元）</dd>
+  </div>`;
+  $('#daOut').innerHTML = txt + renderDramGrid(s.side, s.row, s.col, false, s.side === 4);
+}
+
+/** 画 d 个超级单元的阵列（side × side），可高亮一行 / 一个单元 */
+function renderDramGrid(side, hlRow, hlCell, bufferMode, showAll) {
+  const cell = showAll ? 46 : 54, pad = 26, top = 26;
+  const W = pad * 2 + side * cell;
+  const H = top + side * cell + 46;
+  const ruler = side === 4;
+  let g = `<svg viewBox="0 0 ${W} ${H}" style="width:min(${W}px,100%);height:auto" font-family="var(--font-sans)">`;
+  g += `<text x="${pad}" y="16" font-size="10.5" fill="var(--muted)">${side} 行 × ${side} 列超级单元阵列（每个 ${8} 位）</text>`;
+  if (ruler) {
+    for (let c = 0; c < side; c++)
+      g += `<text x="${pad + c * cell + cell / 2}" y="${top - 6}" text-anchor="middle" font-size="10" fill="var(--muted)">列 ${c}</text>`;
+  }
+  for (let r = 0; r < side; r++) {
+    if (ruler) g += `<text x="${pad - 8}" y="${top + r * cell + cell / 2 + 4}" text-anchor="end" font-size="10" fill="var(--muted)">行 ${r}</text>`;
+    for (let c = 0; c < side; c++) {
+      const sel = (hlRow === r && hlCell === c);
+      const inRow = (hlRow === r && hlCell === -1);
+      const fill = sel ? 'var(--frac-bg)' : inRow ? 'var(--exp-bg)' : 'var(--card)';
+      const stroke = sel ? 'var(--frac)' : inRow ? 'var(--exp-bd)' : 'var(--line)';
+      g += `<rect x="${pad + c * cell + 3}" y="${top + r * cell + 3}" width="${cell - 6}" height="${cell - 6}" rx="5"
+              fill="${fill}" stroke="${stroke}" stroke-width="${sel ? 2.4 : 1.2}"/>`;
+      if (side <= 8) g += `<text x="${pad + c * cell + cell / 2}" y="${top + r * cell + cell / 2 + 4}" text-anchor="middle"
+              font-size="${side === 4 ? 11 : 9}" fill="var(--muted)">${sel ? '◀' : '·'}</text>`;
+    }
+  }
+  if (bufferMode === 'row') {
+    const y = top + side * cell + 8;
+    g += `<rect x="${pad}" y="${y}" width="${side * cell}" height="30" rx="5" fill="var(--exp-bg)" stroke="var(--exp-bd)"/>
+      <text x="${pad + side * cell / 2}" y="${y + 20}" text-anchor="middle" font-size="11" fill="var(--exp-fg)">内部行缓冲：已装入第 ${hlRow} 行</text>`;
+  } else if (bufferMode === 'out') {
+    const y = top + side * cell + 8;
+    g += `<rect x="${pad}" y="${y}" width="${side * cell}" height="30" rx="5" fill="var(--frac-bg)" stroke="var(--frac-bd)"/>
+      <text x="${pad + side * cell / 2}" y="${y + 20}" text-anchor="middle" font-size="11" fill="var(--frac-fg)">数据线 → CPU：超级单元 (${hlRow}, ${hlCell}) 的 8 位</text>`;
+  }
+  return g + '</svg>';
+}
+
+/* ============================================================
+   5. 读超级单元分步（课件第 17–18 页）
+   ============================================================ */
+let drStep = 0, drRow = 2, drCol = 1;
+function renderDramRead() {
+  const steps = [
+    { h: 'Step 1(a) · 原第 17 页', d: `行访问选通 RAS = ${drRow}：选中第 ${drRow} 行`, b: -1, note: 'RAS = Row Access Strobe。列还没选，数据也没出来。' },
+    { h: 'Step 1(b) · 原第 17 页', d: `第 ${drRow} 行从 DRAM 阵列复制到行缓冲`, b: 'row', note: '整行被搬进缓冲区 —— 这是这次访问里代价最大的一步。' },
+    { h: 'Step 2(a) · 原第 18 页', d: `列访问选通 CAS = ${drCol}：选中第 ${drCol} 列`, b: 'row', note: '数据已经在缓冲里，选列只是在缓冲区里挑一个。' },
+    { h: 'Step 2(b) · 原第 18 页', d: `超级单元 (${drRow}, ${drCol}) 从缓冲复制到数据线，最终回到 CPU`, b: 'out', note: '8 位数据离开芯片，走内存总线回到 CPU。' },
+  ];
+  const s = steps[drStep];
+  const grid = renderDramGrid(4, drRow, drStep === 0 ? -1 : drCol, s.b, true);
+  $('#drOut').innerHTML = `
+  <div class="fw" style="align-items:flex-start">
+    <div style="min-width:0">${grid}</div>
+    <div style="flex:1;min-width:230px">
+      <div class="box" style="margin-top:0"><div class="t">${esc(s.h)}</div><b>${esc(s.d)}</b><br>${esc(s.note)}</div>
+      <div class="box ok" style="margin-bottom:0"><div class="t">四步走完（课件第 17–18 页）</div>
+        ${steps.map((x, i) => `${i + 1}. ${esc(x.d)}${i === drStep ? ' <span class="chip">← 当前</span>' : ''}`).join('<br>')}
+        <br><span style="color:var(--muted)">内部行缓冲是「同一行连续访问便宜」的原因：下一次若仍落在第 ${drRow} 行，Step 1 整段可以跳过。</span></div>
+    </div>
+  </div>`;
+}
+
+/* ============================================================
+   6. 内存模块映射（课件第 19 页）
+   ============================================================ */
+let mmByte = 1;
+function renderModule() {
+  const raw = $('#mmIn').value.trim().replace(/[^0-9a-fA-F]/g, '');
+  if (raw.length === 0 || raw.length > 16) {
+    $('#mmOut').innerHTML = badBox('请给 1–16 位十六进制数（16 位 = 完整的 64 位字）。');
+    return;
+  }
+  const word = BigInt('0x' + raw);
+  const info = moduleByteInfo(word, mmByte);
+  const hex = word.toString(16).toUpperCase().padStart(16, '0');
+  const bytes = [];
+  for (let i = 0; i < 8; i++) {
+    const bi = moduleByteInfo(word, i);
+    bytes.push(bi);
+  }
+  const cards = bytes.map(b => {
+    const sel = b.dram === mmByte;
+    return `<div class="card" style="${sel ? 'border-color:var(--accent);background:var(--accent-soft)' : ''}">
+      <h5 style="margin:0 0 4px">DRAM ${b.dram}${sel ? ' <span class="chip">选中</span>' : ''}</h5>
+      <div class="mono" style="font-size:13px">bit ${b.lo}–${b.hi}</div>
+      <div class="mono" style="font-size:16px;font-weight:650">${b.byteVal.toString(16).toUpperCase().padStart(2, '0')}</div>
+      <div style="font-size:12px;color:var(--muted)">0b${b.byteVal.toString(2).padStart(8, '0')}</div>
+    </div>`;
+  }).join('');
+  $('#mmOut').innerHTML = `
+    <div class="readout" style="margin-top:0">
+      <dt>64 位字</dt><dd>0x${hex}</dd>
+      <dt>字节高→低</dt><dd>${hex.match(/../g).join(' ')}</dd>
+      <dt>选中的字节</dt><dd>字节 ${info.dram}（第 ${info.lo}–${info.hi} 位）= 0x${info.byteVal.toString(16).toUpperCase().padStart(2, '0')}，由 <b>DRAM ${info.dram}</b> 供出</dd>
+    </div>
+    <div class="grid" style="grid-template-columns:repeat(8,minmax(0,1fr));gap:8px">${cards}</div>
+    <div class="box ok" style="margin-bottom:0"><div class="t">8 个芯片，同一个地址</div>
+      读这个 64 位字时，8 个芯片收到<b>同一个地址</b>（同一个 (i, j) 超级单元），各自输出自己的 8 位 —— DRAM i 贡献第 ${'8i'}…${'8i+7'} 位。所以「一次主存访问」= 8 个 DRAM 同时工作。</div>`;
+}
+
+/* ============================================================
+   7. 磁盘几何（课件第 23、24、30 页）
+   ============================================================ */
+let geoMode = 'top';
+function renderGeo() {
+  let svg;
+  if (geoMode === 'top') {
+    const cx = 190, cy = 190;
+    let g = `<svg viewBox="0 0 400 400" style="width:min(390px,100%);height:auto" font-family="var(--font-sans)">`;
+    for (let r = 60; r <= 168; r += 27) {
+      g += `<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="var(--line)" stroke-width="1.4"/>`;
+    }
+    const R = 141, r0 = 168;
+    for (let k = 0; k < 12; k++) {
+      const a0 = (k * 30) * Math.PI / 180, a1 = (k * 30 + 22) * Math.PI / 180;
+      const p = (r, a) => `${cx + r * Math.cos(a)},${cy - r * Math.sin(a)}`;
+      const hl = k === 2;
+      g += `<path d="M ${p(r0, a0)} A ${r0} ${r0} 0 0 0 ${p(r0, a1)} L ${p(R, a1)} A ${R} ${R} 0 0 1 ${p(R, a0)} Z"
+        fill="${hl ? 'var(--exp-bg)' : 'var(--gray-bg)'}" stroke="${hl ? 'var(--exp-bd)' : 'var(--line)'}"/>`;
+    }
+    g += `<circle cx="${cx}" cy="${cy}" r="26" fill="var(--card)" stroke="var(--line)"/>
+      <text x="${cx}" y="${cy + 4}" text-anchor="middle" font-size="10.5" fill="var(--muted)">主轴</text>
+      <text x="${cx + 190}" y="${cy - 160}" font-size="11" fill="var(--exp-fg)">扇区（蓝色那块）</text>
+      <line x1="${cx + 120}" y1="${cy - 120}" x2="${cx + 186}" y2="${cy - 152}" stroke="var(--exp-bd)"/>
+      <text x="${cx + 190}" y="${cy + 120}" font-size="11" fill="var(--muted)">磁道（同心圆）</text>
+      <text x="${cx + 190}" y="${cy + 150}" font-size="11" fill="var(--muted)">间隙（扇区之间）</text>
+      <text x="14" y="20" font-size="11" fill="var(--muted)">单面俯视图（原第 23、30 页）· 只是示意，扇区数与磁道数不是真实比例</text>`;
+    svg = g + '</svg>';
+  } else {
+    let g = `<svg viewBox="0 0 460 330" style="width:min(430px,100%);height:auto" font-family="var(--font-sans)">`;
+    for (let i = 0; i < 3; i++) {
+      const y = 60 + i * 74;
+      const hl = i === 1;
+      g += `<line x1="60" y1="${y + 26}" x2="400" y2="${y + 26}" stroke="var(--line)" stroke-width="1.4"/>`;
+      g += `<ellipse cx="230" cy="${y + 26}" rx="170" ry="24" fill="none" stroke="var(--line)"/>`;
+      g += `<ellipse cx="230" cy="${y + 26}" rx="120" ry="17" fill="${hl ? 'var(--exp-bg)' : 'var(--gray-bg)'}" stroke="${hl ? 'var(--exp-bd)' : 'var(--line)'}"/>`;
+      g += `<text x="418" y="${y + 30}" font-size="11" fill="var(--muted)">盘片 ${i}</text>`;
+      g += `<text x="14" y="${y + 30}" font-size="10.5" fill="var(--muted)">面 ${2 * i} / ${2 * i + 1}</text>`;
+    }
+    g += `<rect x="196" y="30" width="12" height="242" rx="4" fill="var(--card)" stroke="var(--line)"/>
+      <text x="230" y="296" text-anchor="middle" font-size="11" fill="var(--muted)">主轴（所有盘片同轴）</text>
+      <text x="230" y="316" text-anchor="middle" font-size="11.5" fill="var(--exp-fg)">蓝色高亮 = 同一柱面（各面上对齐的磁道）</text>
+      <text x="14" y="18" font-size="11" fill="var(--muted)">多盘片视图（原第 24、29 页）· 读写头同进同出，按柱面定位</text>`;
+    svg = g + '</svg>';
+  }
+  $('#geoOut').innerHTML = `<div class="fw" style="align-items:flex-start">${svg}
+    <div style="flex:1;min-width:230px">
+      <div class="box" style="margin-top:0"><div class="t">术语对照（原第 23、24 页）</div>
+        <b>盘片 platter</b> 有两个<b>面 surface</b>；每个面由同心圆<b>磁道 track</b> 组成；每条磁道由<b>扇区 sector</b> 组成，扇区之间是<b>间隙 gap</b>；各面上对齐的磁道合起来是<b>柱面 cylinder</b>。</div>
+      <div class="box ok" style="margin-bottom:0"><div class="t">为什么按柱面而不是按磁道</div>
+        多盘片的读写头装在<b>同一个磁臂</b>上，只能一起动 —— 所以「换一条磁道」的机械动作实际上是「换一个柱面」。这也是第 4 节寻道时间只算一次的物理原因。</div>
+    </div></div>`;
+}
+
+/* ============================================================
+   8. 磁盘容量计算器（课件第 27 页）
+   ============================================================ */
+function renderCap() {
+  const sec = parseCount($('#capSec').value, 1e9);
+  const spt = parseCount($('#capSpt').value, 1e9);
+  const tps = parseCount($('#capTps').value, 1e9);
+  const spf = parseCount($('#capSpf').value, 1e6);
+  const ppd = parseCount($('#capPpd').value, 1e6);
+  if ([sec, spt, tps, spf, ppd].some(v => v === null)) {
+    $('#capOut').innerHTML = badBox('五个参数都要是非负整数：每扇区字节数、平均每道扇区数、每面磁道数、每盘片面数、盘片数。');
+    return;
+  }
+  const r = diskCapacity({ bytesPerSector: sec, sectorsPerTrack: spt, tracksPerSurface: tps, surfacesPerPlatter: spf, platters: ppd });
+  const f = fmtBytes(r.bytes);
+  const isSlide = (sec === 512 && spt === 300 && tps === 20000 && spf === 2 && ppd === 5);
+  $('#capOut').innerHTML = `
+    <div class="readout" style="margin-top:0">
+      <dt>公式</dt><dd>${sec} × ${fmtNum(spt)} × ${fmtNum(tps)} × ${spf} × ${ppd}</dd>
+      <dt>总字节数</dt><dd><b>${fmtBig(r.bytes)}</b> 字节</dd>
+      <dt>厂商口径</dt><dd>${f.gb}</dd>
+      <dt>二进制口径</dt><dd>${f.gib}</dd>
+    </div>
+    ${isSlide ? `<div class="box ok" style="margin-bottom:0"><div class="t">与课件第 27 页例题一致</div>
+      课件写的是 <code>Capacity = 512 × 300 × 20000 × 2 × 5 = 30,720,000,000 = 30.72 GB</code>，本页现算结果与之一致。
+      注意这里用的是 <b>1 GB = 10<sup>9</sup> 字节</b>（第 25 页明说）：换成 2<sup>30</sup> 口径同一块盘只有 28.61 GiB。</div>`
+    : `<div class="box" style="margin-bottom:0"><div class="t">换一个口径看同一个数</div>
+      磁盘厂商用十进制 GB，操作系统常用二进制 GiB —— 同一块盘的两个数字会差 7% 左右，这就是「买回来容量变少」的全部原因（不是盘少了容量）。</div>`}`;
+}
+
+/* ============================================================
+   初始化
+   ============================================================ */
+function initS1() {
+  $$('#txSeg button').forEach(b => b.addEventListener('click', () => {
+    $$('#txSeg button').forEach(x => x.classList.remove('on'));
+    b.classList.add('on'); tx.kind = b.dataset.tx; tx.step = 0; txSync(); renderTx();
+  }));
+  $$('#txStepSeg button').forEach(b => b.addEventListener('click', () => {
+    tx.step = Number(b.dataset.txs); txSync(); renderTx();
+  }));
+  $('#txPlay').addEventListener('click', () => {
+    clearInterval(tx.timer);
+    tx.step = 0; txSync(); renderTx();
+    tx.timer = setInterval(() => {
+      if (tx.step >= 2) { clearInterval(tx.timer); return; }
+      tx.step++; txSync(); renderTx();
+    }, 1100);
+  });
+  $('#txReset').addEventListener('click', () => { clearInterval(tx.timer); tx.step = 0; txSync(); renderTx(); });
+  renderBus();
+  txSync(); renderTx();
+}
+function txSync() { $$('#txStepSeg button').forEach(x => x.classList.toggle('on', Number(x.dataset.txs) === tx.step)); }
+
+function initS2() {
+  $$('#techSeg button').forEach(b => b.addEventListener('click', () => {
+    $$('#techSeg button').forEach(x => x.classList.remove('on'));
+    b.classList.add('on'); techSel = b.dataset.tech; renderTech();
+  }));
+  $('#daShape').addEventListener('change', renderDramAddr);
+  $('#daGo').addEventListener('click', renderDramAddr);
+  $('#daIn').addEventListener('keydown', e => { if (e.key === 'Enter') renderDramAddr(); });
+  $$('[data-da]').forEach(b => b.addEventListener('click', () => {
+    $('#daShape').value = '16'; $('#daIn').value = b.dataset.da; renderDramAddr();
+  }));
+  $$('#drSeg button').forEach(b => b.addEventListener('click', () => {
+    $$('#drSeg button').forEach(x => x.classList.remove('on'));
+    b.classList.add('on'); drStep = Number(b.dataset.dr); renderDramRead();
+  }));
+  $('#drGo').addEventListener('click', () => {
+    const r = parseCount($('#drRow').value, 1e3), c = parseCount($('#drCol').value, 1e3);
+    if (r === null || c === null || r > 3 || c > 3) { $('#drOut').innerHTML = badBox('16 × 8 的芯片只有 4 行 4 列，行、列都请在 0–3 之间。'); return; }
+    drRow = r; drCol = c; drStep = 0;
+    $$('#drSeg button').forEach(x => x.classList.toggle('on', x.dataset.dr === '0'));
+    renderDramRead();
+  });
+  $$('#mmByteSeg button').forEach(b => b.addEventListener('click', () => {
+    $$('#mmByteSeg button').forEach(x => x.classList.remove('on'));
+    b.classList.add('on'); mmByte = parseInt(b.dataset.mm, 10); renderModule();
+  }));
+  $('#mmIn').addEventListener('keydown', e => { if (e.key === 'Enter') renderModule(); });
+  $('#mmIn').addEventListener('change', renderModule);
+  renderTech(); renderDramAddr(); renderDramRead(); renderModule();
+}
+
+function initS3() {
+  $$('#geo button').forEach(b => b.addEventListener('click', () => {
+    $$('#geo button').forEach(x => x.classList.remove('on'));
+    b.classList.add('on'); geoMode = b.dataset.geo; renderGeo();
+  }));
+  $('#capGo').addEventListener('click', renderCap);
+  ['#capSec', '#capSpt', '#capTps', '#capSpf', '#capPpd'].forEach(id =>
+    $(id).addEventListener('keydown', e => { if (e.key === 'Enter') renderCap(); }));
+  $$('[data-cap]').forEach(b => b.addEventListener('click', () => {
+    const v = b.dataset.cap.split(',');
+    $('#capSec').value = v[0]; $('#capSpt').value = v[1]; $('#capTps').value = v[2];
+    $('#capSpf').value = v[3]; $('#capPpd').value = v[4];
+    renderCap();
+  }));
+  renderGeo(); renderCap();
+}
+
+function initAll() {
+  document.addEventListener('click', e => {
+    const bp = e.target.closest('[data-bus]');
+    if (bp) { busSel = bp.dataset.bus; renderBus(); return; }
+    const lv = e.target.closest('[data-hier]');
+    if (lv) { hierSel = lv.dataset.hier; renderHier(); return; }
+    const lr = e.target.closest('[data-latrow]');
+    if (lr) { latSel = Number(lr.dataset.latrow); renderLat(); return; }
+    const pz = e.target.closest('[data-pz]');
+    if (pz) {
+      const [i, v] = pz.dataset.pz.split(':').map(Number);
+      if (pzState[i] !== null) return;
+      pzState[i] = v; renderPuzzles(); return;
+    }
+    const qzo = e.target.closest('[data-qzo]');
+    if (qzo) {
+      const [i, j] = qzo.dataset.qzo.split(':').map(Number);
+      if (qzState[i] !== null) return;
+      qzState[i] = j; renderQuiz(); return;
+    }
+  });
+  initS1(); initS2(); initS3(); initS4(); initS5(); initS6();
+  initS7(); initS8(); initS9(); initS10(); initS11();
+}
+
+document.addEventListener('DOMContentLoaded', initAll);
+
+/* ============================================================
+   9. 磁盘访问九步（课件第 30–39 页）
+   ============================================================ */
+const DSK_STEPS = [
+  { h: '第 0 步 · 原第 31 页', en: 'Head in position above a track', t: '磁头停在一条磁道上方',
+    d: '还没有请求：盘面在转、磁头在飞。一次访问的起点总是「磁头已经在某条磁道上方」。', head: 'outer', spin: 0, at: null },
+  { h: '第 1 步 · 原第 32 页', en: 'Rotation is counter-clockwise', t: '盘面以固定转速逆时针旋转',
+    d: '转速是固定的（7,200 RPM 一类的常数），你无法叫它快一点 —— 只能等。', head: 'outer', spin: 1, at: null },
+  { h: '第 2 步 · 原第 33 页', en: 'About to read blue sector', t: '即将读到蓝色扇区',
+    d: '蓝色扇区马上要转到磁头下面：这一瞬间就是「旋转延迟快结束」的时刻。', head: 'outer', spin: 1, at: 'blue' },
+  { h: '第 3 步 · 原第 34 页', en: 'After reading blue sector', t: '蓝色扇区读完',
+    d: '蓝扇区的位被连续读出（这一步的耗时 = 传输时间）。盘面不会停，接着转。', head: 'outer', spin: 1, at: 'blueDone' },
+  { h: '第 4 步 · 原第 35 页', en: 'Red request scheduled next', t: '红色请求排队：下一个读红色扇区',
+    d: '控制器决定下一个读红色。红色在另一条磁道上 —— 于是要先寻道。', head: 'outer', spin: 1, at: 'redPending' },
+  { h: '第 5 步 · 原第 36 页', en: "Seek to red's track", t: '寻道到红色所在的磁道',
+    d: '磁臂沿半径方向移动（寻道）。多盘片时所有磁头一起动，所以换的是柱面。', head: 'moving', spin: 1, at: 'redPending' },
+  { h: '第 6 步 · 原第 37 页', en: 'Wait for red sector to rotate around', t: '旋转等待：等红色扇区转过来',
+    d: '磁头已经就位，但红色扇区还没转到头下 —— 这就是旋转延迟。平均要等半圈。', head: 'inner', spin: 1, at: 'redWait' },
+  { h: '第 7 步 · 原第 38 页', en: 'Complete read of red', t: '红色扇区读完',
+    d: '一次完整的服务到此结束：定位 + 传输，其中定位（寻道 + 旋转）占了绝大部分。', head: 'inner', spin: 1, at: 'redDone' },
+  { h: '第 8 步 · 原第 39 页', en: 'Disk Access – Service Time Components', t: '服务时间由四段组成',
+    d: '课件把整段服务画成「数据传输（蓝）→ 寻道（红）→ 旋转等待（红）→ 数据传输（红）」四段 —— 只有首尾两段在搬数据。', head: 'inner', spin: 1, at: 'redDone' },
+];
+let dskStep = 0, dskTimer = null;
+
+/** 环形扇区路径（cx,cy 圆心；r0 内半径、r1 外半径；角度制，逆时针为正） */
+function annPath(cx, cy, r0, r1, a0, a1) {
+  const P = (r, a) => { const t = a * Math.PI / 180; return [cx + r * Math.cos(t), cy - r * Math.sin(t)]; };
+  const [x0, y0] = P(r1, a0), [x1, y1] = P(r1, a1), [x2, y2] = P(r0, a1), [x3, y3] = P(r0, a0);
+  const large = Math.abs(a1 - a0) > 180 ? 1 : 0;
+  const sw = a1 > a0 ? 0 : 1;
+  return `M ${x0.toFixed(1)} ${y0.toFixed(1)} A ${r1} ${r1} 0 ${large} ${sw} ${x1.toFixed(1)} ${y1.toFixed(1)}`
+       + ` L ${x2.toFixed(1)} ${y2.toFixed(1)} A ${r0} ${r0} 0 ${large} ${1 - sw} ${x3.toFixed(1)} ${y3.toFixed(1)} Z`;
+}
+
+function dskTimeBar() {
+  /* 课件第 41 页例题的三个分量（现算，不写死结果） */
+  const t = diskAccessTimes({ rpm: 7200, seekMs: 9, sectorsPerTrack: 400 });
+  const segs = [
+    { n: '数据传输（蓝）', v: t.transfer, c: 'var(--exp-bg)', bd: 'var(--exp-bd)', fg: 'var(--exp-fg)' },
+    { n: '寻道（红）', v: t.seek, c: 'var(--sign-bg)', bd: 'var(--sign-bd)', fg: 'var(--sign-fg)' },
+    { n: '旋转等待（红）', v: t.rotation, c: 'var(--frac-bg)', bd: 'var(--frac-bd)', fg: 'var(--frac-fg)' },
+    { n: '数据传输（红）', v: t.transfer, c: 'var(--exp-bg)', bd: 'var(--exp-bd)', fg: 'var(--exp-fg)' },
+  ];
+  /* 三段时间相差三个数量级：宽度按平方根缩放，否则传输段只有零点几像素 */
+  const tot = segs.reduce((a, s) => a + Math.sqrt(s.v), 0);
+  const W = 560, x0 = 8;
+  let x = x0, g = '';
+  segs.forEach(s => {
+    const w = Math.max(24, (Math.sqrt(s.v) / tot) * (W - 16));
+    g += `<rect x="${x.toFixed(1)}" y="0" width="${w.toFixed(1)}" height="30" fill="${s.c}" stroke="${s.bd}"/>
+      <text x="${(x + w / 2).toFixed(1)}" y="19" text-anchor="middle" font-size="10.5" fill="${s.fg}">${s.n}</text>
+      <text x="${(x + w / 2).toFixed(1)}" y="44" text-anchor="middle" font-size="10" fill="var(--muted)">${fmtF(s.v, 4)} ms</text>`;
+    x += w;
+  });
+  return `<div class="fcap" style="margin-bottom:6px">服务时间构成（原第 39 页的顺序；宽度按时间的<b>平方根</b>缩放，实际相差三个数量级）</div>
+    <svg viewBox="0 0 ${W} 54" style="width:min(${W}px,100%);height:auto;overflow:visible" font-family="var(--font-sans)">${g}</svg>`;
+}
+
+function renderDiskAnim() {
+  const s = DSK_STEPS[dskStep];
+  const cx = 150, cy = 148;
+  const outer = 104, inner = 72, hub = 26;
+  const blueA0 = 96, blueA1 = 66, redA0 = 236, redA1 = 206;
+  let g = '';
+  for (let k = 0; k < 12; k++) {                      // 12 个扇区的分界线
+    const a = k * 30 * Math.PI / 180;
+    g += `<line x1="${(cx + hub * Math.cos(a)).toFixed(1)}" y1="${(cy - hub * Math.sin(a)).toFixed(1)}"
+      x2="${(cx + (outer + 6) * Math.cos(a)).toFixed(1)}" y2="${(cy - (outer + 6) * Math.sin(a)).toFixed(1)}"
+      stroke="var(--line)" stroke-width="1"/>`;
+  }
+  g += `<circle cx="${cx}" cy="${cy}" r="${outer + 12}" fill="none" stroke="var(--line)"/>`;
+  g += `<circle cx="${cx}" cy="${cy}" r="${hub}" fill="var(--card)" stroke="var(--line)"/>
+        <text x="${cx}" y="${cy + 4}" text-anchor="middle" font-size="9.5" fill="var(--muted)">主轴</text>`;
+  const blueOn = s.at !== null;
+  const blueDone = s.at === 'blueDone' || s.at === 'redPending';
+  g += `<path d="${annPath(cx, cy, inner + 46, outer + 4, blueA0, blueA1)}" fill="${blueOn ? 'var(--exp-bg)' : 'var(--gray-bg)'}"
+        stroke="${blueOn ? 'var(--exp-bd)' : 'var(--line)'}" stroke-width="1.4"/>`;
+  g += `<text x="${cx + 118}" y="${cy - 128}" font-size="10.5" fill="${blueOn ? 'var(--exp-fg)' : 'var(--muted)'}">蓝色扇区${blueDone ? '（已读完）' : ''}</text>`;
+  const redOn = s.at === 'redPending' || s.at === 'redWait' || s.at === 'redDone';
+  const redDone = s.at === 'redDone';
+  g += `<path d="${annPath(cx, cy, 34, inner, redA0, redA1)}" fill="${redDone ? 'var(--frac-bg)' : redOn ? 'var(--sign-bg)' : 'var(--gray-bg)'}"
+        stroke="${redDone ? 'var(--frac-bd)' : redOn ? 'var(--sign-bd)' : 'var(--line)'}" stroke-width="1.4"/>`;
+  g += `<text x="${cx + 126}" y="${cy + 96}" font-size="10.5" fill="${redOn ? (redDone ? 'var(--frac-fg)' : 'var(--sign-fg)') : 'var(--muted)'}">红色扇区${redDone ? '（已读完）' : redOn ? '（待读）' : ''}</text>`;
+  /* 磁臂与磁头：head 决定停在哪条磁道 */
+  const rHead = s.head === 'inner' ? inner + 22 : s.head === 'moving' ? (inner + outer) / 2 : outer + 2;
+  const ha = -8 * Math.PI / 180;
+  const hx = cx + rHead * Math.cos(ha), hy = cy - rHead * Math.sin(ha);
+  g += `<line x1="${cx + 176}" y1="${cy + 176}" x2="${hx.toFixed(1)}" y2="${hy.toFixed(1)}" stroke="var(--muted)" stroke-width="3"/>
+        <circle cx="${cx + 176}" cy="${cy + 176}" r="5" fill="var(--muted)"/>
+        <circle cx="${hx.toFixed(1)}" cy="${hy.toFixed(1)}" r="6" fill="var(--accent)" stroke="var(--card)" stroke-width="2"/>`;
+  if (s.spin) {
+    const a0 = 150, a1 = 210, r = outer + 26;
+    const P = (r2, a) => { const t = a * Math.PI / 180; return [(cx + r2 * Math.cos(t)).toFixed(1), (cy - r2 * Math.sin(t)).toFixed(1)]; };
+    const [ax, ay] = P(r, a0), [bx, by] = P(r, a1);
+    g += `<path d="M ${ax} ${ay} A ${r} ${r} 0 0 1 ${bx} ${by}" fill="none" stroke="var(--accent)" stroke-width="2" marker-end="url(#dskArrow)"/>
+          <text x="${cx - 4}" y="${cy - outer - 34}" text-anchor="middle" font-size="10.5" fill="var(--accent)">逆时针</text>`;
+  }
+  g += `<defs><marker id="dskArrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+    <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--accent)"/></marker></defs>`;
+  const svg = `<svg viewBox="0 0 400 300" style="width:min(390px,100%);height:auto" font-family="var(--font-sans)">
+    <text x="6" y="14" font-size="10.5" fill="var(--muted)">单面俯视图（原第 30 页）：面 → 磁道 → 扇区，扇区之间有间隙</text>
+    ${g}</svg>`;
+
+  const dot = i => `<span class="chip ${i === dskStep ? '' : 'gray'}">${i}</span>`;
+  $('#dskOut').innerHTML = `<div class="fw" style="align-items:flex-start">${svg}
+    <div style="flex:1;min-width:240px">
+      <div class="box" style="margin-top:0"><div class="t">${esc(s.h)}<span class="srcref">${esc(s.en)}</span></div>
+        <b>${esc(s.t)}</b><br>${esc(s.d)}</div>
+      <div class="box ok" style="margin-bottom:0"><div class="t">九步总览</div>
+        ${DSK_STEPS.map((x, i) => `${dot(i)} ${esc(x.t)}`).join('<br>')}
+        <br><span style="color:var(--muted)">第 4.3 节的公式就是把这九步压成三段时间。</span></div>
+    </div>
+  </div>
+  ${dskTimeBar()}`;
+}
+
+/* ============================================================
+   10. 磁盘访问时间计算器（课件第 40–42 页）
+   ============================================================ */
+function renderAccessTime() {
+  const rpm = parsePos($('#datRpm').value);
+  const seek = parseDec($('#datSeek').value, 1e6);
+  const spt = parsePos($('#datSpt').value);
+  if (rpm === null || seek === null || spt === null) {
+    $('#datOut').innerHTML = badBox('转速与每道扇区数要是正数，平均寻道是非负的数（毫秒）。');
+    return;
+  }
+  const t = diskAccessTimes({ rpm, seekMs: seek, sectorsPerTrack: spt });
+  const rotRounded = Math.round(t.rotation);
+  const trRounded = Number(t.transfer.toFixed(2));
+  const roundedTotal = seek + rotRounded + trRounded;
+  const slide = (rpm === 7200 && seek === 9 && spt === 400);
+  const firstBit = t.total - t.transfer;
+  $('#datOut').innerHTML = `
+    <div class="readout" style="margin-top:0">
+      <dt>转一圈</dt><dd>60 / ${fmtF(rpm, 0)} RPM = ${fmtF(60 / rpm, 6)} s = <b>${fmtF((60 / rpm) * 1000, 4)} ms</b></dd>
+      <dt>旋转延迟</dt><dd>1/2 × ${fmtF((60 / rpm) * 1000, 4)} ms = <b>${fmtF(t.rotation, 4)} ms</b>（平均等半圈）</dd>
+      <dt>传输时间</dt><dd>60 / ${fmtF(rpm, 0)} × 1 / ${fmtF(spt, 0)} × 1000 ms = <b>${fmtF(t.transfer, 6)} ms</b></dd>
+      <dt>寻道时间</dt><dd>${fmtF(seek, 4)} ms</dd>
+      <dt>T<sub>access</sub></dt><dd>${fmtF(seek, 4)} + ${fmtF(t.rotation, 4)} + ${fmtF(t.transfer, 6)} = <b>${fmtF(t.total, 4)} ms</b></dd>
+    </div>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>三段</th><th>占 T<sub>access</sub> 的比例</th><th>说明</th></tr>
+      <tr><td>寻道</td><td class="mono">${fmtF(100 * seek / t.total, 2)}%</td><td>把磁头移到目标柱面</td></tr>
+      <tr><td>旋转延迟</td><td class="mono">${fmtF(100 * t.rotation / t.total, 2)}%</td><td>等目标扇区转到头下</td></tr>
+      <tr><td>传输</td><td class="mono">${fmtF(100 * t.transfer / t.total, 4)}%</td><td>真正搬数据的那一段</td></tr>
+    </table></div>
+    <div class="box ${slide ? 'ok' : ''}" style="margin-bottom:0"><div class="t">${slide ? '与课件第 41、42 页例题一致' : '与课件例题比一比'}</div>
+      课件例题：7,200 RPM、平均寻道 9 ms、平均每道 400 扇区 → 旋转延迟 <code>1/2 × (60/7200) × 1000 = 4 ms</code>、传输 <code>60/7200 × 1/400 × 1000 = 0.02 ms</code>；课件写的是 <code>T_access = 9 ms + 4 ms + 0.02 ms</code>（<b>没有求和</b>），按它的取整口径相加即 13.02 ms。
+      本页现算的未取整值是 <b>${fmtF(t.total, 4)} ms</b>（${fmtF(t.rotation, 4)} + ${fmtF(t.transfer, 6)} 未取整），所以 ${fmtF(roundedTotal, 2)} ms 与 ${fmtF(t.total, 2)} ms 的差别来自四舍五入。
+      <br><b>关键结论（课件原文的 Important points）</b>：访问时间由<b>寻道与旋转延迟支配</b>；<b>扇区里的第一个位最贵，其余基本免费</b> —— 本页这组输入下，第一个位到达前已经花掉 <b>${fmtF(firstBit, 4)} ms</b>（占 ${fmtF(100 * firstBit / t.total, 2)}%）。
+    </div>`;
+}
+
+/* ============================================================
+   11. 与 SRAM / DRAM 的倍数（课件第 41、42 页 + 勘误）
+   ============================================================ */
+function renderRatios() {
+  const ms = parseDec($('#ratMs').value, 1e9);
+  const sram = parsePos($('#ratSram').value);
+  const dram = parsePos($('#ratDram').value);
+  if (ms === null || sram === null || dram === null) {
+    $('#ratOut').innerHTML = badBox('T<sub>access</sub> 请给非负数（毫秒），SRAM / DRAM 请给正数（纳秒）。');
+    return;
+  }
+  const r = diskRatios(ms, sram, dram, 40000, 2500);
+  const offSram = r.sramTimes / r.printedSram, offDram = r.dramTimes / r.printedDram;
+  $('#ratOut').innerHTML = `
+    <div class="readout" style="margin-top:0">
+      <dt>统一单位</dt><dd>${fmtF(ms, 4)} ms = <b>${fmtNum(Math.round(r.ns))} ns</b></dd>
+      <dt>对 SRAM</dt><dd>${fmtNum(Math.round(r.ns))} / ${fmtF(sram, 4)} ns ≈ <b>${fmtNum(Math.round(r.sramTimes))} 倍</b>（课件印的是 40,000 倍）</dd>
+      <dt>对 DRAM</dt><dd>${fmtNum(Math.round(r.ns))} / ${fmtF(dram, 4)} ns ≈ <b>${fmtNum(Math.round(r.dramTimes))} 倍</b>（课件印的是 2,500 倍）</dd>
+      <dt>反推</dt><dd>印出的 40,000 倍对应 SRAM ${fmtF(r.sramImplied, 1)} ns；2,500 倍对应 DRAM ${fmtF(r.dramImplied / 1000, 2)} µs</dd>
+    </div>
+    <div class="box warn" style="margin-bottom:0"><div class="t">这就说明课件印的两个倍数是旧机器的数据</div>
+      ${fmtF(sram, 4)} ns / ${fmtF(dram, 4)} ns 是本页（也就是课件第 41 页）自己给的数，用它算出的倍数是 <b>${fmtNum(Math.round(r.sramTimes))} 倍</b> 与 <b>${fmtNum(Math.round(r.dramTimes))} 倍</b>；印出的 40,000 与 2,500 分别只有现算值的约 1/${fmtNum(Math.round(offSram))} 与 1/${fmtNum(Math.round(offDram))}，对应 SRAM ≈ ${fmtNum(Math.round(r.sramImplied))} ns、DRAM ≈ ${fmtF(r.dramImplied / 1000, 2)} µs 的老机器。
+      <b>量级结论不变</b>：磁盘比内存慢 5–6 个数量级 —— 这正是第 7 节那张「CPU–内存差距」图里最高的线与最低的线之间的距离。
+    </div>`;
+}
+
+/* ============================================================
+   12. 读一个磁盘扇区的三步（课件第 43–46 页）
+   ============================================================ */
+const DMA_STEPS = [
+  { h: '第 1 步 · 原第 44 页', t: 'CPU 发命令',
+    en: 'CPU initiates a disk read by writing a command, logical block number, and destination memory address to a port (address) associated with disk controller.',
+    cpu: '忙着写端口（三个值：命令、逻辑块号、目标内存地址）', ctl: '空闲，等命令', mem: '没变化', bus: '系统总线 / I/O 总线：一次短暂的写事务',
+    note: 'CPU 只做这一件事。写完它就可以去执行别的指令 —— 后面的搬运跟它无关。' },
+  { h: '第 2 步 · 原第 45 页', t: '磁盘控制器做 DMA',
+    en: 'Disk controller reads the sector and performs a direct memory access (DMA) transfer into main memory.',
+    cpu: '可以去做别的事（不参与搬运）', ctl: '读扇区 → 直接写主存', mem: '数据被写进来', bus: '内存总线：控制器作为主设备发起写事务',
+    note: 'DMA = Direct Memory Access。控制器自己当总线主设备，把数据直接写进内存，不经过 CPU 的寄存器。' },
+  { h: '第 3 步 · 原第 46 页', t: '中断通知 CPU',
+    en: 'When the DMA transfer completes, the disk controller notifies the CPU with an interrupt (i.e., asserts a special "interrupt" pin on the CPU).',
+    cpu: '被中断打断 → 开始处理「数据已就绪」', ctl: '拉中断引脚', mem: '数据已在内存里', bus: '一根专门的「中断」信号线',
+    note: '中断让 CPU 不必轮询（反复去问「好了没」）。这是 I/O 与 CPU 分工的基本方式。' },
+];
+let dmaStep = 0;
+function renderDma() {
+  const s = DMA_STEPS[dmaStep];
+  const box = (x, y, w, h, title, on, sub) => `
+    <rect x="${x}" y="${y}" width="${w}" height="${h}" rx="7" fill="${on ? 'var(--exp-bg)' : 'var(--card)'}"
+      stroke="${on ? 'var(--exp-bd)' : 'var(--line)'}" stroke-width="${on ? 2.2 : 1.2}"/>
+    <text x="${x + w / 2}" y="${y + 20}" text-anchor="middle" font-size="12" font-weight="650" fill="${on ? 'var(--exp-fg)' : 'var(--ink)'}">${title}</text>
+    ${sub ? `<text x="${x + w / 2}" y="${y + 38}" text-anchor="middle" font-size="10" fill="var(--muted)">${sub}</text>` : ''}`;
+  const svg = `<svg viewBox="0 0 620 250" style="width:min(600px,100%);height:auto" font-family="var(--font-sans)">
+    ${box(14, 30, 150, 60, 'CPU 芯片', dmaStep !== 1, dmaStep === 1 ? '去做别的事' : '')}
+    <line x1="164" y1="60" x2="240" y2="60" stroke="var(--line)" stroke-width="2"/>
+    ${box(240, 30, 120, 60, 'I/O 桥', false, '')}
+    <line x1="360" y1="60" x2="430" y2="60" stroke="var(--line)" stroke-width="2"/>
+    ${box(430, 30, 170, 60, '主存', dmaStep === 2, dmaStep === 1 ? 'DMA 写入中' : (dmaStep === 2 ? '数据已就位' : ''))}
+    <line x1="300" y1="90" x2="300" y2="150" stroke="${dmaStep === 1 ? 'var(--accent)' : 'var(--line)'}" stroke-width="${dmaStep === 1 ? 3 : 2}"/>
+    <text x="308" y="126" font-size="10.5" fill="var(--muted)">I/O 总线</text>
+    ${box(230, 150, 150, 66, '磁盘控制器', dmaStep !== 0, dmaStep === 0 ? '等命令' : dmaStep === 1 ? 'DMA 引擎' : '拉中断引脚')}
+    ${box(430, 150, 170, 66, '磁盘', false, '')}
+    <line x1="380" y1="183" x2="430" y2="183" stroke="var(--line)" stroke-width="2"/>
+    <line x1="164" y1="120" x2="${dmaStep === 0 ? 230 : 164}" y2="${dmaStep === 0 ? 150 : 120}"
+      stroke="${dmaStep === 0 ? 'var(--accent)' : 'var(--line)'}" stroke-width="2" stroke-dasharray="${dmaStep === 0 ? '' : '4 4'}"/>
+    <text x="14" y="18" font-size="10.5" fill="var(--muted)">高亮 = 这一步正在干活的部件</text>
+  </svg>`;
+  $('#dmaOut').innerHTML = `<div class="fw" style="align-items:flex-start">${svg}
+    <div style="flex:1;min-width:240px">
+      <div class="box" style="margin-top:0"><div class="t">${esc(s.h)} · ${esc(s.t)}</div>
+        <span class="en">${esc(s.en)}</span></div>
+      <div class="readout" style="margin:10px 0">
+        <dt>CPU</dt><dd style="font-family:var(--font-sans)">${esc(s.cpu)}</dd>
+        <dt>控制器</dt><dd style="font-family:var(--font-sans)">${esc(s.ctl)}</dd>
+        <dt>主存</dt><dd style="font-family:var(--font-sans)">${esc(s.mem)}</dd>
+        <dt>总线</dt><dd style="font-family:var(--font-sans)">${esc(s.bus)}</dd>
+      </div>
+      <div class="box ok" style="margin-bottom:0">${esc(s.note)}</div>
+    </div>
+  </div>`;
+}
+
+/* ============================================================
+   13. SSD 的写放大与磨损（课件第 47、48 页）
+   ============================================================ */
+function renderSsd() {
+  const pageKB = parsePos($('#ssdPage').value);
+  const ppb = parseCount($('#ssdPpb').value, 4096);
+  const n = parseCount($('#ssdN').value, 4096);
+  if (pageKB === null || ppb === null || n === null || ppb < 1 || n < 1) {
+    $('#ssdOut').innerHTML = badBox('页大小要是正数（KB），每块页数与要改写的页数要是 ≥ 1 的整数。');
+    return;
+  }
+  if (n > ppb) { $('#ssdOut').innerHTML = badBox(`要改写的页数不能超过块里的页数（每块 ${ppb} 页）。`); return; }
+  const c = ssdWriteCost(pageKB, ppb, n);
+  const cellW = Math.max(4, Math.min(14, Math.floor(520 / ppb)));
+  const perRow = Math.min(ppb, Math.floor(520 / cellW));
+  const rows = Math.ceil(ppb / perRow);
+  let cells = '';
+  for (let i = 0; i < ppb; i++) {
+    const r = Math.floor(i / perRow), cc = i % perRow;
+    const changed = i < n;
+    cells += `<rect x="${cc * cellW}" y="${r * (cellW + 2)}" width="${cellW - 1.5}" height="${cellW}"
+      fill="${changed ? 'var(--sign-bg)' : 'var(--exp-bg)'}" stroke="${changed ? 'var(--sign-bd)' : 'var(--exp-bd)'}"/>`;
+  }
+  const gridW = perRow * cellW, gridH = rows * (cellW + 2);
+  $('#ssdOut').innerHTML = `
+    <div class="readout" style="margin-top:0">
+      <dt>块大小</dt><dd>${fmtF(pageKB, 3)} KB × ${ppb} 页 = <b>${fmtF(c.blockKB / 1000, 4)} MB</b>（${fmtNum(c.blockKB)} KB）</dd>
+      <dt>一次操作</dt><dd>改写 ${n} 页 → 复制其余 ${ppb - n} 页到新块 + 写入这 ${n} 页 = <b>物理写 ${c.physPages} 页</b></dd>
+      <dt>写放大</dt><dd>${c.physPages} / ${n} = <b>${fmtF(c.amp, 2)} 倍</b>（逻辑上写 ${fmtF(c.logicalKB, 3)} KB，闪存里实际写 ${fmtF(c.physKB / 1000, 4)} MB）</dd>
+      <dt>擦除</dt><dd>每次操作擦除 <b>1 个块</b>；块约 10 万次擦除后磨损（第 47 页）</dd>
+      <dt>寿命换算</dt><dd>一块可承受约 ${fmtNum(c.opsPerBlock)} 次这样的操作 ≈ 逻辑写入 ${fmtF(c.logicalMBPerBlock, 1)} MB</dd>
+    </div>
+    <div class="fcap" style="margin-bottom:5px">块布局（${ppb} 页；<span style="color:var(--sign-fg)">红 = 本次改写</span>，<span style="color:var(--exp-fg)">蓝 = 需要复制到新块</span>）</div>
+    <svg viewBox="0 0 ${gridW} ${gridH}" style="width:min(${gridW}px,100%);height:auto">${cells}</svg>
+    <div class="box ok" style="margin-bottom:0"><div class="t">为什么「随机写」慢，以及 FTL 为什么要攒着写</div>
+      改写一页要把<b>整块重写一遍</b>（代价 = 块大小，不是页大小），还要先擦掉旧块 —— 擦除比写慢得多（第 48 页给的量级是<b>约 1 ms</b>）。所以闪存翻译层会把一连串小写<b>攒起来</b>，凑成整块再写。磨损也来自这里：改写次数多的是<b>块</b>，所以控制器要用<b>磨损均衡</b>把擦除摊到所有块上（第 49 页）。
+    </div>`;
+}
+
+/* ============================================================
+   14. SSD 吞吐换算（课件第 48 页）
+   ============================================================ */
+function renderSsdPerf() {
+  const gib = parsePos($('#spGiB').value);
+  const seqR = parsePos($('#spSeqR').value);
+  const rndR = parsePos($('#spRndR').value);
+  const rndW = parsePos($('#spRndW').value);
+  if (gib === null || seqR === null || rndR === null || rndW === null) {
+    $('#ssdPerfOut').innerHTML = badBox('数据量与三个吞吐量都要是正数（GiB / MB/s）。');
+    return;
+  }
+  const bytes = gib * Math.pow(1024, 3);          // 1 GiB = 2^30 B
+  const t = r => ssdDuration(bytes, r).seconds;   // MB/s 按十进制 MB（与课件 1 GB = 10^9 B 同口径）
+  const ts = t(seqR), tr = t(rndR), tw = t(rndW);
+  const iops = rndR * 1e6 / 4096;                 // 4 KB 页的随机读 IOPS
+  const rows = [
+    ['顺序读', seqR, ts, '数据按页序连续读'],
+    ['随机读', rndR, tr, '每次访问一个新页'],
+    ['随机写', rndW, tw, '还要付擦除与整块重写的代价'],
+  ];
+  $('#ssdPerfOut').innerHTML = `
+    <div class="readout" style="margin-top:0">
+      <dt>数据量</dt><dd>${fmtF(gib, 4)} GiB = ${fmtNum(Math.round(bytes))} 字节（1 GiB = 2<sup>30</sup> B）</dd>
+      <dt>换算</dt><dd>时间 = 字节数 ÷ (吞吐量 × 10<sup>6</sup>)，即 MB 按十进制计</dd>
+    </div>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>访问方式</th><th class="mono">MB/s</th><th class="mono">读/写这么多要</th><th>相对顺序读</th><th>说明</th></tr>
+      ${rows.map(r => `<tr><td><b>${r[0]}</b></td><td class="mono">${fmtNum(r[1])}</td><td class="mono">${fmtF(r[2], 3)} s</td>
+        <td class="mono">${fmtF(r[2] / ts, 2)}×</td><td>${r[3]}</td></tr>`).join('')}
+    </table></div>
+    <div class="readout">
+      <dt>随机读 IOPS</dt><dd>${fmtNum(rndR)} MB/s ÷ 4 KB ≈ <b>${fmtNum(Math.round(iops))}</b> 次/秒（按 4 KB 页算）</dd>
+      <dt>顺序 vs 随机</dt><dd>顺序读比随机读快 <b>${fmtF(seqR / rndR, 2)} 倍</b> —— 这就是第 48 页说的「存储层次里的共同主题」</dd>
+    </div>
+    <div class="box" style="margin-bottom:0"><div class="t">为什么 SSD 也怕随机</div>
+      页是读写单位，块是擦除单位：随机写会让 FTL 频繁做「整块重写」，而顺序写可以攒够一整块再写。所以即使在 SSD 上，<b>空间局部性依然值钱</b>（第 8 节）—— 只是它不再像机械盘那样被寻道时间惩罚。
+    </div>`;
+}
+
+/* ============================================================
+   15. 1985 / 2015 的量级图（课件第 50 页 + 第 69、70 页的表）
+   ============================================================ */
+const GAP_LOG_MIN = -1, GAP_LOG_MAX = 8.2;          // 0.1 ns … 1.6e8 ns（课件第 50 页纵轴）
+function renderGap() {
+  const diskMs = parsePos($('#gapDisk').value);
+  const dramNs = parsePos($('#gapDram').value);
+  const sramNs = parsePos($('#gapSram').value);
+  const cpuNs = parsePos($('#gapCpu').value);
+  if (diskMs === null || dramNs === null || sramNs === null || cpuNs === null) {
+    $('#gapOut').innerHTML = badBox('四个时间都要是正数（磁盘按毫秒，其余按纳秒）。');
+    return;
+  }
+  const series = [
+    { n: '磁盘寻道时间', v: diskMs * 1e6, c: 'var(--sign-bg)', bd: 'var(--sign-bd)', fg: 'var(--sign-fg)' },
+    { n: 'DRAM 访问时间', v: dramNs, c: 'var(--exp-bg)', bd: 'var(--exp-bd)', fg: 'var(--exp-fg)' },
+    { n: 'SRAM 访问时间', v: sramNs, c: 'var(--frac-bg)', bd: 'var(--frac-bd)', fg: 'var(--frac-fg)' },
+    { n: 'CPU 周期时间', v: cpuNs, c: 'var(--gray-bg)', bd: 'var(--line)', fg: 'var(--gray-fg)' },
+  ];
+  const X = v => {
+    const l = Math.log10(v);
+    const f = (l - GAP_LOG_MIN) / (GAP_LOG_MAX - GAP_LOG_MIN);
+    return 128 + Math.max(0, Math.min(1, f)) * 420;
+  };
+  let g = '';
+  for (let d = -1; d <= 8; d++) {                    // 每个数量级一条竖线
+    const x = X(Math.pow(10, d));
+    g += `<line x1="${x.toFixed(1)}" y1="14" x2="${x.toFixed(1)}" y2="212" stroke="var(--line)" stroke-width="0.8"/>
+      <text x="${x.toFixed(1)}" y="226" text-anchor="middle" font-size="9.5" fill="var(--muted)">10<sup>${d}</sup></text>`;
+  }
+  series.forEach((s, i) => {
+    const y = 22 + i * 46, x = X(s.v);
+    g += `<rect x="128" y="${y}" width="${(x - 128).toFixed(1)}" height="26" fill="${s.c}" stroke="${s.bd}"/>
+      <text x="124" y="${y + 18}" text-anchor="end" font-size="10.5" fill="${s.fg}">${s.n}</text>
+      <text x="${(x + 6).toFixed(1)}" y="${y + 18}" font-size="10.5" font-family="var(--font-mono)" fill="var(--ink)">${fmtF(s.v, 4)} ns</text>`;
+  });
+  g += `<text x="6" y="240" font-size="10.5" fill="var(--muted)">横轴：时间（纳秒，对数）。数据取自课件第 69、70 页的表（磁盘用 access (ms) 一行）。</text>`;
+  const dVsS = series[0].v / sramNs, dVsD = series[0].v / dramNs, dVsC = series[0].v / cpuNs, dramVsCpu = dramNs / cpuNs;
+  $('#gapOut').innerHTML = `
+    <svg viewBox="0 0 620 248" style="width:min(600px,100%);height:auto" font-family="var(--font-sans)">${g}</svg>
+    <div class="readout">
+      <dt>磁盘 / SRAM</dt><dd>${fmtNum(Math.round(dVsS))} 倍</dd>
+      <dt>磁盘 / DRAM</dt><dd>${fmtNum(Math.round(dVsD))} 倍</dd>
+      <dt>磁盘 / CPU 周期</dt><dd>${fmtNum(Math.round(dVsC))} 倍</dd>
+      <dt>DRAM / CPU 周期</dt><dd>${fmtNum(Math.round(dramVsCpu))} 倍</dd>
+    </div>
+    <div class="box" style="margin-bottom:0"><div class="t">这张图要说的两件事</div>
+      <b>一是同一年的横向差距</b>：磁盘与 CPU 的周期时间差 ${Math.round(Math.log10(dVsC))} 个数量级，这正是第 4 节那 13 ms 的来源。<b>二是两个年份的对比</b>：算一下 CPU 周期与 DRAM 的比值 —— 1985 年是 166/200 = ${fmtF(166 / 200, 2)} 倍，2015 年是 0.33/20 = ${fmtF(0.33 / 20, 4)} 倍，也就是「CPU 比内存快」的程度扩大了约 ${fmtNum(Math.round((200 / 166) / (20 / 0.33)))} 倍。<b>差距在扩大</b>（第 50 页）。
+      <br><span style="color:var(--muted)">说明：原图还有 SSD 访问时间与「有效 CPU 周期时间」两条线（第 50 页），课件文字里没有给逐年的数值，因此这里只画了上表里有据可查的四条。</span>
+    </div>`;
+}
+
+/* ============================================================
+   16. 趋势表：逐格现算 2015:1985（课件第 69、70 页）
+   ============================================================ */
+const TREND = {
+  sram: { n: 'SRAM（第 69 页）', head: ['Metric', '1985', '1990', '1995', '2000', '2005', '2010', '2015', '2015:1985'],
+    rows: [['$/MB', 2900, 320, 256, 100, 75, 60, 25, 116], ['access (ns)', 150, 35, 15, 3, 2, 1.5, 1.3, 115]] },
+  dram: { n: 'DRAM（第 69 页）', head: ['Metric', '1985', '1990', '1995', '2000', '2005', '2010', '2015', '2015:1985'],
+    rows: [['$/MB', 880, 100, 30, 1, 0.1, 0.06, 0.02, 44000], ['access (ns)', 200, 100, 70, 60, 50, 40, 20, 10],
+           ['typical size (MB)', 0.256, 4, 16, 64, 2000, 8000, 16000, 62500]] },
+  disk: { n: '磁盘（第 69 页）', head: ['Metric', '1985', '1990', '1995', '2000', '2005', '2010', '2015', '2015:1985'],
+    rows: [['$/GB', 100000, 8000, 300, 10, 5, 0.3, 0.03, 3333333], ['access (ms)', 75, 28, 10, 8, 5, 3, 3, 25],
+           ['typical size (GB)', 0.01, 0.16, 1, 20, 160, 1500, 3000, 300000]] },
+  cpu: { n: 'CPU 时钟（第 70 页）', head: ['', '1985', '1990', '1995', '2003', '2005', '2010', '2015', '2015:1985'],
+    rows: [['CPU', '80286', '80386', 'Pentium', 'P-4', 'Core 2', 'Core i7(n)', 'Core i7(h)', '—'],
+           ['Clock rate (MHz)', 6, 20, 150, 3300, 2000, 2500, 3000, 500],
+           ['Cycle time (ns)', 166, 50, 6, 0.30, 0.50, 0.4, 0.33, 500],
+           ['Cores', 1, 1, 1, 1, 2, 4, 4, 4],
+           ['Effective cycle time (ns)', 166, 50, 6, 0.30, 0.25, 0.10, 0.08, 2075]] },
+};
+let trSel = 'sram';
+function renderTrend() {
+  const t = TREND[trSel];
+  const body = t.rows.map(r => {
+    const first = r[1], last = r[7], printed = r[8];
+    const numeric = typeof first === 'number' && typeof last === 'number' && typeof printed === 'number';
+    let calc = '—', verdict = '';
+    if (numeric) {
+      const v = trendVerify(first, last, printed);
+      calc = fmtF(v.exact, 6);
+      verdict = `<span class="chip ${v.verdict === '不一致' ? 'warn' : 'ok'}" style="margin-left:6px">${v.verdict}</span>`;
+    }
+    return `<tr><td><b>${esc(String(r[0]))}</b></td>
+      ${r.slice(1, 8).map(x => `<td class="mono">${esc(String(x))}</td>`).join('')}
+      <td class="mono"><b>${esc(String(printed))}</b></td>
+      <td class="mono">${calc}${verdict}</td></tr>`;
+  }).join('');
+  const cpu = trSel === 'cpu';
+  $('#trOut').innerHTML = `
+    <div class="fcap" style="margin:6px 0 4px">${esc(t.n)} · 末列是本页现算的<b>改善倍数（大值 ÷ 小值）</b>，最后一列再与课件印出的数字对照</div>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr>${t.head.map((h, i) => `<th${i === 0 ? '' : ' class="mono"'}>${esc(h)}</th>`).join('')}<th class="mono">现算改善倍数</th><th>判定</th></tr>
+      ${body}
+    </table></div>
+    ${cpu ? `<div class="box ok" style="margin-bottom:0"><div class="t">第 70 页比第 69 页多两行：核数与有效周期时间</div>
+      「有效周期时间」= 周期时间 ÷ 核数：2015 年的 Core i7(h) 是 0.33 / 4 = 0.0825 ns（表里印成 0.08）。所以 CPU 侧的比较有两把尺子：单核周期时间改善 <b>500 倍</b>，而把多核算进去的「有效」改善是 <b>${fmtF(166 / 0.0825, 0)} 倍</b>（表里印 2,075，是按 166 / 0.08 算的）。第 50 页的图里两条 CPU 线就是这两把尺子。
+      <br><b>Power Wall</b>：第 70 页标题旁写着 2003 年前后设计者撞上了「功耗墙」—— 时钟频率从此不再往上冲，转而靠加核。</div>`
+    : `<div class="box" style="margin-bottom:0"><div class="t">这张表怎么读</div>
+      每一行都是「同一个指标、隔 30 年」。倍数栏里既有 10 这种小数字（DRAM 的访问时间只改善了 10 倍），也有 300 万这种大数字（磁盘每 GB 单价降了 333 万倍）—— <b>速度与成本不是一回事</b>：容量和单价改善得飞快，速度改善得慢，而 CPU 的时钟提高了 500 倍。第 7.1 节的量级图就是拿这张表的两端画的。
+      ${trSel === 'dram' ? '<br><b>注意</b>：typical size 的 2015 年那一格在课件里印成 <code>16.000</code>，本页按 <b>16,000</b> MB 呈现（见上面的勘误）。' : ''}</div>`}`;
+}
+
+/* ============================================================
+   17. 循环顺序评测器（课件第 54–57 页）
+   对每种循环排列都生成访问序列，再统计步长、块、与「同一个块两次
+   使用之间隔了几次访问」。这是判断空间局部性最直接的办法。
+   ============================================================ */
+const PERMS_2D = [['i', 'j'], ['j', 'i']];
+const PERMS_3D = [['i', 'j', 'k'], ['i', 'k', 'j'], ['j', 'i', 'k'], ['j', 'k', 'i'], ['k', 'i', 'j'], ['k', 'j', 'i']];
+let lpMode = '2d', lpBest = null;
+
+function lpSeqPreview(seq, k) {
+  const head = seq.slice(0, k).map(x => x);
+  return head.join(', ') + (seq.length > k ? ', …' : '（共 ' + seq.length + ' 次）');
+}
+function renderLocality() {
+  const M = parseCount($('#lpM').value, 64);
+  const N = parseCount($('#lpN').value, 64);
+  const B = parseCount($('#lpB').value, 64);
+  if (M === null || N === null || B === null || M < 1 || N < 1 || B < 1) {
+    $('#lpOut').innerHTML = badBox('M、N、块大小都请给 1–64 之间的整数。');
+    return;
+  }
+  const perms = lpMode === '2d' ? PERMS_2D : PERMS_3D;
+  const rows = perms.map(p => {
+    const order = p.join(',');
+    const seq = loopSeq(lpMode, p, M, N);
+    if (seq === null) return null;
+    const st = loopStats(seq, B);
+    const good = st.stride1Ratio === 1;
+    return { order: p, seq, st, good };
+  }).filter(Boolean);
+  const best = rows.filter(r => r.good).map(r => r.order.join(' → '));
+  const tbl = rows.map(r => {
+    const st = r.st, name = r.order.map(x => 'for (' + x + ')').join(' ');
+    return `<tr class="${lpBest === r.order.join(',') ? 'hl' : ''}">
+      <td class="mono">${esc(name)}</td>
+      <td><span class="chip ${st.stride1Ratio === 1 ? 'ok' : st.stride1Ratio >= 0.5 ? 'warn' : 'bad'}">${fmtF(st.stride1Ratio * 100, 1)}%</span></td>
+      <td class="mono">${fmtF(st.sameBlockRatio * 100, 1)}%</td>
+      <td class="mono">${fmtNum(st.blocks)}（共 ${fmtNum(M * (lpMode === '2d' ? N : N * N))} 元素 → 全数组需 ${fmtNum(Math.ceil(M * (lpMode === '2d' ? N : N * N) / B))} 块）</td>
+      <td class="mono">${fmtF(st.gapAvg, 2)} / ${fmtNum(st.gapMax)}</td>
+      <td>${st.stride1Ratio === 1 ? '<span class="chip ok">stride-1，空间局部性好</span>' : '<span class="chip gray">有跨步，块里用不满</span>'}</td>
+    </tr>`;
+  }).join('');
+  const detail = rows.length ? rows[0] : null;
+  $('#lpOut').innerHTML = `
+    <div class="fcap" style="margin:6px 0 4px">a[M][N]${lpMode === '3d' ? ' 写成 a[k][i][j]（第三个下标最内层）' : '（行优先：a[i][j] 的线性下标 = i*N + j）'} · M = ${M}、N = ${N}、块 = ${B} 个元素</div>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>循环顺序（外层 → 内层）</th><th>stride-1 比例</th><th>相邻两次同块</th><th>触及的块数</th><th>同块两次之间的间隔（平均 / 最大，次）</th><th>判定</th></tr>
+      ${tbl}
+    </table></div>
+    ${best.length ? `<div class="box ok" style="margin-bottom:0"><div class="t">stride-1 的排列：${esc(best.join('；'))}</div>
+      以 1 递增访问才叫 stride-1。${lpMode === '3d'
+        ? '三维数组 <code>a[k][i][j]</code> 的最内下标是 <code>j</code>，所以<b>必须让 j 在最内层</b>（课件第 57 页的答案）。'
+        : '二维数组 <code>a[M][N]</code> 的最内下标是 <code>j</code>（行优先），所以要写成 <code>for (i…) for (j…)</code>（课件第 55 页的答案）。'}
+      反过来的排列每次都跨 ${lpMode === '2d' ? 'N' : 'N×N'} 个元素，只用到一个块里的一小部分。</div>`
+      : `<div class="box warn" style="margin-bottom:0"><div class="t">这一组参数下没有任何排列是 stride-1</div>
+        把 N 调大再试，或者检查块的取值 —— 块大小只是用来「数块」的，不影响步长本身。</div>`}
+    ${detail ? `<div class="box" style="margin-bottom:0"><div class="t">访问序列长什么样（${esc(detail.order.join(' → '))} 的前 24 次）</div>
+      <span class="mono" style="font-size:13px">${esc(lpSeqPreview(detail.seq, 24))}</span><br>
+      <span style="color:var(--muted)">线性下标按行优先算；块号 = 下标 ÷ 块大小。相邻两次同块的比例越高，块被取进来之后就越可能在它被换出之前用满。</span></div>` : ''}`;
+}
+
+/* ============================================================
+   18. 存储层次漫游（课件第 60 页）
+   ============================================================ */
+const HIER = {
+  L0: { n: 'L0 · 寄存器（Regs）', tech: 'CPU 内部', caches: '字（4–8 字节）', from: '从 L1 缓存取',
+        d: 'CPU 寄存器堆里存着当前正在算的字。它由编译器（而不是硬件）决定怎么用 —— 第 66 页的表里写着「Managed By: Compiler」。', p: '原第 60、66 页' },
+  L1: { n: 'L1 · 一级缓存（SRAM）', tech: 'SRAM', caches: '缓存行（cache lines）', from: '从 L2 缓存取',
+        d: 'L1 缓存里放的是从 L2 取来的缓存行。它是每个核私有的、离 CPU 最近的一层缓存。', p: '原第 60、66 页' },
+  L2: { n: 'L2 · 二级缓存（SRAM）', tech: 'SRAM', caches: '缓存行', from: '从 L3 缓存取',
+        d: 'L2 比 L1 大、比 L1 慢，装的是从 L3 取来的缓存行。', p: '原第 60、66 页' },
+  L3: { n: 'L3 · 三级缓存（SRAM）', tech: 'SRAM', caches: '缓存行', from: '从主存取',
+        d: 'L3 缓存装的是从主存取来的缓存行。第 66 页给的延迟量级：L1 约 4 周期、L2 约 10 周期，主存约 100 周期。', p: '原第 60、66 页' },
+  L4: { n: 'L4 · 主存（DRAM）', tech: 'DRAM', caches: '磁盘块（disk blocks）', from: '从本地磁盘取',
+        d: '主存装的是从本地磁盘取来的磁盘块 —— 也就是说：主存是磁盘的缓存（虚拟内存里的「页」就是这里说的块）。', p: '原第 60、66 页' },
+  L5: { n: 'L5 · 本地外存（本地磁盘）', tech: '磁盘 / SSD', caches: '文件', from: '从远端服务器上的磁盘取',
+        d: '本地磁盘装的是从远端服务器取来的文件；它自己也是远端存储的缓存（浏览器缓存、NFS 客户端缓存都在这一层）。', p: '原第 60 页' },
+  L6: { n: 'L6 · 远端外存（如 Web 服务器）', tech: '远端磁盘', caches: '（最底层的原始存储）', from: '——',
+        d: '最底下这一层不再缓存别人：它是数据的「原产地」。往上是六级缓存，每一级都在为「下一级的一小部分」做暂存 —— 这就是「存储层次」四个字的全部含义。', p: '原第 60 页' },
+};
+const HIER_ORDER = ['L0', 'L1', 'L2', 'L3', 'L4', 'L5', 'L6'];
+let hierSel = 'L4';
+function renderHier() {
+  const W = 460, rowH = 40, topPad = 26;
+  let g = '';
+  HIER_ORDER.forEach((k, i) => {
+    const w = 120 + i * 54;                          // 越往下越宽：越大、越慢、越便宜
+    const x = (W - w) / 2, y = topPad + i * rowH;
+    const sel = hierSel === k;
+    const kind = i <= 3 ? 'e' : i === 4 ? 'f' : 'g';
+    const fill = kind === 'e' ? 'var(--exp-bg)' : kind === 'f' ? 'var(--frac-bg)' : 'var(--gray-bg)';
+    const bd = kind === 'e' ? 'var(--exp-bd)' : kind === 'f' ? 'var(--frac-bd)' : 'var(--line)';
+    g += `<g data-hier="${k}" style="cursor:pointer">
+      <rect x="${x}" y="${y}" width="${w}" height="${rowH - 7}" rx="6" fill="${fill}" stroke="${sel ? 'var(--accent)' : bd}" stroke-width="${sel ? 2.6 : 1.2}"/>
+      <text x="${W / 2}" y="${y + 21}" text-anchor="middle" font-size="12.5" font-weight="650" fill="var(--ink)">${esc(HIER[k].n)}</text></g>`;
+  });
+  g += `<text x="8" y="16" font-size="10.5" fill="var(--muted)">往下：更大、更慢、每字节更便宜 —— 每一层都是下一层的缓存</text>
+    <text x="${W + 12}" y="${topPad + 12}" font-size="10.5" fill="var(--muted)">越小越快越贵</text>
+    <text x="${W + 12}" y="${topPad + 6 * rowH + 20}" font-size="10.5" fill="var(--muted)">越大越慢越便宜</text>`;
+  const info = HIER[hierSel];
+  $('#hierOut').innerHTML = `<div class="fw" style="align-items:flex-start">
+    <svg viewBox="0 0 ${W + 120} 330" style="width:min(540px,100%);height:auto" font-family="var(--font-sans)">${g}</svg>
+    <div style="flex:1;min-width:250px">
+      <div class="box" style="margin-top:0"><div class="t">${esc(info.n)}<span class="srcref">${esc(info.p)}</span></div>
+        ${esc(info.d)}</div>
+      <div class="readout" style="margin:10px 0">
+        <dt>实现技术</dt><dd style="font-family:var(--font-sans)">${esc(info.tech)}</dd>
+        <dt>缓存的内容</dt><dd style="font-family:var(--font-sans)"><b>${esc(info.caches)}</b></dd>
+        <dt>数据来自</dt><dd style="font-family:var(--font-sans)">${esc(info.from)}</dd>
+      </div>
+      <div class="box ok" style="margin-bottom:0"><div class="t">整条链子</div>
+        ${HIER_ORDER.map(k => `<b>${esc(k)}</b> 的 <span class="mono" style="font-size:12.5px">${esc(HIER[k].caches)}</span> 来自 ${HIER[k].from.replace('从', '').replace('取', '')}`).join('<br>')}
+        <br><span style="color:var(--muted)">课件第 60 页原文就是按这条链子逐层写的：Regs ← L1 ← L2 ← L3 ← 主存 ← 本地磁盘 ← 远端服务器。</span></div>
+    </div></div>`;
+}
+
+/* ============================================================
+   19. 缓存模拟器（课件第 61–65 页）
+   ============================================================ */
+let cchMode = 'direct', cchStart = [8, 9, 14, 3];
+const MISS_CN = { hit: '命中', cold: '冷缺失', conflict: '冲突缺失', capacity: '容量缺失' };
+const MISS_CHIP = { hit: 'ok', cold: 'gray', conflict: 'warn', capacity: 'bad' };
+function renderCache() {
+  const slots = parseCount($('#cchSlots').value, 64);
+  const raw = $('#cchReq').value.trim();
+  if (slots === null || slots < 1) { $('#cchOut').innerHTML = badBox('槽数请给 1–64 之间的整数。'); return; }
+  if (!raw) { $('#cchOut').innerHTML = badBox('请给一串块号，例如 <code>14 12</code>。'); return; }
+  const reqs = [];
+  for (const tok of raw.split(/[\s,、]+/)) {
+    if (!tok) continue;
+    const v = parseCount(tok, 1e6);
+    if (v === null) { $('#cchOut').innerHTML = badBox(`「${esc(tok)}」不是合法块号 —— 请用空格分隔的非负整数。`); return; }
+    reqs.push({ blk: v });
+  }
+  if (!reqs.length) { $('#cchOut').innerHTML = badBox('请至少给一个块号。'); return; }
+  if (reqs.length > 200) { $('#cchOut').innerHTML = badBox('访问序列请控制在 200 次以内。'); return; }
+  const start = slots === 4 ? cchStart : [];
+  const sim = cacheSimulate(reqs, { slots, mode: cchMode, start });
+  const slotRow = sim.rows.length ? sim.rows[sim.rows.length - 1].snap : start;
+  const slotBoxes = Array.from({ length: slots }, (_, i) => {
+    const v = slotRow[i];
+    const isVictim = sim.rows.length && sim.rows[sim.rows.length - 1].victim === v && v !== null;
+    return `<div class="card" style="padding:8px 10px;text-align:center;${isVictim ? 'border-color:var(--sign-bd);background:var(--sign-bg)' : ''}">
+      <div class="mono" style="font-size:11px;color:var(--muted)">槽 ${i}${cchMode === 'direct' ? `（块 ≡ ${i} mod ${slots}）` : ''}</div>
+      <div class="mono" style="font-size:17px;font-weight:650">${v === null || v === undefined ? '—' : v}</div></div>`;
+  }).join('');
+  const trace = sim.rows.map((r, i) => `<tr class="${r.hit ? '' : 'hl'}">
+    <td class="mono">${i + 1}</td><td class="mono">${r.blk}</td><td class="mono">${r.slot}</td>
+    <td><span class="chip ${MISS_CHIP[r.type]}">${MISS_CN[r.type] || r.type}</span></td>
+    <td class="mono">${r.victim === null ? '—' : r.victim}</td>
+    <td class="mono" style="font-size:12.5px">${r.snap.map(v => v === null ? '·' : v).join(' ')}</td>
+    <td class="mono" style="font-size:12.5px;color:var(--muted)">${r.shadow.map(v => v).join(' ')}</td></tr>`).join('');
+  const st = sim.stat;
+  const slideCase = slots === 4 && cchMode === 'direct' && start.length === 4 && reqs.length === 2 && reqs[0].blk === 14 && reqs[1].blk === 12;
+  $('#cchOut').innerHTML = `
+    <div class="fcap" style="margin:6px 0 5px">当前缓存内容（${cchMode === 'direct' ? '直接映射：块 i 只能放在槽 i mod ' + slots : '全相联 + LRU'}${start.length ? '；起始状态 = 课件第 62 页的 ' + start.join('、') : ''}）</div>
+    <div class="grid" style="grid-template-columns:repeat(${Math.min(slots, 8)},minmax(0,1fr));gap:6px">${slotBoxes}</div>
+    <div class="tbl-wrap"><table class="tbl" style="margin-top:12px">
+      <tr><th>#</th><th>请求块</th><th>落到的槽</th><th>结果</th><th>被换出（victim）</th><th>缓存快照</th><th>影子全相联 LRU</th></tr>
+      ${trace}
+    </table></div>
+    <div class="readout">
+      <dt>命中 / 缺失</dt><dd><b>${fmtNum(st.hit)}</b> / ${fmtNum(st.miss)}（命中率 ${fmtF(sim.hitRate * 100, 1)}%）</dd>
+      <dt>冷缺失</dt><dd>${fmtNum(st.cold)} 次（这个块从没被访问过）</dd>
+      <dt>冲突缺失</dt><dd>${fmtNum(st.conflict)} 次（同容量做成全相联就不会缺 —— 影子缓存里有它，但映射规则不让它待着）</dd>
+      <dt>容量缺失</dt><dd>${fmtNum(st.capacity)} 次（影子缓存里也没有：工作集比缓存大）</dd>
+    </div>
+    ${slideCase ? `<div class="box ok" style="margin-bottom:0"><div class="t">与课件第 63、64 页一致</div>
+      课件第 63 页请求块 <b>14</b> → 缓存里正好有它 → <b>Hit!</b>；第 64 页请求块 <b>12</b> → 不在缓存里 → <b>Miss!</b>，从内存取上来放进槽 ${12 % 4}（把块 8 换出去，VICTIM）。第 65 页说这类映射规则是 <code>块 i → 槽 i mod 4</code>，与上面的模拟完全一致。</div>`
+    : `<div class="box" style="margin-bottom:0"><div class="t">怎么读出「冲突」与「容量」的区别</div>
+      把槽数改成 <b>2</b> 再看 <code>0 8 0 8</code>：块 0 与块 8 都是偶数，会永远抢同一个槽（冲突缺失）。要看到<b>容量缺失</b>，序列里必须<b>重复访问</b>同一个块：<code>0 1 2 3 4 5 0 1</code> 里前六个是冷缺失，末尾的 0、1 之前出现过、全相联影子缓存里也已经没有它们 —— 那是容量缺失（工作集 {0…5} 比 4 个槽大）。影子那一列就是全相联模型的实时内容。</div>`}
+  `;
+}
+
+/* ============================================================
+   20. 缓存阶梯（课件第 66 页的表）
+   ============================================================ */
+const LAT_TBL = [
+  ['Registers', '4–8 bytes words', 'CPU core', '0', 'Compiler'],
+  ['TLB', 'Address translations', 'On-Chip TLB', '0', 'Hardware MMU'],
+  ['L1 cache', '64-byte blocks', 'On-Chip L1', '4', 'Hardware'],
+  ['L2 cache', '64-byte blocks', 'On-Chip L2', '10', 'Hardware'],
+  ['Virtual Memory', '4-KB pages', 'Main memory', '100', 'Hardware + OS'],
+  ['Buffer cache', 'Parts of files', 'Main memory', '100', 'OS'],
+  ['Disk cache', 'Disk sectors', 'Disk controller', '100,000', 'Disk firmware'],
+  ['Network buffer cache', 'Parts of files', 'Local disk', '10,000,000', 'NFS client'],
+  ['Browser cache', 'Web pages', 'Local disk', '10,000,000', 'Web browser'],
+  ['Web cache', 'Web pages', 'Remote server disks', '1,000,000,000', 'Web proxy server'],
+];
+let latMode = 'cyc', latSel = 2;
+function renderLat() {
+  const maxCyc = 1e9;
+  const useGroup = latMode === 'who';
+  const rows = LAT_TBL.map((r, i) => {
+    const cyc = Number(String(r[3]).replace(/,/g, ''));
+    const w = Math.max(1.2, (Math.log10(cyc + 1) / Math.log10(maxCyc + 1)) * 100);
+    const bytes = /byte/i.test(r[1]) ? '字节' : /page/i.test(r[1]) ? '页' : /sector/i.test(r[1]) ? '扇区' : /file|web/i.test(r[1]) ? '文件/页面' : '翻译条目';
+    return { i, r, cyc, w, bytes };
+  });
+  const bar = rows.map(o => `
+    <div style="display:flex;align-items:center;gap:9px;margin:4px 0;cursor:pointer" data-latrow="${o.i}">
+      <div style="width:150px;flex-shrink:0;font-size:13px;font-weight:${o.i === latSel ? 700 : 500};color:${o.i === latSel ? 'var(--accent)' : 'var(--ink)'}">${esc(o.r[0])}</div>
+      <div style="flex:1;min-width:120px;background:var(--gray-bg);border-radius:4px;height:16px;overflow:hidden">
+        <div style="width:${o.w.toFixed(1)}%;height:100%;background:${o.i === latSel ? 'var(--accent)' : 'var(--exp-bg)'};border:1px solid var(--exp-bd)"></div></div>
+      <div class="mono" style="width:88px;text-align:right;font-size:12px;color:var(--muted)">${esc(o.r[3])} 周期</div>
+      <div class="mono" style="width:74px;text-align:right;font-size:12px;color:var(--muted)">${o.cyc ? (o.cyc >= 1e6 ? fmtF(o.cyc / 1e6, 0) + 'M×' : (o.cyc >= 1000 ? fmtF(o.cyc / 1000, 0) + 'k×' : o.cyc + '×')) : '同核心'}</div>
+    </div>`).join('');
+  const sorted = rows.slice().sort((a, b) => a.cyc - b.cyc || a.r[0].localeCompare(b.r[0]));
+  const groups = {};
+  rows.forEach(o => { (groups[o.r[4]] = groups[o.r[4]] || []).push(o.r[0]); });
+  const sel = rows[latSel];
+  const prev = sorted.filter(o => o.cyc < sel.cyc).pop();
+  const stepRatio = prev ? sel.cyc / Math.max(1, prev.cyc) : null;
+  $('#latOut').innerHTML = (useGroup
+    ? `<div class="tbl-wrap"><table class="tbl">
+        <tr><th>管理者</th><th>它管的缓存</th><th>代表延迟（周期）</th></tr>
+        ${Object.keys(groups).map(k => `<tr><td><b>${esc(k)}</b></td><td>${groups[k].map(esc).join('、')}</td>
+          <td class="mono">${groups[k].map(n => { const o = rows.find(x => x.r[0] === n); return o.r[3]; }).join(' / ')}</td></tr>`).join('')}
+      </table></div>
+      <div class="box" style="margin-bottom:0"><div class="t">这张表最值得记的一条</div>
+        同一个小概念「缓存」在不同的层由<b>完全不同的角色</b>实现：最上面两层由<b>编译器与硬件</b>管，中间三层由<b>硬件 + 操作系统</b>管，再往下由<b>磁盘固件、NFS 客户端、浏览器、代理服务器</b>各自实现 —— 而它们的延迟从 0 一直到 10 亿个周期。<b>层数一样、机制一样，只是实现者不同</b>。</div>`
+    : `<div class="fcap" style="margin:6px 0 5px">横条按 log<sub>10</sub>(周期数+1) 缩放（从 0 到 10 亿周期，线性刻度画不出来）；点一行看详情</div>
+      ${bar}
+      <div class="box" style="margin-bottom:0"><div class="t">${esc(sel.r[0])} · 缓存单位：<b>${esc(sel.r[1])}</b>（${sel.bytes}）</div>
+        放在 <b>${esc(sel.r[2])}</b>，由 <b>${esc(sel.r[4])}</b> 管理，延迟 <b class="mono">${esc(sel.r[3])}</b> 个周期${stepRatio ? `；比上一档（${esc(prev.r[0])}，${esc(prev.r[3])} 周期）慢 <b>${fmtF(stepRatio, 1)} 倍</b>` : '（最靠近 CPU 的一档）'}。
+        ${sel.cyc === 0 ? '延迟记 0 是因为它在核心内部、与流水线同拍完成。' : ''}
+        ${sel.i === 9 ? '到了 Web 缓存这一层，「缓存」已经是地球另一台机器上的程序 —— 但机制与 L1 完全相同：拿一小部分数据放在更快的地方。' : ''}
+      </div>`);
+}
+
+/* ============================================================
+   21. 判断题（综合本讲）
+   ============================================================ */
+const PUZ = [
+  { q: '「SRAM 需要周期性刷新，而 DRAM 不需要」', a: false,
+    exp: '反了。课件第 12、13 页：DRAM 是「1 个晶体管 + 1 个电容 / 位」，电容会漏电所以<b>必须周期性刷新</b>；SRAM 是「6 个晶体管 / 位」，<b>通电就能无限期保持</b>。成本上 SRAM 约是 DRAM 的 100 倍，访问时间约 1/10 —— 见第 2.2 节。' },
+  { q: '「64 MB 内存模块由 8 个 8M×8 DRAM 组成，一次访问 8 个芯片同时工作，各出 8 位拼成 64 位字」', a: true,
+    exp: '课件第 19 页：8 个芯片收到<b>同一个地址</b>（同一个超级单元 (i,j)），DRAM i 贡献第 8i…8i+7 位，合起来正好 64 位。见第 2.6 节。' },
+  { q: '「磁盘的 T_access 主要由传输时间决定，所以每道扇区数越多越快，是唯一要紧的因素」', a: false,
+    exp: '课件第 41、42 页的结论正好相反：<b>访问时间由寻道与旋转延迟支配</b>，传输只占千分之几（例题里 0.02 ms / 13.02 ms）；而且「扇区里的第一个位最贵，其余基本免费」。每道扇区数只影响那一小块。见第 4.4 节。' },
+  { q: '「把 a[i][j] 的循环写成 for (j…) for (i…)，空间局部性也一样好」', a: false,
+    exp: '课件第 56 页：「Answer: no, unless… M is very small」。列优先扫描相邻两次访问相隔 N 个元素，跨块；只有 M 很小（整个工作集能留在缓存里）时坏处才不明显。见第 8.4 节。' },
+  { q: '「全相联缓存里不会发生冲突缺失，但仍可能发生容量缺失」', a: true,
+    exp: '冲突缺失来自「多个块被映射到同一个槽」这条限制（课件第 65 页的例子是块 i → 槽 i mod 4）。全相联没有这条限制，所以不会冲突；但工作集大于缓存时照样会缺 —— 那就是容量缺失。见第 10.3 节与缓存模拟器的「影子全相联」一列。' },
+  { q: '「SSD 改写一页时要把同块里其余页复制到新块，所以随机写比顺序写慢」', a: true,
+    exp: '课件第 47、48 页：页只能在块被擦除后写；改写一页要整块重写、并先擦除旧块（约 1 ms），所以随机写（59 MB/s）远慢于顺序写（1,880 MB/s）。FTL 的对策是把小写攒起来。见第 6 节。' },
+];
+let pzState = PUZ.map(() => null);
+function renderPuzzles() {
+  const done = pzState.filter(v => v !== null).length;
+  const right = PUZ.filter((p, i) => pzState[i] === p.a).length;
+  const html = PUZ.map((p, i) => {
+    const s = pzState[i];
+    const cls = s === null ? '' : (s === p.a ? ' correct done' : ' wrong done');
+    return `<div class="puzzle${cls}">
+      <div class="q" style="white-space:normal">${esc(p.q)}</div>
+      <div class="btns">
+        <button class="sm" data-pz="${i}:1" ${s !== null ? 'disabled style="opacity:.55"' : ''}>真</button>
+        <button class="sm" data-pz="${i}:0" ${s !== null ? 'disabled style="opacity:.55"' : ''}>假</button>
+      </div>
+      <div class="exp"><span class="verdict">${s === null ? '' : s === p.a ? '✓ 答对了' : '✗ 答错了'}</span>
+        &nbsp;正确答案：<b>${p.a ? '真' : '假'}</b><br>${p.exp}</div>
+    </div>`;
+  }).join('');
+  const score = done === 0 ? '' : `<div class="box ${right === PUZ.length ? 'ok' : right >= PUZ.length / 2 ? 'warn' : 'bad'}" style="margin-bottom:0">
+    <div class="t">已答 ${done} / ${PUZ.length}，答对 ${right} 题</div>
+    ${done === PUZ.length ? (right === PUZ.length ? '全对 —— 这一讲的六个易错点都避开了。' : '错题解析在上方，每题都指到了对应小节。') : '继续，答完显示小结。'}</div>`;
+  $('#pzOut').innerHTML = html + score;
+}
+
+/* ============================================================
+   22. 测验（10 题）
+   ============================================================ */
+const QUIZ = [
+  { q: '一个 <b>16 × 8</b> 的 DRAM 芯片（4 行 × 4 列超级单元，地址 4 位），地址 <code>9</code>（二进制 1001）选中哪个超级单元？',
+    o: ['(2, 1)', '(1, 2)', '(9, 1)', '(1, 9)'], a: 0,
+    w: '课件第 16 页把 4 位地址分成高 2 位选行、低 2 位选列：1001 → 行 <code>10<sub>2</sub></code> = 2、列 <code>01<sub>2</sub></code> = 1。第 2.4 节的拆分器可以把任意地址拆开试。' },
+  { q: '内存模块由 8 个 <b>8M×8</b> DRAM 并联组成，第 <b>24–31</b> 位由哪个芯片提供？',
+    o: ['DRAM 3', 'DRAM 4', 'DRAM 7', '所有芯片各出一位'], a: 0,
+    w: '课件第 19 页：DRAM i 提供第 8i…8i+7 位。8i = 24 → i = 3。第 2.6 节的映射组件点一下就看到了。' },
+  { q: '按课件第 27 页例题：512 B/扇区、平均 300 扇区/道、20,000 道/面、2 面/盘片、5 盘片，容量是多少？',
+    o: ['30.72 GB（十进制，1 GB = 10<sup>9</sup> B）', '28.61 GiB', '两者都错', '两款是同一数字的两种写法'], a: 0,
+    w: '512 × 300 × 20000 × 2 × 5 = 30,720,000,000 字节 = 30.72 GB（课件第 25 页明说 1 GB = 10<sup>9</sup> B）。同一个数按 2<sup>30</sup> 算才是 28.61 GiB —— 这正是「买回来的盘容量变少」的全部原因。第 3.4 节的计算器两个口径都给。' },
+  { q: 'T<sub>avg rotation</sub> 的正确算法是？',
+    o: ['1/RPM ×(60 s)（整圈）', '1/2 × (60 / RPM) s', '1/RPM × 1/(平均每道扇区数) × 60 s', '寻道时间的一半'], a: 1,
+    w: '课件第 40 页：<code>T_avg rotation = 1/2 × 1/RPM × 60 sec/1 min</code> —— 平均等<b>半圈</b>。7,200 RPM 时是 4.17 ms。第三项 1/RPM × 1/(每道扇区数) 是<b>传输时间</b>的公式。见第 4.3 节。' },
+  { q: '为什么课件说「扇区里的第一个位最贵，其余基本免费」？',
+    o: ['因为第一个位要校验', '因为要等寻道 + 旋转定位，之后盘面转动就把后续位连续送来', '因为第一个位存在磁道开头', '因为 DMA 只传第一个位'], a: 1,
+    w: '第 41 页的 Important points：定位（寻道 9 ms + 旋转 4 ms）花掉了几乎全部时间，而 400 扇区/道的盘上传输一个扇区只要 0.02 ms —— 第一位到达前代价已经付完。第 4.4 节给出了比例。' },
+  { q: '缓存只有 4 个槽、规则是「块 i 放在槽 i mod 4」，访问序列 <code>0, 8, 0, 8, …</code> 会怎样？',
+    o: ['全部命中（块少）', '每次都缺失，虽然大多数槽是空的', '只有第一次缺失', '只有容量够就不缺失'], a: 1,
+    w: '课件第 65 页的原话：referencing blocks 0, 8, 0, 8, 0, 8, … would miss every time —— 因为 0 与 8 都映射到槽 0，互相把对方挤出去。这就是<b>冲突缺失</b>：容量够，但映射规则不让它待着。第 10.3 节的模拟器可以直接跑这条序列。' },
+  { q: '存储层次为什么能同时做到「便宜」和「快」？',
+    o: ['因为硬件越来越好', '因为局部性：程序访问第 k 层的次数远多于第 k+1 层', '因为缓存容量无限', '因为 CPU 会预取所有数据'], a: 1,
+    w: '课件第 61 页：Because of locality, programs tend to access the data at level k more often than they access the data at level k+1 —— 所以第 k+1 层可以更慢，也因此可以更大、更便宜。见第 9.3 节。' },
+  { q: '关于 SSD 的页与块，哪一条是课件第 47 页说的？',
+    o: ['页是擦除单位、块是读写单位', '一页只有在它所在的块被擦除之后才能再写', '块可以无限次重写', '读写以字节为单位'], a: 1,
+    w: '第 47 页四条：页 512 B–4 KB、块 32–128 页；<b>数据以页为单位读写</b>；<b>页只能在块被擦除后写</b>；一个块约 10 万次重复写后磨损。见第 6 节。' },
+  { q: '4 KB 的页、每块 128 页：只改写块里 1 页，闪存里实际要写多少数据？',
+    o: ['4 KB（就写那一页）', '512 KB（整块），写放大 128 倍', '4 KB + 1 次擦除，写放大 1 倍', '128 B'], a: 1,
+    w: '其他 127 页要复制到新块、再加上改写的 1 页 = 128 页 = 512 KB，写放大 128 倍。第 6.1 节的组件可以把页大小、每块页数换来算。' },
+  { q: '从「CPU–内存差距」的角度看，1985 → 2015 这三十年发生了什么？',
+    o: ['DRAM 速度超过了 CPU', '差距缩小了', 'CPU 周期时间改善 500 倍，而 DRAM 访问时间只改善 10 倍，差距扩大', '磁盘变得比 DRAM 快'], a: 2,
+    w: '课件第 69、70 页的表：CPU 时钟 6 → 3,000 MHz（500 倍），DRAM 访问 200 → 20 ns（10 倍），磁盘 75 → 3 ms（25 倍）。所以记忆「DRAM/CPU 的比值」从 1.2 倍扩大到了 60 倍 —— 第 7 节的两张图说的就是这件事。' },
+];
+let qzState = QUIZ.map(() => null);
+function renderQuiz() {
+  const answered = qzState.filter(v => v !== null).length;
+  const right = QUIZ.filter((q, i) => qzState[i] === q.a).length;
+  const list = QUIZ.map((q, i) => {
+    const sel = qzState[i];
+    const cls = sel === null ? '' : sel === q.a ? ' correct done' : ' wrong done';
+    return `<div class="puzzle${cls}" style="flex-direction:column;align-items:stretch">
+      <div class="q" style="white-space:normal"><b>${i + 1}.</b> ${q.q}</div>
+      <div style="display:flex;flex-wrap:wrap;gap:7px;margin-top:8px">
+        ${q.o.map((o, j) => `<button class="sm" data-qzo="${i}:${j}"
+          style="${sel === null ? '' : j === q.a ? 'border-color:var(--ok-bd);background:var(--ok-bg)'
+            : j === sel ? 'border-color:var(--bad-bd);background:var(--bad-bg)' : 'opacity:.6'}">
+          ${'ABCD'[j]}. ${o}</button>`).join('')}
+      </div>
+      <div class="exp"><span class="verdict">${sel === null ? '' : sel === q.a ? '✓ 正确' : '✗ 错误'}</span>
+        &nbsp;正确答案：<b>${'ABCD'[q.a]}. ${q.o[q.a]}</b><br>${q.w}</div>
+    </div>`;
+  }).join('');
+  const score = answered === 0 ? '' : `<div class="box ${right === QUIZ.length ? 'ok' : right >= QUIZ.length / 2 ? 'warn' : 'bad'}" style="margin-bottom:0">
+    <div class="t">已答 ${answered} / ${QUIZ.length} 题，答对 ${right} 题</div>
+    ${answered === QUIZ.length
+      ? (right === QUIZ.length ? '全对 —— 从 DRAM 芯片到缓存缺失都拿下了。' : '错题上方已标出正确答案与依据，回对应小节再看一遍即可。')
+      : '继续答题，每题都会立即给出解析。'}
+  </div>`;
+  $('#qzOut').innerHTML = list + score;
+}
+
+/* ============================================================
+   23. 初始化：第 4–11 节
+   ============================================================ */
+function initS4() {
+  $$('#dskSeg button').forEach(b => b.addEventListener('click', () => {
+    $$('#dskSeg button').forEach(x => x.classList.remove('on'));
+    b.classList.add('on'); dskStep = Number(b.dataset.dsk); renderDiskAnim();
+  }));
+  $('#dskPlay').addEventListener('click', () => {
+    clearInterval(dskTimer);
+    dskStep = 0; dskSync(); renderDiskAnim();
+    dskTimer = setInterval(() => {
+      if (dskStep >= DSK_STEPS.length - 1) { clearInterval(dskTimer); return; }
+      dskStep++; dskSync(); renderDiskAnim();
+    }, 1300);
+  });
+  dskSync(); renderDiskAnim();
+
+  function doDat() { renderAccessTime(); }
+  $('#datGo').addEventListener('click', doDat);
+  ['#datRpm', '#datSeek', '#datSpt'].forEach(id => $(id).addEventListener('keydown', e => { if (e.key === 'Enter') doDat(); }));
+  $$('[data-dat]').forEach(b => b.addEventListener('click', () => {
+    const v = b.dataset.dat.split(',');
+    $('#datRpm').value = v[0]; $('#datSeek').value = v[1]; $('#datSpt').value = v[2]; doDat();
+  }));
+  doDat();
+
+  function doRat() { renderRatios(); }
+  $('#ratGo').addEventListener('click', doRat);
+  ['#ratMs', '#ratSram', '#ratDram'].forEach(id => $(id).addEventListener('keydown', e => { if (e.key === 'Enter') doRat(); }));
+  $$('[data-rat]').forEach(b => b.addEventListener('click', () => {
+    const v = b.dataset.rat.split(',');
+    $('#ratMs').value = v[0]; $('#ratSram').value = v[1]; $('#ratDram').value = v[2]; doRat();
+  }));
+  doRat();
+}
+function dskSync() {
+  $$('#dskSeg button').forEach(x => x.classList.toggle('on', Number(x.dataset.dsk) === dskStep));
+}
+
+function initS5() {
+  $$('#dmaSeg button').forEach(b => b.addEventListener('click', () => {
+    $$('#dmaSeg button').forEach(x => x.classList.remove('on'));
+    b.classList.add('on'); dmaStep = Number(b.dataset.dma); renderDma();
+  }));
+  renderDma();
+}
+
+function initS6() {
+  function doSsd() { renderSsd(); }
+  $('#ssdGo').addEventListener('click', doSsd);
+  ['#ssdPage', '#ssdPpb', '#ssdN'].forEach(id => $(id).addEventListener('keydown', e => { if (e.key === 'Enter') doSsd(); }));
+  $$('[data-ssd]').forEach(b => b.addEventListener('click', () => {
+    const v = b.dataset.ssd.split(',');
+    $('#ssdPage').value = v[0]; $('#ssdPpb').value = v[1]; $('#ssdN').value = v[2]; doSsd();
+  }));
+  doSsd();
+  function doSp() { renderSsdPerf(); }
+  $('#spGo').addEventListener('click', doSp);
+  ['#spGiB', '#spSeqR', '#spRndR', '#spRndW'].forEach(id => $(id).addEventListener('keydown', e => { if (e.key === 'Enter') doSp(); }));
+  $$('[data-sp]').forEach(b => b.addEventListener('click', () => {
+    const v = b.dataset.sp.split(',');
+    $('#spGiB').value = v[0]; $('#spSeqR').value = v[1]; $('#spRndR').value = v[2]; $('#spRndW').value = v[3]; doSp();
+  }));
+  doSp();
+}
+
+function initS7() {
+  function doGap() { renderGap(); }
+  $('#gapGo').addEventListener('click', doGap);
+  ['#gapDisk', '#gapDram', '#gapSram', '#gapCpu'].forEach(id => $(id).addEventListener('keydown', e => { if (e.key === 'Enter') doGap(); }));
+  $$('#gapSeg button').forEach(b => b.addEventListener('click', () => {
+    $$('#gapSeg button').forEach(x => x.classList.remove('on'));
+    b.classList.add('on');
+    const y = b.dataset.gap;
+    const v = y === '1985' ? [75, 200, 150, 166] : [3, 20, 1.3, 0.33];
+    $('#gapDisk').value = v[0]; $('#gapDram').value = v[1]; $('#gapSram').value = v[2]; $('#gapCpu').value = v[3];
+    doGap();
+  }));
+  $$('[data-gap2]').forEach(b => b.addEventListener('click', () => {
+    const v = b.dataset.gap2.split(',');
+    $$('#gapSeg button').forEach(x => x.classList.toggle('on', x.dataset.gap === v[0]));
+    $('#gapDisk').value = v[1]; $('#gapDram').value = v[2]; $('#gapSram').value = v[3]; $('#gapCpu').value = v[4];
+    doGap();
+  }));
+  doGap();
+  $$('#trSeg button').forEach(b => b.addEventListener('click', () => {
+    $$('#trSeg button').forEach(x => x.classList.remove('on'));
+    b.classList.add('on'); trSel = b.dataset.tr; renderTrend();
+  }));
+  renderTrend();
+}
+
+function initS8() {
+  $$('#lpSeg button').forEach(b => b.addEventListener('click', () => {
+    $$('#lpSeg button').forEach(x => x.classList.remove('on'));
+    b.classList.add('on'); lpMode = b.dataset.lp; lpBest = null; renderLocality();
+  }));
+  $('#lpGo').addEventListener('click', renderLocality);
+  ['#lpM', '#lpN', '#lpB'].forEach(id => $(id).addEventListener('keydown', e => { if (e.key === 'Enter') renderLocality(); }));
+  $$('[data-lp2]').forEach(b => b.addEventListener('click', () => {
+    const v = b.dataset.lp2.split(',');
+    lpMode = v[0]; lpBest = v.slice(1, 1 + (v[0] === '2d' ? 2 : 3)).join(',');
+    $$('#lpSeg button').forEach(x => x.classList.toggle('on', x.dataset.lp === lpMode));
+    $('#lpM').value = v[v.length - 3]; $('#lpN').value = v[v.length - 2]; $('#lpB').value = v[v.length - 1];
+    renderLocality();
+  }));
+  renderLocality();
+}
+
+function initS9() {
+  renderHier();
+}
+
+function initS10() {
+  $$('#cchSeg button').forEach(b => b.addEventListener('click', () => {
+    $$('#cchSeg button').forEach(x => x.classList.remove('on'));
+    b.classList.add('on'); cchMode = b.dataset.cch; renderCache();
+  }));
+  $('#cchGo').addEventListener('click', renderCache);
+  ['#cchSlots', '#cchReq'].forEach(id => $(id).addEventListener('keydown', e => { if (e.key === 'Enter') renderCache(); }));
+  $$('[data-cch2]').forEach(b => b.addEventListener('click', () => {
+    const v = b.dataset.cch2.split(',');
+    cchMode = v[1];
+    cchStart = v[0] === '4' ? [8, 9, 14, 3] : [];
+    $$('#cchSeg button').forEach(x => x.classList.toggle('on', x.dataset.cch === cchMode));
+    $('#cchSlots').value = v[0]; $('#cchReq').value = v[2];
+    renderCache();
+  }));
+  renderCache();
+  $$('#latSeg button').forEach(b => b.addEventListener('click', () => {
+    $$('#latSeg button').forEach(x => x.classList.remove('on'));
+    b.classList.add('on'); latMode = b.dataset.lat; renderLat();
+  }));
+  renderLat();
+}
+
+function initS11() {
+  renderPuzzles();
+  $('#pzReset').addEventListener('click', () => { pzState = PUZ.map(() => null); renderPuzzles(); });
+  renderQuiz();
+  $('#qzReset').addEventListener('click', () => { qzState = QUIZ.map(() => null); renderQuiz(); });
+}
+</script>
+</body>
+</html>

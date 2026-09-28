@@ -1,0 +1,2696 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-style="brutalist" data-deck="ics17">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>异常控制流 II：信号与非本地跳转 · 交互式课件（中文）（新粗野版）</title>
+<style>
+/* ==========================================================================
+   base.css —— 结构基础样式（所有风格共用）
+   只使用 CSS 变量，不含任何具体配色；由各主题覆盖变量与少量结构规则。
+   ========================================================================== */
+
+:root{
+  /* 颜色（每个主题必须覆盖） */
+  --bg:#f6f7f9; --card:#fff; --ink:#15181d; --muted:#697586; --line:#e4e7ec;
+  --accent:#2563eb; --accent-ink:#fff; --accent-soft:#eaf1ff;
+  --sign:#e5484d; --exp:#0b7fd4; --frac:#18915a; --warn:#b45309;
+  --sign-bg:#fdecec; --sign-fg:#a3262b; --sign-bd:#f6cdcf;
+  --exp-bg:#e8f2fd;  --exp-fg:#0a5f9e;  --exp-bd:#c7ddf5;
+  --frac-bg:#e9f7ef; --frac-fg:#116b43; --frac-bd:#c8e8d5;
+  --ok-bg:#f2fbf6; --ok-bd:#9ed3b4; --bad-bg:#fff5f5; --bad-bd:#f1b5b8;
+  --warn-bg:#fffbeb; --gray-bg:#eef1f5; --gray-fg:#5b6472;
+  --paper-soft:#fcfdfe; --code-bg:#f1f3f7; --code-bd:#e6e9ef;
+  --tbl-head:#f7f9fc; --tbl-hover:#fafbfd;
+  --sel-bg:#eef1f5;
+
+  /* 字体 */
+  --font-sans:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",system-ui,sans-serif;
+  --font-mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+  --font-display:var(--font-sans);
+  --tracking-title:normal;
+
+  /* 形状 */
+  --radius:12px; --radius-sm:8px; --radius-pill:99px;
+  --border-w:1px; --shadow:0 1px 2px rgba(16,24,40,.06),0 1px 3px rgba(16,24,40,.1);
+  --shadow-card:none;
+  --card-border:var(--border-w) solid var(--line);
+
+  /* 布局 */
+  --page-max:1180px; --nav-w:236px; --gap:26px; --sec-pad:26px 28px;
+  --nav-sticky-top:64px; --anchor-offset:70px;
+  --font-size:16px; --line-height:1.75;
+}
+
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font-sans);
+  font-size:var(--font-size);line-height:var(--line-height);-webkit-font-smoothing:antialiased}
+img{max-width:100%}
+
+/* ---------- 顶栏 ---------- */
+.topbar{position:sticky;top:0;z-index:50;background:var(--card);border-bottom:1px solid var(--line)}
+.topbar-in{max-width:var(--page-max);margin:0 auto;padding:10px 22px;display:flex;align-items:center;gap:14px}
+.brand{font-weight:700;letter-spacing:var(--tracking-title);font-family:var(--font-display)}
+.brand small{font-weight:500;color:var(--muted);margin-left:8px;font-size:12.5px}
+.progress{margin-left:auto;display:flex;align-items:center;gap:10px;font-size:12.5px;color:var(--muted)}
+.progress .bar{width:150px;height:6px;border-radius:var(--radius-pill);background:var(--line);overflow:hidden}
+.progress .bar>i{display:block;height:100%;width:0;background:var(--accent);transition:width .25s}
+
+/* ---------- 主体布局 ---------- */
+.layout{max-width:var(--page-max);margin:0 auto;padding:22px;display:grid;
+  grid-template-columns:var(--nav-w) minmax(0,1fr);gap:var(--gap)}
+main{min-width:0}
+/* 长 URL / 长标识符没有断行点，会把容器整个撑破（窄屏尤其明显）。
+   只作用于文本容器；表格故意不加，让它走 .tbl-wrap 的横向滚动。 */
+main p,main li,main dd,main dt,main h2,main h3,main h4,main h5,
+main .box,main .card,main .readout,main .puzzle,main .step{overflow-wrap:anywhere}
+
+/* ---------- 目录 ---------- */
+nav.toc{position:sticky;top:var(--nav-sticky-top);align-self:start;max-height:calc(100vh - 84px);overflow:auto;padding-right:4px}
+nav.toc h4{margin:0 0 8px;font-size:12px;letter-spacing:.12em;color:var(--muted);text-transform:uppercase;font-weight:600}
+nav.toc a{display:block;padding:7px 11px;border-radius:var(--radius-sm);color:var(--ink);opacity:.78;
+  text-decoration:none;font-size:14.5px;border-left:2.5px solid transparent}
+nav.toc a:hover{background:var(--sel-bg);opacity:1}
+nav.toc a.active{background:var(--accent-soft);color:var(--accent);border-left-color:var(--accent);font-weight:600;opacity:1}
+nav.toc a .n{display:inline-block;min-width:20px;color:var(--muted);font-size:12.5px;font-variant-numeric:tabular-nums}
+nav.toc a.active .n{color:var(--accent)}
+nav.toc .sub{padding-left:26px;font-size:13.5px;opacity:.7}
+
+/* ---------- 章节 ---------- */
+section{background:var(--card);border:var(--card-border);border-radius:var(--radius);
+  padding:var(--sec-pad);margin-bottom:22px;box-shadow:var(--shadow);scroll-margin-top:var(--anchor-offset)}
+section>h2{margin:0 0 6px;font-size:25px;letter-spacing:-.01em;font-family:var(--font-display)}
+section>.lede{color:var(--muted);margin:0 0 20px;font-size:14.5px}
+h3{font-size:18.5px;margin:26px 0 10px;padding-left:11px;border-left:3.5px solid var(--accent);font-family:var(--font-display)}
+h4{font-size:16px;margin:18px 0 8px;font-family:var(--font-display)}
+h5{font-size:15px;font-family:var(--font-display)}
+p{margin:10px 0}
+ul,ol{margin:10px 0;padding-left:22px}
+li{margin:5px 0}
+code{font-family:var(--font-mono);font-size:.89em;background:var(--code-bg);border:1px solid var(--code-bd);border-radius:5px;padding:1px 5px}
+.mono{font-family:var(--font-mono)}
+a{color:var(--accent)}
+hr{border:0;border-top:1px dashed var(--line);margin:24px 0}
+.srcref{font-size:11.5px;color:var(--muted);font-weight:500;font-family:var(--font-sans);margin-left:8px;vertical-align:middle;white-space:nowrap;opacity:.75}
+.en{color:var(--muted);font-size:.92em}
+
+/* ---------- 栅格与卡片 ---------- */
+.grid{display:grid;gap:14px}
+.g2{grid-template-columns:repeat(2,minmax(0,1fr))}
+.g3{grid-template-columns:repeat(3,minmax(0,1fr))}
+/* 窄屏单列：必须用 minmax(0,1fr)。写成 1fr 时轨道最小宽度是 auto，
+   单元格里只要有长代码行（<pre>）就撑破容器，整页横向溢出。 */
+@media(max-width:820px){.g2,.g3{grid-template-columns:minmax(0,1fr)}}
+.card{border:var(--card-border);border-radius:var(--radius-sm);padding:15px 17px;background:var(--paper-soft);box-shadow:var(--shadow-card)}
+.card h5{margin:0 0 7px}
+.card.pad0{padding:0;overflow:hidden}
+
+/* ---------- 提示框 ---------- */
+.box{border:1px solid var(--line);border-left:4px solid var(--accent);background:var(--accent-soft);
+  border-radius:var(--radius-sm);padding:12px 16px;margin:14px 0}
+.box.warn{border-left-color:var(--warn);background:var(--warn-bg)}
+.box.bad{border-left-color:var(--sign);background:var(--bad-bg)}
+.box.ok{border-left-color:var(--frac);background:var(--ok-bg)}
+.box .t{font-weight:650;font-size:14.5px;margin-bottom:2px}
+
+/* ---------- 公式 ---------- */
+.formula{font-family:var(--font-mono);background:var(--paper-soft);border:1px solid var(--line);
+  border-radius:var(--radius-sm);padding:14px 17px;margin:14px 0;font-size:16.5px;text-align:center;overflow-x:auto}
+.formula.big{font-size:20px}
+
+/* ---------- 表格 ---------- */
+table.tbl{width:100%;border-collapse:collapse;font-size:14.5px;margin:14px 0}
+table.tbl th,table.tbl td{border:1px solid var(--line);padding:8px 11px;text-align:left;vertical-align:top}
+table.tbl th{background:var(--tbl-head);font-weight:650;font-size:13.5px;white-space:nowrap}
+table.tbl td.mono,table.tbl th.mono{font-family:var(--font-mono);font-size:13.5px}
+table.tbl tr:hover td{background:var(--tbl-hover)}
+/* 当前行高亮：interactive 表格用它标出「正在看的那一行」。
+   注意 --tbl-hover 是悬停色，深色皮肤下故意比底色亮，所以 hl 用同一套变量。 */
+table.tbl tr.hl td{background:var(--sel-bg)}
+.tbl-wrap{overflow-x:auto}
+
+/* ---------- 位串控件 ---------- */
+.fw{display:flex;flex-wrap:wrap;gap:8px 18px;align-items:flex-start;margin:4px 0 2px;min-width:0}
+.fgrp{min-width:0}
+.fcap{font-size:12px;color:var(--muted);margin-bottom:4px;font-weight:600}
+.fcap b{font-family:var(--font-mono);font-size:12.5px}
+.bits{display:flex;flex-wrap:wrap;gap:2px;font-family:var(--font-mono);margin:4px 0}
+.bits .b{width:25px;height:33px;display:flex;align-items:center;justify-content:center;
+  border-radius:6px;font-size:15px;cursor:pointer;user-select:none;border:1px solid transparent;
+  transition:transform .06s,background .12s;font-weight:600}
+.bits .b:hover{transform:translateY(-2px)}
+.bits .b.s{background:var(--sign-bg);color:var(--sign-fg);border-color:var(--sign-bd)}
+.bits .b.e{background:var(--exp-bg);color:var(--exp-fg);border-color:var(--exp-bd)}
+.bits .b.f{background:var(--frac-bg);color:var(--frac-fg);border-color:var(--frac-bd)}
+.bits .b.sel{outline:2px solid var(--ink);outline-offset:1px}
+.bits.sm .b{width:19px;height:26px;font-size:12px;border-radius:4px}
+.fgrp .bits{flex-wrap:wrap;max-width:100%;gap:2px}
+.fgrp.ge .bits{max-width:300px}
+
+/* ---------- 读数表 ---------- */
+.readout{display:grid;grid-template-columns:auto 1fr;gap:4px 16px;font-size:14.5px;margin:12px 0}
+.readout dt{color:var(--muted);font-weight:600;font-family:var(--font-mono);font-size:13.5px;padding-top:2px}
+.readout dd{margin:0;font-family:var(--font-mono)}
+
+/* ---------- 小标签 ---------- */
+.chip{display:inline-block;font-size:12.5px;padding:2px 9px;border-radius:var(--radius-pill);
+  background:var(--accent-soft);color:var(--accent);font-weight:600}
+.chip.ok{background:var(--frac-bg);color:var(--frac-fg)}
+.chip.bad{background:var(--sign-bg);color:var(--sign-fg)}
+.chip.warn{background:var(--warn-bg);color:var(--warn)}
+.chip.gray{background:var(--gray-bg);color:var(--gray-fg)}
+.kbd{font-family:var(--font-mono);font-size:13px;background:var(--code-bg);border:1px solid var(--code-bd);
+  border-bottom-width:2px;border-radius:6px;padding:1px 7px}
+
+/* ---------- 控件 ---------- */
+.ctrls{display:flex;flex-wrap:wrap;gap:9px;align-items:center;margin:12px 0}
+label.fld{display:inline-flex;align-items:center;gap:7px;font-size:14px;color:var(--ink);max-width:100%;flex-wrap:wrap;min-width:0}
+label.fld select,label.fld input{min-width:0;max-width:100%}
+input[type=text],input[type=number],select{font-family:var(--font-mono);font-size:14px;padding:6px 10px;
+  border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--card);color:var(--ink)}
+input[type=text]:focus,input[type=number]:focus,select:focus{outline:2px solid var(--accent-soft);border-color:var(--accent)}
+button{font-family:var(--font-sans);font-size:14px;font-weight:600;padding:7px 15px;border-radius:var(--radius-sm);
+  border:1px solid var(--line);background:var(--card);color:var(--ink);cursor:pointer}
+button:hover{background:var(--sel-bg)}
+button.p{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+button.sm{padding:4px 10px;font-size:13px}
+button.pill{border-radius:var(--radius-pill)}
+/* 按钮组默认不换行：项一多就会把 .ctrls 撑破。允许它缩到容器宽度并横向滚动。 */
+.seg{display:inline-flex;max-width:100%;border:1px solid var(--line);
+  border-radius:var(--radius-sm);overflow-x:auto;overflow-y:hidden}
+.seg button{border:0;border-radius:0;border-right:1px solid var(--line);padding:6px 13px}
+.seg button:last-child{border-right:0}
+.seg button.on{background:var(--accent);color:var(--accent-ink)}
+
+/* ---------- 分步演示 ---------- */
+/* .steps 是 .step 的包裹层（skill 词汇表里列了但一直没定义）——
+   仅给一点上下留白，步骤块自己的边距由 .step 负责。 */
+.steps{margin:12px 0}
+.step{border:1px solid var(--line);border-radius:var(--radius-sm);padding:11px 15px;margin:9px 0;
+  background:var(--paper-soft);opacity:.42;transition:opacity .2s}
+.step.on{opacity:1;background:var(--card)}
+.step .h{font-size:13px;font-weight:700;color:var(--accent);letter-spacing:.02em;margin-bottom:3px}
+.step .m{font-family:var(--font-mono);font-size:14.5px;overflow-x:auto}
+.step .e{font-size:13.5px;color:var(--muted);margin-top:3px}
+
+/* ---------- 折叠与答案 ---------- */
+.reveal{border:1px solid var(--line);border-radius:var(--radius-sm);padding:11px 15px;margin:8px 0;background:var(--paper-soft)}
+.reveal summary{cursor:pointer;font-weight:600;font-size:14.5px}
+.reveal[open]{background:var(--card)}
+.ans{margin-top:8px;padding-top:8px;border-top:1px dashed var(--line);font-size:14.5px}
+
+/* ---------- 判断题 ---------- */
+.puzzle{border:1px solid var(--line);border-radius:var(--radius-sm);padding:12px 15px;margin:9px 0;
+  display:flex;gap:13px;align-items:flex-start;background:var(--paper-soft)}
+.puzzle .q{font-family:var(--font-mono);font-size:15px;flex:1;min-width:0;overflow-x:auto;white-space:nowrap}
+.puzzle .q small{font-family:var(--font-sans);color:var(--muted);display:block;white-space:normal}
+.puzzle .btns{display:flex;gap:6px;flex-shrink:0}
+.puzzle.correct{border-color:var(--ok-bd);background:var(--ok-bg)}
+.puzzle.wrong{border-color:var(--bad-bd);background:var(--bad-bg)}
+.puzzle .exp{margin-top:9px;padding-top:9px;border-top:1px dashed var(--line);font-size:14.5px;
+  display:none;white-space:normal;font-family:var(--font-sans)}
+.puzzle.done .exp{display:block}
+.puzzle .exp .verdict{font-weight:700}
+
+/* ---------- 分布图 ---------- */
+.tick{stroke:#94a3b8;stroke-width:1.4}
+.tick.dn{stroke:var(--exp)}
+.tick.nm{stroke:var(--frac)}
+.ticklabel{font-size:9.5px;fill:var(--muted);font-family:var(--font-mono)}
+.axisline{stroke:var(--line);stroke-width:1.2}
+.axislabel{font-size:11px;fill:var(--muted)}
+
+/* ---------- 页脚 / 回到顶部 ---------- */
+.footer{max-width:var(--page-max);margin:0 auto;padding:8px 22px 40px;color:var(--muted);font-size:13px}
+.totop{position:fixed;right:22px;bottom:22px;z-index:40;box-shadow:var(--shadow);display:none}
+
+/* ---------- 响应式 ---------- */
+@media(max-width:960px){
+  .layout{grid-template-columns:1fr;padding:16px}
+  nav.toc{position:static;max-height:none;display:flex;flex-wrap:wrap;gap:6px;
+    background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:10px}
+  nav.toc h4{width:100%;margin-bottom:2px}
+  nav.toc a{border-left:0;padding:5px 10px;font-size:13px}
+  nav.toc .sub{display:none}
+  section{padding:20px 17px}
+}
+@media print{
+  nav.toc,.topbar,.totop{display:none}
+  .layout{display:block}
+  section{break-inside:avoid;box-shadow:none}
+}
+
+/* ==========================================================================
+   风格 C · 新粗野主义（Neo-brutalism）
+   厚黑描边 · 硬投影 · 高饱和色块 · 顶部大字报 + 药丸导航
+   ========================================================================== */
+
+:root{
+  --bg:#fdf3d7; --card:#fffdf5; --ink:#111111; --muted:#5b564a; --line:#111111;
+  --accent:#ff3d68; --accent-ink:#fff; --accent-soft:#ffe3ea;
+  --sign:#e01b24; --exp:#0b6fd4; --frac:#0f9d58; --warn:#c2410c;
+  --sign-bg:#ffdfe0; --sign-fg:#b3141c; --sign-bd:#111;
+  --exp-bg:#dcecff;  --exp-fg:#0a5aa8;  --exp-bd:#111;
+  --frac-bg:#dcf7e5; --frac-fg:#0b7a45; --frac-bd:#111;
+  --ok-bg:#e3fbe9; --ok-bd:#111; --bad-bg:#ffe6e6; --bad-bd:#111;
+  --warn-bg:#fff0d6; --gray-bg:#efe9d8; --gray-fg:#4a463c;
+  --paper-soft:#fffdf5; --code-bg:#fff8e1; --code-bd:#111;
+  --tbl-head:#ffe9a8; --tbl-hover:#fffbe8;
+  --sel-bg:#ffe9a8;
+
+  --font-sans:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",system-ui,sans-serif;
+  --font-mono:ui-monospace,"SF Mono",Menlo,Consolas,"Liberation Mono",monospace;
+  --font-display:var(--font-sans);
+  --tracking-title:-.02em;
+
+  --radius:4px; --radius-sm:4px; --radius-pill:99px;
+  --border-w:2px;
+  --shadow:5px 5px 0 var(--line); --shadow-card:4px 4px 0 var(--line);
+  --card-border:2px solid var(--line);
+
+  --page-max:1200px; --nav-w:auto; --gap:0px;
+  --sec-pad:24px 26px; --nav-sticky-top:0px; --anchor-offset:150px;
+  --font-size:16px; --line-height:1.72;
+}
+
+body{background:
+  repeating-linear-gradient(45deg, rgba(17,17,17,.028) 0 12px, transparent 12px 24px),
+  var(--bg)}
+
+/* ---------- 顶栏：大字报（不吸顶，避免与吸顶药丸导航重叠） ---------- */
+.topbar{position:static;background:var(--accent);border-bottom:3px solid var(--line);color:#fff}
+.topbar-in{padding:12px 22px;max-width:var(--page-max)}
+.brand{font-weight:900;font-size:22px;letter-spacing:var(--tracking-title);
+  text-transform:none;text-shadow:2px 2px 0 rgba(17,17,17,.55)}
+.brand small{color:#fff;opacity:.9;font-weight:700;font-size:12px;letter-spacing:.02em}
+.progress{color:#fff;font-weight:700;font-size:12.5px}
+.progress .bar{width:150px;height:12px;border-radius:0;background:#fff;border:2px solid var(--line);overflow:hidden}
+.progress .bar>i{background:repeating-linear-gradient(45deg,#111 0 6px,#ffd93d 6px 12px)}
+
+/* ---------- 导航：横排药丸，吸顶 ---------- */
+.layout{display:block;max-width:var(--page-max);padding:0 22px 26px}
+nav.toc{position:sticky;top:0;z-index:45;display:flex;flex-wrap:wrap;gap:6px;align-items:center;
+  max-height:none;overflow:visible;padding:10px 0;margin:0 0 18px;
+  background:var(--bg);border-bottom:3px solid var(--line)}
+nav.toc h4{width:100%;margin:0 0 2px;font-size:11px;letter-spacing:.16em;color:var(--muted)}
+nav.toc a{border:2px solid var(--line);border-radius:var(--radius-pill);background:var(--card);
+  padding:4px 11px;font-size:12px;font-weight:700;border-left-width:2px;white-space:nowrap;
+  box-shadow:2px 2px 0 var(--line)}
+nav.toc a:hover{background:var(--sel-bg);transform:translate(1px,1px);box-shadow:1px 1px 0 var(--line)}
+nav.toc a.active{background:var(--ink);color:#ffd93d;box-shadow:1px 1px 0 var(--line)}
+nav.toc a .n{color:inherit;opacity:.6;font-weight:800;min-width:auto;margin-right:5px}
+nav.toc .sub{display:none}
+
+/* ---------- 章节：粗框卡片 ---------- */
+section{box-shadow:var(--shadow);margin-bottom:26px;background:var(--card)}
+section>h2{font-size:27px;font-weight:900;display:inline-block;background:var(--ink);color:#ffd93d;
+  padding:3px 14px;margin:0 0 12px;border-radius:2px}
+section>h2 .srcref{color:#ffd93d;opacity:.65}
+section>.lede{font-weight:600;color:var(--muted);margin-bottom:18px}
+h3{font-size:19px;font-weight:900;border-left:0;padding:0 0 0 14px;position:relative;margin-top:28px}
+h3::before{content:"";position:absolute;left:0;top:.28em;width:8px;height:.95em;background:var(--accent);
+  border:2px solid var(--line)}
+h4,h5{font-weight:800}
+code{background:var(--code-bg);border:2px solid var(--line);border-radius:3px;font-weight:600}
+
+/* ---------- 卡片 / 盒：硬投影 + 位移 hover ---------- */
+.card{box-shadow:var(--shadow-card);border-radius:var(--radius);transition:transform .08s,box-shadow .08s}
+.card:hover{transform:translate(2px,2px);box-shadow:2px 2px 0 var(--line)}
+.box{border:2px solid var(--line);border-left-width:8px;border-radius:var(--radius);background:var(--accent-soft);
+  box-shadow:var(--shadow-card)}
+.box.warn{background:var(--warn-bg)}
+.box.bad{background:var(--bad-bg)}
+.box.ok{background:var(--ok-bg)}
+.box .t{font-weight:900;font-size:15px}
+
+.formula{background:#fff;border:2px solid var(--line);border-radius:var(--radius);font-weight:700;
+  box-shadow:var(--shadow-card)}
+.formula.big{font-size:21px}
+
+/* ---------- 表格：粗网格 ---------- */
+table.tbl th,table.tbl td{border:2px solid var(--line);padding:8px 12px}
+table.tbl th{background:var(--tbl-head);font-weight:900;font-size:13px}
+table.tbl tbody tr:nth-child(even) td{background:#fffdf0}
+table.tbl tr:hover td{background:var(--tbl-hover)}
+
+/* ---------- 位视图：色块方格 ---------- */
+.fw{gap:10px 20px;padding:14px;border:2px dashed var(--line);border-radius:var(--radius);background:#fff}
+.fcap{font-weight:800;font-size:11.5px;letter-spacing:.06em;text-transform:uppercase}
+.bits{gap:3px}
+.bits .b{width:26px;height:32px;border-radius:3px;border:2px solid var(--line);font-weight:900}
+.bits .b.s{background:var(--sign-bg);color:var(--sign-fg)}
+.bits .b.e{background:var(--exp-bg);color:var(--exp-fg)}
+.bits .b.f{background:var(--frac-bg);color:var(--frac-fg)}
+.bits .b:hover{transform:translate(1px,1px)}
+.bits .b.sel{outline:3px solid var(--accent);outline-offset:0}
+.bits.sm .b{width:20px;height:26px;font-size:11.5px}
+
+.readout dt{color:var(--muted);font-weight:800}
+
+/* ---------- 控件：可按的实体按钮 ---------- */
+input[type=text],input[type=number],select{border:2px solid var(--line);border-radius:var(--radius);
+  background:#fff;font-weight:700}
+input:focus,select:focus{outline:none;box-shadow:3px 3px 0 var(--line)}
+button{border:2px solid var(--line);border-radius:var(--radius);font-weight:800;background:#fff;
+  box-shadow:3px 3px 0 var(--line);transition:transform .08s,box-shadow .08s}
+button:hover{background:var(--sel-bg);transform:translate(1px,1px);box-shadow:2px 2px 0 var(--line)}
+button.p{background:var(--accent);color:#fff}
+button.p:hover{background:#ff2456}
+button:active{transform:translate(3px,3px);box-shadow:0 0 0 var(--line)}
+.chip{border:2px solid var(--line);border-radius:var(--radius-pill);background:#fff;color:var(--ink);
+  font-weight:800;font-size:12px}
+.chip.ok{background:var(--frac-bg);color:var(--frac-fg)}
+.chip.bad{background:var(--sign-bg);color:var(--sign-fg)}
+.chip.warn{background:var(--warn-bg);color:var(--warn)}
+.chip.gray{background:var(--gray-bg)}
+.seg{border:2px solid var(--line);border-radius:var(--radius);box-shadow:3px 3px 0 var(--line)}
+.seg button{border-right:2px solid var(--line);box-shadow:none;border:0;border-radius:0}
+.seg button:hover{transform:none}
+.seg button.on{background:var(--ink);color:#ffd93d}
+
+/* ---------- 分步演示 ---------- */
+.step{border:2px solid var(--line);border-radius:var(--radius);background:#fff;box-shadow:3px 3px 0 var(--line)}
+.step.on{background:#fffdf5}
+.step .h{color:var(--accent);font-weight:900;font-size:13px;letter-spacing:.02em}
+.step .m{font-weight:600}
+.step .e{color:var(--muted)}
+
+/* ---------- 判断题 ---------- */
+.puzzle{border:2px solid var(--line);border-radius:var(--radius);background:#fff}
+.puzzle.correct{background:var(--ok-bg)}
+.puzzle.wrong{background:var(--bad-bg)}
+.puzzle .q{font-weight:700}
+.reveal{border:2px solid var(--line);border-radius:var(--radius);background:#fff;
+  box-shadow:3px 3px 0 var(--line)}
+.reveal[open]{background:#fffdf5}
+
+.totop{border:2px solid var(--line);box-shadow:4px 4px 0 var(--line);background:#ffd93d;font-weight:900}
+.tick{stroke:#7a6f52}
+.tick.nm{stroke:var(--frac)}
+.tick.dn{stroke:var(--exp)}
+.axisline{stroke:var(--line)}
+
+/* ---------- 响应式 ---------- */
+@media(max-width:960px){
+  .topbar-in{padding:10px 16px}
+  .brand{font-size:18px}
+  .layout{padding:0 16px 20px}
+  nav.toc{gap:6px;padding:10px 0}
+  nav.toc a{padding:4px 10px;font-size:12px}
+  section{padding:20px 16px}
+  section>h2{font-size:22px}
+  .progress .bar{width:90px}
+}
+
+
+/* ---------- 风格切换条（构建时注入，各主题通用） ---------- */
+.stylebar{max-width:var(--page-max);margin:0 auto;padding:14px 22px 0;display:flex;gap:8px;
+  flex-wrap:wrap;align-items:center;font-size:12.5px;color:var(--muted)}
+.stylebar>span{font-weight:600}
+.stylebar a{text-decoration:none;padding:4px 11px;border:1px solid var(--line);border-radius:var(--radius-pill);
+  color:var(--muted);background:var(--card);font-weight:600}
+.stylebar a:hover{border-color:var(--accent);color:var(--accent)}
+.stylebar a.cur{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.stylebar>span{flex:0 0 auto}
+@media(max-width:960px){.stylebar{padding:12px 16px 0}}
+/* 25 讲之后药丸很多：窄屏折行会吃掉大半屏，改成单行横滑 */
+@media(max-width:820px){.stylebar{flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;
+  scrollbar-width:thin}.stylebar a{flex:0 0 auto;font-size:12px;padding:4px 10px}}
+
+</style>
+</head>
+<body>
+
+<header class="topbar"><div class="topbar-in">
+  <div class="brand">异常控制流 II：信号与非本地跳转 Exceptional Control Flow: Signals and Nonlocal Jumps<small>《计算机系统导论》第 17 讲 · 新粗野版</small></div>
+  <div class="progress"><span id="pgText">学习进度 0%</span><span class="bar"><i id="pgBar"></i></span></div>
+</div></header>
+
+<div class="stylebar">
+  <span>风格：</span>
+  <a href="../ics17-zh.html">清爽蓝（原版）</a>
+  <a href="01-academic.html">学术讲义</a>
+  <a href="02-terminal.html">深色终端</a>
+  <a href="04-glass.html">柔和玻璃</a>
+  <a href="index.html">◧ 全部预览</a>
+  <span style="opacity:.5">|</span>
+  <a href="../variants-ics01/index.html">↗ 第 1 讲 · 课程概述</a>
+  <a href="../variants-bits/index.html">↗ 第 2 讲 · 位、字节与整数</a>
+  <a href="../variants/index.html">↗ 第 3 讲 · 浮点数</a>
+  <a href="../variants-ics04/index.html">↗ 第 4 讲 · 机器级编程 I：基础</a>
+  <a href="../variants-ics05/index.html">↗ 第 5 讲 · 机器级编程 II：控制</a>
+  <a href="../variants-ics06/index.html">↗ 第 6 讲 · 机器级编程 III：过程</a>
+  <a href="../variants-ics07/index.html">↗ 第 7 讲 · 机器级编程 IV：数据</a>
+  <a href="../variants-ics08/index.html">↗ 第 8 讲 · 机器级编程 V：高级</a>
+  <a href="../variants-ics09/index.html">↗ 第 9 讲 · 处理器体系结构：ISA 与逻辑</a>
+  <a href="../variants-ics10/index.html">↗ 第 10 讲 · 处理器体系结构：顺序实现</a>
+  <a href="../variants-ics11/index.html">↗ 第 11 讲 · 处理器体系结构：流水线</a>
+  <a href="../variants-ics12/index.html">↗ 第 12 讲 · 存储层次结构</a>
+  <a href="../variants-ics13/index.html">↗ 第 13 讲 · 缓存存储器</a>
+  <a href="../variants-ics14/index.html">↗ 第 14 讲 · 代码优化</a>
+  <a href="../variants-ics15/index.html">↗ 第 15 讲 · 链接</a>
+  <a href="../variants-ics16/index.html">↗ 第 16 讲 · 异常控制流 I</a>
+  <a href="../variants-ics18/index.html">↗ 第 18 讲 · 系统级 I/O</a>
+  <a href="../variants-ics19/index.html">↗ 第 19 讲 · 虚拟内存 I</a>
+  <a href="../variants-ics20/index.html">↗ 第 20 讲 · 虚拟内存 II</a>
+  <a href="../variants-ics21/index.html">↗ 第 21 讲 · 动态内存分配</a>
+  <a href="../variants-ics22/index.html">↗ 第 22 讲 · 网络基础</a>
+  <a href="../variants-ics23/index.html">↗ 第 23 讲 · 网络编程</a>
+  <a href="../variants-ics24/index.html">↗ 第 24 讲 · 并发编程</a>
+  <a href="../variants-ics25/index.html">↗ 第 25 讲 · 同步</a>
+  <a href="../variants-lab/index.html">↗ Data Lab 实验</a>
+</div>
+
+<div class="layout">
+
+<nav class="toc">
+  <h4>目录</h4>
+  <a href="#s0"><span class="n">0</span>课程导览</a>
+  <a href="#s1"><span class="n">1</span>Shell 与进程层次</a>
+  <a href="#s2"><span class="n">2</span>简易 shell 的 eval</a>
+  <a href="#s3"><span class="n">3</span>信号基础</a>
+  <a href="#s4"><span class="n">4</span>发送信号与进程组</a>
+  <a href="#s5"><span class="n">5</span>接收信号与处理器</a>
+  <a href="#s6"><span class="n">6</span>阻塞与安全处理器</a>
+  <a href="#s7"><span class="n">7</span>并发陷阱与竞态</a>
+  <a href="#s8"><span class="n">8</span>非本地跳转</a>
+  <a href="#s9"><span class="n">9</span>综合案例：自动重启</a>
+  <a href="#s10"><span class="n">10</span>总结与测验</a>
+</nav>
+
+<main>
+<!-- ================= 0 ================= -->
+  <section id="s0">
+    <h2>课程导览<span class="srcref">原第 1–5 页</span></h2>
+    <p class="lede">北京大学《计算机系统导论》第 17 讲：异常控制流（exceptional control flow, ECF）II —— <b>信号（signals）与非本地跳转（nonlocal jumps）</b>。上一讲把「异常」与「进程」讲完了；这一讲回答两个新问题：<b>进程之间怎么互相通知</b>（信号），以及<b>一个进程怎么跨过函数调用栈直接跳走</b>（<code>setjmp</code>/<code>longjmp</code>）。</p>
+
+    <div class="grid g3">
+      <div class="card"><h5>本讲提纲</h5>
+        <ol style="margin:0;padding-left:20px;font-size:14.5px">
+          <li>Shell、进程层次与后台作业</li>
+          <li>简易 shell 的 <code>eval</code> 函数与它的三个问题</li>
+          <li>信号：概念、未决与阻塞位向量</li>
+          <li>发送信号：进程组、<code>/bin/kill</code> 与键盘</li>
+          <li>接收信号与信号处理器</li>
+          <li>阻塞信号、安全处理器与异步信号安全</li>
+          <li>并发陷阱：信号不排队、竞态、<code>sigsuspend</code></li>
+          <li>非本地跳转 <code>setjmp</code>/<code>longjmp</code></li>
+        </ol>
+      </div>
+      <div class="card"><h5>一句话核心</h5>
+        <p style="margin:0;font-size:14.5px">信号的全部机制就是<b>内核在目标进程的上下文里改写几位</b>：发送 = 置一位 <code>pending</code>，阻塞 = 置一位 <code>blocked</code>，递送 = 算一次 <code>pending &amp; ~blocked</code> 再清掉那一位。真正的难点不在位运算，而在<b>处理器是与主程序并发的第二条逻辑流</b> —— 所以它只能调用异步信号安全的函数、访问共享数据前要阻塞信号。</p>
+      </div>
+      <div class="card"><h5>和上一讲的衔接</h5>
+        <p style="margin:0;font-size:14.5px">第 2 页把系统里的异常控制流排成四层：<b>异常</b>与<b>进程上下文切换</b>是上一讲的内容（都由内核主导），本讲拿下<b>信号</b>（内核软件 + 应用程序）与<b>非本地跳转</b>（纯应用程序代码）。第 4 页复习的 <code>fork</code>/<code>exit</code>/<code>wait</code>/<code>execve</code> 会在简易 shell 里立刻派上用场 —— 而它的 bug 正是信号登场的理由。</p>
+      </div>
+    </div>
+
+    <h3>0.1 异常控制流存在于系统的每一层<span class="srcref">原第 2 页</span></h3>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>机制</th><th>谁来提供</th><th>本讲覆盖</th></tr>
+      <tr><td><b>异常</b> Exceptions</td><td>硬件 + 操作系统内核软件</td><td>上一讲</td></tr>
+      <tr><td><b>进程上下文切换</b> Process context switch</td><td>硬件定时器 + 内核软件</td><td>上一讲</td></tr>
+      <tr><td><b>信号</b> Signals</td><td>内核软件 + 应用程序</td><td><b>本讲</b></td></tr>
+      <tr><td><b>非本地跳转</b> Nonlocal jumps</td><td>应用程序代码</td><td><b>本讲</b></td></tr>
+    </table></div>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：ECF 四层漫游 —— 点一层，看它由谁实现、本讲讲到哪</span>
+        <div class="seg" id="ecfSeg">
+          <button class="on" data-ecf="exc">异常</button>
+          <button data-ecf="ctx">进程切换</button>
+          <button data-ecf="sig">信号</button>
+          <button data-ecf="jmp">非本地跳转</button>
+        </div>
+      </div>
+      <div id="ecfOut"></div>
+    </div>
+
+    <h3>0.2 本讲的三段路与三张「Today」页<span class="srcref">原第 5、21、64 页</span></h3>
+    <p>课件用三张几乎相同的「Today」页把本讲切成三段，每段讲完就再停一次：<b>Shells</b>（第 5 页起，对应本页第 1–2 节）→ <b>Signals</b>（第 21 页起，对应第 3–7 节）→ <b>Nonlocal jumps</b>（第 64 页起，对应第 8–9 节）。下面这张表就是本页章节与原课件页码的对照总表。</p>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>本页章节</th><th>原课件页码</th><th>这一段在讲什么</th></tr>
+      <tr><td><a href="#s1">1 Shell、进程层次与前台/后台作业</a></td><td class="mono">6–8</td><td>进程家族树、shell 是什么、简易 shell 的一次完整会话</td></tr>
+      <tr><td><a href="#s2">2 简易 shell 的实现与它的三个问题</a></td><td class="mono">9–20</td><td><code>eval</code> 逐行批注、后台作业变僵尸、信号登场</td></tr>
+      <tr><td><a href="#s3">3 信号：概念、未决与阻塞</a></td><td class="mono">22–32</td><td>信号表、pending/blocked 位向量、发送→接收全过程</td></tr>
+      <tr><td><a href="#s4">4 发送信号：进程组、kill 与键盘</a></td><td class="mono">33–37</td><td>进程组与作业控制、<code>/bin/kill</code>、ctrl-c/ctrl-z</td></tr>
+      <tr><td><a href="#s5">5 接收信号与处理器</a></td><td class="mono">38–46</td><td>三种反应、递送算法、默认动作、并发流</td></tr>
+      <tr><td><a href="#s6">6 阻塞与安全处理器</a></td><td class="mono">47–53</td><td><code>sigprocmask</code>、G0–G5、异步信号安全、SIO</td></tr>
+      <tr><td><a href="#s7">7 并发陷阱与竞态</a></td><td class="mono">54–63</td><td>信号不排队、<code>procmask1/2</code> 竞态、<code>sigsuspend</code></td></tr>
+      <tr><td><a href="#s8">8 非本地跳转</a></td><td class="mono">65–70</td><td><code>setjmp</code>/<code>longjmp</code> 与栈纪律</td></tr>
+      <tr><td><a href="#s9">9 综合案例：自动重启</a></td><td class="mono">71</td><td><code>restart.c</code>：ctrl-c 打不死的程序</td></tr>
+      <tr><td><a href="#s10">10 总结与测验</a></td><td class="mono">72</td><td>两句话总结 + 10 题测验 + 3 道判断题</td></tr>
+    </table></div>
+
+    <h3>0.3 复习：多任务编程模型<span class="srcref">原第 3–4 页</span></h3>
+    <p>第 3 页复习两个前提：<b>异常</b>是「需要非标准控制流的事件」，它<b>外部</b>产生就是中断（interrupt），<b>内部</b>产生就是陷阱（trap）与故障（fault）；<b>进程</b>则是「系统里同时有多个活动进程，但单核上任何时刻只有一个在跑，而每个进程看起来独占处理器 + 私有内存空间」。第 4 页把上一讲那组函数的「非标准语义」列成一张表 —— 注意每个函数的「调用一次、返回几次」：</p>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>函数</th><th>语义（课件原文展开）</th></tr>
+      <tr><td class="mono">fork</td><td>派生（spawn）一个新进程 · <b>调用一次，返回两次</b></td></tr>
+      <tr><td class="mono">exit</td><td>终止自己这个进程 · <b>调用一次，永不返回</b> · 把进程置为「僵尸（zombie）」状态</td></tr>
+      <tr><td class="mono">wait / waitpid</td><td>等待并回收（reap）已经终止的子进程</td></tr>
+      <tr><td class="mono">execve</td><td>在现有进程里运行新程序 · <b>调用一次，（正常）永不返回</b></td></tr>
+    </table></div>
+    <div class="box warn"><div class="t">编程挑战（课件第 4 页原话）</div>
+      要理解这些函数的非标准语义、避免不恰当地使用系统资源 —— 课件举的反面例子是 <b>fork 炸弹</b>：它可以拖垮一整个系统。本讲后面看到的所有麻烦（僵尸、竞态、<code>errno</code> 被覆盖）都出自同一口锅：<b>这些函数的语义不像普通函数那样「一进一出」</b>。
+    </div>
+
+    <div class="box"><div class="t">本页使用说明</div>
+      标有 <span class="chip gray">可交互</span> 的地方都能点击或输入，所有计算都在浏览器里实时完成。<a href="#s3">第 3 节的未决/阻塞时序推演器</a>与 <a href="#s8">第 8 节的 setjmp/longjmp 推演器</a>最值得反复玩：前者把课件第 26–32 页那组动画变成可以自己编事件序列的单步推演，后者把「跳回已经返回的函数会怎样」演给你看。页面里所有「判对错」的基准（信号集位运算、递送判定 <code>pnb = pending &amp; ~blocked</code>、<code>sigsuspend</code> 的等价代码）都已用独立参考实现交叉验证。
+    </div>
+  </section>
+
+  <!-- ================= 1 ================= -->
+  <section id="s1">
+    <h2>1. Shell、进程层次与前台/后台作业<span class="srcref">原第 6–8 页</span></h2>
+    <p class="lede">课件用三页把「用户敲下一条命令」这件事讲清楚：先看进程的家族树（第 6 页），再看 shell 是什么（第 7 页），最后跑一遍<b>简易 shell</b> 的完整会话（第 8 页）—— 这 11 行终端记录就是整讲后面所有问题的现场。</p>
+
+    <h3>1.1 Linux 进程层次<span class="srcref">原第 6 页</span></h3>
+    <p>每个进程都有一个父进程，于是全部进程构成一棵树：<code>init</code>（PID 1）是祖先，登录 shell、守护进程（daemon，例如 <code>httpd</code>）挂在它下面，再由 shell 逐层派生 child / grandchild。课件在本页右下角留了一句实用提示：<b>可以用 Linux 的 <code>pstree</code> 命令查看这棵树</b>。</p>
+    <div class="card" style="font-family:var(--font-mono);font-size:14px;line-height:2">
+      <div style="text-align:center">[0]</div>
+      <div style="text-align:center">│</div>
+      <div style="text-align:center">init [1]</div>
+      <div style="text-align:center">┌──────────────┼──────────────┐</div>
+      <div style="display:flex;justify-content:center;gap:26px;flex-wrap:wrap;text-align:center">
+        <span>Daemon<br><span style="color:var(--muted)">e.g. httpd</span></span>
+        <span>Login shell</span>
+        <span>Login shell</span>
+      </div>
+      <div style="display:flex;justify-content:center;gap:26px;flex-wrap:wrap;text-align:center;margin-top:6px">
+        <span>Child ── Grandchild</span>
+        <span>Child</span>
+        <span>Child</span>
+      </div>
+    </div>
+    <div class="box"><div class="t">这棵树和本讲的关系</div>
+      第 4 节要讲的<b>进程组（process group）</b>就是在这棵树上做的横切：每个进程恰好属于一个进程组，shell 把「一个作业（job）」的全部进程放进同一个组，于是在前台按键 <span class="kbd">ctrl-c</span> 就能一次打断整个作业，而不是一个个去 <code>kill</code>。
+    </div>
+
+    <h3>1.2 Shell 是什么<span class="srcref">原第 7 页</span></h3>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>Shell</th><th>来历（课件原文）</th></tr>
+      <tr><td class="mono">sh</td><td>最初的 Unix shell（Stephen Bourne, AT&amp;T Bell Labs, 1977）</td></tr>
+      <tr><td class="mono">csh / tcsh</td><td>BSD Unix 的 C shell</td></tr>
+      <tr><td class="mono">bash</td><td>“Bourne-Again” Shell，<b>Linux 的默认 shell</b></td></tr>
+    </table></div>
+    <p><b>shell 是一个「替用户运行程序」的应用程序</b>。教材从 p.753 起给了一个非常初等的 shell 实现（<code>shellex</code>），课件说明它存在的目的只有两个：理解<b>你敲下命令时到底发生了什么</b>，以及理解<b>进程控制操作的用法与运作方式</b>。</p>
+
+    <h3>1.3 简易 shell 的一次完整会话<span class="srcref">原第 8 页</span></h3>
+    <p>下面是课件第 8 页的终端记录原文。三处值得留意的行为已经标在右边：<b>程序必须给完整路径</b>（写 <code>ls</code> 会被 <code>execve</code> 判为找不到）、<b>行尾加 <code>&amp;</code> 就是后台运行</b>（shell 打印一行 <code>pid 命令</code> 就立刻回来）、<code>quit</code> 是唯一实现的内建命令。</p>
+    <div class="formula" style="text-align:left;font-size:13.5px;line-height:1.9">
+      <div>linux&gt; ./shellex</div>
+      <div>&gt; /bin/ls -l csapp.c&nbsp;&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)">← 必须给程序的完整路径</span></div>
+      <div>-rw-r--r-- 1 bryant users 23053 Jun 15&nbsp;&nbsp;2015 csapp.c</div>
+      <div>&gt; /bin/ps</div>
+      <div>&nbsp;&nbsp;PID TTY&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; TIME CMD</div>
+      <div>31542 pts/2&nbsp;&nbsp;&nbsp; 00:00:01 tcsh</div>
+      <div>32017 pts/2&nbsp;&nbsp;&nbsp; 00:00:00 shellex</div>
+      <div>32019 pts/2&nbsp;&nbsp;&nbsp; 00:00:00 ps</div>
+      <div>&gt; /bin/sleep 10 &amp;&nbsp;&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)">← 后台运行</span></div>
+      <div>32031 /bin/sleep 10 &amp;</div>
+      <div>&gt; /bin/ps</div>
+      <div>&nbsp;&nbsp;PID TTY&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; TIME CMD</div>
+      <div>31542 pts/2&nbsp;&nbsp;&nbsp; 00:00:01 tcsh</div>
+      <div>32024 pts/2&nbsp;&nbsp;&nbsp; 00:00:00 emacs</div>
+      <div>32030 pts/2&nbsp;&nbsp;&nbsp; 00:00:00 shellex</div>
+      <div>32031 pts/2&nbsp;&nbsp;&nbsp; 00:00:00 sleep&nbsp;&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)">← sleep 正在后台跑</span></div>
+      <div>32033 pts/2&nbsp;&nbsp;&nbsp; 00:00:00 ps</div>
+      <div>&gt; quit</div>
+    </div>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：shellex 会话模拟器 —— 敲命令，看 shell、前台、后台各自在做什么</span>
+        <label class="fld">命令 <input type="text" id="shIn" value="/bin/sleep 10 &amp;" size="20" spellcheck="false"></label>
+        <button class="p" id="shGo">执行</button>
+        <button class="sm" data-sh="/bin/ls -l csapp.c">/bin/ls -l csapp.c</button>
+        <button class="sm" data-sh="/bin/ps">/bin/ps</button>
+        <button class="sm" data-sh="/bin/sleep 10 &amp;">/bin/sleep 10 &amp;</button>
+        <button class="sm" data-sh="ls -l">只写 ls（看报错）</button>
+        <button class="sm" data-sh="quit">quit</button>
+        <button class="sm" id="shReset">重开会话</button>
+      </div>
+      <div id="shellexOut"></div>
+    </div>
+    <div class="box"><div class="t">模拟器里哪些是现算的</div>
+      进程号取自课件原图（<code>tcsh 31542</code>、<code>shellex 32017</code>、<code>sleep 32031</code>），<code>ps</code> 的表则按<b>当前会话状态现场生成</b>：只有真的在后台跑着 <code>sleep</code> 时，表里才会出现 <code>sleep</code> 那一行。课件第 8 页的第二张 <code>ps</code> 表来自另一次会话，所以那里 <code>shellex</code> 的 pid 是 32030 而不是 32017 —— 本页的模拟器自己保持一致。
+    </div>
+  </section>
+
+  <!-- ================= 2 ================= -->
+  <section id="s2">
+    <h2>2. 简易 shell 的实现与它的三个问题<span class="srcref">原第 9–20 页</span></h2>
+    <p class="lede">课件用整整 11 页只讲一个函数：<code>eval</code>。第 9 页给出主循环，第 10–17 页把同一段代码放着不动、<b>每次加一条批注</b>，第 18–19 页指出它的致命缺陷 —— <b>后台作业会一直变成僵尸</b> —— 第 20 页请出本讲的主角：信号。</p>
+
+    <h3>2.1 主循环：读一行、执行一行<span class="srcref">原第 9 页</span></h3>
+    <p>shell 的执行模型就是「读入 — 求值」的无限循环：从标准输入读一行，交给 <code>eval</code>。命令只有两种去向：<b>内建命令</b>（课件里只实现了 <code>quit</code>）原地处理，<b>否则</b>就要加载并执行一个程序文件。</p>
+
+    <h3>2.2 eval 函数：七条批注读完一段代码<span class="srcref">原第 10–17 页</span></h3>
+    <p>课件把同一段 <code>eval</code> 连放 8 页，每页多一条批注。点下面的按钮可以按原课件的顺序逐条读；代码行与批注的对应关系来自课件每页高亮的位置。</p>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：eval 逐条批注 —— 点批注序号，看它标的是哪几行</span>
+        <div class="seg" id="evSeg">
+          <button class="on" data-ev="1">1</button>
+          <button data-ev="2">2</button>
+          <button data-ev="3">3</button>
+          <button data-ev="4">4</button>
+          <button data-ev="5">5</button>
+          <button data-ev="6">6</button>
+          <button data-ev="7">7</button>
+        </div>
+        <button class="sm" id="evAll">显示全部批注</button>
+      </div>
+      <div id="evalOut"></div>
+    </div>
+
+    <div class="box ok"><div class="t">把这段代码翻译成一句话</div>
+      <code>eval</code> 先把命令行切好、判断有没有 <code>&amp;</code>；如果是内建命令就自己处理；否则 <b>fork 一个子进程，子进程用 <code>execve</code> 换成要跑的程序</b>（<code>execve</code> 只在出错时才返回，所以后面紧跟一句 <code>exit</code>）；父进程如果看到是<b>前台</b>作业就 <code>waitpid</code> 等它结束，是<b>后台</b>作业就打印一行 <code>pid 命令</code> 继续回到提示符。
+    </div>
+
+    <h3>2.3 问题：后台作业会变成永不回收的僵尸<span class="srcref">原第 18–19 页</span></h3>
+    <p>课件第 18 页把话挑明：<b>shell 是设计来长期运行的，不应该累积不需要的资源</b>（内存、子进程、文件描述符）。上面这份代码对<b>前台</b>作业做对了 —— 它 <code>wait</code> 并回收了每一个前台子进程；但对<b>后台</b>作业完全没管：</p>
+    <ul>
+      <li>后台作业终止后会变成<b>僵尸</b>；</li>
+      <li>它们永远不被回收，因为 shell（通常）不会终止；</li>
+      <li>僵尸会占着内核里的进程表项，形成<b>内存泄漏</b>，严重时能把内核的内存耗光。</li>
+    </ul>
+    <p>第 19 页用一个场景说明「后台作业」的必要性：<code>unix&gt; sleep 7200; rm /tmp/junk</code> 会让 shell 卡住两小时；写成 <code>unix&gt; (sleep 7200 ; rm /tmp/junk) &amp;</code> 就立刻拿到提示符，输出 <code>[1] 907</code>。所谓后台作业，就是<b>我们不想等它的那个进程</b>。</p>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：前台 / 后台与僵尸进程 —— 看 shell 有没有 wait 掉子进程</span>
+        <label class="fld">一次运行几个 <input type="text" id="jobN" value="1" size="3" spellcheck="false"></label>
+        <label class="fld">模式
+          <select id="jobMode">
+            <option value="fg">前台作业（shell waitpid 等它）</option>
+            <option value="bg">后台作业（shell 只打印 pid）</option>
+          </select>
+        </label>
+        <button class="p" id="jobGo">运行一个作业</button>
+        <button class="p" id="jobTick">时间推进：让运行中的作业结束</button>
+        <button class="sm" id="jobReset">重来</button>
+      </div>
+      <div id="jobOut"></div>
+    </div>
+
+    <div class="box"><div class="t">僵尸（zombie）到底是什么</div>
+      第 4 页复习里已经给出答案：<code>exit</code> 会「把进程置为僵尸状态」。僵尸是<b>已经跑完、但父进程还没 <code>wait</code> 它</b>的进程 —— 它只剩一个退出状态等着被取走。父进程取走状态的那一刻（reap，回收），内核才真正删掉这条记录。
+    </div>
+
+    <h3>2.4 异常控制流来救场<span class="srcref">原第 20 页</span></h3>
+    <p>课件第 20 页给出一句话的解法：<b>当后台进程完成时，内核会打断正常的处理来提醒我们</b>。在 Unix 里，这个「提醒机制」就叫<b>信号（signal）</b> —— 于是 shell 不必轮询、也不必阻塞等待，只要在信号到来时把僵尸收掉即可。这句话也是接下来 40 多页的纲领。</p>
+  </section>
+
+  <!-- ================= 3 ================= -->
+  <section id="s3">
+    <h2>3. 信号：概念、未决与阻塞<span class="srcref">原第 22–32 页</span></h2>
+    <p class="lede">信号（signal）是<b>一条小消息</b>，通知某个进程「系统里发生了某类事件」。它的全部内容只有两样东西：<b>信号的编号</b>，以及「它到了」这件事本身 —— 没有参数、没有数据、没有顺序保证。</p>
+
+    <h3>3.1 信号在异常控制流里的位置<span class="srcref">原第 22 页</span></h3>
+    <p>课件的「（部分）分类」把 ECF 分成异步与同步两支：异步的是<b>中断</b>，同步的是<b>陷阱、故障与终止</b>，它们都由内核处理；而<b>信号</b>是另一条路 —— 内核对它的默认处置仍在核心里完成，但<b>真正的反应可以由用户进程自己写的处理器来决定</b>（第 5 节会展开）。这也是第 2 页把信号写成「内核软件 + 应用程序」的原因。</p>
+
+    <h3>3.2 信号表<span class="srcref">原第 23 页</span></h3>
+    <p>课件只列了五个信号，但每一个都值得记住：<b>信号类型用 1–30 的小整数编号</b>，每种类型有预设的默认动作，也对应一类固定的系统事件。</p>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：信号速查表 —— 输入编号或名字过滤</span>
+        <label class="fld">过滤 <input type="text" id="sigQ" value="" size="14" spellcheck="false" placeholder="如 17 / SIGCHLD / ctrl"></label>
+        <button class="sm" data-sigq="">全部</button>
+        <button class="sm" data-sigq="Terminate">默认动作：终止</button>
+        <button class="sm" data-sigq="Ignore">默认动作：忽略</button>
+      </div>
+      <div id="sigTblOut"></div>
+    </div>
+    <div class="box warn"><div class="t">唯一「杀不死」的信号</div>
+      <code>SIGKILL</code> 的默认动作是终止，且课件特别注明它<b>不能被覆盖（override）也不能被忽略</b> —— 换句话说，你在程序里写 <code>signal(SIGKILL, …)</code> 也不会生效。相对地，<code>SIGINT</code>（ctl-c）与 <code>SIGTSTP</code>（ctl-z）都是可以被程序改写的，这正是第 5 节 <code>sigint.c</code> 与第 9 节 <code>restart.c</code> 能玩出花样的前提。
+    </div>
+
+    <h3>3.3 未决（pending）与阻塞（blocked）<span class="srcref">原第 24–25 页</span></h3>
+    <p>两条定义要先分清：<b>发送</b>（send，也叫 deliver）是内核在目标进程上下文里写下「有信号了」；<b>接收</b>（receive）则是进程被内核强迫对这个信号做出反应。两者之间隔着一段时间，这段时间里信号处于<b>未决（pending）</b>状态。规则有三条，全都来自「信号不是队列」这一个事实：</p>
+    <div class="grid g3">
+      <div class="card"><h5>至多一个</h5><p style="margin:0;font-size:14.5px">任何类型<b>最多只能有一个未决信号</b>。若类型 k 已有一个未决信号，之后发给它的所有类型 k 信号都被<b>丢弃</b>。</p></div>
+      <div class="card"><h5>可以阻塞</h5><p style="margin:0;font-size:14.5px">进程可以<b>阻塞</b>某些信号的接收。被阻塞的信号<b>可以被发送但不会被接收</b>，直到解除阻塞。</p></div>
+      <div class="card"><h5>至多一次</h5><p style="margin:0;font-size:14.5px">一个未决信号<b>至多被接收一次</b> —— 这直接判了「用信号数事件个数」的死刑（第 7 节）。</p></div>
+    </div>
+    <p>第 25 页给出内核视角的实现：内核在<b>每个进程的上下文里维护两个位向量</b>。<code>pending</code> 表示「已发送、尚未接收」的信号集合（内核递送类型 k 的信号时置第 k 位，进程接收时清第 k 位）；<code>blocked</code> 表示被阻塞的信号集合，可以用 <code>sigprocmask</code> 函数设置与清除，它还叫<b>信号掩码（signal mask）</b>。</p>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：信号时序推演器 —— 单步执行「发送 / 阻塞 / 解除阻塞 / 递送」</span>
+        <label class="fld">信号 <input type="text" id="sqSig" value="SIGCHLD" size="9" spellcheck="false"></label>
+        <button class="sm" id="sqSend">发送 send(k)</button>
+        <button class="sm" id="sqBlock">阻塞 block(k)</button>
+        <button class="sm" id="sqUnblock">解除 unblock(k)</button>
+        <button class="p" id="sqStep">内核递送一步</button>
+        <button class="sm" id="sqDemo">课件第 26–32 页动画</button>
+        <button class="sm" id="sqReset">复位</button>
+      </div>
+      <div id="sigSeqOut"></div>
+    </div>
+    <div class="box ok"><div class="t">把课件的动画变成可操作的推演</div>
+      课件第 26–32 页是一段同一张图上的动画：进程 A 发信号给 C → C 的 <code>pending</code> 第 k 位变 1 → C 被内核强制接收 → 第 k 位清 0。第 32 页末尾把结论钉死：<b>一个未决信号至多被接收一次</b>。上面的推演器让你自己造事件序列，尤其是「同一个信号连发多次、期间还阻塞着」这种课件动画来不及演的情况。
+    </div>
+  </section>
+
+  <!-- ================= 4 ================= -->
+  <section id="s4">
+    <h2>4. 发送信号：进程组、<code>/bin/kill</code> 与键盘<span class="srcref">原第 33–37 页</span></h2>
+    <p class="lede">内核为什么要发信号？课件第 26 页给出两种理由：<b>内核自己检测到系统事件</b>（例如除零 <code>SIGFPE</code>、子进程终止 <code>SIGCHLD</code>），或者<b>别的进程调用 <code>kill</code> 系统调用要求它发</b>。而收件人既可以是一个进程，也可以是一个<b>进程组</b> —— 这正是键盘上那两个组合键的威力所在。</p>
+
+    <h3>4.1 进程组<span class="srcref">原第 33 页</span></h3>
+    <p><b>每个进程恰好属于一个进程组</b>，进程组用它的「组长 pid」来命名（叫 pgid）。课件给的两个 API 是 <code>getpgrp()</code>（返回当前进程的进程组）与 <code>setpgid()</code>（修改某个进程的进程组）。第 33 页的图是本节的主角：shell 自己一组（<code>pid=10, pgid=10</code>），它派生出的<b>前台作业</b>是 20 号组（<code>pid=20</code> 带着两个子进程 <code>pid=21</code>、<code>22</code>，三者的 <code>pgid</code> 都是 20），另外两个<b>后台作业</b>各自成组（<code>pgid=32</code> 与 <code>pgid=40</code>）。</p>
+    <p>第 35 页接着说键盘：敲 <span class="kbd">ctrl-c</span>（或 <span class="kbd">ctrl-z</span>）时，<b>内核把 <code>SIGINT</code>（或 <code>SIGTSTP</code>）发给前台进程组里的每一个作业</b>。两者的默认动作不同 —— <code>SIGINT</code> 终止每个进程，<code>SIGTSTP</code> 停止（挂起）每个进程。</p>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：进程组与作业控制 —— 敲 ctrl-c / ctrl-z / fg，看谁被打断</span>
+        <button class="p" id="pgCtrlC">ctrl-c（SIGINT）</button>
+        <button class="p" id="pgCtrlZ">ctrl-z（SIGTSTP）</button>
+        <button class="sm" id="pgFg">fg（把作业拉回前台）</button>
+        <button class="sm" id="pgKill">kill(-20, SIGKILL)：整组杀掉前台作业</button>
+        <button class="sm" id="pgPs">ps -j：看 pid / pgid / STAT</button>
+        <button class="sm" id="pgReset">复位到课件第 33 页</button>
+      </div>
+      <div id="pgrpOut"></div>
+    </div>
+
+    <div class="box warn"><div class="t">只有前台进程组收得到键盘信号</div>
+      键盘事件由内核交给<b>前台进程组</b>；后台进程组碰不到键盘（不然你在 vim 里按 ctrl-c，后台的编译进程也会被误杀）。第 36 页的 <code>ps w</code> 输出里那个 <code>+</code> 号就是「属于前台进程组」的标记 —— <code>ps w</code> 之后紧跟的 <code>ps</code> 自己是 <code>R+</code>，而停止在 <code>T</code> 状态的 <code>./forks 17</code> 就没有 <code>+</code>。
+    </div>
+
+    <h3>4.2 /bin/kill 程序与 kill 函数<span class="srcref">原第 34、37 页</span></h3>
+    <p><code>/bin/kill</code> 程序可以给一个进程或一个进程组发送任意信号。课件第 34 页用 <code>forks 16</code> 演示了「正数 = 单个进程、负数 = 整个进程组」这条规则：两个子进程的 pid 是 24818 与 24819，它们的 <code>pgrp</code> 是 24817（父进程的 pid）。</p>
+    <div class="formula" style="text-align:left;font-size:13.5px;line-height:1.9">
+      <div>/bin/kill –9 24818&nbsp;&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)">← 只给进程 24818 发 SIGKILL</span></div>
+      <div>/bin/kill –9 –24817&nbsp;&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)">← 给进程组 24817 里的每个进程发 SIGKILL</span></div>
+    </div>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：/bin/kill 目标解析器 —— 输入参数，看它会打到谁</span>
+        <label class="fld">参数 <input type="text" id="killIn" value="-9 -24817" size="14" spellcheck="false"></label>
+        <button class="p" id="killGo">解析并发送</button>
+        <button class="sm" data-kill="-9 24818">-9 24818</button>
+        <button class="sm" data-kill="-9 -24817">-9 -24817</button>
+        <button class="sm" data-kill="-2 -24817">-2 -24817</button>
+        <button class="sm" data-kill="24818">24818（省略信号）</button>
+        <button class="sm" id="killReset">复位</button>
+      </div>
+      <div id="killOut"></div>
+    </div>
+    <p>第 37 页给出 C 里的对应写法（<code>forks.c</code> 的 <code>fork12</code>）：父进程 fork 出 N 个<b>死循环</b>的子进程，然后逐个 <code>kill(pid[i], SIGINT)</code>，最后用 <code>wait</code> 收尸，并用 <code>WIFEXITED</code> 判断子进程是「正常退出」还是「异常终止」—— 被信号杀死的子进程走的是 <code>else</code> 分支（打印 <code>Child %d terminated abnormally</code>）。</p>
+    <div class="box"><div class="t">为什么输出是 abnormally</div>
+      <code>SIGINT</code> 的默认动作是终止，但终止方式不是 <code>exit</code>：进程是被信号<b>杀死</b>的，没有返回退出码。所以 <code>WIFEXITED(child_status)</code> 为假，父进程打印的是「异常终止」那一行 —— 这正好给后面「<code>WIFEXITED</code> 只管正常退出」埋一个对照。
+    </div>
+
+    <h3>4.3 键盘中断的现场：ctrl-z 之后 ctrl-c<span class="srcref">原第 36 页</span></h3>
+    <p>第 36 页是一段完整的实验记录：<code>./forks 17</code> 在前台跑着（父进程 28107、子进程 28108，同属 28107 组），按 <span class="kbd">ctrl-z</span> 之后 shell 报 <code>Suspended</code>，两次 <code>ps w</code> 的输出里两个 <code>forks</code> 都变成 <code>T</code>（stopped）状态；随后 <code>fg</code> 把它拉回前台，再按 <span class="kbd">ctrl-c</span>，两个进程就都消失了。</p>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>STAT 首字母</th><th>含义（课件第 36 页图例）</th></tr>
+      <tr><td class="mono">S</td><td>sleeping（睡眠）</td></tr>
+      <tr><td class="mono">T</td><td>stopped（停止）</td></tr>
+      <tr><td class="mono">R</td><td>running（运行）</td></tr>
+      <tr><td class="mono">s</td><td>第二个字母：session leader（会话首进程）</td></tr>
+      <tr><td class="mono">+</td><td>第二个字母：foreground proc group（前台进程组）</td></tr>
+    </table></div>
+  </section>
+
+  <!-- ================= 5 ================= -->
+  <section id="s5">
+    <h2>5. 接收信号与信号处理器<span class="srcref">原第 38–46 页</span></h2>
+    <p class="lede">发送信号只是「置一位」，真正有戏的是<b>接收</b>：进程被内核强迫对信号做出反应。反应有三种，其中最有威力的一种要用户自己写代码 —— 即<b>信号处理器（signal handler）</b>。而处理器一旦登场，就带来了新的麻烦：它是一条与主程序<b>并发</b>的逻辑流。</p>
+
+    <h3>5.1 三种反应<span class="srcref">原第 38 页</span></h3>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>反应</th><th>含义</th></tr>
+      <tr><td><b>忽略</b> Ignore</td><td>什么也不做</td></tr>
+      <tr><td><b>终止</b> Terminate</td><td>结束这个进程（可选地 dump core）</td></tr>
+      <tr><td><b>捕获</b> Catch</td><td>执行一个用户级函数 —— 信号处理器</td></tr>
+    </table></div>
+    <p>课件把「捕获」类比成硬件异常处理器响应异步中断的过程，并画出四步：<b>(1) 进程接收到信号 → (2) 控制权交给信号处理器 → (3) 处理器运行 → (4) 处理器返回被信号打断的那条指令之后继续执行</b>。</p>
+
+    <h3>5.2 内核怎么挑信号：pnb = pending &amp; ~blocked<span class="srcref">原第 39–40 页</span></h3>
+    <p>当内核从一个异常处理器返回、准备把控制权交给进程 p 时（第 39 页强调：<b>所有上下文切换都是通过调用某个异常处理器发起的</b>），它会做这样一段判断（第 40 页原文）：</p>
+    <div class="formula big">pnb = pending &amp; ~blocked</div>
+    <ul>
+      <li><code>pnb</code> 是进程 p 的<b>未决且未被阻塞</b>信号集合；</li>
+      <li>如果 <code>pnb == 0</code>：把控制权交给 p 逻辑流里的下一条指令；</li>
+      <li>否则：<b>挑 <code>pnb</code> 里最小的非零位 k</b>，强制 p 接收信号 k（这一次接收会触发某个动作），然后<b>对所有非零位 k 重复</b>，最后把控制权交给 p 的下一条指令。</li>
+    </ul>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：递送判定器 —— 输入两组掩码，看内核下一步会强制谁接收</span>
+        <label class="fld">pending <input type="text" id="pnbPend" value="SIGCHLD" size="22" spellcheck="false"></label>
+        <label class="fld">blocked <input type="text" id="pnbBlk" value="SIGCHLD" size="22" spellcheck="false"></label>
+        <button class="p" id="pnbGo">计算 pnb</button>
+        <button class="sm" data-pnb="p=SIGCHLD|b=">子进程退出、未阻塞</button>
+        <button class="sm" data-pnb="p=SIGCHLD|b=SIGCHLD">子进程退出但阻塞着</button>
+        <button class="sm" data-pnb="p=SIGCHLD, SIGINT|b=">两个信号同时未决</button>
+        <button class="sm" data-pnb="p=SIGINT, SIGSEGV, SIGALRM|b=SIGINT">三个未决、只阻塞 SIGINT</button>
+      </div>
+      <div id="pnbOut"></div>
+    </div>
+    <div class="box ok"><div class="t">掩码两种写法都收</div>
+      输入框接受<b>信号名</b>（<code>SIGCHLD</code>，逗号分隔，允许写全小写或省略 <code>SIG</code> 前缀的数字）与<b>十六进制掩码</b>（<code>0x4000</code>）两种写法；右侧会同步显示它对应的 64 位位向量与十进制值 —— 第 25 页说内核维护的就是这两个位向量，页面上的掩码就是它们。
+    </div>
+
+    <h3>5.3 默认动作的五种结局<span class="srcref">原第 41 页</span></h3>
+    <p>每种信号类型都有一个预设的默认动作，只能是下列之一：<b>进程终止</b>；<b>进程终止并 dump core</b>；<b>进程停止，直到被 <code>SIGCONT</code> 信号重启</b>；<b>进程忽略这个信号</b>。</p>
+
+    <h3>5.4 安装处理器：signal 函数<span class="srcref">原第 42–43 页</span></h3>
+    <p><code>signal</code> 函数修改「收到 signum 信号时的动作」：<code>handler_t *signal(int signum, handler_t *handler)</code>。handler 取三种值之一：<code>SIG_IGN</code> 忽略该类型信号；<code>SIG_DFL</code> 恢复默认动作；<b>否则就是一个用户级处理器的地址</b>。课件把这几个术语钉得很清楚：把处理器交给内核叫<b>安装（install）</b>，执行处理器叫<b>捕获（catch）</b>或<b>处理（handle）</b>；处理器 <code>return</code> 时，控制权回到<b>被信号打断的那条指令</b>。</p>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：sigint.c —— 装一台「杀不死」的程序</span>
+        <div class="seg" id="siSeg">
+          <button class="on" data-si="run">./sigint 已安装处理器</button>
+          <button data-si="dfl">改用默认动作</button>
+        </div>
+        <button class="p" id="siCtrlC">按 ctrl-c</button>
+        <button class="sm" id="siReset">重来</button>
+      </div>
+      <div id="sigintOut"></div>
+    </div>
+    <div class="box warn"><div class="t">课件这段程序的隐藏前提</div>
+      第 43 页 <code>sigint.c</code> 的处理器里调用了 <code>printf</code>、<code>sleep</code>、<code>exit</code> —— 其中 <code>printf</code> 与 <code>exit</code> 都不是异步信号安全函数（第 51 页会点名）。课件先用这段代码演示「处理器能改写默认动作」，随后第 52–53 页立刻给出安全版本。本页的模拟器只是照课件原样演示行为，写到生产代码里请用第 6 节的 SIO 版本。
+    </div>
+
+    <h3>5.5 处理器是并发的逻辑流<span class="srcref">原第 44–46 页</span></h3>
+    <p>课件连用两页强调同一件事：<b>信号处理器是一条独立的逻辑流（不是独立进程），它与主程序并发运行</b>；不过这条流只存在到它返回主程序为止。第 46 页再往前推一步：<b>处理器自己也能被打断</b> —— 主程序捕获信号 s 进入处理器 S，S 运行期间又来了信号 t，控制权转给处理器 T，T 返回 S，S 再返回主程序。</p>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：并发流时序 —— 切换场景，看控制权在三条流之间怎么走</span>
+        <div class="seg" id="flSeg">
+          <button class="on" data-fl="switch">普通上下文切换</button>
+          <button data-fl="deliver">信号递送给 A</button>
+          <button data-fl="nested">嵌套处理器 S 与 T</button>
+        </div>
+      </div>
+      <div id="flowOut"></div>
+    </div>
+  </section>
+
+  <!-- ================= 6 ================= -->
+  <section id="s6">
+    <h2>6. 阻塞信号、安全处理器与异步信号安全<span class="srcref">原第 47–53 页</span></h2>
+    <p class="lede">处理器与主程序共享同一份全局数据，而且随时可能在任何一条指令之间插进来 —— 于是「怎么写处理器」变成了一门手艺。课件先给机制（阻塞），再给六条指南，最后落在一份<b>函数白名单</b>上。</p>
+
+    <h3>6.1 隐式阻塞与显式阻塞<span class="srcref">原第 47–48 页</span></h3>
+    <div class="grid g2">
+      <div class="card"><h5>隐式阻塞机制</h5>
+        <p style="margin:0;font-size:14.5px">内核会<b>自动阻塞「当前正在处理的那个类型」的所有未决信号</b>。例如 <code>SIGINT</code> 的处理器运行期间，另一个 <code>SIGINT</code> 不可能把它打断 —— 所以处理器不必可重入地防自己。</p>
+      </div>
+      <div class="card"><h5>显式阻塞机制</h5>
+        <p style="margin:0;font-size:14.5px">用 <code>sigprocmask</code> 加四个集合操作函数：<code>sigemptyset</code>（空集）、<code>sigfillset</code>（加入所有信号）、<code>sigaddset</code>（加入一个）、<code>sigdelset</code>（删掉一个）。</p>
+      </div>
+    </div>
+    <p>第 48 页给出一段「暂时屏蔽 <code>SIGINT</code>」的标准模板：先 <code>Sigemptyset</code> + <code>Sigaddset(&amp;mask, SIGINT)</code> 造出集合，用 <code>Sigprocmask(SIG_BLOCK, &amp;mask, &amp;prev_mask)</code> <b>阻塞它并保存原来的掩码</b>，把不想被打断的代码放进中间，最后用 <code>Sigprocmask(SIG_SETMASK, &amp;prev_mask, NULL)</code> <b>恢复原掩码</b>（从而解除阻塞）。</p>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：信号集运算器 —— 一句句执行集合操作，看掩码怎么变</span>
+        <button class="sm" data-so="sigemptyset(&amp;mask)">sigemptyset</button>
+        <button class="sm" data-so="sigfillset(&amp;mask)">sigfillset</button>
+        <button class="sm" data-so="sigaddset(&amp;mask, SIGINT)">+ SIGINT</button>
+        <button class="sm" data-so="sigaddset(&amp;mask, SIGCHLD)">+ SIGCHLD</button>
+        <button class="sm" data-so="sigdelset(&amp;mask, SIGINT)">− SIGINT</button>
+        <button class="sm" data-so="sigaddset(&amp;mask, SIGKILL)">+ SIGKILL</button>
+        <button class="p" id="soGo">执行脚本</button>
+        <button class="sm" id="soReset">清空</button>
+      </div>
+      <label class="fld" style="display:block;margin:0 0 6px">操作脚本（每行一句，可自己改；支持 sigemptyset / sigfillset / sigaddset / sigdelset）
+        <textarea id="soSrc" rows="6" spellcheck="false" style="width:100%;font-family:var(--font-mono);font-size:13.5px;margin-top:6px"></textarea>
+      </label>
+      <div id="setOpOut"></div>
+    </div>
+    <div class="box warn"><div class="t">SIGKILL 放得进集合，却堵不住它</div>
+      课件第 23 页已注明 <code>SIGKILL</code>「不能被覆盖也不能被忽略」。注意区分两步：<b><code>sigaddset(&amp;mask, SIGKILL)</code> 本身会成功</b>（集合里可以有第 9 位），但把这个掩码交给 <code>sigprocmask</code> 时，<b>内核会忽略第 9 位</b> —— 进程的信号掩码里永远不会出现 SIGKILL（本页用 C 在真信号上实测过）。所以「屏蔽掉 kill 做一个不可杀进程」这条路是走不通的。
+    </div>
+
+    <h3>6.2 为什么处理器容易写错<span class="srcref">原第 49–50 页</span></h3>
+    <p>第 49 页点题：<b>处理器与主程序并发，而且共享同一批全局数据结构，这些结构可能被破坏</b>。课件在第 50 页给出六条指南：</p>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>指南</th><th>内容</th><th>课件给的理由 / 例子</th></tr>
+      <tr><td class="mono">G0</td><td>让处理器尽量简单</td><td>例如：设一个全局标志然后返回</td></tr>
+      <tr><td class="mono">G1</td><td>处理器里<b>只调用异步信号安全的函数</b></td><td><code>printf</code>、<code>sprintf</code>、<code>malloc</code>、<code>exit</code> 都不安全！</td></tr>
+      <tr><td class="mono">G2</td><td>进入与退出时保存、恢复 <code>errno</code></td><td>免得别的处理器覆盖掉你的 <code>errno</code></td></tr>
+      <tr><td class="mono">G3</td><td>访问共享数据结构时<b>临时阻塞所有信号</b></td><td>防止可能的破坏</td></tr>
+      <tr><td class="mono">G4</td><td>全局变量声明为 <code>volatile</code></td><td>防止编译器把它放进寄存器</td></tr>
+      <tr><td class="mono">G5</td><td>全局标志声明为 <code>volatile sig_atomic_t</code></td><td>标志只作「读或写」（例如 <code>flag = 1</code>，而不是 <code>flag++</code>）；这样声明的标志<b>不需要像其它全局量那样保护</b></td></tr>
+    </table></div>
+    <div class="box"><div class="t">G4 与 G5 为什么必须放在一起</div>
+      <code>volatile</code> 管的是<b>编译器</b>：别把变量缓存进寄存器，否则主循环可能永远读不到处理器写下的新值（第 60–61 页的 <code>while (!pid)</code> 就靠它）。<code>sig_atomic_t</code> 管的是<b>读改写不可分割</b>：它保证单次读或单次写在硬件层面是原子的。两者合起来，一个标志位才能在「一条流写、另一条流读」的情况下可信 —— 而 <code>flag++</code> 是「读 + 写」两步，超出 <code>sig_atomic_t</code> 的承诺，所以 G5 特意点名。
+    </div>
+
+    <h3>6.3 异步信号安全<span class="srcref">原第 51 页</span></h3>
+    <p><b>如果一个函数要么是可重入的（所有变量都在栈帧上），要么不会被信号打断，它就是异步信号安全的（async-signal-safe）</b>。Posix 保证 117 个函数是安全的（出处：<code>man 7 signal</code>）。课件挑出最常用的两组：</p>
+    <div class="grid g2">
+      <div class="card"><h5>在白名单里</h5><p class="mono" style="margin:0;font-size:14px">_exit · write · wait · waitpid · sleep · kill</p></div>
+      <div class="card"><h5>在黑名单里</h5><p class="mono" style="margin:0;font-size:14px">printf · sprintf · malloc · exit</p></div>
+    </div>
+    <p>课件用一句话概括这个尴尬现实：<b>不幸的是，<code>write</code> 是唯一异步信号安全的输出函数</b> —— 这直接导致第 52–53 页的 SIO 库。</p>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：异步信号安全查询 —— 敲函数名，看它在不在白名单里</span>
+        <label class="fld">函数 <input type="text" id="safeIn" value="printf" size="12" spellcheck="false"></label>
+        <button class="p" id="safeGo">查</button>
+        <button class="sm" data-safe="write">write</button>
+        <button class="sm" data-safe="malloc">malloc</button>
+        <button class="sm" data-safe="sio_printf">sio_printf</button>
+        <button class="sm" data-safe="_exit">_exit</button>
+      </div>
+      <div id="safeOut"></div>
+    </div>
+
+    <h3>6.4 安全输出：SIO 库<span class="srcref">原第 52–53 页</span></h3>
+    <p>课件给两个选项，都不依赖 <code>printf</code>。选项一是 <code>csapp.c</code> 里可重入的 SIO（Safe I/O）库：<code>ssize_t sio_puts(char s[])</code> 输出字符串、<code>ssize_t sio_putl(long v)</code> 输出长整数、<code>void sio_error(char s[])</code> 输出消息并退出。选项二是升级版的 <code>sio_printf</code>：<b>只支持受限的 <code>printf</code> 格式串</b> —— 认得 <code>%c %s %d %u %x %%</code>，以及长度修饰符 <code>l</code> 与 <code>z</code>。两个版本都把 <code>printf</code> 换成了 <code>Sio_puts</code>/<code>Sio_printf</code>，把 <code>exit</code> 换成了 <code>_exit</code>。</p>
+  </section>
+
+  <!-- ================= 7 ================= -->
+  <section id="s7">
+    <h2>7. 并发陷阱：信号不排队、竞态与 sigsuspend<span class="srcref">原第 54–63 页</span></h2>
+    <p class="lede">这一节是本讲的深水区。它把第 3 节那条「信号不是队列」的规则变成三个真实的 bug：<b>用信号数子进程会挂住</b>、<b>父子进程谁先跑会让作业列表错乱</b>、<b>等待信号的三段式写法都有毛病</b> —— 最后一个由 <code>sigsuspend</code> 收场。</p>
+
+    <h3>7.1 陷阱一：不能用信号计数<span class="srcref">原第 54–55 页</span></h3>
+    <p>课件的 <code>fork14</code> 程序 fork 出 5 个子进程，让它们<b>几乎同时</b>退出（都是 <code>Sleep(1); exit(0)</code>），父进程则用一个信号处理器来数数：处理器里 <code>ccount--</code>，主程序 <code>while (ccount &gt; 0) ;</code> 自旋等它减到 0。课件自己给这页贴了标签：<b>这段代码是错的</b> —— 实跑结果是只回收了两个孩子就永久挂住。</p>
+    <div class="formula" style="text-align:left;font-size:13.5px;line-height:1.9">
+      <div>linux&gt; ./forks 14</div>
+      <div>Handler reaped child 23240</div>
+      <div>Handler reaped child 23241</div>
+      <div>. . .（挂住）</div>
+    </div>
+    <p>原因是第 24 页学的规则在这里报应：<b>每种信号只有一个未决位</b>。5 个子进程在处理器运行期间陆续退出，那些 <code>SIGCHLD</code> 里只有<b>第一个</b>能把 pending 位置 1，其余全被丢弃；于是处理器只跑了两次，<code>ccount</code> 停在 3，主程序永远转下去。<b>结论：不能用信号去统计事件个数</b>。</p>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：信号不排队 —— 调「孩子退出的密集程度」与「处理器耗时」，看能回收几个</span>
+        <label class="fld">子进程数 N <input type="text" id="ccN" value="5" size="3" spellcheck="false"></label>
+        <label class="fld">处理器耗时（ms） <input type="text" id="ccH" value="80" size="4" spellcheck="false"></label>
+        <label class="fld">孩子退出散布（ms） <input type="text" id="ccS" value="5" size="4" spellcheck="false"></label>
+        <button class="p" id="ccGo">运行 fork14</button>
+        <button class="sm" data-cc="n=5|h=80|s=5">课件参数（几乎同时退出）</button>
+        <button class="sm" data-cc="n=5|h=2|s=5">处理器极快</button>
+        <button class="sm" data-cc="n=5|h=80|s=200">孩子错开退出</button>
+      </div>
+      <div id="ccountOut"></div>
+    </div>
+    <div class="box"><div class="t">这个模拟器在算什么</div>
+      它只用到第 24 页的两条规则：<b>未决位最多一个</b>（已有未决同类信号时新信号被丢弃）、<b>处理器运行期间该类信号被隐式阻塞</b>（所以处理器不会自己打断自己）。时间轴是页面按参数现算的离散事件表：孩子按散布时间退出 → 每次都「发送 SIGCHLD」（可能被丢弃）→ 处理器空闲时取走一次未决位并回收<b>一个</b>孩子。处理器里写的是第 54 页那句单次 <code>wait</code>，所以它一次只回收一个 —— 这正是 bug 的一半。
+    </div>
+    <p>第 55 页给出修法：<b>必须把所有已终止的子进程都等掉</b> —— 把 <code>wait</code> 放进循环里：<code>while ((pid = wait(NULL)) &gt; 0) { ccount--; … }</code>，循环结束后检查 <code>errno != ECHILD</code>，最后恢复 <code>errno</code>（G2）。</p>
+
+    <h3>7.2 陷阱二：父子谁先跑 —— addjob / deletejob 竞态<span class="srcref">原第 56–58 页</span></h3>
+    <p>第 56 页的 <code>procmask1.c</code> 里，父进程 fork 之后才 <code>addjob(pid)</code>，而 <code>SIGCHLD</code> 处理器里做的是 <code>deletejob(pid)</code>。问题在于<b>代码假设了父进程总在子进程之前运行</b>：如果子进程跑得足够快、在父进程 <code>addjob</code> 之前就退出，处理器会先执行 <code>deletejob</code> —— 删掉一个还没被加进列表的作业。第 57 页的处理器用「阻塞所有信号」保护自己的临界区；第 58 页的 <code>procmask2.c</code> 给出真正的修法：<b>在 fork 之前就阻塞 <code>SIGCHLD</code></b>，fork 后在子进程里先恢复掩码（这样孩子在 <code>execve</code> 前不会被滞留的信号打断），父进程 <code>addjob</code> 之后再解除阻塞 —— 于是「加作业」与「收信号」之间不可能再插进来。</p>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：竞态推演 —— 换两种调度顺序，看作业列表会不会错</span>
+        <div class="seg" id="rcSeg">
+          <button class="on" data-rc="p1">procmask1.c（未阻塞）</button>
+          <button data-rc="p2">procmask2.c（fork 前阻塞）</button>
+        </div>
+        <button class="p" id="rcGo">跑一次（父先/子先）</button>
+        <button class="sm" id="rcReset">重来</button>
+      </div>
+      <div id="raceOut"></div>
+    </div>
+
+    <h3>7.3 陷阱三：显式等待信号<span class="srcref">原第 59–61 页</span></h3>
+    <p><code>waitforsignal.c</code> 换了个思路：主程序不 <code>waitpid</code>，而是让处理器去 <code>Waitpid(-1, NULL, 0)</code> 并把结果写进全局 <code>volatile sig_atomic_t pid</code>，主程序则在 <code>while (!pid) ;</code> 里等这个标志 —— 这与 shell 等待前台作业的处境很像。课件对三种写法的评价很干脆：</p>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：四种等待写法的开销与风险</span>
+        <div class="seg" id="wtSeg">
+          <button class="on" data-wt="spin">while (!pid) ;</button>
+          <button data-wt="pause">while (!pid) pause();</button>
+          <button data-wt="sleep">while (!pid) sleep(1);</button>
+          <button data-wt="susp">sigsuspend(&amp;prev)</button>
+        </div>
+        <button class="sm" id="wtRun">模拟一次「信号来得正是时候」</button>
+        <button class="sm" id="wtRun2">模拟一次「信号踩在缝隙里」</button>
+      </div>
+      <div id="waitOut"></div>
+    </div>
+
+    <h3>7.4 sigsuspend：原子地「换掩码再挂起」<span class="srcref">原第 62–63 页</span></h3>
+    <p><code>int sigsuspend(const sigset_t *mask)</code> 的语义是：<b>原子地（不可打断地）把信号掩码换成 <code>*mask</code>，然后挂起进程直到收到一个信号</b>；返回时掩码恢复到调用前的值。它存在的唯一理由就是补上第 61 页那条缝：<code>while (!pid) pause();</code> 的问题在于「检查 <code>pid</code>」与「进入 <code>pause</code>」之间可能收到信号，而 <code>sigsuspend</code> 把「换掩码」和「挂起」合成一个不可分割的动作，信号要么在挂起前就被接收（此时 <code>pid</code> 已非零，循环条件直接为假），要么在挂起期间唤醒进程。</p>
+
+    <div class="box warn"><div class="t">勘误：第 62 页「等价代码」的第一行应为 SIG_SETMASK</div>
+      课件第 62 页把 <code>sigsuspend(&amp;mask)</code> 写成「下面三行的原子版本」：<code>sigprocmask(SIG_BLOCK, &amp;mask, &amp;prev);</code> / <code>pause();</code> / <code>sigprocmask(SIG_SETMASK, &amp;prev, NULL);</code>。
+      <b>第一行写错了</b>：<code>sigsuspend</code> 的语义是把掩码<b>整体替换</b>为 <code>*mask</code>（<code>SIG_SETMASK</code>），而不是把 <code>mask</code> 里的信号<b>加进</b>阻塞集合（<code>SIG_BLOCK</code>）。按 SIG_BLOCK 写的话，那些本就阻塞着的信号永远不会被解除阻塞：课件第 63 页的 <code>sigsuspend.c</code> 里 <code>Sigsuspend(&amp;prev)</code>（<code>prev</code> 是不含 <code>SIGCHLD</code> 的旧掩码）将无法解除 <code>SIGCHLD</code> 的阻塞，程序会死锁 —— 而课件的本意（以及第 61 页那段竞态分析）恰恰是「临时<b>解除</b>阻塞」。本页按 <b><code>sigprocmask(SIG_SETMASK, &amp;mask, &amp;prev)</code></b> 呈现，并用 C 实测验证过两种写法的差别（见报告）。
+    </div>
+    <div class="box ok"><div class="t">一句话记住 sigsuspend</div>
+      <code>sigsuspend(&amp;prev)</code> 在 <code>sigsuspend.c</code> 里的角色是「<b>原子地解除 <code>SIGCHLD</code> 的阻塞并睡到它到来</b>」：<code>prev</code> 是 <code>Sigprocmask(SIG_BLOCK, &amp;mask, &amp;prev)</code> 保存下来的<b>旧掩码</b>，也就是「<code>SIGCHLD</code> 尚未被阻塞」的那个版本。用旧掩码去挂起，等于把阻塞临时撤销 —— 这就是它比 <code>pause()</code> 强的地方。
+    </div>
+  </section>
+
+  <!-- ================= 8 ================= -->
+  <section id="s8">
+    <h2>8. 非本地跳转：setjmp 与 longjmp<span class="srcref">原第 65–70 页</span></h2>
+    <p class="lede">信号负责「进程之间」的异常控制流，这一节负责「一个进程内部」的：<b>从深层嵌套的函数里直接跳回上层</b>，跳过中间所有的返回。机制只有两个函数，但用错的代价是崩溃 —— 因为它受<b>栈纪律</b>约束。</p>
+
+    <h3>8.1 setjmp：在栈上留一个书签<span class="srcref">原第 65 页</span></h3>
+    <p><code>int setjmp(jmp_buf j)</code> 是「把当前的位置记在 <code>j</code> 里」：<b>必须在 <code>longjmp</code> 之前调用</b>，它为后续的 <code>longjmp</code> 标识一个「返回点」。实现上，它把<b>当前的寄存器上下文、栈指针与 PC 值存进 <code>jmp_buf</code></b>，然后返回 0。课件用一个短语记住它的调用特征：<b>调用一次，返回一次或多次</b>。</p>
+
+    <h3>8.2 longjmp：把书签读出来并跳过去<span class="srcref">原第 66 页</span></h3>
+    <p><code>void longjmp(jmp_buf j, int i)</code> 的语义是：<b>从 <code>j</code> 记住的那个 <code>setjmp</code> 处再次返回，只不过这次返回的是 <code>i</code> 而不是 0</b>。必须<b>在 <code>setjmp</code> 之后</b>调用；<b>调用一次，永不返回</b>。实现上是三步：恢复 <code>j</code> 里的寄存器上下文（栈指针、基址指针、PC 值）→ 把返回值 <code>%eax</code> 设成 <code>i</code> → 跳到 <code>j</code> 里记录的 PC 处。</p>
+
+    <h3>8.3 例子：从深层函数直接回到 main<span class="srcref">原第 67–68 页</span></h3>
+    <p>目标是<b>从深层嵌套的函数直接返回原始调用者</b>。<code>foo</code> 出错就 <code>longjmp(buf, 1)</code>，<code>bar</code> 出错就 <code>longjmp(buf, 2)</code>，而 <code>main</code> 只用一个 <code>switch (setjmp(buf))</code> 就把三种情况分辨出来 —— 这就是非本地跳转最典型的用法：<b>一处集中处理分散在各层的错误</b>。</p>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：setjmp/longjmp 推演器 —— 单步走，看 PC 与栈帧怎么变</span>
+        <button class="p" id="jmStep">下一步</button>
+        <button class="sm" id="jmReset">重来</button>
+        <div class="seg" id="jmSeg">
+          <button class="on" data-jm="ok">课件例：error2 = 1（bar 里跳）</button>
+          <button data-jm="bad">反例：先让 bar 返回，再跳</button>
+        </div>
+      </div>
+      <div id="jmpOut"></div>
+    </div>
+
+    <div class="box warn"><div class="t">勘误：第 68 页 case 2 的消息写错了「家的名字」</div>
+      课件第 68 页 <code>case 2</code> 打印的是 <code>"Detected an error2 condition in foo\n"</code>，但这一页（以及第 67 页）里判断 <code>error2</code> 并执行 <code>longjmp(buf, 2)</code> 的地方是 <b><code>bar()</code> 而不是 <code>foo()</code></b>：<code>foo</code> 里由 <code>error1</code> 触发的是 <code>longjmp(buf, 1)</code>。按代码语义，这条消息应当是 <b><code>"Detected an error2 condition in bar\n"</code></b>。
+      页面上方的代码<b>保持课件原文</b>（学生要能对上原课件），此处按正确语义注明差异 —— 运行结果不受影响，只有提示文案对不上。
+    </div>
+
+    <h3>8.4 限制：只能在栈纪律之内跳<span class="srcref">原第 69–70 页</span></h3>
+    <p>课件用两页反复强调同一条限制：<b>非本地跳转只在栈纪律（stack discipline）之内成立 —— 你只能跳到「已经被调用、但还没有返回」的那个函数的环境里去</b>。</p>
+    <ul>
+      <li>第 69 页是合法情形：<code>P1</code> 调 <code>P2</code>，<code>P2</code> 调 <code>P3</code>，<code>P3</code> 里 <code>longjmp(env, 1)</code> 跳回 <code>P1</code> 的 <code>setjmp</code> —— 此时 <code>P1</code> 的栈帧仍然活着，跳回去完全正确；</li>
+      <li>第 70 页是非法情形：如果 <code>P2</code> 里 <code>setjmp</code>、但 <code>P2</code> <b>已经返回到 <code>P1</code></b> 之后才有人 <code>longjmp(env, 1)</code>，那么 <code>env</code> 指向的栈帧早已不存在 —— 课件在这张图上直接打了一个 <code>X</code>。</li>
+    </ul>
+    <div class="box"><div class="t">这条限制解释了信号处理器为什么偏爱 sigsetjmp</div>
+      第 71 页的 <code>restart.c</code> 用的是 <code>sigsetjmp</code>/<code>siglongjmp</code> 而不是 <code>setjmp</code>/<code>longjmp</code>：在信号处理器里跳转时，除了寄存器上下文，还必须把信号的阻塞掩码一起恢复，否则跳回来之后掩码会停在「处理器运行期间」的状态。<code>setjmp</code> 系列不保存掩码，<code>sigsetjmp</code> 系列会保存（第二个参数非零表示要保存）—— 这是「栈纪律」之外的第二重纪律。
+    </div>
+  </section>
+
+  <!-- ================= 9 ================= -->
+  <section id="s9">
+    <h2>9. 综合案例：按下 ctrl-c 就重启的程序<span class="srcref">原第 71 页</span></h2>
+    <p class="lede">课件把信号与非本地跳转合起来做了一个只有 20 行的程序：<code>restart.c</code>。它<b>故意</b>把 <code>ctrl-c</code> 的默认动作（终止）改成「回到程序开头」，于是你在终端里怎么按都杀不死它 —— 除非用 <code>SIGKILL</code>。</p>
+
+    <div class="formula" style="text-align:left;font-size:13.5px;line-height:1.85">
+      <div>#include "csapp.h"</div>
+      <div>sigjmp_buf buf;</div>
+      <div>&nbsp;</div>
+      <div>void handler(int sig)</div>
+      <div>{</div>
+      <div>&nbsp;&nbsp;&nbsp;&nbsp;siglongjmp(buf, 1);</div>
+      <div>}</div>
+      <div>&nbsp;</div>
+      <div>int main()</div>
+      <div>{</div>
+      <div>&nbsp;&nbsp;&nbsp;&nbsp;if (!sigsetjmp(buf, 1)) {</div>
+      <div>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Signal(SIGINT, handler);</div>
+      <div>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Sio_puts("starting\n");</div>
+      <div>&nbsp;&nbsp;&nbsp;&nbsp;}</div>
+      <div>&nbsp;&nbsp;&nbsp;&nbsp;else</div>
+      <div>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Sio_puts("restarting\n");</div>
+      <div>&nbsp;</div>
+      <div>&nbsp;&nbsp;&nbsp;&nbsp;while(1) {</div>
+      <div>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Sleep(1);</div>
+      <div>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Sio_puts("processing...\n");</div>
+      <div>&nbsp;&nbsp;&nbsp;&nbsp;}</div>
+      <div>&nbsp;&nbsp;&nbsp;&nbsp;exit(0); /* Control never reaches here */</div>
+      <div>}</div>
+    </div>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：restart.c 模拟 —— 跑起来，然后拿 ctrl-c 打它</span>
+        <button class="p" id="rsRun">运行 ./restart</button>
+        <button class="p" id="rsCtrlC">按 ctrl-c</button>
+        <button class="sm" id="rsKill">kill -9（SIGKILL）</button>
+        <button class="sm" id="rsReset">重来</button>
+      </div>
+      <div id="restartOut"></div>
+    </div>
+
+    <div class="box ok"><div class="t">这 20 行把本讲的全部要点都串起来了</div>
+      <b>信号安装</b>（<code>Signal(SIGINT, handler)</code>）改写了 <code>ctrl-c</code> 的默认动作；<b>处理器</b>里只做一件事 —— <code>siglongjmp</code>（正好符合 G0「尽量简单」）；<b>非本地跳转</b>把控制权从处理器直接送回 <code>main</code> 的 <code>sigsetjmp</code> 处；而 <b><code>sig</code> 前缀</b>保证了跳转时信号掩码被一并恢复。最后那句注释 <code>exit(0); /* Control never reaches here */</code> 也不只是玩笑 —— 主循环是 <code>while(1)</code>，正常路径永远走不到 <code>exit</code>。
+    </div>
+
+    <h3>9.1 为什么必须用 sigsetjmp 家族<span class="srcref">原第 65–66、71 页</span></h3>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>对比项</th><th class="mono">setjmp / longjmp</th><th class="mono">sigsetjmp / siglongjmp</th></tr>
+      <tr><td>保存的内容</td><td>寄存器上下文、栈指针、PC</td><td>以上全部 <b>+ 信号阻塞掩码</b>（第 2 个参数非零时）</td></tr>
+      <tr><td>适用场景</td><td>普通函数间的错误跳转（第 67–68 页的例子）</td><td><b>信号处理器里的跳转</b>（第 71 页的 restart.c）</td></tr>
+      <tr><td>跳转方向</td><td colspan="2">两者都只能在<b>栈纪律</b>之内：只能跳回「已被调用但尚未返回」的函数（第 69–70 页）</td></tr>
+    </table></div>
+  </section>
+
+  <!-- ================= 10 ================= -->
+  <section id="s10">
+    <h2>10. 总结与测验<span class="srcref">原第 72 页</span></h2>
+    <p class="lede">第 72 页用两段话收官：<b>信号提供进程级的异常处理</b>（可以由用户程序产生、可以声明处理器来定义效果、写处理器时必须非常小心）；<b>非本地跳转提供进程内部的异常控制流</b>（但受栈纪律约束）。</p>
+
+    <div class="grid g2">
+      <div class="card"><h5>信号：一句话流程</h5>
+        <p class="mono" style="margin:0;font-size:13.5px;line-height:2">发送（置 pending 位）<br>→ 未决（pending）<br>→ 被阻塞则先等着（blocked）<br>→ 内核算 pnb = pending &amp; ~blocked<br>→ 取最小非零位 k → 强制接收 → 清位 k</p>
+      </div>
+      <div class="card"><h5>本讲的六个坑</h5>
+        <ul style="margin:0;font-size:14px">
+          <li>信号<b>不排队</b>：不能用它计数（第 54 页）</li>
+          <li>处理器里<b>不能调用 printf/malloc/exit</b>（第 51 页）</li>
+          <li>访问共享数据前要<b>阻塞信号</b>（G3）</li>
+          <li>全局标志要 <code>volatile sig_atomic_t</code>（G4/G5）</li>
+          <li><code>while (!pid) pause();</code> 有<b>竞态</b>，要用 <code>sigsuspend</code>（第 61–62 页）</li>
+          <li>非本地跳转<b>跳不回已返回的函数</b>（第 70 页）</li>
+        </ul>
+      </div>
+    </div>
+
+    <h3>10.1 判断题<span class="srcref">综合原第 24、54、69–70 页</span></h3>
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：三道判断题 —— 答完给出依据与反例</span>
+        <button class="sm" id="pzReset">重来</button>
+      </div>
+      <div id="pzOut"></div>
+    </div>
+
+    <h3>10.2 测验<span class="srcref">10 题</span></h3>
+    <p>每题选完立刻判分并给出解析，依据都标注到具体小节。</p>
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：本讲测验</span>
+        <button class="sm" id="qzReset">重来</button>
+      </div>
+      <div id="quizOut"></div>
+    </div>
+  </section>
+</main>
+
+</div>
+
+<div class="footer">
+  本页由原课件 PDF 翻译整理而成 · 数值计算与可视化均为页面内实时计算 · 可对照原课件页码阅读。
+</div>
+<button class="totop" id="toTop">↑ 顶部</button>
+
+<script>
+"use strict";
+/* ============================================================
+   异常控制流 II：信号与非本地跳转 · 交互式课件 —— 全部逻辑
+   约定：
+     · 所有计算在页面内实时完成；无效输入必须给出提示而不是抛错。
+     · 信号掩码是 64 位位向量，一律用 BigInt —— 不与 Number 混算。
+       位号约定：信号 k 占第 k 位（课件第 25 页「内核递送类型 k 的信号时
+       置第 k 位」的字面意思）；内核 sigset_t 里是第 k−1 位，两者表示的
+       是同一个集合，交叉验证按「逐信号成员关系」比对，与编号约定无关。
+     · 顶层 function 声明的 sigSetApply / sigmaskApply / sigPnB /
+       sigNextSignal / sigDeliverStep / sigSigsuspendMask 是判分基准，
+       由 tools/verify_ics17.js 与 C 的 sigsetops / sigsuspend 实测比对。
+   ============================================================ */
+
+const $  = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const badBox = msg => `<div class="box bad"><div class="t">输入无效</div>${esc(msg)}</div>`;
+const kvAttr = str => {                      /* "a=1|b=2" → {a:'1', b:'2'} */
+  const out = {};
+  String(str).split('|').forEach(part => {
+    const i = part.indexOf('=');
+    if (i > 0) out[part.slice(0, i).trim()] = part.slice(i + 1).trim();
+  });
+  return out;
+};
+
+/* ============================================================
+   一、信号表（课件第 23 页的表；另外三行是课件别处提到过名字的信号）
+   ============================================================ */
+const SIG_TABLE = [
+  { n: 2,  name: 'SIGINT',  act: '终止 Terminate', ev: '用户敲了 ctrl-c（User typed ctrl-c）', page: 23 },
+  { n: 9,  name: 'SIGKILL', act: '终止 Terminate', ev: '杀掉程序（Kill program）· 不能被覆盖也不能被忽略', page: 23 },
+  { n: 11, name: 'SIGSEGV', act: '终止 Terminate', ev: '段违例（Segmentation violation）', page: 23 },
+  { n: 14, name: 'SIGALRM', act: '终止 Terminate', ev: '定时器信号（Timer signal）', page: 23 },
+  { n: 17, name: 'SIGCHLD', act: '忽略 Ignore',    ev: '子进程停止或终止（Child stopped or terminated）', page: 23 },
+  { n: null, name: 'SIGTSTP', act: '停止 Stop（挂起每个进程）', ev: '用户敲了 ctrl-z', page: 35 },
+  { n: null, name: 'SIGFPE',  act: '课件未列', ev: '内核检测到除零这类系统事件', page: 26 },
+  { n: null, name: 'SIGCONT', act: '课件未列', ev: '让停止的进程重新运行（第 41 页）', page: 41 }
+];
+const NAMED = {};                                    /* 只有课件第 23 页给了编号 */
+SIG_TABLE.filter(s => s.n !== null).forEach(s => { NAMED[s.name] = s.n; });
+const NUM2SIG = {};
+Object.keys(NAMED).forEach(k => { NUM2SIG[NAMED[k]] = k; });
+const sigName = k => NUM2SIG[k] || ('信号 ' + k);
+
+/** 解析信号名：SIGCHLD / chld / SIGCHLD(17) / 17 —— 只有课件表里的五个能按名字或编号认出 */
+function parseSignalName(tok) {
+  const t = String(tok).trim().toUpperCase();
+  if (!t) return null;
+  if (/^\d+$/.test(t)) { const k = Number(t); return NUM2SIG[k] ? k : null; }
+  const plain = t.replace(/^SIG/, '');
+  for (const name of Object.keys(NAMED)) {
+    if (name === t || name === 'SIG' + plain) return NAMED[name];
+  }
+  return null;
+}
+
+/* ============================================================
+   二、64 位信号掩码（BigInt）
+   ============================================================ */
+const MASK64 = (1n << 64n) - 1n;
+const sigBit = k => (k >= 1 && k <= 64) ? (1n << BigInt(k)) : 0n;
+const maskWrap = v => BigInt(v) & MASK64;
+const hasBit = (mask, k) => (mask & sigBit(k)) !== 0n;
+const maskHex = mask => '0x' + maskWrap(mask).toString(16).toUpperCase().padStart(16, '0');
+const maskHexShort = mask => '0x' + maskWrap(mask).toString(16).toUpperCase();
+const maskDec = mask => maskWrap(mask).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+
+/** 把掩码里的位号列出来（升序） */
+function maskBits(mask) {
+  const out = [];
+  for (let k = 1; k <= 64; k++) if (hasBit(mask, k)) out.push(k);
+  return out;
+}
+function maskNames(mask) {
+  const b = maskBits(mask);
+  if (!b.length) return '（空集）';
+  return b.map(k => NUM2SIG[k] ? NUM2SIG[k] + '(' + k + ')' : '第 ' + k + ' 位').join('、');
+}
+
+/** 解析用户输入的一组信号：名字（逗号/空格分隔）、十六进制、十进制 */
+function parseSignalSet(str) {
+  const raw = String(str == null ? '' : str).trim();
+  const empty = { mask: 0n, bits: [], raw: raw };
+  if (!raw || raw === '空' || raw === '-') return empty;
+  if (/^0[xX][0-9a-fA-F]+$/.test(raw)) {
+    try { const m = maskWrap(BigInt(raw)); return { mask: m, bits: maskBits(m), raw: raw }; }
+    catch (e) { return null; }
+  }
+  if (/^\d+$/.test(raw)) return { mask: maskWrap(BigInt(raw)), bits: maskBits(maskWrap(BigInt(raw))), raw: raw };
+  let mask = 0n;
+  const toks = raw.split(/[,，、\s]+/).filter(Boolean);
+  for (const tk of toks) {
+    const clean = tk.replace(/\(\s*\d+\s*\)$/, '');           /* 允许写 SIGCHLD(17) */
+    const k = parseSignalName(clean);
+    if (k === null) return null;
+    mask |= sigBit(k);
+  }
+  return { mask: mask, bits: maskBits(mask), raw: raw };
+}
+
+/* ---------- 判分基准 1：信号集运算（对齐 POSIX/glibc 的 sigsetops） ----------
+   op: 'emptyset' | 'fillset' | 'add' | 'del' ；返回 {mask, ret, err}
+   编号范围：glibc 的 _NSIG 是 65，所以合法编号是 1..64，越界返回 −1（EINVAL）。
+   注意：SIGKILL/SIGSTOP **可以**被写进集合（sigaddset 不做特殊检查，Linux 与 macOS
+   实测都是返回 0）；真正被内核拦住的是「用它当掩码去阻塞」那一步，见 sigmaskApply。 */
+function sigSetApply(op, k, mask) {
+  const m = maskWrap(mask);
+  if (op === 'emptyset') return { mask: 0n, ret: 0, err: '' };
+  if (op === 'fillset')  return { mask: MASK64, ret: 0, err: '' };
+  if (op !== 'add' && op !== 'del') return { mask: m, ret: -1, err: '未知操作 ' + op };
+  if (!(k >= 1 && k <= 64)) return { mask: m, ret: -1, err: '信号编号必须落在 1..64（越界返回 EINVAL）' };
+  const b = sigBit(k);
+  if (op === 'add') return { mask: maskWrap(m | b), ret: 0, err: '' };
+  return { mask: maskWrap(m & ~b), ret: 0, err: '' };
+}
+
+/* ---------- 判分基准 2：sigprocmask 的两种模式（课件第 48、56、58 页） ----------
+   内核不允许阻塞 SIGKILL：即使掩码里写了第 9 位，进程的信号掩码里也不会出现它
+   （本机 macOS 与 Linux 都是这个行为；课件第 23 页说 SIGKILL 不能被覆盖也不能被忽略）。
+   本页只声明这一条实测得到的规则。 */
+const NOBLOCK = sigBit(9);
+function sigmaskApply(mode, cur, m) {
+  const c = maskWrap(cur), x = maskWrap(m);
+  if (mode === 'SIG_BLOCK')    return maskWrap((c | x) & ~NOBLOCK);
+  if (mode === 'SIG_SETMASK')  return maskWrap(x & ~NOBLOCK);
+  throw new Error('本页只实现 SIG_BLOCK 与 SIG_SETMASK（课件第 48 页用到的两种）');
+}
+
+/* ---------- 判分基准 3：递送判定 pnb = pending & ~blocked（课件第 40 页） ---------- */
+function sigPnB(pending, blocked) { return maskWrap(maskWrap(pending) & ~maskWrap(blocked)) & MASK64; }
+/** pnb 里最小的非零位 k；没有则返回 0（对应课件「pnb == 0 就交控制权」） */
+function sigNextSignal(pnb) {
+  for (let k = 1; k <= 64; k++) if (hasBit(pnb, k)) return k;
+  return 0;
+}
+/** 内核递送一步：返回 {k, pending, text}；k = 0 表示这一步无事可做 */
+function sigDeliverStep(pending, blocked) {
+  const pnb = sigPnB(pending, blocked);
+  const k = sigNextSignal(pnb);
+  if (k === 0) return { k: 0, pnb: 0n, pending: maskWrap(pending), text: 'pnb == 0：把控制权交给进程逻辑流里的下一条指令。' };
+  return { k: k, pnb: pnb, pending: maskWrap(maskWrap(pending) & ~sigBit(k)),
+           text: '取 pnb 里最小的非零位 k = ' + k + '（' + sigName(k) + '）：强制进程接收信号 k，并清掉 pending 的第 ' + k + ' 位。' };
+}
+
+/* ---------- 判分基准 4：sigsuspend 的掩码语义（第 62–63 页；勘误见 §7.4） ---------- */
+/** sigsuspend(&mask) 在挂起期间使用的掩码 = *mask（整体替换，不是并进阻塞集） */
+function sigSigsuspendMask(cur, m) { return maskWrap(m); }
+/** 课件第 62 页写的「等价三行」在挂起期间留下的掩码；mode 写错时会被本函数暴露 */
+function sigSuspEquivMask(mode, cur, m) { return sigmaskApply(mode, cur, m); }
+
+/* ============================================================
+   三、渲染小工具
+   ============================================================ */
+function bitRow(mask, opts) {
+  const o = opts || {};
+  const upto = o.upto || 32;
+  const cells = [];
+  const pnb = o.pnb != null ? maskWrap(o.pnb) : null;
+  for (let k = 1; k <= upto; k++) {
+    const isP = hasBit(mask, k);
+    let cls = 'b';
+    if (pnb !== null && hasBit(pnb, k)) cls += ' f';
+    else if (isP) cls += ' e';
+    if (o.blocked != null && hasBit(maskWrap(o.blocked), k)) cls += ' s';
+    cells.push(`<div class="${cls}" title="${esc(sigName(k))}"${o.click ? ` data-bitk="${k}" style="cursor:pointer"` : ''}>${k}</div>`);
+  }
+  return `<div class="bits">${cells.join('')}</div>`;
+}
+const legendBits = () => `
+  <div class="fw">
+    <span class="chip" style="background:var(--exp-bg);color:var(--exp-fg)">未决 pending</span>
+    <span class="chip" style="background:var(--sign-bg);color:var(--sign-fg)">已阻塞 blocked</span>
+    <span class="chip" style="background:var(--frac-bg);color:var(--frac-fg)">即将被接收 pnb</span>
+  </div>`;
+
+/* ============================================================
+   四、各交互组件的状态
+   ============================================================ */
+const ECF_LEVELS = {
+  exc: { name: '异常 Exceptions', who: '硬件 + 操作系统内核软件', when: '上一讲',
+         body: '需要非标准控制流的事件；<b>外部</b>产生的是中断（interrupt），<b>内部</b>产生的是陷阱（trap）与故障（fault）。事件本身就是由硬件或内核捕获并处理的。',
+         ex: '除零、缺页、系统调用、定时器中断' },
+  ctx: { name: '进程上下文切换 Process context switch', who: '硬件定时器 + 内核软件', when: '上一讲',
+         body: '系统里同时有多个活动进程，但单核上任何时刻只有一个在跑；每个进程看起来独占处理器 + 私有内存空间。切换由内核在异常处理器里完成。',
+         ex: '时间片用完 → 定时器中断 → 内核换一个进程跑' },
+  sig: { name: '信号 Signals', who: '内核软件 + 应用程序', when: '本讲',
+         body: '内核在目标进程的上下文里置一位来通知「有事件发生」；<b>收到信号后做什么，可以由应用程序自己安装的处理器决定</b> —— 这是四层里唯一「应用程序说了算」的机制。',
+         ex: 'ctrl-c 的 SIGINT、子进程退出的 SIGCHLD、定时器的 SIGALRM' },
+  jmp: { name: '非本地跳转 Nonlocal jumps', who: '应用程序代码', when: '本讲',
+         body: '纯应用层机制：<code>setjmp</code> 把当前上下文（寄存器、栈指针、PC）存进 <code>jmp_buf</code>，<code>longjmp</code> 恢复它并跳回 —— <b>跳过中间所有函数的返回</b>，但受栈纪律约束。',
+         ex: '从深层嵌套函数里直接回到 main 处理错误' }
+};
+
+const SHELLEX = {
+  lines: [], sleepJob: null, nextPs: 32019, running: false, fgNote: '', steps: 0
+};
+const SH_BANNER = '<span style="color:var(--muted)">（模拟器：linux&gt; ./shellex）</span>';
+const EVAL_CODE = [
+  'void eval(char *cmdline)',
+  '{',
+  '    char *argv[MAXARGS]; /* Argument list execve() */',
+  '    char buf[MAXLINE];   /* Holds modified command line */',
+  '    int bg;              /* Should the job run in bg or fg? */',
+  '    pid_t pid;           /* Process id */',
+  '',
+  '    strcpy(buf, cmdline);',
+  '    bg = parseline(buf, argv);',
+  '    if (argv[0] == NULL)',
+  '        return;   /* Ignore empty lines */',
+  '',
+  '    if (!builtin_command(argv)) {',
+  '        if ((pid = Fork()) == 0) {   /* Child runs user job */',
+  '            if (execve(argv[0], argv, environ) < 0) {',
+  '                printf("%s: Command not found.\\n", argv[0]);',
+  '                exit(0);',
+  '            }',
+  '        }',
+  '',
+  '        /* Parent waits for foreground job to terminate */',
+  '        if (!bg) {',
+  '            int status;',
+  '            if (waitpid(pid, &status, 0) < 0)',
+  '                unix_error("waitfg: waitpid error");',
+  '        }',
+  '        else',
+  '            printf("%d %s", pid, cmdline);',
+  '    }',
+  '    return;',
+  '}'
+];
+const EVAL_NOTES = [
+  { page: 10, lines: [8, 9],  text: 'parseline 会把 <code>buf</code> 解析进 <code>argv</code>，并返回这一行是否以 <code>&amp;</code> 结尾。' },
+  { page: 11, lines: [10, 11], text: '忽略空行。' },
+  { page: 12, lines: [13, 14], text: '如果是「内建（built-in）」命令，就在这里（这个程序里）处理；否则 fork/exec 掉 <code>argv[0]</code> 指定的程序。' },
+  { page: 13, lines: [14], text: '创建子进程。' },
+  { page: 14, lines: [15, 16, 17, 18], text: '启动 <code>argv[0]</code>。记住 <code>execve</code> <b>只在出错时返回</b> —— 所以后面必须紧跟打印错误与 <code>exit</code>。' },
+  { page: 15, lines: [21, 22, 23, 24, 25], text: '如果子进程在前台运行，就等它结束。' },
+  { page: 16, lines: [26, 27, 28], text: '如果子进程在后台运行，打印它的 pid 然后继续做别的事。' },
+  { page: 17, lines: [], text: '<b>糟糕，这段代码有问题。</b>（课件第 17 页只写了这一句 —— 问题就是第 18 页说的僵尸。）' }
+];
+
+const JOB = { jobs: [], mode: 'fg', nextId: 1 };
+const SIGSEQ = { pending: 0n, blocked: 0n, log: [], k: 17 };
+const PGRP0 = () => ([
+  { pid: 10, pgid: 10, cmd: 'Shell', role: 'shell', state: 'Running' },
+  { pid: 20, pgid: 20, cmd: 'Foreground job', role: 'fg', state: 'Running' },
+  { pid: 21, pgid: 20, cmd: 'Child', role: 'fg', state: 'Running' },
+  { pid: 22, pgid: 20, cmd: 'Child', role: 'fg', state: 'Running' },
+  { pid: 32, pgid: 32, cmd: 'Background job #1', role: 'bg', state: 'Running' },
+  { pid: 40, pgid: 40, cmd: 'Background job #2', role: 'bg', state: 'Running' }
+]);
+const PGRP = { procs: PGRP0(), transcript: [], fgPgid: 20, replay: null };
+const KILL = {
+  procs: [
+    { pid: 24788, pgid: 24788, cmd: 'tcsh', state: 'Running' },
+    { pid: 24818, pgid: 24817, cmd: 'forks 16（Child1）', state: 'Running' },
+    { pid: 24819, pgid: 24817, cmd: 'forks 16（Child2）', state: 'Running' },
+    { pid: 24820, pgid: 24788, cmd: 'ps', state: 'Running' }
+  ],
+  msg: '', bumped: false
+};
+const SIGINT_SIM = { mode: 'run', phase: 'waiting', log: [] };
+const FLOW = { key: 'switch' };
+const SETOP = { src: '', log: [], mask: 0n };
+const CCOUNT = { N: 5, H: 1000, spread: 5, out: null };
+const RACE = { proto: 'p1', order: 'parent', trace: [], verdict: '' };
+const WAIT_W = { key: 'spin', case: 'ok' };
+const JMP = { key: 'ok', step: 0 };
+const RESTART = { running: false, restarts: 0, log: [], killed: false };
+const SAFE_LISTS = {
+  safe: ['_exit', 'write', 'wait', 'waitpid', 'sleep', 'kill'],
+  unsafe: ['printf', 'sprintf', 'malloc', 'exit'],
+  sio: ['sio_puts', 'sio_putl', 'sio_error', 'sio_printf']
+};
+let ecfKey = 'exc';
+let pzState = [], qzState = [];
+
+/* ============================================================
+   五、渲染函数
+   ============================================================ */
+/* ---- 0 节：ECF 四层 ---- */
+function renderEcf() {
+  const L = ECF_LEVELS[ecfKey];
+  const list = Object.keys(ECF_LEVELS).map(k => {
+    const cur = k === ecfKey;
+    return `<tr${cur ? ' style="background:var(--sel-bg)"' : ''}><td><b>${ECF_LEVELS[k].name}</b></td>
+      <td>${ECF_LEVELS[k].who}</td><td>${ECF_LEVELS[k].when}</td></tr>`;
+  }).join('');
+  $('#ecfOut').innerHTML = `
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>本讲选中的一层</th><th>由谁提供（原第 2 页）</th><th>在哪一讲</th></tr>
+      ${list}
+    </table></div>
+    <div class="box ok" style="margin-bottom:0"><div class="t">${L.name}</div>
+      ${L.body}
+      <div style="margin-top:6px;font-size:13.5px;color:var(--muted)">例子：${esc(L.ex)}</div>
+    </div>`;
+}
+
+/* ---- 1 节：shellex 会话模拟器 ---- */
+function shPush(html, cls) { SHELLEX.lines.push({ html: html, cls: cls || '' }); }
+function renderShellex() {
+  const bg = SHELLEX.sleepJob;
+  const rows = [];
+  rows.push({ pid: 31542, cmd: 'tcsh', time: '00:00:01', note: '登录 shell（进程号取自课件第 8 页原图）' });
+  rows.push({ pid: 32017, cmd: 'shellex', time: '00:00:00', note: '本模拟器自己' });
+  if (bg) rows.push({ pid: bg.pid, cmd: 'sleep', time: '00:00:00', note: '后台作业，正在跑' });
+  rows.push({ pid: SHELLEX.nextPs, cmd: 'ps', time: '00:00:00', note: '这次 ps 自己' });
+  const psTbl = `<div class="tbl-wrap"><table class="tbl">
+      <tr><th class="mono">PID</th><th class="mono">TTY</th><th class="mono">TIME</th><th class="mono">CMD</th><th>为什么在表里</th></tr>
+      ${rows.map(r => `<tr><td class="mono">${r.pid}</td><td class="mono">pts/2</td><td class="mono">${r.time}</td><td class="mono">${esc(r.cmd)}</td><td style="font-size:13px;color:var(--muted)">${r.note}</td></tr>`).join('')}
+    </table></div>`;
+  const sess = SHELLEX.lines.map(l => l.cls ? `<div class="${l.cls}">${l.html}</div>` : `<div>${l.html}</div>`).join('');
+  $('#shellexOut').innerHTML = `
+    <div class="formula" style="text-align:left;font-size:13.5px;line-height:1.85;min-height:120px">
+      ${SH_BANNER}
+      ${sess || '<span style="color:var(--muted)">（还没有输入命令）</span>'}
+    </div>
+    <div class="grid g2">
+      <div class="card"><h5>会话状态</h5>
+        <p style="margin:0;font-size:14px">后台作业：${bg ? '<b>sleep ' + bg.sec + '</b>（pid ' + bg.pid + '）' : '无'}
+        <br>已执行的命令数：${SHELLEX.steps}
+        <br>前台作业：${SHELLEX.fgNote || '无'}</p>
+      </div>
+      <div class="card"><h5>ps 现在会输出什么</h5>
+        <p style="margin:0;font-size:13.5px;color:var(--muted)">下一次 <code>/bin/ps</code> 的表大致如下（进程号取自课件第 8 页原图，表本身按当前会话状态生成）：</p>
+        ${psTbl}
+      </div>
+    </div>`;
+}
+function shellexCmd(raw) {
+  const line = String(raw == null ? '' : raw);
+  const cmd = line.replace(/&amp;/g, '&').trim();
+  SHELLEX.steps++;
+  if (cmd === '') { shPush('<span style="color:var(--muted)">&gt; （空行）</span>'); shPush('<span style="color:var(--muted)">eval: argv[0] == NULL → return（课件第 11 页批注：Ignore empty lines）</span>'); return; }
+  shPush('<span style="color:var(--muted)">&gt;</span> <span class="mono">' + esc(cmd) + '</span>');
+  const bgReq = /&\s*$/.test(cmd);
+  const body = cmd.replace(/&\s*$/, '').trim();
+  const head = body.split(/\s+/)[0];
+  if (head === 'quit') {
+    shPush('<span style="color:var(--muted)">shell 退出（quit 是这份简易 shell 唯一实现的内建命令，课件第 9 页）</span>');
+    return;
+  }
+  if (!body.startsWith('/')) {
+    shPush(`<span style="color:var(--muted)">${esc(head)}: Command not found.</span>`);
+    shPush('<span style="color:var(--muted)">→ 课件第 10 页批注：给程序必须写完整路径，execve 找不到就走到 printf("%s: Command not found.\\n") 分支</span>');
+    return;
+  }
+  if (body === '/bin/ls -l csapp.c') {
+    shPush('-rw-r--r-- 1 bryant users 23053 Jun 15&nbsp;&nbsp;2015 csapp.c');
+    shPush('<span style="color:var(--muted)">→ 前台作业：父进程 fork 出子进程，execve 换成 /bin/ls，父进程 waitpid 等它结束（第 10 页 eval）</span>');
+    SHELLEX.fgNote = '/bin/ls -l csapp.c（已 wait 并回收）';
+    return;
+  }
+  if (body === '/bin/ps') {
+    shPush(' （ps 表见右侧卡片：它按当前会话状态现算）');
+    SHELLEX.fgNote = '/bin/ps（已 wait 并回收）';
+    SHELLEX.nextPs = 32033;
+    return;
+  }
+  const mSleep = /^\/bin\/sleep\s+(\d+)$/.exec(body);
+  if (mSleep) {
+    const sec = Number(mSleep[1]);
+    if (bgReq) {
+      SHELLEX.sleepJob = { pid: 32031, sec: sec };
+      shPush('<span class="mono">32031 ' + esc(cmd) + '</span>');
+      shPush('<span style="color:var(--muted)">→ 后台作业：eval 里 bg 为真，父进程只 printf("%d %s", pid, cmdline) 就回到提示符，<b>不 wait</b>（第 16 页批注）</span>');
+      SHELLEX.fgNote = '无（刚启动的是后台作业）';
+    } else {
+      shPush('<span style="color:var(--muted)">→ 前台作业：shell 会卡住 ' + sec + ' 秒等它（waitpid）</span>');
+      SHELLEX.fgNote = '/bin/sleep ' + sec + '（前台等待中）';
+    }
+    return;
+  }
+  shPush('<span style="color:var(--muted)">→ 模拟器只实现了课件第 8 页出现过的几条命令（/bin/ls、/bin/ps、/bin/sleep N、quit）。</span>');
+  SHELLEX.steps--;
+}
+
+/* ---- 2 节：eval 逐条批注 ---- */
+function renderEval(which) {
+  const cur = which == null ? 1 : which;        /* 0 = 全部 */
+  const hi = {};
+  EVAL_NOTES.forEach((nt, i) => {
+    if (cur === 0 || cur === i + 1) nt.lines.forEach(ln => { hi[ln] = (hi[ln] || 0) + 1; });
+  });
+  const code = EVAL_CODE.map((ln, i) => {
+    const no = i + 1;
+    const on = cur === 0 ? (hi[no] ? 'background:var(--sel-bg)' : '') : (hi[no] ? 'background:var(--accent-soft);font-weight:600' : 'opacity:.45');
+    return `<div style="${on};white-space:pre;padding:0 6px;border-radius:4px"><span style="color:var(--muted);user-select:none">${String(no).padStart(2, ' ')} </span>${esc(ln) || '&nbsp;'}</div>`;
+  }).join('');
+  const notes = EVAL_NOTES.map((nt, i) => {
+    if (cur !== 0 && cur !== i + 1) return '';
+    const pl = nt.lines.length ? nt.lines.join('、') : '—';
+    return `<div class="step on"><div class="h">批注 ${i + 1} · 原第 ${nt.page} 页 · 对应代码行 ${pl}</div>
+      <div class="e" style="font-size:14px;color:var(--ink)">${nt.text}</div></div>`;
+  }).join('');
+  $('#evalOut').innerHTML = `
+    <div class="formula" style="text-align:left;font-size:13px;line-height:1.7">${code}</div>
+    ${notes || '<div class="box" style="margin-bottom:0">点上面的 1–7 或「显示全部批注」。</div>'}`;
+}
+
+/* ---- 2 节：前台 / 后台与僵尸 ---- */
+function renderJob() {
+  const rows = JOB.jobs.map(j => {
+    const chip = j.state === 'ZOMBIE' ? '<span class="chip bad">Z 僵尸</span>'
+      : j.state === 'REAPED' ? '<span class="chip ok">已回收</span>'
+      : '<span class="chip">运行中</span>';
+    return `<tr><td class="mono">${j.id}</td><td class="mono">${esc(j.cmd)}</td>
+      <td>${j.bg ? '后台（shell 不 wait）' : '前台（shell waitpid 等它）'}</td><td>${chip}</td><td>${esc(j.note)}</td></tr>`;
+  }).join('');
+  const z = JOB.jobs.filter(j => j.state === 'ZOMBIE').length;
+  $('#jobOut').innerHTML = `
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>作业</th><th>命令</th><th>前台 / 后台</th><th>状态</th><th>说明</th></tr>
+      ${rows || '<tr><td colspan="5" style="color:var(--muted)">还没有作业 —— 点「运行一个作业」。</td></tr>'}
+    </table></div>
+    <div class="box ${z ? 'bad' : 'ok'}" style="margin-bottom:0"><div class="t">僵尸数：${z}</div>
+      ${z ? '后台作业终止后变成僵尸，而这份 shell 从不 wait 它们 —— 僵尸永远留着，占住内核的进程表项，形成内存泄漏（课件第 18 页）。' :
+           '目前没有僵尸：前台作业都被 waitpid 回收了。试试把模式切成「后台作业」再运行几个。'}
+    </div>`;
+}
+function jobRun() {
+  let n = 1;
+  const el = $('#jobN');
+  if (el) {
+    const p = parseInt(el.value, 10);
+    if (!Number.isFinite(p) || p < 1 || p > 20) { $('#jobOut').innerHTML = badBox('作业数请给 1–20 之间的整数。'); return; }
+    n = p;
+  }
+  for (let i = 0; i < n; i++) {
+    JOB.jobs.push({ id: JOB.nextId++, cmd: '/bin/date', bg: JOB.mode === 'bg', state: 'RUNNING', note: '刚 fork 出来' });
+  }
+  renderJob();
+}
+function jobTick() {
+  JOB.jobs.forEach(j => {
+    if (j.state !== 'RUNNING') return;
+    if (j.bg) { j.state = 'ZOMBIE'; j.note = '后台作业已经跑完，没人 wait 它'; }
+    else { j.state = 'REAPED'; j.note = 'shell 在 waitpid 里等到了它并回收'; }
+  });
+  renderJob();
+}
+
+/* ---- 3 节：信号速查表 ---- */
+function renderSigTbl() {
+  const q = ($('#sigQ').value || '').trim().toLowerCase();
+  const rows = SIG_TABLE.filter(s => {
+    if (!q) return true;
+    return (s.name + ' ' + s.act + ' ' + s.ev + ' ' + (s.n === null ? '' : s.n)).toLowerCase().includes(q);
+  }).map(s => `<tr>
+      <td class="mono">${s.n === null ? '—' : s.n}</td>
+      <td class="mono"><b>${s.name}</b></td>
+      <td>${esc(s.act)}</td>
+      <td style="font-size:13.5px">${esc(s.ev)}</td>
+      <td class="mono">${s.page}</td></tr>`).join('');
+  $('#sigTblOut').innerHTML = `
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>编号 ID</th><th>名称</th><th>默认动作</th><th>对应事件</th><th>课件页码</th></tr>
+      ${rows || '<tr><td colspan="5" style="color:var(--muted)">没有匹配的信号。</td></tr>'}
+    </table></div>
+    <div class="box" style="margin-bottom:0">课件第 23 页原话：<b>信号类型用小整数编号（1–30）标识</b>，信号里唯一的信息就是它的编号与「它到了」这件事。
+    表里前五行是第 23 页原表；<b>后三行只有名字没有编号</b> —— 课件在第 26、35、41 页提到了它们，但没有编号，本页不替它编号（要用它们就请用十六进制掩码，例如把第 k 位置 1）。</div>`;
+}
+
+/* ---- 3 节：未决 / 阻塞时序推演器 ---- */
+function renderSigSeq() {
+  const st = SIGSEQ;
+  const pnb = sigPnB(st.pending, st.blocked);
+  const log = st.log.map(l => `<div style="font-family:var(--font-mono);font-size:13.5px">${l}</div>`).join('');
+  const k = st.k;
+  const state = !hasBit(st.pending, k) && !hasBit(st.blocked, k) ? '空闲：既未决也不阻塞'
+    : hasBit(st.pending, k) && hasBit(st.blocked, k) ? '未决 + 已阻塞：信号已发送，但不会被接收（等解除阻塞）'
+    : hasBit(st.pending, k) ? '未决且未阻塞：内核下一步就会强制进程接收它'
+    : '已阻塞但未决：目前没有信号在等，阻塞位先摆着';
+  $('#sigSeqOut').innerHTML = `
+    <div class="grid g2">
+      <div class="card" style="min-width:0">
+        <h5>目标进程的三个集合</h5>
+        <div class="fcap">pending（未决）· <b>${maskHexShort(st.pending)}</b> · ${maskDec(st.pending)}</div>
+        ${bitRow(st.pending, { blocked: st.blocked, pnb: pnb, click: true, upto: 24 })}
+        <div class="fcap" style="margin-top:10px">blocked（信号掩码）· <b>${maskHexShort(st.blocked)}</b></div>
+        ${bitRow(st.blocked, { upto: 24 })}
+        <div class="fcap" style="margin-top:10px">pnb = pending &amp; ~blocked · <b>${maskHexShort(pnb)}</b> → 下一个被接收的信号：<b>${sigNextSignal(pnb) || '无（pnb == 0）'}</b></div>
+        ${legendBits()}
+      </div>
+      <div class="card" style="min-width:0">
+        <h5>第 ${k} 位（${esc(sigName(k))}）现在的处境</h5>
+        <p style="margin:0 0 8px;font-size:14px">${esc(state)}</p>
+        <div class="box ${hasBit(pnb, k) ? 'bad' : ''}" style="margin:0"><div class="t">即将发生什么</div>
+          ${hasBit(pnb, k) ? '它是 pnb 里最小的非零位 —— 内核下一步会强制进程接收它，然后把它从 pending 里清掉。' :
+            hasBit(st.pending, k) ? '内核想给也给不了：它被 blocked 挡着，只有解除阻塞（或者等内核用一个信号把它唤醒并暂时换掉掩码）才会被接收。' :
+            '按 pnb 的算法，内核现在不会为它做任何事。'}
+        </div>
+        <div style="margin-top:10px;font-size:13px;color:var(--muted)">点击位格可以直接切换该位的 pending（不经过「发送」）。</div>
+      </div>
+    </div>
+    <div class="card" style="margin-top:12px"><h5>推演日志</h5>
+      ${log || '<p style="margin:0;color:var(--muted);font-size:14px">还没有动作。可以试试「发送 send(k)」→「内核递送一步」。</p>'}
+    </div>`;
+}
+function sigSeqLog(html) { if (SIGSEQ.log.length > 14) SIGSEQ.log.shift(); SIGSEQ.log.push(html); }
+
+/* ---- 4 节：进程组与作业控制（课件第 33、35、36 页） ---- */
+function pgrpStat(p, isPs) {
+  if (p.state === 'Terminated') return '—';
+  if (p.state === 'Stopped') return 'T';
+  if (isPs) return 'R+';
+  if (p.role === 'shell') return 'S';
+  if (p.role === 'fg') return 'R+';
+  return 'R';
+}
+function renderPgrp() {
+  const psShown = PGRP.showPs;
+  const isFgPid = pid => PGRP.procs.some(q => q.pid === pid && q.pgid === PGRP.fgPgid && q.state !== 'Terminated');
+  const rows = PGRP.procs.map(p => {
+    const cls = p.state === 'Terminated' ? 'winner' : '';
+    const stat = pgrpStat(p, p.cmd === 'ps');
+    const chip = p.state === 'Terminated' ? '<span class="chip bad">SIGKILL/SIGINT 已终止</span>'
+      : p.state === 'Stopped' ? '<span class="chip warn">Stopped（T）</span>'
+      : p.pgid === PGRP.fgPgid ? '<span class="chip">Running（前台组）</span>'
+      : '<span class="chip gray">Running（后台组）</span>';
+    return `<tr><td class="mono">${p.pid}</td><td class="mono">${p.pgid}</td>
+      <td>${esc(p.cmd)}</td><td class="mono">${stat}</td><td>${chip}</td></tr>`;
+  }).join('');
+  const term = PGRP.transcript.length
+    ? PGRP.transcript.map(l => `<div>${l}</div>`).join('')
+    : '<span style="color:var(--muted)">（还没有操作）</span>';
+  const fgDesc = PGRP.fgPgid === null ? '无'
+    : '进程组 ' + PGRP.fgPgid + '（' + PGRP.procs.filter(p => p.pgid === PGRP.fgPgid && p.state !== 'Terminated').map(p => p.pid).join(', ') + '）';
+  $('#pgrpOut').innerHTML = `
+    <div class="grid g2">
+      <div style="min-width:0">
+        <div class="tbl-wrap"><table class="tbl">
+          <tr><th class="mono">pid</th><th class="mono">pgid</th><th>命令</th><th class="mono">STAT</th><th>状态</th></tr>
+          ${rows}
+        </table></div>
+        <p style="margin:4px 0 0;font-size:13px;color:var(--muted)">STAT 字母按课件第 36 页图例：<code>S</code> sleeping · <code>T</code> stopped · <code>R</code> running · <code>+</code> foreground proc group。已终止的进程在真实 <code>ps</code> 里不会再出现，这里保留它们是为了让你看清刚才打到了谁。</p>
+      </div>
+      <div class="card" style="min-width:0">
+        <h5>终端</h5>
+        <div class="formula" style="text-align:left;font-size:13.5px;line-height:1.8;min-height:96px">${term}</div>
+        <p style="margin:0;font-size:14px">前台进程组：<b>${fgDesc}</b></p>
+        <p style="margin:6px 0 0;font-size:13.5px;color:var(--muted)">键盘信号只会送给前台进程组 —— 后台组 32、40 与 shell 自己都收不到。</p>
+      </div>
+    </div>`;
+}
+function pgrpNote(html) { if (html) PGRP.transcript.push(html); if (PGRP.transcript.length > 10) PGRP.transcript.shift(); }
+function pgrpKey(key) {
+  const live = p => p.state !== 'Terminated';
+  const fg = PGRP.procs.filter(p => p.pgid === PGRP.fgPgid && live(p));
+  if (key === 'ctrlc') {
+    if (!fg.length) { pgrpNote('<span style="color:var(--muted)">&lt;ctrl-c&gt; —— 没有前台进程组可打断</span>'); }
+    else {
+      fg.forEach(p => { p.state = 'Terminated'; });
+      pgrpNote('&lt;ctrl-c&gt;&nbsp;&nbsp;<span style="color:var(--muted)">→ 内核把 SIGINT 发给前台进程组的每个作业（第 35 页）：' + fg.map(p => p.pid).join('、') + ' 被终止（默认动作 Terminate）</span>');
+    }
+  } else if (key === 'ctrlz') {
+    if (!fg.length) { pgrpNote('<span style="color:var(--muted)">&lt;ctrl-z&gt; —— 没有前台进程组可停止</span>'); }
+    else {
+      fg.forEach(p => { p.state = 'Stopped'; });
+      pgrpNote('&lt;ctrl-z&gt;&nbsp;&nbsp;<span style="color:var(--muted)">→ SIGTSTP 发给前台进程组的每个作业（第 35 页）：默认动作是停止（挂起）每个进程</span>');
+      pgrpNote('Suspended');
+    }
+  } else if (key === 'fg') {
+    const stopped = PGRP.procs.filter(p => p.state === 'Stopped');
+    if (!stopped.length) pgrpNote('<span style="color:var(--muted)">fg —— 没有处于停止状态的作业（试试先按 ctrl-z）</span>');
+    else { stopped.forEach(p => { p.state = 'Running'; }); pgrpNote('fg&nbsp;&nbsp;<span style="color:var(--muted)">→ 把停止的前台作业拉回前台并继续运行</span>'); }
+  } else if (key === 'killgrp') {
+    if (PGRP.fgPgid === null) pgrpNote('<span style="color:var(--muted)">没有前台进程组</span>');
+    else {
+      const tgt = PGRP.procs.filter(p => p.pgid === PGRP.fgPgid && live(p));
+      tgt.forEach(p => { p.state = 'Terminated'; });
+      pgrpNote('kill(-' + PGRP.fgPgid + ', SIGKILL)&nbsp;&nbsp;<span style="color:var(--muted)">→ 负数参数表示整个进程组：' + tgt.map(p => p.pid).join('、') + ' 全部被杀（SIGKILL 不能被覆盖也不能被忽略）</span>');
+    }
+  } else if (key === 'ps') {
+    PGRP.showPs = true;
+    pgrpNote('ps -j&nbsp;&nbsp;<span style="color:var(--muted)">→ 看左边的表：pid / pgid / STAT</span>');
+  }
+  renderPgrp();
+}
+
+/* ---- 4 节：/bin/kill 目标解析（课件第 34、37 页） ---- */
+function killParse(str) {
+  const t = String(str == null ? '' : str).trim().replace(/[–—−]/g, '-');
+  if (!t) return { err: '给一个参数，例如 -9 -24817' };
+  const parts = t.split(/\s+/);
+  let sig = null, target = null;
+  if (parts.length === 1) { target = parts[0]; }
+  else if (parts.length === 2) { sig = parts[0]; target = parts[1]; }
+  else return { err: '参数最多两个：<信号> <目标>' };
+  let sigN = 15, sigGiven = false;
+  if (sig !== null) {
+    const s = sig.replace(/^-/, '').replace(/^SIG/i, '');
+    if (!/^\d+$/.test(s)) return { err: '信号部分要写编号，例如 -9（' + sig + ' 不是编号）' };
+    sigN = Number(s); sigGiven = true;
+  }
+  if (!/^-?\d+$/.test(target)) return { err: '目标要写 pid 或 -pgid，例如 24818 / -24817' };
+  const tgt = Number(target);
+  if (tgt === 0) return { err: '目标 0 在课件里没出现过，本页不演示（POSIX 里它表示当前进程组）' };
+  const grp = tgt < 0;
+  return { sigN: sigN, sigGiven: sigGiven, grp: grp, id: Math.abs(tgt) };
+}
+function renderKill() {
+  const rows = KILL.procs.map(p => `<tr><td class="mono">${p.pid}</td><td class="mono">${p.pgid}</td>
+      <td class="mono">pts/2</td>
+      <td class="mono">${p.state === 'Terminated' ? '—' : '00:00:00'}</td><td class="mono">${esc(p.cmd)}</td>
+      <td>${p.state === 'Terminated' ? '<span class="chip bad">已被杀死</span>' : (p.cmd === 'ps' ? '<span class="chip gray">本次 ps 自己</span>' : '<span class="chip">运行中</span>')}</td></tr>`).join('');
+  const meta = KILL.msg ? `<div class="box ${KILL.msg.bad ? 'bad' : 'ok'}"><div class="t">${KILL.msg.t}</div>${KILL.msg.body}</div>` : '';
+  $('#killOut').innerHTML = `
+    ${meta}
+    <div class="grid g2">
+      <div style="min-width:0">
+        <h5>pid 表（课件第 34 页 ./forks 16 的现场）</h5>
+        <p style="margin:4px 0;font-size:13.5px;color:var(--muted)">Child1: pid=24818 pgrp=24817 · Child2: pid=24819 pgrp=24817 —— 两个子进程继承同一个进程组 24817。</p>
+        <div class="tbl-wrap"><table class="tbl">
+          <tr><th class="mono">PID</th><th class="mono">PGID</th><th class="mono">TTY</th><th class="mono">TIME</th><th class="mono">CMD</th><th>状态</th></tr>
+          ${rows}
+        </table></div>
+      </div>
+      <div class="card" style="min-width:0">
+        <h5>规则（课件第 34 页）</h5>
+        <ul style="margin:0;font-size:14px">
+          <li>参数是<b>正数</b>：只发给那一个进程 —— <code>/bin/kill -9 24818</code>「Send SIGKILL to process 24818」</li>
+          <li>参数是<b>负数</b>：发给该编号的整个<b>进程组</b> —— <code>/bin/kill -9 -24817</code>「Send SIGKILL to every process in process group 24817」</li>
+        </ul>
+        <p style="margin:8px 0 0;font-size:13.5px;color:var(--muted)">课件这一页的第一张 <code>ps</code> 里没有 24817 自己：启动 <code>./forks 16</code> 的那个进程已经不在了，但进程组 24817 还在（两个子进程仍在这个组里）。${KILL.bumped ? '<br>上面表里 <code>ps</code> 的 pid 换成了 24823 —— 课件第二张 ps 表里这次 <code>ps</code> 的 pid 正是 24823（每次 ps 都是新进程）。' : ''}</p>
+      </div>
+    </div>`;
+}
+function killApply(str) {
+  const r = killParse(str);
+  if (r.err) { KILL.msg = { bad: true, t: '参数看不懂', body: esc(r.err) }; renderKill(); return; }
+  const sigNameTxt = r.sigN === 9 ? 'SIGKILL' : r.sigN === 2 ? 'SIGINT' : r.sigN === 11 ? 'SIGSEGV'
+    : r.sigN === 14 ? 'SIGALRM' : r.sigN === 17 ? 'SIGCHLD' : null;
+  const live = p => p.state !== 'Terminated';
+  const existsSingle = KILL.procs.some(p => p.pid === r.id);
+  const existsGrp = KILL.procs.some(p => p.pgid === r.id);
+  if (r.grp && !existsGrp) {
+    KILL.msg = { bad: true, t: '没有这个进程组', body: '进程组 ' + r.id + ' 不存在；课件的两个 forks 都在进程组 24817 里，tcsh 与 ps 在 24788 里。' };
+    renderKill(); return;
+  }
+  if (!r.grp && !existsSingle) {
+    KILL.msg = { bad: true, t: '没有这个进程', body: 'pid ' + r.id + ' 不在课件的这张表里（表里是 24788 tcsh、24818 与 24819 两个 forks、24820 ps）。' };
+    renderKill(); return;
+  }
+  const hit = KILL.procs.filter(p => (r.grp ? p.pgid === r.id : p.pid === r.id) && live(p));
+  hit.forEach(p => { p.state = 'Terminated'; });
+  if (r.grp && r.sigN === 9 && r.id === 24817 && KILL.procs.some(p => p.cmd === 'ps' && live(p))) {
+    const ps = KILL.procs.find(p => p.cmd === 'ps');
+    ps.pid = 24823; KILL.bumped = true;
+  }
+  const extra = (!r.sigGiven)
+    ? '<br><b>注意</b>：省略信号时本页按 UNIX 惯例填 15（SIGTERM），但课件第 23 页的表里<b>没有</b>列 SIGTERM，所以这里只是演示参数解析。'
+    : (sigNameTxt ? '' : '<br>课件第 23 页的表里只列了 2 SIGINT、9 SIGKILL、11 SIGSEGV、14 SIGALRM、17 SIGCHLD 五个信号，编号 ' + r.sigN + ' 不在其中。');
+  KILL.msg = {
+    bad: false, t: '已发送信号 ' + r.sigN + (sigNameTxt ? '（' + sigNameTxt + '）' : ''),
+    body: (r.grp ? '目标是<b>进程组</b> ' + r.id + '：该组里还在跑的进程（' + hit.map(p => p.pid).join('、') + '）全部收到信号。'
+                 : '目标是<b>单个进程</b> ' + r.id + '。') +
+          '<br>受影响：' + (hit.length ? hit.map(p => p.cmd + '（pid ' + p.pid + '）').join('、') : '无（这些进程已经死了）') + extra
+  };
+  renderKill();
+}
+
+/* ---- 5 节：递送判定器 pnb ---- */
+function renderPnb() {
+  const ps = parseSignalSet($('#pnbPend').value);
+  const bs = parseSignalSet($('#pnbBlk').value);
+  if (ps === null || bs === null) {
+    $('#pnbOut').innerHTML = badBox('掩码请写信号名（SIGCHLD 或 SIGCHLD, SIGINT）、十六进制（0x4000）或十进制整数。');
+    return;
+  }
+  const pnb = sigPnB(ps.mask, bs.mask);
+  const order = [];
+  let pend = ps.mask, guard = 0;
+  while (guard++ < 8) {
+    const st = sigDeliverStep(pend, bs.mask);
+    if (st.k === 0) break;
+    order.push(st.k);
+    pend = st.pending;
+  }
+  $('#pnbOut').innerHTML = `
+    <div class="formula" style="font-size:15.5px">pnb = pending &amp; ~blocked = <b>${maskHexShort(pnb)}</b></div>
+    <div class="grid g2">
+      <div class="card" style="min-width:0"><h5>三个位向量</h5>
+        <div class="fcap">pending · ${maskHex(ps.mask)} · ${maskDec(ps.mask)}</div>
+        ${bitRow(ps.mask, { blocked: bs.mask, pnb: pnb, upto: 24 })}
+        <div class="fcap" style="margin-top:8px">blocked · ${maskHex(bs.mask)}</div>
+        ${bitRow(bs.mask, { upto: 24 })}
+        <div class="fcap" style="margin-top:8px">pnb（将被接收）· ${maskHex(pnb)}</div>
+        ${bitRow(pnb, { upto: 24 })}
+        ${legendBits()}
+      </div>
+      <div class="card" style="min-width:0"><h5>内核接下来做什么（课件第 40 页）</h5>
+        ${pnb === 0n
+          ? '<p style="margin:0;font-size:14.5px"><code>pnb == 0</code>：把控制权交给进程逻辑流里的下一条指令。这一位都不用动。</p>'
+          : `<p style="margin:0;font-size:14.5px">按编号从小到大依次强行让进程接收：<b>${order.join(' → ')}</b>（${order.map(k => sigName(k)).join(' → ')}）</p>
+             <p style="margin:8px 0 0;font-size:13.5px;color:var(--muted)">课件原文：Choose least nonzero bit k in pnb and force process p to receive signal k … Repeat for all nonzero k in pnb.</p>`}
+        <div class="box" style="margin-bottom:0"><div class="t">掩码里都装了谁</div>
+          pending：${esc(maskNames(ps.mask))}<br>blocked：${esc(maskNames(bs.mask))}
+        </div>
+      </div>
+    </div>`;
+}
+
+/* ---- 5 节：sigint.c 处理器模拟 ---- */
+function renderSigint() {
+  const S = SIGINT_SIM;
+  const log = S.log.map(l => `<div class="step on"><div class="h">${l.h}</div><div class="m">${l.m}</div></div>`).join('');
+  const code = `<div class="formula" style="text-align:left;font-size:13px;line-height:1.75">
+    <div>void sigint_handler(int sig) /* SIGINT handler */</div>
+    <div>{</div>
+    <div style="background:var(--accent-soft);padding:0 6px">    printf("So you think you can stop the bomb with ctrl-c, do you?\\n");</div>
+    <div>    sleep(2);</div>
+    <div style="background:var(--accent-soft);padding:0 6px">    printf("Well...");</div>
+    <div>    fflush(stdout);</div>
+    <div>    sleep(1);</div>
+    <div style="background:var(--accent-soft);padding:0 6px">    printf("OK. :-)\\n");</div>
+    <div>    exit(0);</div>
+    <div>}</div></div>`;
+  $('#sigintOut').innerHTML = `
+    <div class="grid g2">
+      <div style="min-width:0">${code}
+        <p style="margin:0;font-size:13.5px;color:var(--muted)">main 里做两件事：<code>signal(SIGINT, sigint_handler)</code> 安装处理器（失败就 <code>unix_error</code>），然后 <code>pause()</code> 等着收信号。</p>
+      </div>
+      <div class="card" style="min-width:0"><h5>终端</h5>
+        <div class="formula" style="text-align:left;font-size:13.5px;line-height:1.8;min-height:120px">
+          <div>linux&gt; ./sigint</div>
+          <div><span style="color:var(--muted)">${S.phase === 'waiting' ? '（pause() 挂起中，等着收信号）' : ''}</span></div>
+          ${S.log.map(l => l.term ? `<div>${l.term}</div>` : '').join('')}
+        </div>
+        <p style="margin:0;font-size:13.5px;color:var(--muted)">当前模式：${S.mode === 'run' ? '已安装 SIGINT 处理器' : 'SIG_DFL（默认动作：终止）'}</p>
+      </div>
+    </div>
+    ${log ? '<div style="margin-top:10px">' + log + '</div>' : ''}`;
+}
+
+/* ---- 5 节：并发流时序 ---- */
+function flowSeg(text, kind, width) {
+  const bg = kind === 'user' ? 'var(--accent-soft)' : kind === 'kern' ? 'var(--gray-bg)' : 'var(--frac-bg)';
+  const fg = kind === 'user' ? 'var(--accent)' : kind === 'kern' ? 'var(--gray-fg)' : 'var(--frac-fg)';
+  return `<div style="flex:${width};background:${bg};color:${fg};border-radius:6px;padding:6px 8px;font-size:12.5px;min-width:0">${text}</div>`;
+}
+function renderFlow() {
+  let body = '';
+  if (FLOW.key === 'switch') {
+    body = `
+      <p style="margin:0 0 8px;font-size:14.5px">课件第 39 页：内核从一个异常处理器返回、准备把控制权交给某个进程时，就是这个样子。<b>所有上下文切换都是通过调用某个异常处理器发起的。</b></p>
+      <div class="card"><h5>进程 A</h5>
+        <div style="display:flex;gap:4px">${flowSeg('user code', 'user', 3)}${flowSeg('kernel code（异常处理器）', 'kern', 2)}${flowSeg('context switch', 'kern', 2)}${flowSeg('user code', 'user', 3)}</div>
+      </div>
+      <div class="card"><h5>进程 B</h5>
+        <div style="display:flex;gap:4px">${flowSeg('user code', 'user', 2)}${flowSeg('kernel code', 'kern', 2)}${flowSeg('context switch', 'kern', 2)}${flowSeg('user code', 'user', 2)}${flowSeg('kernel code', 'kern', 2)}</div>
+      </div>
+      <p style="margin:8px 0 0;font-size:13.5px;color:var(--muted)">时间从左往右走。进程只会「用户代码 ↔ 内核代码」地来回切，从来看不到别人的代码。</p>`;
+  } else if (FLOW.key === 'deliver') {
+    body = `
+      <p style="margin:0 0 8px;font-size:14.5px">课件第 45 页：信号递送给进程 A 时，A 的第三条逻辑流（处理器）出现了 —— 它插在 A 自己的用户代码中间。</p>
+      <div class="card"><h5>进程 A</h5>
+        <div style="display:flex;gap:4px">
+          ${flowSeg('user code (main) I<sub>curr</sub>', 'user', 4)}
+          ${flowSeg('kernel code（递送信号）', 'kern', 3)}
+          ${flowSeg('user code (handler)', 'hl', 3)}
+          ${flowSeg('kernel code', 'kern', 2)}
+          ${flowSeg('user code (main) I<sub>next</sub>', 'user', 4)}
+        </div>
+      </div>
+      <div class="card"><h5>进程 B</h5>
+        <div style="display:flex;gap:4px">${flowSeg('user code (main)', 'user', 4)}${flowSeg('kernel code（上下文切换）', 'kern', 3)}${flowSeg('user code (main)', 'user', 4)}</div>
+      </div>
+      <p style="margin:8px 0 0;font-size:13.5px;color:var(--muted)">处理器执行完 return 之后，控制权回到被打断的那条指令（<code>I<sub>next</sub></code>），中间的上下文切换其实是内核在替 A 保存/恢复现场。</p>`;
+  } else {
+    body = `
+      <p style="margin:0 0 8px;font-size:14.5px">课件第 46 页：处理器自己也会被打断。按序号读一遍，注意 <b>7 步里控制权来回横跳，但每次返回都回到「被打断的那一点」</b>。</p>
+      <div class="step on"><div class="h">(1) 主程序捕获信号 s</div><div class="e">主程序（main program）继续跑到 I<sub>curr</sub> 处被信号 s 打断。</div></div>
+      <div class="step on"><div class="h">(2) 控制权交给处理器 S</div><div class="e">内核把控制权交给 signal s 的处理器 —— <b>处理器 S</b>。</div></div>
+      <div class="step on"><div class="h">(3) 程序捕获信号 t</div><div class="e">处理器 S 运行期间，又来了信号 t。</div></div>
+      <div class="step on"><div class="h">(4) 控制权交给处理器 T</div><div class="e">于是 S 被 T 打断（嵌套处理器）。</div></div>
+      <div class="step on"><div class="h">(5) 处理器 T 返回</div><div class="e">T 执行完 return —— 返回到<b>被它打断的处理器 S</b>。</div></div>
+      <div class="step on"><div class="h">(6) 处理器 S 返回</div><div class="e">S 执行完 return —— 返回到主程序。</div></div>
+      <div class="step on"><div class="h">(7) 主程序继续</div><div class="e">从 I<sub>next</sub> 处接着跑。</div></div>`;
+  }
+  $('#flowOut').innerHTML = body;
+}
+
+/* ---- 6 节：信号集运算器 ---- */
+function renderSetOp() {
+  const lines = String($('#soSrc').value || '').split('\n');
+  let mask = 0n;
+  const rows = [];
+  const re = /^\s*(sigemptyset|sigfillset|sigaddset|sigdelset)\s*\(\s*&?\s*(\w+)\s*(?:,\s*([^)]+?)\s*)?\)\s*;?\s*$/i;
+  lines.forEach((raw, i) => {
+    const line = raw.trim();
+    if (!line) return;
+    const m = re.exec(line);
+    if (!m) { rows.push({ ok: false, line: line, note: '看不懂这一行（支持 sigemptyset(&mask) / sigfillset(&mask) / sigaddset(&mask, SIGINT) / sigdelset(&mask, SIGINT)）', mask: mask }); return; }
+    const opName = m[1].toLowerCase();
+    const arg = m[3];
+    if (opName === 'sigemptyset' || opName === 'sigfillset') {
+      const r = sigSetApply(opName === 'sigemptyset' ? 'emptyset' : 'fillset', 0, mask);
+      mask = r.mask;
+      rows.push({ ok: true, line: line, note: opName === 'sigemptyset' ? '创建空集' : '把每个信号编号都加进去', mask: mask });
+      return;
+    }
+    if (arg == null) { rows.push({ ok: false, line: line, note: '缺少信号名参数', mask: mask }); return; }
+    const k = parseSignalName(arg.replace(/\(\s*\d+\s*\)$/, ''));
+    if (k === null) {
+      rows.push({ ok: false, line: line, note: '认不出信号「' + esc(arg) + '」：课件第 23 页的表只给了 2 SIGINT、9 SIGKILL、11 SIGSEGV、14 SIGALRM、17 SIGCHLD 的编号，其它信号本页认不出来', mask: mask });
+      return;
+    }
+    const r = sigSetApply(opName === 'sigaddset' ? 'add' : 'del', k, mask);
+    if (r.ret !== 0) { rows.push({ ok: false, line: line, note: '失败（返回 −1）：' + esc(r.err), mask: mask }); return; }
+    mask = r.mask;
+    rows.push({ ok: true, line: line, note: (opName === 'sigaddset' ? '加入 ' : '删除 ') + sigName(k) + '（第 ' + k + ' 位）' + (k === 9 ? ' —— 集合里放得进去，但内核不会真的按它阻塞（见下）' : ''), mask: mask });
+  });
+  SETOP.mask = mask;
+  const tbl = rows.map((r, i) => `<tr>
+      <td class="mono" style="font-size:13px">${esc(r.line)}</td>
+      <td class="mono">${maskHexShort(r.mask)}</td>
+      <td style="font-size:13.5px">${r.ok ? '' : '<span class="chip bad">失败</span> '}${r.note}</td></tr>`).join('');
+  $('#setOpOut').innerHTML = `
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>执行的操作</th><th>执行后的掩码</th><th>说明</th></tr>
+      ${tbl || '<tr><td colspan="3" style="color:var(--muted)">脚本是空的。</td></tr>'}
+    </table></div>
+    <div class="card"><h5>最终掩码</h5>
+      <div class="fcap">blocked · ${maskHex(mask)} · 十进制 ${maskDec(mask)}</div>
+      ${bitRow(mask, { upto: 24 })}
+      <p style="margin:6px 0 0;font-size:14px">集合内容：<b>${esc(maskNames(mask))}</b></p>
+      <p style="margin:6px 0 0;font-size:13px;color:var(--muted)">课件第 47 页把 <code>sigemptyset</code>／<code>sigfillset</code>／<code>sigaddset</code>／<code>sigdelset</code> 称作 <code>sigprocmask</code> 的支撑函数；这个掩码可以直接丢给推演器或递送判定器（两者都接受十六进制）。</p>
+      ${hasBit(mask, 9) ? `<div class="box warn" style="margin:10px 0 0"><div class="t">掩码里有第 9 位（SIGKILL）</div>
+        <code>sigaddset(&amp;mask, SIGKILL)</code> 本身会成功 —— 但<b>内核不允许阻塞 SIGKILL</b>：把这样的集合交给 <code>sigprocmask</code> 时第 9 位会被忽略（本机实测；课件第 23 页说 SIGKILL 不能被覆盖也不能被忽略）。本页的递送判定器算的是<b>集合</b>，所以它会照你写的掩码算。</div>` : ''}
+    </div>`;
+}
+
+/* ---- 6 节：异步信号安全查询 ---- */
+function renderSafe() {
+  const fn = ($('#safeIn').value || '').trim();
+  if (!fn) { $('#safeOut').innerHTML = badBox('输入一个函数名。'); return; }
+  const base = fn.replace(/\(.*$/, '').trim();
+  const inSafe = SAFE_LISTS.safe.includes(base);
+  const inUnsafe = SAFE_LISTS.unsafe.includes(base);
+  const inSio = SAFE_LISTS.sio.includes(base);
+  let verdict, cls, why;
+  if (inSafe) {
+    verdict = '异步信号安全 ✓'; cls = 'ok';
+    why = '在 Posix 保证安全的名单里（课件第 51 页点了名的：<code>_exit</code>、<code>write</code>、<code>wait</code>、<code>waitpid</code>、<code>sleep</code>、<code>kill</code>）。';
+  } else if (inUnsafe) {
+    verdict = '不安全 ✗'; cls = 'bad';
+    why = '课件第 50–51 页点名<b>不在</b>安全名单里：<code>printf</code>、<code>sprintf</code>、<code>malloc</code>、<code>exit</code>。它们内部会用锁、堆或全局缓冲，处理器插进来会把它们的状态弄坏。';
+  } else if (inSio) {
+    verdict = '安全（课件给的替代品）✓'; cls = 'ok';
+    why = '这是 <code>csapp.c</code> 里可重入的 SIO 库（课件第 52–53 页）：<code>sio_puts</code>／<code>sio_putl</code>／<code>sio_error</code>／<code>sio_printf</code>，专为处理器里输出而造。';
+  } else {
+    verdict = '课件没列 —— 按「未知」处理 ?'; cls = 'warn';
+    why = '课件只给了两份名单（第 50、51 页）。Posix 一共保证 117 个函数是异步信号安全的（<code>man 7 signal</code>），名单之外要自己去查 —— 查不到就当不安全。';
+  }
+  $('#safeOut').innerHTML = `
+    <div class="box ${cls}" style="margin-bottom:8px"><div class="t"><code>${esc(base)}</code> —— ${verdict}</div>${why}</div>
+    <div class="grid g2">
+      <div class="card"><h5>课件点名的安全函数</h5><p class="mono" style="margin:0;font-size:14px">${SAFE_LISTS.safe.join(' · ')}</p>
+        <p style="margin:6px 0 0;font-size:13px;color:var(--muted)">课件原话：<code>write</code> 是唯一异步信号安全的输出函数。</p></div>
+      <div class="card"><h5>课件点名的不安全函数</h5><p class="mono" style="margin:0;font-size:14px">${SAFE_LISTS.unsafe.join(' · ')}</p>
+        <p style="margin:6px 0 0;font-size:13px;color:var(--muted)">SIO 替代品：<span class="mono">${SAFE_LISTS.sio.join(' · ')}</span></p></div>
+    </div>`;
+}
+
+/* ---- 7 节：信号不排队（fork14 的离散事件模拟） ---- */
+function ccountRun(N, H, spread) {
+  const T_MAX = Math.max(3000, 3 * H + N * spread + 200);
+  const exits = [];
+  for (let i = 0; i < N; i++) exits.push(i * spread);
+  let pending = false, busyUntil = -1, cc = N, discarded = 0, t = 0;
+  const zombies = [], reaped = [], log = [];
+  for (t = 0; t <= T_MAX; t++) {
+    if (busyUntil >= 0 && t >= busyUntil) busyUntil = -1;
+    for (let i = 0; i < N; i++) {
+      if (exits[i] !== t) continue;
+      zombies.push(i);
+      if (pending) { discarded++; log.push({ t: t, txt: '子进程 ' + (i + 1) + ' 退出 → 发送 SIGCHLD：<b>丢弃</b>（同类信号已经未决，一个类型只有一个未决位）' }); }
+      else { pending = true; log.push({ t: t, txt: '子进程 ' + (i + 1) + ' 退出 → 发送 SIGCHLD：把 pending 第 17 位置 1' }); }
+    }
+    if (pending && busyUntil < 0 && zombies.length) {
+      pending = false;
+      const z = zombies.shift();
+      reaped.push(z);
+      cc--;
+      busyUntil = t + H;
+      log.push({ t: t, txt: '内核递送 SIGCHLD → 处理器执行一次 <code>wait</code>，回收子进程 ' + (z + 1) + '（ccount → ' + cc + '），然后 sleep ' + H + ' ms' });
+    }
+    if (cc === 0) break;
+  }
+  return { reaped: reaped, discarded: discarded, cc: cc, log: log, hung: cc > 0, N: N, H: H, spread: spread, T: t };
+}
+function renderCcount() {
+  const r = CCOUNT.out;
+  if (!r) return;
+  const term = r.reaped.map((z, i) => `<div>Handler reaped child ${23240 + i}</div>`).join('')
+    + (r.hung ? '<div>. . .<span style="color:var(--muted)">（挂住：ccount 还有 ' + r.cc + '，主程序在 <code>while (ccount &gt; 0) ;</code> 里永远自旋）</span></div>'
+              : '<div><span style="color:var(--muted)">（全部回收，ccount 归零，主程序退出自旋）</span></div>');
+  $('#ccountOut').innerHTML = `
+    <div class="grid g2">
+      <div class="card" style="min-width:0"><h5>结果</h5>
+        <p style="margin:0;font-size:14.5px">
+          回收了 <b>${r.reaped.length}</b> / ${r.N} 个子进程；<br>
+          因「已有未决同类信号」被丢弃的 SIGCHLD：<b>${r.discarded}</b> 次；<br>
+          ccount 最终值：<b>${r.cc}</b>；<br>
+          结局：${r.hung ? '<span class="chip bad">主程序永久挂住</span>' : '<span class="chip ok">正常结束</span>'}</p>
+        <p style="margin:8px 0 0;font-size:13px;color:var(--muted)">模拟规则只有两条（都来自课件）：未决位最多一个；处理器运行期间内核隐式阻塞同类型信号。处理器里写的是课件第 54 页那句单次 <code>wait</code>。</p>
+      </div>
+      <div class="card" style="min-width:0"><h5>终端</h5>
+        <div class="formula" style="text-align:left;font-size:13.5px;line-height:1.8;min-height:80px">
+          <div>linux&gt; ./forks ${r.N === 5 ? '14' : '14'} <span style="color:var(--muted)">/* N = ${r.N} */</span></div>
+          ${term}
+        </div>
+      </div>
+    </div>
+    <div class="card" style="margin-top:12px"><h5>事件表（毫秒）</h5>
+      <div style="max-height:230px;overflow:auto;font-family:var(--font-mono);font-size:13px">
+        ${r.log.map(l => `<div><span style="color:var(--muted)">t=${String(l.t).padStart(4, ' ')}</span> ${l.txt}</div>`).join('')}
+      </div>
+    </div>
+    <div class="box ${r.hung ? 'warn' : 'ok'}"><div class="t">${r.hung ? '这就是课件第 54 页标注「This code is incorrect」的原因' : '这一组参数下恰好不会丢信号'}</div>
+      ${r.hung ? '只要有几个子进程在处理器运行期间扎堆退出，它们就共用一个未决位 —— <b>信号没法当计数器用</b>。第 55 页的修法是把 <code>wait</code> 放进循环：<code>while ((pid = wait(NULL)) &gt; 0) { ccount--; … }</code>，一次进处理器就把所有僵尸收干净。'
+               : '但这是运气：把「处理器耗时」调大或把「散布」调小，就能看到丢信号。现算的好处是你可以自己试出边界。'}
+    </div>`;
+}
+
+/* ---- 7 节：竞态 procmask1 / procmask2 ---- */
+function raceRun(proto, order) {
+  const pid = 24818;
+  const t = [];
+  const push = (who, txt, tag) => t.push({ who: who, txt: txt, tag: tag || '' });
+  const early = proto === 'p2';
+  push('父', 'fork() → 子进程 pid=' + pid + (early ? '（在此之前已 <code>Sigprocmask(SIG_BLOCK, &amp;mask_one, &amp;prev_one)</code> 阻塞 SIGCHLD）' : '（SIGCHLD 未被阻塞）'));
+  if (order === 'child') {
+    if (early) push('子', '<code>Sigprocmask(SIG_SETMASK, &amp;prev_one, NULL)</code> 在 execve 之前解除阻塞（否则滞留的信号会在 execve 时才送达）');
+    push('子', 'execve("/bin/date", argv, NULL) 很快跑完 → 内核给父进程发 SIGCHLD');
+    if (early) push('内核', 'SIGCHLD 变成<b>未决</b>，但被掩码挡着 → 处理器不会运行', 'good');
+    else push('内核', 'SIGCHLD 未被阻塞 → 处理器<b>立刻</b>运行', 'bad');
+  }
+  if (!early && order === 'child') push('处理器', 'deletejob(' + pid + ') —— 可是作业列表里<b>还没有</b>这个作业', 'bad');
+  push('父', '<code>addjob(' + pid + ')</code> —— 把子进程加进作业列表' + (early ? '（前一行先 <code>Sigprocmask(SIG_BLOCK, &amp;mask_all, …)</code> 用「阻塞所有信号」保护临界区）' : ''));
+  if (early) push('父', '<code>Sigprocmask(SIG_SETMASK, &amp;prev_one, NULL)</code> 解除 SIGCHLD 阻塞');
+  if (order === 'parent') {
+    if (early) {
+      push('内核', '解除阻塞后立刻发现 SIGCHLD 未决 → 递送', 'good');
+      push('处理器', 'deletejob(' + pid + ') —— 列表里有它，正常删除', 'good');
+    } else {
+      push('子', '子进程这时才结束 → SIGCHLD → 处理器运行');
+      push('处理器', 'deletejob(' + pid + ') —— 列表里有它，正常删除', 'good');
+    }
+  } else if (early) {
+    push('内核', '解除阻塞后立刻发现 SIGCHLD 未决 → 递送', 'good');
+    push('处理器', 'deletejob(' + pid + ') —— 列表里已经有它了，正常删除', 'good');
+  }
+  const broken = !early && order === 'child';
+  return { trace: t, broken: broken };
+}
+function renderRace() {
+  const r = raceRun(RACE.proto, RACE.order);
+  RACE.trace = r.trace;
+  const who = w => w === '父' ? '父' : w === '子' ? '子' : w === '处理器' ? '处理器' : '内核';
+  const steps = r.trace.map((s, i) => `<div class="step on"${s.tag === 'bad' ? ' style="border-color:var(--bad-bd);background:var(--bad-bg)"' : s.tag === 'good' ? ' style="border-color:var(--ok-bd);background:var(--ok-bg)"' : ''}>
+      <div class="h">${i + 1} · ${who(s.who)}</div><div class="e" style="font-size:14px;color:var(--ink)">${s.txt}</div></div>`).join('');
+  $('#raceOut').innerHTML = `
+    <div class="grid g2">
+      <div style="min-width:0"><h5>事件时序（${RACE.order === 'parent' ? '父进程先跑' : '子进程先跑'}）</h5>${steps}</div>
+      <div style="min-width:0">
+        <div class="card"><h5>这份协议在防什么</h5>
+          <p style="margin:0;font-size:14px">${RACE.proto === 'p1'
+            ? '<code>procmask1.c</code>：fork 之后就 <code>addjob</code>，<b>没有</b>任何掩码保护。课件原话：它「假设父进程总在子进程之前运行」。'
+            : '<code>procmask2.c</code>：<b>fork 之前</b>先阻塞 SIGCHLD 并把旧掩码存进 <code>prev_one</code>；子进程先恢复掩码再 <code>execve</code>；父进程 <code>addjob</code> 之后才解除阻塞。'}</p>
+        </div>
+        <div class="box ${r.broken ? 'bad' : 'ok'}" style="margin-bottom:0"><div class="t">${r.broken ? '作业列表被破坏 ✗' : '一致 ✓'}</div>
+          ${r.broken
+            ? '<code>deletejob</code> 跑在 <code>addjob</code> 之前：作业列表先被删了一次不存在的记录，随后又加进一条<b>已经终止</b>的记录 —— 这条记录永远不会被回收。课件说这就是那个「subtle synchronization error」。'
+            : '不论谁先跑，<code>addjob</code> 一定发生在处理器看到这条作业之前：要么子进程的 SIGCHLD 被掩码挡着，要么父进程本来就先跑完。'}
+        </div>
+      </div>
+    </div>`;
+}
+
+/* ---- 7 节：等待信号的四种写法 ---- */
+const WAIT_INFO = {
+  spin:  { code: 'while (!pid)\n    ;', when: 61,
+           cpu: '100% 自旋（课件：very wasteful）', race: '无竞态', lat: '立即',
+           note: '主程序一直在查 <code>pid</code>，白白烧掉一个核。' },
+  pause: { code: 'while (!pid)  /* Race! */\n    pause();', when: 61,
+           cpu: '几乎不占 CPU', race: '<b>有竞态</b>：检查 pid 与进入 pause 之间收到信号就丢了', lat: '立即（如果不丢信号）',
+           note: '课件逐字标了 <code>/* Race! */</code>：见右边的「缝隙」演示。' },
+  sleep: { code: 'while (!pid) /* Too slow! */\n    sleep(1);', when: 61,
+           cpu: '几乎不占 CPU', race: '无竞态（每秒复查一次）', lat: '<b>最多 1 秒</b>（课件：Safe, but slow）',
+           note: '安全但慢：信号到了也可能要等下一秒才发现。' },
+  susp:  { code: 'while (!pid)\n    Sigsuspend(&prev);', when: 62,
+           cpu: '几乎不占 CPU', race: '<b>无竞态</b>：换掩码与挂起是一个原子动作', lat: '立即',
+           note: '课件第 62 页：<code>sigsuspend</code> 相当于把「换掩码 / 挂起 / 恢复掩码」三件事做成不可打断的一件。' }
+};
+function renderWait() {
+  const k = WAIT_W.key, info = WAIT_INFO[k];
+  const tbl = Object.keys(WAIT_INFO).map(key => {
+    const i = WAIT_INFO[key];
+    return `<tr${key === k ? ' style="background:var(--sel-bg)"' : ''}><td class="mono" style="white-space:pre;font-size:13px">${esc(i.code)}</td>
+      <td>${i.cpu}</td><td>${i.race}</td><td>${i.lat}</td><td class="mono">${i.when}</td></tr>`;
+  }).join('');
+  let sim = '';
+  if (WAIT_W.case === 'gap') {
+    if (k === 'spin') sim = '<div class="box ok" style="margin:0"><div class="t">自旋没有缝隙</div>自旋一直在检查标志位，信号无论什么时候到都会立刻被子程序发现（代价是烧 CPU）。</div>';
+    else if (k === 'sleep') sim = '<div class="box warn" style="margin:0"><div class="t">不会丢，但可能晚 1 秒</div>缝隙期间信号被接收、处理器把 pid 设好；主程序醒来（最多 1 秒后）看到 pid 非零就退出循环。</div>';
+    else if (k === 'pause') sim = `<div class="step on" style="border-color:var(--bad-bd);background:var(--bad-bg)"><div class="h">1 · 主程序检查条件</div><div class="m">while (!pid)</div><div class="e">pid 还是 0 → 准备调用 pause()。</div></div>
+      <div class="step on" style="border-color:var(--bad-bd);background:var(--bad-bg)"><div class="h">2 · 【缝隙】信号到了</div><div class="m">SIGCHLD → 处理器 → pid = 子进程号</div><div class="e">就在这两步之间，内核递送了 SIGCHLD，处理器跑完并把 pid 设成非零 —— 信号已经被<b>收掉</b>了。</div></div>
+      <div class="step on" style="border-color:var(--bad-bd);background:var(--bad-bg)"><div class="h">3 · 主程序进入 pause()</div><div class="m">pause();</div><div class="e">可是没有下一个信号了 —— 它<b>永远醒不过来</b>。这就是课件标的 <code>/* Race! */</code>。</div></div>`;
+    else sim = `<div class="step on" style="border-color:var(--ok-bd);background:var(--ok-bg)"><div class="h">1 · 原子动作：换掩码 + 挂起</div><div class="m">Sigsuspend(&amp;prev);</div><div class="e">掩码被换成 <code>prev</code>（解除 SIGCHLD 的阻塞）与挂起进程是<b>一个不可打断的动作</b>。</div></div>
+      <div class="step on" style="border-color:var(--ok-bd);background:var(--ok-bg)"><div class="h">2 · 信号只有两种可能的时间点</div><div class="m">挂起之前 / 挂起期间</div><div class="e">若在挂起之前被接收：掩码里 SIGCHLD 已不再阻塞，处理器设好 pid，回到循环时条件为假；若在挂起期间到达：内核直接唤醒进程。两种都不会丢。</div></div>`;
+  } else {
+    sim = `<div class="box" style="margin:0"><div class="t">信号来得正是时候</div>信号在「主程序已经进入等待」之后才到 —— 四种写法都能正常工作。差别只在上表的 CPU 与延迟：自旋烧 CPU，<code>sleep(1)</code> 最多慢 1 秒，<code>pause</code> 与 <code>sigsuspend</code> 都不烧 CPU 也不慢。</div>`;
+  }
+  $('#waitOut').innerHTML = `
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>写法</th><th>CPU 开销</th><th>竞态</th><th>响应延迟</th><th>课件页</th></tr>
+      ${tbl}
+    </table></div>
+    <div class="box"><div class="t">${info.note}</div></div>
+    <h5 style="margin-top:12px">时序推演：${WAIT_W.case === 'gap' ? '信号踩在缝隙里' : '信号来得正是时候'}</h5>
+    ${sim}`;
+}
+
+/* ---- 8 节：setjmp / longjmp 推演器 ---- */
+const JMP_STEPS = {
+  ok: [
+    { h: '1 · main：留一个书签', m: 'switch (setjmp(buf))', e: 'setjmp 把当前的寄存器上下文、栈指针与 PC 值存进 <code>buf</code>，返回 0 → 走 case 0。', stack: ['main'] },
+    { h: '2 · main 调用 foo', m: 'foo();', e: 'foo 里 <code>error1 = 0</code>，条件为假，不跳；于是继续调用 <code>bar()</code>。', stack: ['main', 'foo'] },
+    { h: '3 · bar 里触发 longjmp', m: 'if (error2)  longjmp(buf, 2);', e: 'error2 = 1 → 执行 <code>longjmp(buf, 2)</code>：恢复 <code>buf</code> 里的寄存器上下文，把返回值 <code>%eax</code> 设成 <b>2</b>，跳回 <code>buf</code> 记录的 PC。这一跳<b>不返回</b>。', stack: ['main', 'foo', 'bar'] },
+    { h: '4 · setjmp 第二次返回', m: 'switch (setjmp(buf))  →  2', e: '同一个 <code>setjmp</code> 这次返回 2（课件第 66 页：this time returning i instead of 0）→ 走 case 2。此刻 <code>foo</code>、<code>bar</code> 的栈帧已经被丢弃 —— 它们不会「返回」。', stack: ['main'] },
+    { h: '5 · 处理错误并退出', m: 'printf("Detected an error2 condition in bar\\n"); exit(0);', e: '一处集中处理了深层函数的错误。注意课件第 68 页这条消息原文写的是 <code>in foo</code>，但 error2 是在 <code>bar</code> 里检测的（见上面的勘误）。', stack: ['main'] }
+  ],
+  bad: [
+    { h: '1 · P1 调用 P2', m: 'P1() { P2(); P3(); }', e: '课件第 70 页的情形：<code>setjmp</code> 不在 P1 里，而在<b>被调用的 P2</b> 里。', stack: ['P1', 'P2'] },
+    { h: '2 · P2 里 setjmp', m: 'if (setjmp(env)) { /* Long Jump to here */ }', e: '<code>env</code> 现在记录的是 <b>P2 的栈帧</b>与它当时的 PC；setjmp 返回 0，if 不成立。', stack: ['P1', 'P2'] },
+    { h: '3 · P2 返回', m: '}', e: 'P2 执行完就返回了 —— <b><code>env</code> 指向的那个栈帧不复存在</b>。', stack: ['P1'] },
+    { h: '4 · P1 接着调用 P3', m: 'P3();', e: '此时栈上只有 P1（和 P3）的帧。', stack: ['P1', 'P3'] },
+    { h: '5 · P3 里 longjmp', m: 'longjmp(env, 1);', e: '它想恢复到 P2 的环境 —— 但那个环境已经销毁了。课件在图上直接打了一个 <b>X</b>：这不是「跳到旧地址」这么简单，而是栈纪律被破坏，行为未定义（通常直接崩）。', stack: ['P1', 'P3'] }
+  ]
+};
+function renderJmp() {
+  const steps = JMP_STEPS[JMP.key];
+  const upto = JMP.step;
+  const cards = steps.map((s, i) => i < upto
+    ? `<div class="step on"${i === upto - 1 ? ' style="border-color:var(--accent)"' : ''}"><div class="h">${s.h}</div><div class="m">${esc(s.m)}</div><div class="e">${s.e}</div></div>`
+    : `<div class="step"><div class="h">${s.h}</div><div class="m">${esc(s.m)}</div></div>`).join('');
+  const stack = (steps[Math.max(0, upto - 1)] || steps[0]).stack;
+  const stackBox = stack.map((f, i) => `<div style="border:1px solid var(--line);border-radius:6px;padding:6px 10px;margin:4px 0;background:var(--paper-soft);font-family:var(--font-mono);font-size:13.5px">${f} 的栈帧${i === 0 ? '<span style="color:var(--muted)">（main）</span>' : ''}</div>`).join('');
+  const done = upto >= steps.length;
+  $('#jmpOut').innerHTML = `
+    <div class="grid g2">
+      <div style="min-width:0"><h5>第 ${Math.min(upto, steps.length)} / ${steps.length} 步</h5>${cards}
+        ${done ? (JMP.key === 'ok'
+          ? '<div class="box ok" style="margin:0"><div class="t">成功：栈纪律之内</div>跳转目标 P1（或 main）还活着，所以 <code>longjmp</code> 恢复的上下文有效。这正是第 71 页 <code>restart.c</code> 能工作的原因 —— 它的 <code>sigsetjmp</code> 就在 main 里。</div>'
+          : '<div class="box bad" style="margin:0"><div class="t">失败：栈纪律被破坏</div>课件第 70 页在这个位置打了一个 <b>X</b>。限制只有一条：<b>只能跳到「已经被调用、但还没有返回」的那个函数的环境</b>。</div>') : ''}
+      </div>
+      <div class="card" style="min-width:0"><h5>此刻的调用栈（自顶向下）</h5>${stackBox}
+        <p style="margin:6px 0 0;font-size:13px;color:var(--muted)">&quot;Long Jump to here&quot; 的含义：跳回去之后，<code>setjmp</code> 的返回值不是 0 而是 <code>longjmp</code> 的第二个参数。</p>
+      </div>
+    </div>`;
+}
+
+/* ---- 9 节：restart.c 模拟 ---- */
+function renderRestart() {
+  const R = RESTART;
+  const term = R.log.map(l => `<div>${l}</div>`).join('');
+  $('#restartOut').innerHTML = `
+    <div class="grid g2">
+      <div class="card" style="min-width:0"><h5>程序状态</h5>
+        <p style="margin:0;font-size:14.5px">
+          ${R.killed ? '<span class="chip bad">已被 SIGKILL 杀死</span>' : R.running ? '<span class="chip ok">正在跑</span>' : '<span class="chip gray">还没启动</span>'}<br>
+          <code>sigsetjmp</code> 的返回值：<b>${R.running || R.killed ? (R.restarts === 0 ? '0（第一次）' : '1（来自 siglongjmp）') : '—'}</b><br>
+          被 ctrl-c 打回原点的次数：<b>${R.restarts}</b><br>
+          SIGINT 处理器的安装状态：${R.running || R.killed ? '<code>Signal(SIGINT, handler)</code> 已生效' : '未安装'}</p>
+      </div>
+      <div class="card" style="min-width:0"><h5>终端</h5>
+        <div class="formula" style="text-align:left;font-size:13.5px;line-height:1.8;min-height:120px">${term || '<span style="color:var(--muted)">点「运行 ./restart」</span>'}</div>
+      </div>
+    </div>
+    <div class="box"><div class="t">为什么 SIGINT 打不死它，SIGKILL 可以</div>
+      <code>handler</code> 里只有一句 <code>siglongjmp(buf, 1)</code>：SIGINT 一到，控制权就被送回 <code>main</code> 的 <code>sigsetjmp</code> 处，<code>sigsetjmp</code> 这次返回非零 → 打印 <code>restarting</code> → 重新进入无限循环。而 <code>SIGKILL</code> <b>不能被覆盖也不能被忽略</b>（课件第 23 页），所以它能真正杀掉这个进程。
+    </div>`;
+}
+
+/* ============================================================
+   六、测验与判断题
+   ============================================================ */
+const QUIZ = [
+  { q: '关于信号的「未决（pending）」，下面哪一句符合课件？',
+    o: ['同类型信号会排队，发 5 个就会收到 5 次', '任何类型最多只有一个未决信号，之后的同类信号被丢弃', '被阻塞的信号根本不会被发送到进程', '一个未决信号可以被反复接收多次'],
+    a: 1, w: '课件第 24 页：至多一个未决信号；<b>信号不排队</b>，同类后续信号被丢弃；被阻塞的信号「可以送达但不会被接收」；未决信号至多被接收一次。' },
+  { q: '内核准备把控制权交给进程 p 时，用来挑选信号的公式是？',
+    o: ['pnb = pending | blocked', 'pnb = pending & ~blocked', 'pnb = ~pending & blocked', 'pnb = pending ^ blocked'],
+    a: 1, w: '课件第 40 页：<code>pnb = pending &amp; ~blocked</code>，即「未决且未被阻塞」的集合；若非空就取<b>最小的非零位 k</b>，强制进程接收信号 k，并对所有非零位重复。' },
+  { q: 'SIGKILL 与其他信号的关键区别是什么？',
+    o: ['它的默认动作是忽略', '它只能由内核发出', '它不能被覆盖也不能被忽略', '它只能用 /bin/kill 发送'],
+    a: 2, w: '课件第 23 页在 SIGKILL 那一行注明「cannot override or ignore」，所以你在程序里装处理器或写 SIG_IGN 都无效 —— 这也是第 71 页 restart.c 唯一能被杀死的方式。' },
+  { q: '你在终端里按 ctrl-c，内核把 SIGINT 发给谁？',
+    o: ['当前终端上的所有进程', '你自己 shell 所属的进程组', '前台进程组里的每一个作业', '只有最近启动的那一个进程'],
+    a: 2, w: '课件第 35 页：敲 ctrl-c（ctrl-z）会让内核把 SIGINT（SIGTSTP）发给<b>前台进程组里的每一个作业</b>；SIGINT 的默认动作是终止每个进程，SIGTSTP 是停止（挂起）每个进程。' },
+  { q: '<code>/bin/kill -9 -24817</code> 里的负数 <code>-24817</code> 表示？',
+    o: ['进程 24817 的父进程', '编号为 24817 的进程组', '一条错误用法，会报错', '优先级为 24817'],
+    a: 1, w: '课件第 34 页：正数参数只发给那一个进程（Send SIGKILL to process 24818），负数参数发给整个<b>进程组</b>（Send SIGKILL to every process in process group 24817）。' },
+  { q: '下面哪个函数可以在信号处理器里安全调用？',
+    o: ['printf', 'malloc', 'write', '_exit 与 write 都可以'],
+    a: 3, w: '课件第 50–51 页：<code>printf</code>、<code>sprintf</code>、<code>malloc</code>、<code>exit</code> 都<b>不</b>是异步信号安全的；安全名单里有 <code>_exit</code>、<code>write</code>、<code>wait</code>、<code>waitpid</code>、<code>sleep</code>、<code>kill</code>。课件还补了一句：<code>write</code> 是唯一异步信号安全的输出函数。' },
+  { q: '课件第 54 页的 fork14 只回收了两个孩子就挂住，根本原因是？',
+    o: ['子进程太多，超出了进程表上限', '处理器里的 wait 写错了返回值判断', '信号不排队：5 个子进程几乎同时退出，只留下一个未决的 SIGCHLD', '父进程忘了安装 SIGCHLD 处理器'],
+    a: 2, w: '每种信号只有一个未决位，处理器运行期间同类型信号被隐式阻塞 —— 扎堆退出的子进程共用一个 SIGCHLD，所以只能触发两次处理器。<b>不能用信号计数事件</b>；修法是把 <code>wait</code> 放进循环一次收干净（第 55 页）。' },
+  { q: '<code>sigsuspend(&amp;prev)</code> 在 sigsuspend.c 里起的作用是？',
+    o: ['把 prev 里的信号加进阻塞集合', '原子地换掉信号掩码并挂起，避免「检查标志与挂起之间」的竞态', '暂时把 CPU 让给其它进程', '恢复被 SIGTSTP 停止的进程'],
+    a: 1, w: '课件第 61–63 页：<code>while (!pid) pause();</code> 有竞态（检查与挂起之间收到信号就永久睡下去）；<code>sigsuspend</code> 把「换掩码 + 挂起」做成一个不可打断的动作。注意课件第 62 页把等价代码的第一行写成 <code>SIG_BLOCK</code> 是笔误，应为 <code>SIG_SETMASK</code>（见 §7.4 勘误）。' },
+  { q: '关于 setjmp/longjmp 的限制，正确的是？',
+    o: ['可以跳到任意地址，包括已经返回的函数', '只能跳到「已经被调用、但还没有返回」的函数的环境', 'longjmp 之后 setjmp 一定返回 0', 'longjmp 会把栈帧重新创建出来'],
+    a: 1, w: '课件第 69–70 页：只能在<b>栈纪律</b>之内跳转。第 70 页那个 P2 已经返回的例子被直接打上了 X —— 环境没了，恢复它是未定义行为。' },
+  { q: '<code>longjmp(buf, 2)</code> 执行后，对应的 <code>setjmp(buf)</code> 这次返回什么？',
+    o: ['0', '2', '未定义', '上一次的返回值'],
+    a: 1, w: '课件第 66 页：<code>longjmp</code> 让 <code>setjmp</code>「再次返回，这次返回 <code>i</code> 而不是 0」；实现上就是把返回值寄存器 <code>%eax</code> 设成 <code>i</code> 再跳到 <code>jmp_buf</code> 里记录的 PC。' }
+];
+const PUZZLES = [
+  { q: '信号会排队保存，所以可以用「收到几个信号」来数事件个数。', a: 0,
+    w: '<b>错。</b>课件第 24、54 页：任何类型最多只有一个未决信号，同类后续信号被丢弃；fork14 里 5 个子进程几乎同时退出，父进程只被通知了两次，于是挂在 <code>while (ccount &gt; 0) ;</code> 上。' },
+  { q: '一个未决信号最多只会被接收一次。', a: 1,
+    w: '<b>对。</b>课件第 24 页最后一条：<i>A pending signal is received at most once</i>；第 32 页的动画把这句话又重复了一遍。' },
+  { q: '只要 <code>jmp_buf</code> 还在，longjmp 就能安全地跳回它记录的 setjmp 处，哪怕是已经返回的函数。', a: 0,
+    w: '<b>错。</b>课件第 69–70 页：非本地跳转只在栈纪律之内成立 —— 只能跳到「已被调用、但尚未返回」的函数的环境。第 70 页那个 <code>env</code> 对应的 P2 已经返回，课件直接在图上打了一个 X。' }
+];
+function renderQuiz() {
+  const answered = qzState.filter(v => v !== null).length;
+  const right = QUIZ.filter((q, i) => qzState[i] === q.a).length;
+  const list = QUIZ.map((q, i) => {
+    const sel = qzState[i];
+    const cls = sel === null ? '' : sel === q.a ? ' correct done' : ' wrong done';
+    return `<div class="puzzle${cls}" style="flex-direction:column;align-items:stretch">
+      <div class="q" style="white-space:normal"><b>${i + 1}.</b> ${q.q}</div>
+      <div style="display:flex;flex-wrap:wrap;gap:7px;margin-top:8px">
+        ${q.o.map((o, j) => `<button class="sm" data-qzo="${i}:${j}"
+          style="${sel === null ? '' : j === q.a ? 'border-color:var(--ok-bd);background:var(--ok-bg)'
+            : j === sel ? 'border-color:var(--bad-bd);background:var(--bad-bg)' : 'opacity:.6'}">
+          ${'ABCD'[j]}. ${o}</button>`).join('')}
+      </div>
+      <div class="exp"><span class="verdict">${sel === null ? '' : sel === q.a ? '✓ 正确' : '✗ 错误'}</span>
+        &nbsp;正确答案：<b>${'ABCD'[q.a]}. ${q.o[q.a]}</b><br>${q.w}</div>
+    </div>`;
+  }).join('');
+  const score = answered === 0 ? '' : `<div class="box ${right === QUIZ.length ? 'ok' : right >= QUIZ.length / 2 ? 'warn' : 'bad'}" style="margin-bottom:0">
+    <div class="t">已答 ${answered} / ${QUIZ.length} 题，答对 ${right} 题</div>
+    ${answered === QUIZ.length
+      ? (right === QUIZ.length ? '全对 —— 从信号的位向量到 setjmp 的栈纪律都拿下了。' : '错题上方已标出正确答案与依据页码，回对应小节再看一遍即可。')
+      : '继续答题，每题都会立即给出解析。'}
+  </div>`;
+  $('#quizOut').innerHTML = list + score;
+}
+function renderPuzzles() {
+  const list = PUZZLES.map((p, i) => {
+    const sel = pzState[i];
+    const cls = sel === null ? '' : sel === p.a ? ' correct done' : ' wrong done';
+    return `<div class="puzzle${cls}" style="flex-direction:column;align-items:stretch">
+      <div class="q" style="white-space:normal;font-family:var(--font-sans);font-size:15px">${p.q}</div>
+      <div style="display:flex;gap:7px;margin-top:8px">
+        <button class="sm" data-pz="${i}:1" style="${sel === null ? '' : p.a === 1 ? 'border-color:var(--ok-bd);background:var(--ok-bg)' : sel === 1 ? 'border-color:var(--bad-bd);background:var(--bad-bg)' : 'opacity:.6'}">真</button>
+        <button class="sm" data-pz="${i}:0" style="${sel === null ? '' : p.a === 0 ? 'border-color:var(--ok-bd);background:var(--ok-bg)' : sel === 0 ? 'border-color:var(--bad-bd);background:var(--bad-bg)' : 'opacity:.6'}">假</button>
+      </div>
+      <div class="exp"><span class="verdict">${sel === null ? '' : sel === p.a ? '✓ 正确' : '✗ 错误'}</span>&nbsp;${p.w}</div>
+    </div>`;
+  }).join('');
+  $('#pzOut').innerHTML = list;
+}
+
+/* ============================================================
+   七、初始化
+   ============================================================ */
+function initAll() {
+  /* --- 0 节 --- */
+  renderEcf();
+  $$('#ecfSeg button').forEach(b => b.addEventListener('click', () => {
+    $$('#ecfSeg button').forEach(x => x.classList.remove('on'));
+    b.classList.add('on'); ecfKey = b.dataset.ecf; renderEcf();
+  }));
+
+  /* --- 1 节 --- */
+  function doSh(v) { shellexCmd(v == null ? $('#shIn').value : v); renderShellex(); }
+  $('#shGo').addEventListener('click', () => doSh(null));
+  $('#shIn').addEventListener('keydown', e => { if (e.key === 'Enter') doSh(null); });
+  $$('[data-sh]').forEach(b => b.addEventListener('click', () => { $('#shIn').value = b.dataset.sh; doSh(b.dataset.sh); }));
+  $('#shReset').addEventListener('click', () => {
+    SHELLEX.lines = []; SHELLEX.sleepJob = null; SHELLEX.nextPs = 32019; SHELLEX.steps = 0; SHELLEX.fgNote = '';
+    $('#shIn').value = '/bin/sleep 10 &'; renderShellex();
+  });
+  renderShellex();
+
+  /* --- 2 节 --- */
+  $$('#evSeg button').forEach(b => b.addEventListener('click', () => {
+    $$('#evSeg button').forEach(x => x.classList.remove('on'));
+    b.classList.add('on'); renderEval(Number(b.dataset.ev));
+  }));
+  $('#evAll').addEventListener('click', () => {
+    $$('#evSeg button').forEach(x => x.classList.remove('on'));
+    renderEval(0);
+  });
+  renderEval(1);
+  $('#jobMode').addEventListener('change', () => { JOB.mode = $('#jobMode').value; });
+  $('#jobGo').addEventListener('click', jobRun);
+  $('#jobTick').addEventListener('click', jobTick);
+  $('#jobN').addEventListener('keydown', e => { if (e.key === 'Enter') jobRun(); });
+  $('#jobReset').addEventListener('click', () => { JOB.jobs = []; JOB.nextId = 1; renderJob(); });
+  renderJob();
+
+  /* --- 3 节 --- */
+  $('#sigQ').addEventListener('input', renderSigTbl);
+  $$('[data-sigq]').forEach(b => b.addEventListener('click', () => { $('#sigQ').value = b.dataset.sigq; renderSigTbl(); }));
+  renderSigTbl();
+
+  $('#sqSig').addEventListener('change', () => {
+    const k = parseSignalName($('#sqSig').value);
+    if (k === null) { SIGSEQ.log.push('<span style="color:var(--sign)">认不出信号「' + esc($('#sqSig').value) + '」：课件第 23 页的表只给了 SIGINT/SIGKILL/SIGSEGV/SIGALRM/SIGCHLD 的编号。</span>'); }
+    else SIGSEQ.k = k;
+    renderSigSeq();
+  });
+  const sqKey = () => {
+    const k = parseSignalName($('#sqSig').value);
+    if (k === null) { renderSigSeq(); $('#sigSeqOut').insertAdjacentHTML('afterbegin', badBox('信号名认不出来，请用课件第 23 页表里的五个之一。')); return 0; }
+    SIGSEQ.k = k; return k;
+  };
+  $('#sqSend').addEventListener('click', () => {
+    const k = sqKey(); if (!k) return;
+    if (hasBit(SIGSEQ.pending, k)) {
+      sigSeqLog('发送 send(' + k + ')：<b>丢弃</b> —— 第 ' + k + ' 位已经是 1，同类未决信号最多只有一个（课件第 24 页）。');
+    } else {
+      SIGSEQ.pending = maskWrap(SIGSEQ.pending | sigBit(k));
+      sigSeqLog('发送 send(' + k + ')：pending 第 ' + k + ' 位置 1（' + sigName(k) + '）。');
+    }
+    renderSigSeq();
+  });
+  $('#sqBlock').addEventListener('click', () => {
+    const k = sqKey(); if (!k) return;
+    const before = SIGSEQ.blocked;
+    SIGSEQ.blocked = sigmaskApply('SIG_BLOCK', before, sigBit(k));
+    if (!hasBit(SIGSEQ.blocked, k)) {
+      sigSeqLog('阻塞 block(' + k + ')：<b>内核拒绝阻塞 ' + sigName(k) + '</b> —— 掩码里这一位加不进去（课件第 23 页：它不能被覆盖也不能被忽略）。');
+    } else {
+      sigSeqLog('阻塞 block(' + k + ')：blocked 第 ' + k + ' 位置 1 —— 之后再送来的信号可以送达但不会被接收。');
+    }
+    renderSigSeq();
+  });
+  $('#sqUnblock').addEventListener('click', () => {
+    const k = sqKey(); if (!k) return;
+    SIGSEQ.blocked = maskWrap(SIGSEQ.blocked & ~sigBit(k));
+    sigSeqLog('解除阻塞 unblock(' + k + ')：blocked 第 ' + k + ' 位清 0。');
+    renderSigSeq();
+  });
+  $('#sqStep').addEventListener('click', () => {
+    const r = sigDeliverStep(SIGSEQ.pending, SIGSEQ.blocked);
+    SIGSEQ.pending = r.pending;
+    sigSeqLog('内核递送一步：' + r.text);
+    renderSigSeq();
+  });
+  $('#sqDemo').addEventListener('click', () => {
+    SIGSEQ.pending = 0n; SIGSEQ.blocked = 0n; SIGSEQ.log = []; SIGSEQ.k = 17;
+    $('#sqSig').value = 'SIGCHLD';
+    SIGSEQ.pending = maskWrap(SIGSEQ.pending | sigBit(17));
+    sigSeqLog('（课件第 26–32 页的动画）进程 A 发信号给 C：<code>kill(C, SIGCHLD)</code> → pending 第 17 位置 1。');
+    const r = sigDeliverStep(SIGSEQ.pending, SIGSEQ.blocked);
+    SIGSEQ.pending = r.pending;
+    sigSeqLog('内核在返回路径上算 pnb = pending &amp; ~blocked，发现第 17 位非零 → ' + r.text);
+    sigSeqLog('C 的 pending 第 17 位回到 0。<b>一个未决信号至多被接收一次</b>（第 32 页）：这就是为什么连发两次只能收到一次。');
+    renderSigSeq();
+  });
+  $('#sqReset').addEventListener('click', () => {
+    SIGSEQ.pending = 0n; SIGSEQ.blocked = 0n; SIGSEQ.log = []; renderSigSeq();
+  });
+  document.addEventListener('click', e => {
+    const cell = e.target.closest('#sigSeqOut [data-bitk]');
+    if (cell) {
+      const k = Number(cell.dataset.bitk);
+      SIGSEQ.pending = maskWrap(SIGSEQ.pending ^ sigBit(k));
+      SIGSEQ.k = k; $('#sqSig').value = NUM2SIG[k] || $('#sqSig').value;
+      sigSeqLog('直接翻转第 ' + k + ' 位（' + sigName(k) + '）：pending = ' + maskHexShort(SIGSEQ.pending));
+      renderSigSeq();
+    }
+  });
+  renderSigSeq();
+
+  /* --- 4 节 --- */
+  $('#pgCtrlC').addEventListener('click', () => pgrpKey('ctrlc'));
+  $('#pgCtrlZ').addEventListener('click', () => pgrpKey('ctrlz'));
+  $('#pgFg').addEventListener('click', () => pgrpKey('fg'));
+  $('#pgKill').addEventListener('click', () => pgrpKey('killgrp'));
+  $('#pgPs').addEventListener('click', () => pgrpKey('ps'));
+  $('#pgReset').addEventListener('click', () => {
+    PGRP.procs = PGRP0(); PGRP.transcript = []; PGRP.fgPgid = 20; renderPgrp();
+  });
+  renderPgrp();
+  function doKill(v) { killApply(v == null ? $('#killIn').value : v); }
+  $('#killGo').addEventListener('click', () => doKill(null));
+  $('#killIn').addEventListener('keydown', e => { if (e.key === 'Enter') doKill(null); });
+  $$('[data-kill]').forEach(b => b.addEventListener('click', () => { $('#killIn').value = b.dataset.kill; doKill(b.dataset.kill); }));
+  $('#killReset').addEventListener('click', () => {
+    KILL.procs.forEach(p => { p.state = 'Running'; }); KILL.msg = ''; renderKill();
+  });
+  renderKill();
+
+  /* --- 5 节 --- */
+  function doPnb() { renderPnb(); }
+  $('#pnbGo').addEventListener('click', doPnb);
+  ['#pnbPend', '#pnbBlk'].forEach(id => $(id).addEventListener('keydown', e => { if (e.key === 'Enter') doPnb(); }));
+  ['#pnbPend', '#pnbBlk'].forEach(id => $(id).addEventListener('change', doPnb));
+  $$('[data-pnb]').forEach(b => b.addEventListener('click', () => {
+    const kv = kvAttr(b.dataset.pnb);
+    $('#pnbPend').value = kv.p || '';
+    $('#pnbBlk').value = kv.b || '';
+    doPnb();
+  }));
+  doPnb();
+  $$('#siSeg button').forEach(b => b.addEventListener('click', () => {
+    $$('#siSeg button').forEach(x => x.classList.remove('on'));
+    b.classList.add('on');
+    SIGINT_SIM.mode = b.dataset.si;
+    SIGINT_SIM.phase = 'waiting'; SIGINT_SIM.log = [];
+    renderSigint();
+  }));
+  $('#siCtrlC').addEventListener('click', () => {
+    const S = SIGINT_SIM;
+    if (S.phase === 'done') return;
+    if (S.mode === 'dfl') {
+      S.log = [
+        { h: '内核发 SIGINT', m: '默认动作：终止', e: '没有装处理器，进程直接按默认动作被终止 —— 你就再也看不到后面那三行打印了。', term: '&lt;ctrl-c&gt;<br><span style="color:var(--muted)">（进程被 SIGINT 终止，shell 拿回提示符）</span>' }
+      ];
+      S.phase = 'done';
+    } else {
+      S.log = [
+        { h: '(1) 进程接收到信号', m: 'SIGINT', e: 'main 里的 <code>pause()</code> 被唤醒，控制权交给 <code>sigint_handler</code>。', term: '&lt;ctrl-c&gt;' },
+        { h: '(2) 处理器运行', m: 'printf("So you think you can stop the bomb with ctrl-c, do you?\\n"); sleep(2);', e: '处理器里调用 <code>printf</code> 与 <code>sleep</code>（课件原样；这两个里 <code>printf</code> 其实不安全，第 52–53 页给了 SIO 版本）。', term: 'So you think you can stop the bomb<br>with ctrl-c, do you?' },
+        { h: '(3) 处理器继续', m: 'printf("Well..."); fflush(stdout); sleep(1);', e: '故意加 <code>fflush(stdout)</code>，否则 <code>Well...</code> 因为不带换行会卡在缓冲区里。', term: 'Well...' },
+        { h: '(4) 处理器返回前结束进程', m: 'printf("OK. :-)\\n"); exit(0);', e: '注意这里调用的是 <code>exit</code> 而不是 <code>return</code>：进程就此结束（<code>exit</code> 不是异步信号安全函数，第 51 页点名过）。', term: 'OK. :-)' }
+      ];
+      S.phase = 'done';
+    }
+    renderSigint();
+  });
+  $('#siReset').addEventListener('click', () => {
+    SIGINT_SIM.phase = 'waiting'; SIGINT_SIM.log = []; renderSigint();
+  });
+  renderSigint();
+  $$('#flSeg button').forEach(b => b.addEventListener('click', () => {
+    $$('#flSeg button').forEach(x => x.classList.remove('on'));
+    b.classList.add('on'); FLOW.key = b.dataset.fl; renderFlow();
+  }));
+  renderFlow();
+
+  /* --- 6 节 --- */
+  $('#soSrc').value = ['sigemptyset(&mask);', 'sigaddset(&mask, SIGINT);', 'sigaddset(&mask, SIGCHLD);', 'sigdelset(&mask, SIGINT);'].join('\n');
+  $$('[data-so]').forEach(b => b.addEventListener('click', () => {
+    const line = b.dataset.so.replace(/&amp;/g, '&');
+    const cur = $('#soSrc').value.replace(/\s*$/, '');
+    $('#soSrc').value = cur + '\n' + line;
+    renderSetOp();
+  }));
+  $('#soGo').addEventListener('click', renderSetOp);
+  $('#soReset').addEventListener('click', () => { $('#soSrc').value = ''; renderSetOp(); });
+  renderSetOp();
+  function doSafe(v) { if (v != null) $('#safeIn').value = v; renderSafe(); }
+  $('#safeGo').addEventListener('click', () => doSafe(null));
+  $('#safeIn').addEventListener('keydown', e => { if (e.key === 'Enter') doSafe(null); });
+  $$('[data-safe]').forEach(b => b.addEventListener('click', () => doSafe(b.dataset.safe)));
+  doSafe();
+
+  /* --- 7 节 --- */
+  function ccRead() {
+    const N = parseInt($('#ccN').value, 10), H = parseInt($('#ccH').value, 10), S = parseInt($('#ccS').value, 10);
+    if (!(N >= 1 && N <= 30)) { $('#ccountOut').innerHTML = badBox('子进程数请给 1–30 之间的整数。'); return null; }
+    if (!(H >= 0 && H <= 5000)) { $('#ccountOut').innerHTML = badBox('处理器耗时请给 0–5000 毫秒。'); return null; }
+    if (!(S >= 0 && S <= 2000)) { $('#ccountOut').innerHTML = badBox('散布请给 0–2000 毫秒。'); return null; }
+    return { N: N, H: H, S: S };
+  }
+  $('#ccGo').addEventListener('click', () => {
+    const p = ccRead(); if (!p) return;
+    CCOUNT.out = ccountRun(p.N, p.H, p.S);
+    renderCcount();
+  });
+  $$('[data-cc]').forEach(b => b.addEventListener('click', () => {
+    const kv = kvAttr(b.dataset.cc);
+    if (kv.n) $('#ccN').value = kv.n;
+    if (kv.h) $('#ccH').value = kv.h;
+    if (kv.s) $('#ccS').value = kv.s;
+    const p = ccRead(); if (!p) return;
+    CCOUNT.out = ccountRun(p.N, p.H, p.S);
+    renderCcount();
+  }));
+  $('#ccN').addEventListener('keydown', e => { if (e.key === 'Enter') $('#ccGo').click(); });
+  $('#ccH').addEventListener('keydown', e => { if (e.key === 'Enter') $('#ccGo').click(); });
+  $('#ccS').addEventListener('keydown', e => { if (e.key === 'Enter') $('#ccGo').click(); });
+  CCOUNT.out = ccountRun(5, 1000, 5);
+  renderCcount();
+  $$('#rcSeg button').forEach(b => b.addEventListener('click', () => {
+    $$('#rcSeg button').forEach(x => x.classList.remove('on'));
+    b.classList.add('on'); RACE.proto = b.dataset.rc; RACE.order = 'parent'; renderRace();
+  }));
+  $('#rcGo').addEventListener('click', () => {
+    RACE.order = RACE.order === 'parent' ? 'child' : 'parent';
+    renderRace();
+  });
+  $('#rcReset').addEventListener('click', () => { RACE.order = 'parent'; RACE.proto = 'p1'; 
+    $$('#rcSeg button').forEach(x => x.classList.toggle('on', x.dataset.rc === 'p1')); renderRace(); });
+  renderRace();
+  $$('#wtSeg button').forEach(b => b.addEventListener('click', () => {
+    $$('#wtSeg button').forEach(x => x.classList.remove('on'));
+    b.classList.add('on'); WAIT_W.key = b.dataset.wt; renderWait();
+  }));
+  $('#wtRun').addEventListener('click', () => { WAIT_W.case = 'ok'; renderWait(); });
+  $('#wtRun2').addEventListener('click', () => { WAIT_W.case = 'gap'; renderWait(); });
+  renderWait();
+
+  /* --- 8 节 --- */
+  $('#jmStep').addEventListener('click', () => {
+    const steps = JMP_STEPS[JMP.key];
+    JMP.step = JMP.step >= steps.length ? steps.length : JMP.step + 1;
+    renderJmp();
+  });
+  $('#jmReset').addEventListener('click', () => { JMP.step = 0; renderJmp(); });
+  $$('#jmSeg button').forEach(b => b.addEventListener('click', () => {
+    $$('#jmSeg button').forEach(x => x.classList.remove('on'));
+    b.classList.add('on'); JMP.key = b.dataset.jm; JMP.step = 0; renderJmp();
+  }));
+  renderJmp();
+
+  /* --- 9 节 --- */
+  $('#rsRun').addEventListener('click', () => {
+    const R = RESTART;
+    if (R.killed) return;
+    if (!R.running) {
+      R.running = true; R.restarts = 0;
+      R.log = ['greatwhite&gt; ./restart',
+               'starting', 'processing...', 'processing...', 'processing...'];
+    } else {
+      R.log.push('processing...', 'processing...');
+    }
+    renderRestart();
+  });
+  $('#rsCtrlC').addEventListener('click', () => {
+    const R = RESTART;
+    if (!R.running || R.killed) return;
+    R.restarts++;
+    R.log.push('&lt;ctrl-c&gt;', 'restarting', 'processing...', 'processing...');
+    renderRestart();
+  });
+  $('#rsKill').addEventListener('click', () => {
+    const R = RESTART;
+    if (!R.running) return;
+    R.killed = true; R.running = false;
+    R.log.push('kill -9 ' + 28107, '<span style="color:var(--muted)">（SIGKILL 不能被覆盖也不能被忽略 —— 进程真的死了）</span>');
+    renderRestart();
+  });
+  $('#rsReset').addEventListener('click', () => {
+    RESTART.running = false; RESTART.restarts = 0; RESTART.log = []; RESTART.killed = false;
+    renderRestart();
+  });
+  renderRestart();
+
+  /* --- 10 节 --- */
+  qzState = QUIZ.map(() => null);
+  pzState = PUZZLES.map(() => null);
+  document.addEventListener('click', e => {
+    const qzo = e.target.closest('[data-qzo]');
+    if (qzo) {
+      const [i, j] = qzo.dataset.qzo.split(':').map(Number);
+      if (qzState[i] !== null) return;
+      qzState[i] = j; renderQuiz(); return;
+    }
+    const pz = e.target.closest('[data-pz]');
+    if (pz) {
+      const [i, v] = pz.dataset.pz.split(':').map(Number);
+      if (pzState[i] !== null) return;
+      pzState[i] = v; renderPuzzles(); return;
+    }
+  });
+  $('#qzReset').addEventListener('click', () => { qzState = QUIZ.map(() => null); renderQuiz(); });
+  $('#pzReset').addEventListener('click', () => { pzState = PUZZLES.map(() => null); renderPuzzles(); });
+  renderQuiz();
+  renderPuzzles();
+}
+
+document.addEventListener('DOMContentLoaded', initAll);
+</script>
+</body>
+</html>

@@ -1,0 +1,2291 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-style="academic" data-deck="ics06">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>机器级编程 III：过程 · 交互式课件（中文）（学术讲义版）</title>
+<style>
+/* ==========================================================================
+   base.css —— 结构基础样式（所有风格共用）
+   只使用 CSS 变量，不含任何具体配色；由各主题覆盖变量与少量结构规则。
+   ========================================================================== */
+
+:root{
+  /* 颜色（每个主题必须覆盖） */
+  --bg:#f6f7f9; --card:#fff; --ink:#15181d; --muted:#697586; --line:#e4e7ec;
+  --accent:#2563eb; --accent-ink:#fff; --accent-soft:#eaf1ff;
+  --sign:#e5484d; --exp:#0b7fd4; --frac:#18915a; --warn:#b45309;
+  --sign-bg:#fdecec; --sign-fg:#a3262b; --sign-bd:#f6cdcf;
+  --exp-bg:#e8f2fd;  --exp-fg:#0a5f9e;  --exp-bd:#c7ddf5;
+  --frac-bg:#e9f7ef; --frac-fg:#116b43; --frac-bd:#c8e8d5;
+  --ok-bg:#f2fbf6; --ok-bd:#9ed3b4; --bad-bg:#fff5f5; --bad-bd:#f1b5b8;
+  --warn-bg:#fffbeb; --gray-bg:#eef1f5; --gray-fg:#5b6472;
+  --paper-soft:#fcfdfe; --code-bg:#f1f3f7; --code-bd:#e6e9ef;
+  --tbl-head:#f7f9fc; --tbl-hover:#fafbfd;
+  --sel-bg:#eef1f5;
+
+  /* 字体 */
+  --font-sans:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",system-ui,sans-serif;
+  --font-mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+  --font-display:var(--font-sans);
+  --tracking-title:normal;
+
+  /* 形状 */
+  --radius:12px; --radius-sm:8px; --radius-pill:99px;
+  --border-w:1px; --shadow:0 1px 2px rgba(16,24,40,.06),0 1px 3px rgba(16,24,40,.1);
+  --shadow-card:none;
+  --card-border:var(--border-w) solid var(--line);
+
+  /* 布局 */
+  --page-max:1180px; --nav-w:236px; --gap:26px; --sec-pad:26px 28px;
+  --nav-sticky-top:64px; --anchor-offset:70px;
+  --font-size:16px; --line-height:1.75;
+}
+
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font-sans);
+  font-size:var(--font-size);line-height:var(--line-height);-webkit-font-smoothing:antialiased}
+img{max-width:100%}
+
+/* ---------- 顶栏 ---------- */
+.topbar{position:sticky;top:0;z-index:50;background:var(--card);border-bottom:1px solid var(--line)}
+.topbar-in{max-width:var(--page-max);margin:0 auto;padding:10px 22px;display:flex;align-items:center;gap:14px}
+.brand{font-weight:700;letter-spacing:var(--tracking-title);font-family:var(--font-display)}
+.brand small{font-weight:500;color:var(--muted);margin-left:8px;font-size:12.5px}
+.progress{margin-left:auto;display:flex;align-items:center;gap:10px;font-size:12.5px;color:var(--muted)}
+.progress .bar{width:150px;height:6px;border-radius:var(--radius-pill);background:var(--line);overflow:hidden}
+.progress .bar>i{display:block;height:100%;width:0;background:var(--accent);transition:width .25s}
+
+/* ---------- 主体布局 ---------- */
+.layout{max-width:var(--page-max);margin:0 auto;padding:22px;display:grid;
+  grid-template-columns:var(--nav-w) minmax(0,1fr);gap:var(--gap)}
+main{min-width:0}
+/* 长 URL / 长标识符没有断行点，会把容器整个撑破（窄屏尤其明显）。
+   只作用于文本容器；表格故意不加，让它走 .tbl-wrap 的横向滚动。 */
+main p,main li,main dd,main dt,main h2,main h3,main h4,main h5,
+main .box,main .card,main .readout,main .puzzle,main .step{overflow-wrap:anywhere}
+
+/* ---------- 目录 ---------- */
+nav.toc{position:sticky;top:var(--nav-sticky-top);align-self:start;max-height:calc(100vh - 84px);overflow:auto;padding-right:4px}
+nav.toc h4{margin:0 0 8px;font-size:12px;letter-spacing:.12em;color:var(--muted);text-transform:uppercase;font-weight:600}
+nav.toc a{display:block;padding:7px 11px;border-radius:var(--radius-sm);color:var(--ink);opacity:.78;
+  text-decoration:none;font-size:14.5px;border-left:2.5px solid transparent}
+nav.toc a:hover{background:var(--sel-bg);opacity:1}
+nav.toc a.active{background:var(--accent-soft);color:var(--accent);border-left-color:var(--accent);font-weight:600;opacity:1}
+nav.toc a .n{display:inline-block;min-width:20px;color:var(--muted);font-size:12.5px;font-variant-numeric:tabular-nums}
+nav.toc a.active .n{color:var(--accent)}
+nav.toc .sub{padding-left:26px;font-size:13.5px;opacity:.7}
+
+/* ---------- 章节 ---------- */
+section{background:var(--card);border:var(--card-border);border-radius:var(--radius);
+  padding:var(--sec-pad);margin-bottom:22px;box-shadow:var(--shadow);scroll-margin-top:var(--anchor-offset)}
+section>h2{margin:0 0 6px;font-size:25px;letter-spacing:-.01em;font-family:var(--font-display)}
+section>.lede{color:var(--muted);margin:0 0 20px;font-size:14.5px}
+h3{font-size:18.5px;margin:26px 0 10px;padding-left:11px;border-left:3.5px solid var(--accent);font-family:var(--font-display)}
+h4{font-size:16px;margin:18px 0 8px;font-family:var(--font-display)}
+h5{font-size:15px;font-family:var(--font-display)}
+p{margin:10px 0}
+ul,ol{margin:10px 0;padding-left:22px}
+li{margin:5px 0}
+code{font-family:var(--font-mono);font-size:.89em;background:var(--code-bg);border:1px solid var(--code-bd);border-radius:5px;padding:1px 5px}
+.mono{font-family:var(--font-mono)}
+a{color:var(--accent)}
+hr{border:0;border-top:1px dashed var(--line);margin:24px 0}
+.srcref{font-size:11.5px;color:var(--muted);font-weight:500;font-family:var(--font-sans);margin-left:8px;vertical-align:middle;white-space:nowrap;opacity:.75}
+.en{color:var(--muted);font-size:.92em}
+
+/* ---------- 栅格与卡片 ---------- */
+.grid{display:grid;gap:14px}
+.g2{grid-template-columns:repeat(2,minmax(0,1fr))}
+.g3{grid-template-columns:repeat(3,minmax(0,1fr))}
+/* 窄屏单列：必须用 minmax(0,1fr)。写成 1fr 时轨道最小宽度是 auto，
+   单元格里只要有长代码行（<pre>）就撑破容器，整页横向溢出。 */
+@media(max-width:820px){.g2,.g3{grid-template-columns:minmax(0,1fr)}}
+.card{border:var(--card-border);border-radius:var(--radius-sm);padding:15px 17px;background:var(--paper-soft);box-shadow:var(--shadow-card)}
+.card h5{margin:0 0 7px}
+.card.pad0{padding:0;overflow:hidden}
+
+/* ---------- 提示框 ---------- */
+.box{border:1px solid var(--line);border-left:4px solid var(--accent);background:var(--accent-soft);
+  border-radius:var(--radius-sm);padding:12px 16px;margin:14px 0}
+.box.warn{border-left-color:var(--warn);background:var(--warn-bg)}
+.box.bad{border-left-color:var(--sign);background:var(--bad-bg)}
+.box.ok{border-left-color:var(--frac);background:var(--ok-bg)}
+.box .t{font-weight:650;font-size:14.5px;margin-bottom:2px}
+
+/* ---------- 公式 ---------- */
+.formula{font-family:var(--font-mono);background:var(--paper-soft);border:1px solid var(--line);
+  border-radius:var(--radius-sm);padding:14px 17px;margin:14px 0;font-size:16.5px;text-align:center;overflow-x:auto}
+.formula.big{font-size:20px}
+
+/* ---------- 表格 ---------- */
+table.tbl{width:100%;border-collapse:collapse;font-size:14.5px;margin:14px 0}
+table.tbl th,table.tbl td{border:1px solid var(--line);padding:8px 11px;text-align:left;vertical-align:top}
+table.tbl th{background:var(--tbl-head);font-weight:650;font-size:13.5px;white-space:nowrap}
+table.tbl td.mono,table.tbl th.mono{font-family:var(--font-mono);font-size:13.5px}
+table.tbl tr:hover td{background:var(--tbl-hover)}
+/* 当前行高亮：interactive 表格用它标出「正在看的那一行」。
+   注意 --tbl-hover 是悬停色，深色皮肤下故意比底色亮，所以 hl 用同一套变量。 */
+table.tbl tr.hl td{background:var(--sel-bg)}
+.tbl-wrap{overflow-x:auto}
+
+/* ---------- 位串控件 ---------- */
+.fw{display:flex;flex-wrap:wrap;gap:8px 18px;align-items:flex-start;margin:4px 0 2px;min-width:0}
+.fgrp{min-width:0}
+.fcap{font-size:12px;color:var(--muted);margin-bottom:4px;font-weight:600}
+.fcap b{font-family:var(--font-mono);font-size:12.5px}
+.bits{display:flex;flex-wrap:wrap;gap:2px;font-family:var(--font-mono);margin:4px 0}
+.bits .b{width:25px;height:33px;display:flex;align-items:center;justify-content:center;
+  border-radius:6px;font-size:15px;cursor:pointer;user-select:none;border:1px solid transparent;
+  transition:transform .06s,background .12s;font-weight:600}
+.bits .b:hover{transform:translateY(-2px)}
+.bits .b.s{background:var(--sign-bg);color:var(--sign-fg);border-color:var(--sign-bd)}
+.bits .b.e{background:var(--exp-bg);color:var(--exp-fg);border-color:var(--exp-bd)}
+.bits .b.f{background:var(--frac-bg);color:var(--frac-fg);border-color:var(--frac-bd)}
+.bits .b.sel{outline:2px solid var(--ink);outline-offset:1px}
+.bits.sm .b{width:19px;height:26px;font-size:12px;border-radius:4px}
+.fgrp .bits{flex-wrap:wrap;max-width:100%;gap:2px}
+.fgrp.ge .bits{max-width:300px}
+
+/* ---------- 读数表 ---------- */
+.readout{display:grid;grid-template-columns:auto 1fr;gap:4px 16px;font-size:14.5px;margin:12px 0}
+.readout dt{color:var(--muted);font-weight:600;font-family:var(--font-mono);font-size:13.5px;padding-top:2px}
+.readout dd{margin:0;font-family:var(--font-mono)}
+
+/* ---------- 小标签 ---------- */
+.chip{display:inline-block;font-size:12.5px;padding:2px 9px;border-radius:var(--radius-pill);
+  background:var(--accent-soft);color:var(--accent);font-weight:600}
+.chip.ok{background:var(--frac-bg);color:var(--frac-fg)}
+.chip.bad{background:var(--sign-bg);color:var(--sign-fg)}
+.chip.warn{background:var(--warn-bg);color:var(--warn)}
+.chip.gray{background:var(--gray-bg);color:var(--gray-fg)}
+.kbd{font-family:var(--font-mono);font-size:13px;background:var(--code-bg);border:1px solid var(--code-bd);
+  border-bottom-width:2px;border-radius:6px;padding:1px 7px}
+
+/* ---------- 控件 ---------- */
+.ctrls{display:flex;flex-wrap:wrap;gap:9px;align-items:center;margin:12px 0}
+label.fld{display:inline-flex;align-items:center;gap:7px;font-size:14px;color:var(--ink);max-width:100%;flex-wrap:wrap;min-width:0}
+label.fld select,label.fld input{min-width:0;max-width:100%}
+input[type=text],input[type=number],select{font-family:var(--font-mono);font-size:14px;padding:6px 10px;
+  border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--card);color:var(--ink)}
+input[type=text]:focus,input[type=number]:focus,select:focus{outline:2px solid var(--accent-soft);border-color:var(--accent)}
+button{font-family:var(--font-sans);font-size:14px;font-weight:600;padding:7px 15px;border-radius:var(--radius-sm);
+  border:1px solid var(--line);background:var(--card);color:var(--ink);cursor:pointer}
+button:hover{background:var(--sel-bg)}
+button.p{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+button.sm{padding:4px 10px;font-size:13px}
+button.pill{border-radius:var(--radius-pill)}
+/* 按钮组默认不换行：项一多就会把 .ctrls 撑破。允许它缩到容器宽度并横向滚动。 */
+.seg{display:inline-flex;max-width:100%;border:1px solid var(--line);
+  border-radius:var(--radius-sm);overflow-x:auto;overflow-y:hidden}
+.seg button{border:0;border-radius:0;border-right:1px solid var(--line);padding:6px 13px}
+.seg button:last-child{border-right:0}
+.seg button.on{background:var(--accent);color:var(--accent-ink)}
+
+/* ---------- 分步演示 ---------- */
+/* .steps 是 .step 的包裹层（skill 词汇表里列了但一直没定义）——
+   仅给一点上下留白，步骤块自己的边距由 .step 负责。 */
+.steps{margin:12px 0}
+.step{border:1px solid var(--line);border-radius:var(--radius-sm);padding:11px 15px;margin:9px 0;
+  background:var(--paper-soft);opacity:.42;transition:opacity .2s}
+.step.on{opacity:1;background:var(--card)}
+.step .h{font-size:13px;font-weight:700;color:var(--accent);letter-spacing:.02em;margin-bottom:3px}
+.step .m{font-family:var(--font-mono);font-size:14.5px;overflow-x:auto}
+.step .e{font-size:13.5px;color:var(--muted);margin-top:3px}
+
+/* ---------- 折叠与答案 ---------- */
+.reveal{border:1px solid var(--line);border-radius:var(--radius-sm);padding:11px 15px;margin:8px 0;background:var(--paper-soft)}
+.reveal summary{cursor:pointer;font-weight:600;font-size:14.5px}
+.reveal[open]{background:var(--card)}
+.ans{margin-top:8px;padding-top:8px;border-top:1px dashed var(--line);font-size:14.5px}
+
+/* ---------- 判断题 ---------- */
+.puzzle{border:1px solid var(--line);border-radius:var(--radius-sm);padding:12px 15px;margin:9px 0;
+  display:flex;gap:13px;align-items:flex-start;background:var(--paper-soft)}
+.puzzle .q{font-family:var(--font-mono);font-size:15px;flex:1;min-width:0;overflow-x:auto;white-space:nowrap}
+.puzzle .q small{font-family:var(--font-sans);color:var(--muted);display:block;white-space:normal}
+.puzzle .btns{display:flex;gap:6px;flex-shrink:0}
+.puzzle.correct{border-color:var(--ok-bd);background:var(--ok-bg)}
+.puzzle.wrong{border-color:var(--bad-bd);background:var(--bad-bg)}
+.puzzle .exp{margin-top:9px;padding-top:9px;border-top:1px dashed var(--line);font-size:14.5px;
+  display:none;white-space:normal;font-family:var(--font-sans)}
+.puzzle.done .exp{display:block}
+.puzzle .exp .verdict{font-weight:700}
+
+/* ---------- 分布图 ---------- */
+.tick{stroke:#94a3b8;stroke-width:1.4}
+.tick.dn{stroke:var(--exp)}
+.tick.nm{stroke:var(--frac)}
+.ticklabel{font-size:9.5px;fill:var(--muted);font-family:var(--font-mono)}
+.axisline{stroke:var(--line);stroke-width:1.2}
+.axislabel{font-size:11px;fill:var(--muted)}
+
+/* ---------- 页脚 / 回到顶部 ---------- */
+.footer{max-width:var(--page-max);margin:0 auto;padding:8px 22px 40px;color:var(--muted);font-size:13px}
+.totop{position:fixed;right:22px;bottom:22px;z-index:40;box-shadow:var(--shadow);display:none}
+
+/* ---------- 响应式 ---------- */
+@media(max-width:960px){
+  .layout{grid-template-columns:1fr;padding:16px}
+  nav.toc{position:static;max-height:none;display:flex;flex-wrap:wrap;gap:6px;
+    background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:10px}
+  nav.toc h4{width:100%;margin-bottom:2px}
+  nav.toc a{border-left:0;padding:5px 10px;font-size:13px}
+  nav.toc .sub{display:none}
+  section{padding:20px 17px}
+}
+@media print{
+  nav.toc,.topbar,.totop{display:none}
+  .layout{display:block}
+  section{break-inside:avoid;box-shadow:none}
+}
+
+/* ==========================================================================
+   风格 A · 学术讲义（Academic / 印刷体）
+   纸感底色 · 衬线标题 · 书眉式细线 · 三线表 · 目录位于右侧栏
+   ========================================================================== */
+
+:root{
+  --bg:#fbfaf6; --card:#fffefb; --ink:#1b1a17; --muted:#6d6a60; --line:#e2ded2;
+  --accent:#8a2f2c; --accent-ink:#fff; --accent-soft:#f7eeea;
+  --sign:#a3282a; --exp:#1f4e79; --frac:#2c6b45; --warn:#8a5a12;
+  --sign-bg:#f9eeee; --sign-fg:#8f2426; --sign-bd:#e8cfcd;
+  --exp-bg:#eef3f9;  --exp-fg:#1f4e79;  --exp-bd:#cddcec;
+  --frac-bg:#eef5f0; --frac-fg:#2c6b45; --frac-bd:#cfe2d6;
+  --ok-bg:#f2f7f3; --ok-bd:#b6cfbc; --bad-bg:#fbf1f1; --bad-bd:#e2bcbc;
+  --warn-bg:#fbf6ea; --gray-bg:#f0eee7; --gray-fg:#6d6a60;
+  --paper-soft:#fdfcf9; --code-bg:#f4f2ec; --code-bd:#e2ded2;
+  --tbl-head:#faf8f3; --tbl-hover:#fdfbf7;
+  --sel-bg:#f2efe7;
+
+  --font-sans:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",system-ui,sans-serif;
+  --font-mono:ui-monospace,"SF Mono",Menlo,Consolas,"Liberation Mono",monospace;
+  --font-display:"Songti SC","Source Han Serif SC","Noto Serif SC",Georgia,"Times New Roman",var(--font-sans);
+  --tracking-title:.01em;
+
+  --radius:3px; --radius-sm:2px; --radius-pill:3px;
+  --border-w:1px;
+  --shadow:none; --shadow-card:none;
+  --card-border:1px solid var(--line);
+
+  --page-max:1140px; --nav-w:196px; --gap:32px;
+  --sec-pad:30px 34px; --nav-sticky-top:28px; --anchor-offset:24px;
+  --font-size:16px; --line-height:1.8;
+}
+
+/* ---------- 书眉：细线 + 小字，不用色块 ---------- */
+.topbar{background:var(--bg);border-bottom:1px solid var(--line)}
+.topbar-in{padding:14px 22px 10px}
+.brand{font-family:var(--font-display);font-weight:600;font-size:17px;letter-spacing:.02em}
+.brand small{font-family:var(--font-sans);font-size:12px;letter-spacing:.04em;text-transform:uppercase}
+.progress{font-family:var(--font-display);font-style:italic}
+.progress .bar{height:3px;border-radius:0;background:var(--line)}
+.progress .bar>i{background:var(--accent)}
+
+/* ---------- 目录移到右侧，做成「纲要」 ---------- */
+.layout{grid-template-columns:minmax(0,1fr) var(--nav-w);padding:26px 22px}
+nav.toc{order:2}
+main{order:1}
+nav.toc h4{font-family:var(--font-display);letter-spacing:.18em;font-size:10.5px;
+  border-bottom:1px solid var(--line);padding-bottom:6px}
+nav.toc a{border-left:0;border-right:2.5px solid transparent;text-align:right;padding:5px 11px 5px 4px;
+  font-size:13.5px;font-family:var(--font-display)}
+nav.toc a.active{background:transparent;border-right-color:var(--accent);color:var(--accent)}
+nav.toc a:hover{background:transparent;color:var(--accent)}
+nav.toc a .n{font-family:var(--font-mono);font-size:11.5px;min-width:18px;margin-right:8px}
+
+/* ---------- 章节：双线标题 + 无边框白纸 ---------- */
+section{padding:var(--sec-pad);margin-bottom:30px;border:0;border-top:3px double var(--ink);
+  border-radius:0;background:transparent}
+section>h2{font-size:26px;font-weight:600;margin-bottom:4px}
+section>h2::before{content:"§";color:var(--accent);font-size:.72em;vertical-align:.12em;margin-right:.35em;font-family:var(--font-mono)}
+section>.lede{font-family:var(--font-display);font-style:italic;font-size:15px;color:var(--muted);
+  border-bottom:1px solid var(--line);padding-bottom:14px}
+h3{font-size:19px;font-weight:600;border-left:0;padding-left:0;margin-top:30px;
+  border-bottom:1px solid var(--line);padding-bottom:5px}
+h4,h5{font-weight:600}
+
+/* 正文首行不缩进，但引用块做缩排 */
+.card{border:0;border-left:2px solid var(--line);border-radius:0;background:transparent;padding:2px 0 2px 16px}
+
+/* ---------- 盒模型：批注式 ---------- */
+.box{border:0;border-left:3px solid var(--accent);background:transparent;border-radius:0;
+  padding:2px 0 2px 16px;margin:16px 0}
+.box.warn{border-left-color:var(--warn)}
+.box.bad{border-left-color:var(--sign)}
+.box.ok{border-left-color:var(--frac)}
+.box .t{font-family:var(--font-display);font-size:14px;letter-spacing:.02em}
+
+/* ---------- 公式：居中衬线体 ---------- */
+.formula{border:0;border-top:1px solid var(--line);border-bottom:1px solid var(--line);border-radius:0;
+  background:transparent;font-family:var(--font-display);font-size:18px;padding:16px 12px}
+.formula.big{font-size:22px}
+
+/* ---------- 三线表（booktabs） ---------- */
+table.tbl{border-collapse:collapse;font-size:14px}
+table.tbl th,table.tbl td{border:0;border-bottom:1px solid var(--line);padding:7px 12px}
+table.tbl th{background:transparent;border-top:1.5px solid var(--ink);border-bottom:1px solid var(--ink);
+  font-family:var(--font-display);font-weight:600;font-size:13px;letter-spacing:.02em}
+table.tbl tr:last-child td{border-bottom:1.5px solid var(--ink)}
+table.tbl tr:hover td{background:transparent}
+table.tbl td.mono,table.tbl th.mono{font-size:13px}
+
+/* ---------- 位串：空心方框，像活字 ---------- */
+.bits .b{width:24px;height:30px;border-radius:0;border:1px solid var(--line);background:var(--card);
+  font-family:var(--font-mono);font-weight:500}
+.bits .b.s{background:var(--card);color:var(--sign);border-color:var(--sign-bd);border-bottom:2px solid var(--sign)}
+.bits .b.e{background:var(--card);color:var(--exp);border-color:var(--exp-bd);border-bottom:2px solid var(--exp)}
+.bits .b.f{background:var(--card);color:var(--frac);border-color:var(--frac-bd);border-bottom:2px solid var(--frac)}
+.bits .b:hover{transform:none;background:var(--sel-bg)}
+.bits .b.sel{outline:2px solid var(--ink);outline-offset:0}
+
+/* ---------- 交互控件：细描边，方角 ---------- */
+input[type=text],input[type=number],select{border-radius:0;background:var(--card);border-color:var(--line);font-size:13.5px}
+button{border-radius:0;font-weight:500;background:transparent;border-color:var(--line)}
+button.p{background:var(--accent);border-color:var(--accent)}
+button.sm{font-size:12.5px;padding:4px 9px}
+.chip{border-radius:0;background:transparent;border:1px solid var(--line);color:var(--muted);font-weight:500}
+.chip.ok{border-color:var(--ok-bd);color:var(--frac-fg)}
+.chip.bad{border-color:var(--bad-bd);color:var(--sign-fg)}
+.chip.warn{border-color:#e3cfa4;color:var(--warn)}
+.chip.gray{background:transparent;border-color:var(--line);color:var(--muted)}
+.seg{border-radius:0}
+.seg button.on{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+
+/* ---------- 分步演示：编号批注 ---------- */
+.steps{counter-reset:ast}
+.step{border:0;border-left:2px solid var(--line);border-radius:0;background:transparent;
+  padding:8px 0 8px 16px;margin:10px 0;position:relative}
+.step.on{border-left-color:var(--accent);background:transparent}
+.step .h{font-family:var(--font-display);color:var(--muted);font-weight:600;letter-spacing:.04em;font-size:12.5px}
+.step .m{font-size:14px}
+
+/* ---------- 判断题：脚注感 ---------- */
+.puzzle{border:0;border-bottom:1px solid var(--line);border-radius:0;background:transparent;padding:12px 0}
+.puzzle.correct,.puzzle.wrong{background:transparent;border-bottom-color:var(--line)}
+.puzzle.correct{border-left:3px solid var(--frac)}
+.puzzle.wrong{border-left:3px solid var(--sign)}
+.puzzle.correct,.puzzle.wrong{padding-left:14px}
+.puzzle .exp{font-family:var(--font-sans);font-size:14px}
+.reveal{border:0;border-left:2px solid var(--line);border-radius:0;background:transparent;padding:6px 0 6px 16px}
+.reveal[open]{background:transparent}
+
+/* 回到顶部：素净 */
+.totop{border-radius:0;font-family:var(--font-display)}
+
+@media(max-width:960px){
+  .layout{grid-template-columns:1fr;padding:16px}
+  nav.toc{order:0;border-radius:0;border-left:0;border-right:0;background:transparent;padding:8px 0}
+  nav.toc a{text-align:left;border-right:0;padding:5px 8px}
+  section{padding:22px 4px}
+}
+
+
+/* ---------- 风格切换条（构建时注入，各主题通用） ---------- */
+.stylebar{max-width:var(--page-max);margin:0 auto;padding:14px 22px 0;display:flex;gap:8px;
+  flex-wrap:wrap;align-items:center;font-size:12.5px;color:var(--muted)}
+.stylebar>span{font-weight:600}
+.stylebar a{text-decoration:none;padding:4px 11px;border:1px solid var(--line);border-radius:var(--radius-pill);
+  color:var(--muted);background:var(--card);font-weight:600}
+.stylebar a:hover{border-color:var(--accent);color:var(--accent)}
+.stylebar a.cur{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.stylebar>span{flex:0 0 auto}
+@media(max-width:960px){.stylebar{padding:12px 16px 0}}
+/* 25 讲之后药丸很多：窄屏折行会吃掉大半屏，改成单行横滑 */
+@media(max-width:820px){.stylebar{flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;
+  scrollbar-width:thin}.stylebar a{flex:0 0 auto;font-size:12px;padding:4px 10px}}
+
+</style>
+</head>
+<body>
+
+<header class="topbar"><div class="topbar-in">
+  <div class="brand">机器级编程 III：过程 Machine-Level Programming III: Procedures<small>《计算机系统导论》第 6 讲 · 学术讲义版</small></div>
+  <div class="progress"><span id="pgText">学习进度 0%</span><span class="bar"><i id="pgBar"></i></span></div>
+</div></header>
+
+<div class="stylebar">
+  <span>风格：</span>
+  <a href="../ics06-zh.html">清爽蓝（原版）</a>
+  <a href="02-terminal.html">深色终端</a>
+  <a href="03-brutalist.html">新粗野</a>
+  <a href="04-glass.html">柔和玻璃</a>
+  <a href="index.html">◧ 全部预览</a>
+  <span style="opacity:.5">|</span>
+  <a href="../variants-ics01/index.html">↗ 第 1 讲 · 课程概述</a>
+  <a href="../variants-bits/index.html">↗ 第 2 讲 · 位、字节与整数</a>
+  <a href="../variants/index.html">↗ 第 3 讲 · 浮点数</a>
+  <a href="../variants-ics04/index.html">↗ 第 4 讲 · 机器级编程 I：基础</a>
+  <a href="../variants-ics05/index.html">↗ 第 5 讲 · 机器级编程 II：控制</a>
+  <a href="../variants-ics07/index.html">↗ 第 7 讲 · 机器级编程 IV：数据</a>
+  <a href="../variants-ics08/index.html">↗ 第 8 讲 · 机器级编程 V：高级</a>
+  <a href="../variants-ics09/index.html">↗ 第 9 讲 · 处理器体系结构：ISA 与逻辑</a>
+  <a href="../variants-ics10/index.html">↗ 第 10 讲 · 处理器体系结构：顺序实现</a>
+  <a href="../variants-ics11/index.html">↗ 第 11 讲 · 处理器体系结构：流水线</a>
+  <a href="../variants-ics12/index.html">↗ 第 12 讲 · 存储层次结构</a>
+  <a href="../variants-ics13/index.html">↗ 第 13 讲 · 缓存存储器</a>
+  <a href="../variants-ics14/index.html">↗ 第 14 讲 · 代码优化</a>
+  <a href="../variants-ics15/index.html">↗ 第 15 讲 · 链接</a>
+  <a href="../variants-ics16/index.html">↗ 第 16 讲 · 异常控制流 I</a>
+  <a href="../variants-ics17/index.html">↗ 第 17 讲 · 异常控制流 II</a>
+  <a href="../variants-ics18/index.html">↗ 第 18 讲 · 系统级 I/O</a>
+  <a href="../variants-ics19/index.html">↗ 第 19 讲 · 虚拟内存 I</a>
+  <a href="../variants-ics20/index.html">↗ 第 20 讲 · 虚拟内存 II</a>
+  <a href="../variants-ics21/index.html">↗ 第 21 讲 · 动态内存分配</a>
+  <a href="../variants-ics22/index.html">↗ 第 22 讲 · 网络基础</a>
+  <a href="../variants-ics23/index.html">↗ 第 23 讲 · 网络编程</a>
+  <a href="../variants-ics24/index.html">↗ 第 24 讲 · 并发编程</a>
+  <a href="../variants-ics25/index.html">↗ 第 25 讲 · 同步</a>
+  <a href="../variants-lab/index.html">↗ Data Lab 实验</a>
+</div>
+
+<div class="layout">
+
+<nav class="toc">
+  <h4>目录</h4>
+  <a href="#s0"><span class="n">0</span>课程导览</a>
+  <a href="#s1"><span class="n">1</span>过程的机制与 ABI</a>
+  <a href="#s2"><span class="n">2</span>x86-64 栈：push 与 pop</a>
+  <a href="#s3"><span class="n">3</span>传递控制：call 与 ret</a>
+  <a href="#s4"><span class="n">4</span>传递数据：寄存器与栈</a>
+  <a href="#s5"><span class="n">5</span>栈帧与调用链</a>
+  <a href="#s6"><span class="n">6</span>管理局部数据：incr</a>
+  <a href="#s7"><span class="n">7</span>寄存器保存约定</a>
+  <a href="#s8"><span class="n">8</span>递归：pcount_r</a>
+  <a href="#s9"><span class="n">9</span>总结与测验</a>
+</nav>
+
+<main>
+<!-- ================= 0 ================= -->
+  <section id="s0">
+    <h2>课程导览<span class="srcref">原第 1–3 页</span></h2>
+    <p class="lede">北京大学《计算机系统导论》第 6 讲：机器级编程 III —— 过程（procedures）。上一讲看清了「程序怎么决定下一步走哪」，这一讲看清<b>「函数调用是怎么实现的」</b>：怎么跳过去、把数据带过去、把现场保住，然后再干干净净地回来。</p>
+
+    <div class="grid g3">
+      <div class="card"><h5>本讲提纲</h5>
+        <ol style="margin:0;padding-left:20px;font-size:14.5px">
+          <li>过程的三种机制（mechanisms）</li>
+          <li>栈结构：push / pop</li>
+          <li>调用约定（calling conventions）：<br>传递控制 · 传递数据 · 管理局部数据</li>
+          <li>递归的完整图景</li>
+        </ol>
+      </div>
+      <div class="card"><h5>一句话核心</h5>
+        <p style="margin:0;font-size:14.5px">机器层<b>没有「函数」这个概念</b>。过程调用的全部秘密就是两条指令 —— <code>call</code> 把返回地址压栈后跳过去，<code>ret</code> 把它弹出来跳回来；剩下的（参数怎么传、局部变量放哪、谁的寄存器能改）都是<b>写在 ABI 里的约定</b>。</p>
+      </div>
+      <div class="card"><h5>和上一讲的衔接</h5>
+        <p style="margin:0;font-size:14.5px">第 5 讲的跳转都是「跳过去就不回来了」或者「跳到固定标签」。这一讲的 <code>call</code> 多做一件事：<b>把回来的路记在栈上</b>。这一条小小的差别，就撑起了整个函数调用、递归和 mutual recursion。</p>
+      </div>
+    </div>
+
+    <h3>0.1 九个主题与原页码</h3>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>主题</th><th>原课件页码</th><th>要回答的问题</th></tr>
+      <tr><td><b>过程的机制</b></td><td class="mono">4–9</td><td>一次调用要完成哪三件事？谁规定的做法？</td></tr>
+      <tr><td><b>x86-64 栈</b></td><td class="mono">10–17</td><td><code>push</code> / <code>pop</code> 到底动了什么、没动什么</td></tr>
+      <tr><td><b>传递控制</b></td><td class="mono">18–24</td><td><code>call</code> / <code>ret</code> 如何配合，返回地址是什么</td></tr>
+      <tr><td><b>传递数据</b></td><td class="mono">25–27</td><td>参数放哪、返回值放哪、第 7 个参数怎么办</td></tr>
+      <tr><td><b>栈帧与调用链</b></td><td class="mono">28–43</td><td>递归调用时栈长什么样；一帧里都装了什么</td></tr>
+      <tr><td><b>管理局部数据</b></td><td class="mono">44–53</td><td>局部变量怎么在栈上分配、用完怎么收</td></tr>
+      <tr><td><b>寄存器保存约定</b></td><td class="mono">54–65</td><td>caller 与 callee 谁来保住寄存器的旧值</td></tr>
+      <tr><td><b>递归</b></td><td class="mono">66–74</td><td>为什么递归不需要任何特殊机制</td></tr>
+      <tr><td><b>总结</b></td><td class="mono">75</td><td>过程机制的全部要点</td></tr>
+    </table></div>
+
+    <h3>0.2 学习目标<span class="srcref">原第 2 页</span></h3>
+    <p>课件开头列了四条「学完你要能」：</p>
+    <ul>
+      <li>说明 <code>push</code> / <code>pop</code>、<code>call</code> / <code>ret</code> 这两对指令的基本功能；</li>
+      <li>指出一帧栈的各个组成部分：<b>返回地址、参数、保存的寄存器、局部变量</b>；</li>
+      <li>解释 <b>callee-saved 与 caller-saved 寄存器</b>的区别；</li>
+      <li>解释栈为什么让函数可以<b>被递归调用 / 可重入（re-entrant）</b>。</li>
+    </ul>
+    <div class="box"><div class="t">本页使用说明</div>
+      标有 <span class="chip gray">可交互</span> 的地方都能点击或输入，所有计算都在浏览器里实时完成。<a href="#s3">第 3 节的 call/ret 追踪器</a>、<a href="#s5">第 5 节的栈帧生长模拟器</a>和<a href="#s8">第 8 节的递归追踪器</a>最值得反复玩：它们把课件里几十页的静态图变成了可以自己出题、单步执行的工具。
+    </div>
+  </section>
+
+  <!-- ================= 1 ================= -->
+  <section id="s1">
+    <h2>1. 过程的机制与 ABI<span class="srcref">原第 4–9 页</span></h2>
+    <p class="lede">课件先用 5 页把「一次过程调用要干什么」拆成三种机制 —— 这一节的结论会贯穿全讲：<b>机制靠机器指令实现，但「怎么用」是人为约定</b>。</p>
+
+    <h3>1.1 三种机制<span class="srcref">原第 4–7 页</span></h3>
+    <p>课件用一对最小的调用方 / 被调方展示三种机制各要做什么：</p>
+    <div class="formula" style="text-align:left">
+      <div>P(…) {</div>
+      <div>&nbsp;&nbsp;• y = Q(x);</div>
+      <div>&nbsp;&nbsp;• print(y)</div>
+      <div>}</div>
+      <div>int Q(int i)</div>
+      <div>{</div>
+      <div>&nbsp;&nbsp;int t = 3*i;</div>
+      <div>&nbsp;&nbsp;int v[10];</div>
+      <div>&nbsp;&nbsp;return v[t];</div>
+      <div>}</div>
+    </div>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>机制</th><th>要做什么</th><th>落在 P/Q 的哪里</th></tr>
+      <tr><td><b>传递控制</b><br>passing control</td><td>跳到过程代码的开头；结束后来到返回点</td><td><code>y = Q(x)</code> 要跳进 Q，Q 结束要回到 <code>print(y)</code></td></tr>
+      <tr><td><b>传递数据</b><br>passing data</td><td>把过程参数（arguments）递进去；把返回值带回来</td><td><code>x</code> 进 Q，<code>return v[t]</code> 回到 P 的 <code>y</code></td></tr>
+      <tr><td><b>内存管理</b><br>memory management</td><td>执行期间分配空间；返回时释放</td><td>Q 的 <code>t</code> 和 <code>v[10]</code> 要在执行期间有地方放</td></tr>
+    </table></div>
+    <p>课件强调：<b>这三种机制全部用机器指令实现</b>；而 x86-64 对一次具体的过程调用，<b>只实现它需要的那部分机制</b>（例如 Q 若能把所有局部变量都放进寄存器，就不必动栈）。</p>
+
+    <div class="box"><div class="t">谁决定「怎么做」？—— 应用二进制接口（ABI）<span class="srcref">原第 8 页</span></div>
+      课件原话：<b>「Machine instructions implement the mechanisms, but the choices are determined by designers. These choices make up the Application Binary Interface (ABI).」</b>
+      <br>指令只提供了「能这么做」的能力；参数放在哪个寄存器、栈往哪边长、谁的寄存器不能动 —— 这些<b>选择</b>是设计者定下的约定，合起来就是 ABI。本讲后面所有「约定」（调用约定、寄存器保存约定）都是 ABI 的一部分。
+    </div>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：三种机制分别靠哪些指令实现</span>
+        <div class="seg" id="mechSeg">
+          <button class="on" data-m="ctl">传递控制</button>
+          <button data-m="dat">传递数据</button>
+          <button data-m="mem">内存管理</button>
+        </div>
+      </div>
+      <div id="mechOut"></div>
+    </div>
+  </section>
+
+  <!-- ================= 2 ================= -->
+  <section id="s2">
+    <h2>2. x86-64 栈：push 与 pop<span class="srcref">原第 10–17 页</span></h2>
+    <p class="lede">栈是这一讲的主角。先把它的三条物理事实钉死：<b>它就是一段普通内存</b>；<b>它向低地址生长</b>；<b>%rsp 永远指着「栈顶」那个元素</b>。</p>
+
+    <h3>2.1 栈在哪里、往哪边长<span class="srcref">原第 10–12 页</span></h3>
+    <p>课件把栈定义为「<b>用栈纪律（stack discipline）管理的一段内存区域</b>」：内存本身就是一个字节一个大数组，不同区域有不同用途（这跟 ABI 一样，是<b>策略决定</b>，不是硬件限制）。x86-64 的栈在内存<b>高地址一端</b>，并且 <b>grows toward lower addresses —— 向低地址方向生长</b>：</p>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>事实</th><th>内容</th></tr>
+      <tr><td><b>栈底（Stack “Bottom”）</b></td><td>栈在高地址一端的起点，地址最大</td></tr>
+      <tr><td><b>生长方向</b></td><td>向<b>低地址</b>生长（Increasing Addresses 与生长方向相反）</td></tr>
+      <tr><td><b>栈指针 %rsp</b></td><td>保存<b>最低</b>的栈地址 —— 也就是「栈顶（Stack “Top”）」元素的地址</td></tr>
+    </table></div>
+    <div class="box warn"><div class="t">最容易拧巴的一件事：「栈顶」是地址最小的一端</div>
+      日常语言里「往箱顶摞东西」是往高处摞；x86-64 的栈是<b>往低地址摞</b>。所以「压栈」让 <code>%rsp</code> <b>变小</b>，「弹栈」让它<b>变大</b>。课件图里「Stack “Bottom”」在上（高地址）、「Stack “Top”」在下（低地址），第一次看别被左右上下绕晕。
+    </div>
+
+    <h3>2.2 <code>pushq Src</code>：压栈<span class="srcref">原第 13–14 页</span></h3>
+    <p>三步，顺序固定：</p>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>步</th><th>动作</th><th>效果</th></tr>
+      <tr><td class="mono">1</td><td>取操作数</td><td>从 <code>Src</code> 读出 val</td></tr>
+      <tr><td class="mono">2</td><td><code>%rsp −= 8</code></td><td>栈顶向上（低地址）让出一个 8 字节格子</td></tr>
+      <tr><td class="mono">3</td><td>写入内存</td><td>把 val 写到 <code>%rsp</code> 新指向的地址</td></tr>
+    </table></div>
+
+    <h3>2.3 <code>popq Dest</code>：弹栈<span class="srcref">原第 15–17 页</span></h3>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>步</th><th>动作</th><th>效果</th></tr>
+      <tr><td class="mono">1</td><td>读内存</td><td>读出 <code>%rsp</code> 指向的值 val</td></tr>
+      <tr><td class="mono">2</td><td><code>%rsp += 8</code></td><td>栈顶退回高地址</td></tr>
+      <tr><td class="mono">3</td><td>存入 Dest</td><td>val 写进 <code>Dest</code>（通常是个寄存器）</td></tr>
+    </table></div>
+    <div class="box bad"><div class="t">课件特意用一整页强调：pop 不擦除内存</div>
+      「<b>The memory doesn't change, only the value of %rsp</b>」—— 弹栈后那个格子里的 8 个字节<b>原封不动地留在原地</b>，只是 <code>%rsp</code> 已经越过它，它从此成了「栈外的垃圾」。这就是后面「返回地址弹掉了但还在栈上」「旧栈帧的数据能被越界读到」一类现象的物理根源。
+    </div>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：push / pop 栈模拟器</span>
+        <label class="fld">指令序列 <input type="text" id="stkSeq" value="push %rax, push %rbx, push %rcx, pop %rbx" size="34" spellcheck="false"></label>
+        <button class="p" id="stkGo">载入</button>
+        <button class="sm" id="stkNext">单步</button>
+        <button class="sm" id="stkRun">自动播放</button>
+        <button class="sm" id="stkReset">重来</button>
+        <button class="sm" data-stk="push %rax, push %rbx, pop %rax">课件式一压一弹</button>
+        <button class="sm" data-stk="push %rax, pop %rax, pop %rbx">弹过头的垃圾</button>
+      </div>
+      <div id="stkOut"></div>
+    </div>
+  </section>
+
+  <!-- ================= 3 ================= -->
+  <section id="s3">
+    <h2>3. 传递控制：call 与 ret<span class="srcref">原第 18–24 页</span></h2>
+    <p class="lede">有了栈，控制传递只差一对指令：<code>call</code> 负责走，<code>ret</code> 负责回。它们合起来就是第 1 节说的第一种机制。</p>
+
+    <h3>3.1 贯穿本讲的例子：multstore / mult2<span class="srcref">原第 19 页</span></h3>
+    <div class="grid g2">
+      <div class="card"><h5>C 代码</h5>
+        <pre class="mono" style="font-size:12.5px;margin:0;overflow-x:auto">void multstore(long x, long y,
+               long *dest) {
+  long t = mult2(x, y);
+  *dest = t;
+}
+
+long mult2(long a, long b) {
+  long s = a * b;
+  return s;
+}</pre>
+      </div>
+      <div class="card"><h5>反汇编</h5>
+        <pre class="mono" style="font-size:12.5px;margin:0;overflow-x:auto">0000000000400540 &lt;multstore&gt;:
+  400540: push   %rbx        # Save %rbx
+  400541: mov    %rdx,%rbx   # Save dest
+  400544: callq  400550 &lt;mult2&gt;
+  400549: mov    %rax,(%rbx) # Save at dest
+  40054c: pop    %rbx        # Restore %rbx
+  40054d: retq               # Return
+
+0000000000400550 &lt;mult2&gt;:
+  400550: mov    %rdi,%rax   # a
+  400553: imul   %rsi,%rax   # a * b
+  400557: retq               # Return</pre>
+      </div>
+    </div>
+
+    <h3>3.2 call 与 ret 各自做什么<span class="srcref">原第 20 页</span></h3>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>指令</th><th>动作 1</th><th>动作 2</th></tr>
+      <tr><td class="mono">call label</td><td>把<b>返回地址</b>压栈</td><td>跳到 <code>label</code></td></tr>
+      <tr><td class="mono">ret</td><td>从栈里弹出地址</td><td>跳到那个地址</td></tr>
+    </table></div>
+    <div class="box"><div class="t">返回地址是什么？</div>
+      <b>「紧挨着 call 的下一条指令」的地址</b>。课件拿上面的反汇编举例：<code>callq</code> 在 <code>0x400544</code>，于是压进栈的是 <code>0x400549</code> —— 不是 call 自己的地址，也不是 label 的地址，而是<b>回来后该继续执行的那条 <code>mov %rax,(%rbx)</code></b>。
+    </div>
+
+    <h3>3.3 跟着课件走一遍完整调用<span class="srcref">原第 21–24 页</span></h3>
+    <p>课件用四张图追踪了 <code>callq 400550</code> 从出发到回来的全过程，盯住三个量：<code>%rip</code>（正在执行哪条指令）、<code>%rsp</code>（栈顶在哪）、栈上的返回地址。下面这个追踪器完全复现这四张图 ——</p>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：call / ret 控制流追踪（课件四连图）</span>
+        <button class="p" id="crNext">下一步</button>
+        <button class="sm" id="crRun">自动播放</button>
+        <button class="sm" id="crReset">重来</button>
+      </div>
+      <div id="crOut"></div>
+    </div>
+
+    <h3>3.4 自己算返回地址</h3>
+    <p>返回地址 = <code>call 指令自己的地址 + call 指令的编码长度</code>。直接跳转的 <code>call</code> 有两种编码：近调用 <b>rel8（2 字节）</b>与 <b>rel32（5 字节）</b>。课件例子里 <code>callq 400550</code> 用的是 5 字节编码：<code>0x400544 + 5 = 0x400549</code>。</p>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：返回地址计算器</span>
+        <label class="fld">call 地址 <input type="text" id="rcAddr" value="0x400544" size="12" spellcheck="false"></label>
+        <div class="seg" id="rcSeg">
+          <button data-l="2">rel8 · 2 字节</button>
+          <button class="on" data-l="5">rel32 · 5 字节</button>
+        </div>
+        <button class="p" id="rcGo">计算</button>
+      </div>
+      <div id="rcOut"></div>
+    </div>
+  </section>
+
+  <!-- ================= 4 ================= -->
+  <section id="s4">
+    <h2>4. 传递数据：寄存器与栈<span class="srcref">原第 25–27 页</span></h2>
+    <p class="lede">控制过去了，数据怎么跟着过去？x86-64 的答案非常抠门：<b>前 6 个参数用寄存器，返回值用 <code>%rax</code>，实在放不下了才用栈</b>。</p>
+
+    <h3>4.1 参数与返回值的「规定座位」<span class="srcref">原第 26 页</span></h3>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>内容</th><th>去哪</th></tr>
+      <tr><td><b>第 1–6 个参数</b></td><td class="mono">%rdi、%rsi、%rdx、%rcx、%r8、%r9</td></tr>
+      <tr><td><b>返回值</b></td><td class="mono">%rax</td></tr>
+      <tr><td><b>第 7 个及以后</b></td><td>栈 —— 由<b>调用者</b>在自己栈帧顶部预先放好（argument build 区）</td></tr>
+    </table></div>
+    <p>课件在这页图的栈那一侧只标了 <code>Arg n … Arg 8、Arg 7</code>，并写了一句原则：<b>「Only allocate stack space when needed」</b>—— 参数不超过 6 个的过程，压根不需要为参数动栈。</p>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：参数分配器 —— 给 N 个参数排座位</span>
+        <label class="fld">long f( <input type="text" id="argN" value="8" size="4" spellcheck="false"> 个 long 参数 )</label>
+        <button class="p" id="argGo">分配</button>
+        <button class="sm" data-arg="3">3 个</button>
+        <button class="sm" data-arg="6">6 个（正好）</button>
+        <button class="sm" data-arg="7">7 个（溢出 1 个）</button>
+        <button class="sm" data-arg="11">11 个</button>
+      </div>
+      <div id="argOut"></div>
+    </div>
+
+    <h3>4.2 数据流示例<span class="srcref">原第 27 页</span></h3>
+    <p>回到 multstore / mult2，这回盯住参数与返回值走哪条路：</p>
+    <div class="formula" style="text-align:left">
+      <div>multstore:</div>
+      <div>&nbsp;&nbsp;# x in %rdi, y in %rsi, dest in %rdx</div>
+      <div>&nbsp;&nbsp;• • •</div>
+      <div>&nbsp;&nbsp;400541: mov&nbsp;&nbsp;&nbsp;%rdx,%rbx&nbsp;&nbsp;# Save dest</div>
+      <div>&nbsp;&nbsp;400544: callq&nbsp;&nbsp;400550 &lt;mult2&gt;&nbsp;&nbsp;# mult2(x,y)</div>
+      <div>&nbsp;&nbsp;# t in %rax</div>
+      <div>&nbsp;&nbsp;400549: mov&nbsp;&nbsp;&nbsp;%rax,(%rbx)&nbsp;&nbsp;# Save at dest</div>
+      <div>&nbsp;&nbsp;• • •</div>
+      <div>mult2:</div>
+      <div>&nbsp;&nbsp;# a in %rdi, b in %rsi</div>
+      <div>&nbsp;&nbsp;400550: mov&nbsp;&nbsp;&nbsp;%rdi,%rax&nbsp;&nbsp;# a</div>
+      <div>&nbsp;&nbsp;400553: imul&nbsp;&nbsp;%rsi,%rax&nbsp;&nbsp;# a * b</div>
+      <div>&nbsp;&nbsp;# s in %rax</div>
+      <div>&nbsp;&nbsp;400557: retq&nbsp;&nbsp;# Return</div>
+    </div>
+    <p>三个值得看的细节：</p>
+    <ul>
+      <li><b>参数直接「已在」寄存器里</b>：注释写 <code>x in %rdi</code> 而不是「把 x 放进 %rdi」—— 传参就是调用者事先把值放进约定的寄存器，<b>没有一条专门的「传参指令」</b>。</li>
+      <li><b>返回值经 <code>%rax</code> 回家</b>：<code>mult2</code> 把 <code>s</code> 留在 <code>%rax</code> 就 <code>ret</code>；<code>multstore</code> 从 <code>%rax</code> 里接住 <code>t</code>。</li>
+      <li><b>超过 6 个的部分才走栈</b>：这个例子一共 3 个参数，全在寄存器里 —— 所以这两段汇编里看不到任何为传参准备的压栈。</li>
+    </ul>
+  </section>
+
+  <!-- ================= 5 ================= -->
+  <section id="s5">
+    <h2>5. 栈帧与调用链<span class="srcref">原第 28–43 页</span></h2>
+    <p class="lede">栈把内存切成一帧一帧（frame），<b>每次过程执行都拥有一帧自己的地盘</b>。递归之所以可能，全靠「每次调用都有自己的一帧」。</p>
+
+    <h3>5.1 基于栈的语言<span class="srcref">原第 29 页</span></h3>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>概念</th><th>内容</th></tr>
+      <tr><td><b>支持递归的语言</b></td><td>C、Pascal、Java……代码必须是<b>可重入的（reentrant）</b></td></tr>
+      <tr><td><b>可重入</b></td><td>同一个过程可以同时存在<b>多个活跃的实例</b>（比如递归中的 amI）—— 每个实例都要有地方放自己的状态：<b>参数、局部变量、返回指针</b></td></tr>
+      <tr><td><b>栈纪律</b><br>stack discipline</td><td>每个实例的状态只在<b>有限时间</b>内需要：从被调用到返回；<b>被调用者（callee）一定先于调用者（caller）返回</b></td></tr>
+      <tr><td><b>帧（frame）</b></td><td>栈按帧分配：<b>一帧 = 单个过程实例的全部状态</b></td></tr>
+    </table></div>
+
+    <h3>5.2 调用链示例<span class="srcref">原第 30 页</span></h3>
+    <p>本节的例子是一串三层调用，其中 <code>amI</code> 调自己：</p>
+    <div class="formula" style="text-align:left">
+      <div>yoo(…) {</div>
+      <div>&nbsp;&nbsp;• who();</div>
+      <div>&nbsp;&nbsp;• • •</div>
+      <div>}</div>
+      <div>&nbsp;&nbsp;who(…) {</div>
+      <div>&nbsp;&nbsp;• • •</div>
+      <div>&nbsp;&nbsp;• amI();</div>
+      <div>&nbsp;&nbsp;• • •</div>
+      <div>&nbsp;&nbsp;}</div>
+      <div>&nbsp;&nbsp;&nbsp;&nbsp;amI(…) {</div>
+      <div>&nbsp;&nbsp;&nbsp;&nbsp;• • •</div>
+      <div>&nbsp;&nbsp;&nbsp;&nbsp;• amI();</div>
+      <div>&nbsp;&nbsp;&nbsp;&nbsp;• • •</div>
+      <div>&nbsp;&nbsp;&nbsp;&nbsp;}</div>
+    </div>
+    <p>调用链是 <b>yoo → who → amI → amI → amI</b>：一路下到递归的最深处，再原路退回。</p>
+
+    <h3>5.3 栈帧里有什么、谁管它<span class="srcref">原第 31 页</span></h3>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>角度</th><th>内容</th></tr>
+      <tr><td><b>内容</b></td><td>返回信息（return information）；局部存储（<b>需要时</b>）；临时空间（<b>需要时</b>）</td></tr>
+      <tr><td><b>分配</b></td><td>进入过程时：一段「set-up」代码 —— 其中就包括 <code>call</code> 指令压入的返回地址</td></tr>
+      <tr><td><b>释放</b></td><td>返回时：一段「finish」代码 —— 其中就包括 <code>ret</code> 指令弹出的动作</td></tr>
+      <tr><td><b>帧指针 %rbp</b></td><td><b>可选</b>：可以拿它指向本帧开头，方便定位帧内各物；也可以不用它</td></tr>
+    </table></div>
+
+    <h3>5.4 亲眼看栈帧长出来、缩回去<span class="srcref">原第 32–42 页</span></h3>
+    <p>课件用 11 张连图演了 <code>yoo → who → amI×3</code> 的全过程：调用一次长一帧，返回一次缩一帧，<code>%rbp</code> 与 <code>%rsp</code> 两个指针一路跟随。下面把它做成单步动画 ——</p>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：栈帧生长模拟器（yoo / who / amI）</span>
+        <button class="p" id="fwNext">下一步</button>
+        <button class="sm" id="fwRun">自动播放</button>
+        <button class="sm" id="fwReset">重来</button>
+      </div>
+      <div id="fwOut"></div>
+    </div>
+
+    <h3>5.5 x86-64/Linux 栈帧的完整布局<span class="srcref">原第 43 页</span></h3>
+    <p>把一帧里的所有可能成分画全（从高地址往低地址）：</p>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>区域</th><th>属于谁</th><th>什么时候存在</th></tr>
+      <tr><td><b>Caller 栈帧</b></td><td>调用者</td><td>——</td></tr>
+      <tr><td><b>参数 7+</b>（Arguments 7+）</td><td>本过程</td><td>调用者为本这次调用准备的参数（第 7 个起）</td></tr>
+      <tr><td><b>返回地址</b>（Return Addr）</td><td>本过程</td><td><code>call</code> 指令压入</td></tr>
+      <tr><td><b>旧 %rbp</b>（Old %rbp，可选）</td><td>本过程</td><td>用 <code>%rbp</code> 作帧指针时压入，<code>%rbp</code> 指向这里</td></tr>
+      <tr><td><b>保存的寄存器 + 局部变量</b></td><td>本过程</td><td>局部变量放不进寄存器时；要跨调用保住的 callee-saved 寄存器</td></tr>
+      <tr><td><b>参数构建区</b>（Argument build，可选）</td><td>本过程</td><td>本过程还要调用别的函数、且参数超过 6 个时，给<b>下一次调用</b>预放的参数</td></tr>
+    </table></div>
+    <p>注意一个方向感：<b>「参数 7+」是别人为我准备的</b>（在我进门前就压好了），而「参数构建区」<b>是我为别人准备的</b>（在我调用别人前压好）。同一帧的两个端点各服务一次调用。</p>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：栈帧布局构造器 —— 勾选条件，看帧里多出哪些区域</span>
+        <button class="sm" data-sf="in">进来时参数超过 6 个</button>
+        <button class="sm" data-sf="loc">有放不下的局部变量</button>
+        <button class="sm" data-sf="sav">要保存 callee-saved 寄存器</button>
+        <button class="sm" data-sf="arg">要调用函数且参数超过 6 个</button>
+        <button class="sm" data-sf="rbp">使用 %rbp 作帧指针</button>
+        <button class="sm" id="sfClear">清空</button>
+      </div>
+      <div id="sfOut"></div>
+    </div>
+  </section>
+
+  <!-- ================= 6 ================= -->
+  <section id="s6">
+    <h2>6. 管理局部数据：incr 例子<span class="srcref">原第 44–53 页</span></h2>
+    <p class="lede">第三种机制「内存管理」怎么落地？课件用 10 页追一个小函数：<b>局部变量 <code>v1</code> 住在栈上，跨过一次调用还要活着，用完再拆掉</b>。</p>
+
+    <h3>6.1 被调方：incr<span class="srcref">原第 44 页</span></h3>
+    <div class="grid g2">
+      <div class="card"><h5>C 代码</h5>
+        <pre class="mono" style="font-size:12.5px;margin:0;overflow-x:auto">long incr(long *p, long val) {
+  long x = *p;
+  long y = x + val;
+  *p = y;
+  return x;
+}</pre>
+      </div>
+      <div class="card"><h5>汇编与寄存器用途</h5>
+        <pre class="mono" style="font-size:12.5px;margin:0;overflow-x:auto">incr:
+  movq (%rdi), %rax
+  addq %rax, %rsi
+  movq %rsi, (%rdi)
+  ret</pre>
+        <div class="tbl-wrap"><table class="tbl" style="margin-top:8px">
+          <tr><th>寄存器</th><th>用途</th></tr>
+          <tr><td class="mono">%rdi</td><td>参数 p（指针）</td></tr>
+          <tr><td class="mono">%rsi</td><td>参数 val，后来放 y</td></tr>
+          <tr><td class="mono">%rax</td><td>x，也是返回值</td></tr>
+        </table></div>
+      </div>
+    </div>
+    <p><code>incr</code> 一条指令都不「浪费」：<code>x</code> 和 <code>y</code> 都没上栈，全在寄存器里倒手 —— 这正是第 1 节说的「只实现需要的机制」。<b>它还顺手把 <code>*p</code> 从旧值改成了 <code>x + val</code></b>，这个副作用马上会在调用方看到。</p>
+
+    <h3>6.2 调用方：call_incr 全程追踪<span class="srcref">原第 45–53 页</span></h3>
+    <p>调用方把局部变量 <code>v1 = 15213</code> 放在<b>自己栈帧</b>里，把它的<b>地址</b>递给 <code>incr</code>：</p>
+    <div class="grid g2">
+      <div class="card"><h5>C 代码</h5>
+        <pre class="mono" style="font-size:12.5px;margin:0;overflow-x:auto">long call_incr() {
+  long v1 = 15213;
+  long v2 = incr(&amp;v1, 3000);
+  return v1+v2;
+}</pre>
+      </div>
+      <div class="card"><h5>汇编</h5>
+        <pre class="mono" style="font-size:12.5px;margin:0;overflow-x:auto">call_incr:
+  subq $16, %rsp
+  movq $15213, 8(%rsp)
+  movl $3000, %esi
+  leaq 8(%rsp), %rdi
+  call incr
+  addq 8(%rsp), %rax
+  addq $16, %rsp
+  ret</pre>
+      </div>
+    </div>
+    <p>下面这个模拟器逐条执行这 8 条指令，把课件第 45–53 页那 9 张栈结构图连成动画 —— 盯住 <code>15213</code> 是在哪一步变成 <code>18213</code> 的：</p>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：call_incr 逐条执行模拟器</span>
+        <label class="fld">初值 <input type="text" id="ciV" value="15213" size="10" spellcheck="false"></label>
+        <label class="fld">增量 <input type="text" id="ciD" value="3000" size="8" spellcheck="false"></label>
+        <button class="p" id="ciGo">载入</button>
+        <button class="sm" id="ciNext">单步</button>
+        <button class="sm" id="ciRun">自动播放</button>
+        <button class="sm" id="ciReset">重来</button>
+      </div>
+      <div id="ciOut"></div>
+    </div>
+
+    <h3>6.3 Aside 1：为什么是 <code>movl $3000, %esi</code><span class="srcref">原第 47 页</span></h3>
+    <p>课件在这一页停下来问了一个小问题：往 64 位寄存器 <code>%rsi</code> 放一个 3000，为什么用 <b><code>movl</code></b>（32 位）而不是 <code>movq</code>？答案有两半：</p>
+    <ul>
+      <li><b><code>movl</code> 会把高 32 位清零</b>：x86-64 规定，任何写到 32 位寄存器（<code>%e…</code>）的操作都把那个 64 位寄存器的高 32 位清成 0 —— 所以 <code>movl $3000, %esi</code> 之后 <code>%rsi</code> 恰好就是干净的 3000，不会残留垃圾；</li>
+      <li><b>编码更短</b>。</li>
+    </ul>
+
+    <div class="box warn"><div class="t">勘误：短了 2 字节，不是 1 字节</div>
+      课件写的是「Why use movl instead of movq? <b>1 byte shorter</b>」。实测（本机 <code>clang --target=x86_64</code> 汇编 + <code>objdump</code>）：
+      <code>movl $3000, %esi</code> 编码为 <code>be b8 0b 00 00</code>（<b>5 字节</b>），
+      <code>movq $3000, %rsi</code> 编码为 <code>48 c7 c6 b8 0b 00 00</code>（<b>7 字节</b>）——
+      差的是 <b>2 字节</b>（寄存器目的地要用 <code>C7 /0</code> 格式，还得带 REX.W 前缀）。「1 字节」的数字只有在<b>内存目的地</b>的场合才成立（那里两种写法只差一个 REX.W 前缀）。结论不变：movl 又对又短，但数字按 2 字节记。
+    </div>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：movl 的「高 32 位清零」实验台</span>
+        <label class="fld">写入值 <input type="text" id="mlVal" value="3000" size="12" spellcheck="false"></label>
+        <button class="p" id="mlGo">执行</button>
+        <button class="sm" data-ml="0x1122334455667788">高位有货的 %rax</button>
+        <button class="sm" data-ml="-1">−1（全 1）</button>
+      </div>
+      <div id="mlOut"></div>
+    </div>
+
+    <h3>6.4 Aside 2：<code>leaq 8(%rsp), %rdi</code> 干的是本行<span class="srcref">原第 48 页</span></h3>
+    <p>要把 <code>v1</code> 的<b>地址</b>递给 <code>incr</code>，编译器写的是 <code>leaq 8(%rsp), %rdi</code> —— 计算出 <code>%rsp + 8</code> 这个<b>数</b>（地址就是数），不访问内存。课件的原话带着一点得意：<b>「Actually, used for what it is meant!」</b>—— 上一讲说过 <code>lea</code> 常被编译器拿来凑算术，这一次它干回了老本行：<b>取地址</b>。</p>
+  </section>
+
+  <!-- ================= 7 ================= -->
+  <section id="s7">
+    <h2>7. 寄存器保存约定<span class="srcref">原第 54–65 页</span></h2>
+    <p class="lede">16 个寄存器是<b>所有过程共享的一块白板</b>。如果 A 用 <code>%rdx</code> 存了个宝贝，调用了 B，B 把 <code>%rdx</code> 改了 —— 回来时宝贝就没了。这节讲 x86-64 Linux 怎么用一张约定表把这事定死。</p>
+
+    <h3>7.1 先看事故现场<span class="srcref">原第 54 页</span></h3>
+    <p>课件给了一段「出事」的代码：<code>yoo</code> 把 15213 存进 <code>%rdx</code>，调用 <code>who</code>；<code>who</code> 毫不知情地把 <code>%rdx</code> 减成 <code>15213 − 18213</code>。回到 <code>yoo</code>，<code>%rdx</code> 里早已不是 15213 ——</p>
+    <div class="formula" style="text-align:left">
+      <div>yoo:                 who:</div>
+      <div>&nbsp;&nbsp;• • •                • • •</div>
+      <div>&nbsp;&nbsp;movq $15213, %rdx    subq $18213, %rdx</div>
+      <div>&nbsp;&nbsp;call who             • • •</div>
+      <div>&nbsp;&nbsp;addq %rdx, %rax      ret</div>
+      <div>&nbsp;&nbsp;• • •</div>
+      <div>&nbsp;&nbsp;ret</div>
+    </div>
+    <p>课件的批注是：「Contents of register <code>%rdx</code> overwritten by who. This could be trouble ➙ something should be done! <b>Need some coordination</b>」—— 需要一套协调方案。</p>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：%rdx 覆写事故现场（单步）</span>
+        <button class="p" id="ywNext">下一步</button>
+        <button class="sm" id="ywRun">自动播放</button>
+        <button class="sm" id="ywReset">重来</button>
+      </div>
+      <div id="ywOut"></div>
+    </div>
+
+    <h3>7.2 两种补救约定<span class="srcref">原第 55 页</span></h3>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>约定</th><th>谁负责</th><th>怎么做</th></tr>
+      <tr><td><b>Caller Saved</b><br>调用者保存</td><td>调用者</td><td>调用别人<b>之前</b>，把自己的临时值存进<b>自己的帧</b>；回来再取</td></tr>
+      <tr><td><b>Callee Saved</b><br>被调用者保存</td><td>被调用者</td><td>想用某个寄存器<b>之前</b>先把旧值存进<b>自己的帧</b>；<b>返回前</b>恢复原值</td></tr>
+    </table></div>
+    <div class="box"><div class="t">两种约定的分工本质</div>
+      一条界线：<b>caller-saved 寄存器，调用一发生就默认作废</b>（谁想留值谁自己压栈）；<b>callee-saved 寄存器，跨过任何调用都原封不动</b>（想用的人自己先存后还）。编译器按「值的生命周期」挑寄存器：要跨调用活着的值放 callee-saved，只在调用前用一小下的放 caller-saved。
+    </div>
+
+    <h3>7.3 x86-64 Linux 寄存器用法<span class="srcref">原第 56–57 页</span></h3>
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：寄存器分类表 —— 点一个寄存器看它的「户口」</span>
+        <div class="seg" id="rqSeg">
+          <button class="on" data-f="all">全部</button>
+          <button data-f="caller">Caller-saved</button>
+          <button data-f="callee">Callee-saved</button>
+          <button data-f="arg">参数</button>
+        </div>
+      </div>
+      <div id="rqOut"></div>
+    </div>
+
+    <div class="box warn"><div class="t">勘误：课件漏了 <code>%r15</code> —— 它也是 callee-saved</div>
+      课件第 57 页把 callee-saved 列为「<code>%rbx, %r12, %r13, %r14</code>」（外加 <code>%rbp</code> 与 <code>%rsp</code>）。<b>System V AMD64 ABI 的寄存器使用表规定 callee-saved 是 <code>RBX、RSP、RBP、R12–R15</code></b> —— <code>%r15</code> 与 <code>%r12–%r14</code> 完全同级。本页用编译器实测佐证：让一个函数跨调用保住 <code>%r15</code> 里的值，clang 生成的序言/尾声会<b>自动</b>加上 <code>pushq %r15 / popq %r15</code>（它必须保存恢复，否则违反 ABI）。本页所有表格与模拟器都按 ABI 把 <code>%r15</code> 归入 callee-saved。
+    </div>
+
+    <h3>7.4 用上约定：call_incr2<span class="srcref">原第 58–65 页</span></h3>
+    <p>现在解决一个真问题：<code>x</code> 从 <code>%rdi</code> 进来，可是 <code>incr</code> 的第一个参数也要用 <code>%rdi</code>，而且 <code>x</code> 要<b>活过</b>那次调用 —— 放哪？课件先抛问题，再用 8 页给出答案：<b>放 callee-saved 寄存器 <code>%rbx</code></b>。</p>
+    <div class="grid g2">
+      <div class="card"><h5>C 代码</h5>
+        <pre class="mono" style="font-size:12.5px;margin:0;overflow-x:auto">long call_incr2(long x) {
+  long v1 = 15213;
+  long v2 = incr(&amp;v1, 3000);
+  return x+v2;
+}</pre>
+      </div>
+      <div class="card"><h5>汇编</h5>
+        <pre class="mono" style="font-size:12.5px;margin:0;overflow-x:auto">call_incr2:
+  pushq %rbx
+  subq  $16, %rsp
+  movq  %rdi, %rbx
+  movq  $15213, 8(%rsp)
+  movl  $3000, %esi
+  leaq  8(%rsp), %rdi
+  call  incr
+  addq  %rbx, %rax
+  addq  $16, %rsp
+  popq  %rbx
+  ret</pre>
+      </div>
+    </div>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：call_incr2 逐条执行模拟器（盯住 x 的旅程）</span>
+        <label class="fld">x <input type="text" id="c2X" value="100" size="10" spellcheck="false"></label>
+        <label class="fld">初值 <input type="text" id="c2V" value="15213" size="10" spellcheck="false"></label>
+        <label class="fld">增量 <input type="text" id="c2D" value="3000" size="8" spellcheck="false"></label>
+        <button class="p" id="c2Go">载入</button>
+        <button class="sm" id="c2Next">单步</button>
+        <button class="sm" id="c2Run">自动播放</button>
+        <button class="sm" id="c2Reset">重来</button>
+      </div>
+      <div id="c2Out"></div>
+    </div>
+
+    <div class="box ok"><div class="t">对照两个版本，看懂「约定的用处」</div>
+      <code>call_incr</code> 没有需要跨调用保活的值，所以连一个寄存器都不用存；<code>call_incr2</code> 有 <code>x</code>，于是序言多了 <code>pushq %rbx</code>、尾声多了 <code>popq %rbx</code>。这<b>就是</b>「callee-saved」四个字的全部含义：不白承诺 —— 用的人自己出代价保存恢复，<b>别人</b>（调用者）免费得到「我的 <code>%rbx</code> 绝对不会变」的保证。
+    </div>
+  </section>
+
+  <!-- ================= 8 ================= -->
+  <section id="s8">
+    <h2>8. 递归：pcount_r<span class="srcref">原第 66–74 页</span></h2>
+    <p class="lede">把前七节的机制合起来跑一遍，就是递归 —— 课件选了数二进制 1 的 <code>pcount_r</code>：<b>它调用自己，却不需要任何一条新指令、任何特殊机制</b>。</p>
+
+    <h3>8.1 递归 popcount：C 与汇编<span class="srcref">原第 67 页</span></h3>
+    <div class="grid g2">
+      <div class="card"><h5>C 代码</h5>
+        <pre class="mono" style="font-size:12.5px;margin:0;overflow-x:auto">/* Recursive popcount */
+long pcount_r(unsigned long x) {
+  if (x == 0)
+    return 0;
+  else
+    return (x &amp; 1)
+      + pcount_r(x &gt;&gt; 1);
+}</pre>
+      </div>
+      <div class="card"><h5>汇编</h5>
+        <pre class="mono" style="font-size:12.5px;margin:0;overflow-x:auto">pcount_r:
+  movl  $0, %eax
+  testq %rdi, %rdi
+  je    .L6
+  pushq %rbx
+  movq  %rdi, %rbx
+  andl  $1, %ebx
+  shrq  %rdi        # (by 1)
+  call  pcount_r
+  addq  %rbx, %rax
+  popq  %rbx
+.L6:
+  rep; ret</pre>
+      </div>
+    </div>
+    <p>每一条都在本讲出现过：<code>testq</code> 判零（第 5 讲）、<code>pushq %rbx</code> 保存 callee-saved 寄存器（7.4）、<code>call / ret</code> 传递控制（第 3 节）、<code>%rdi</code> 进参 / <code>%rax</code> 出参（第 4 节）。</p>
+
+    <h3>8.2 每个寄存器在这一刻的角色<span class="srcref">原第 68–72 页</span></h3>
+    <p>课件用 5 页把<b>执行过程中同一寄存器的含义变化</b>列成了表 —— 递归难读，难就难在「同一个寄存器在不同时刻装着不同的东西」：</p>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>时刻</th><th class="mono">%rdi</th><th class="mono">%rbx</th><th class="mono">%rax</th></tr>
+      <tr><td>刚进入（还没递归）</td><td>x（参数）</td><td>——</td><td>0 / 返回值</td></tr>
+      <tr><td>保存之后（register save）</td><td>x</td><td><b>旧值已压栈，本帧腾出 %rbx</b></td><td>0</td></tr>
+      <tr><td>递归调用前（call setup）</td><td><b>x &gt;&gt; 1（递归参数）</b></td><td>x &amp; 1（callee-saved 跨调用保活）</td><td>——</td></tr>
+      <tr><td>递归返回后（call）</td><td>（已无用）</td><td>x &amp; 1</td><td><b>递归调用的返回值</b></td></tr>
+      <tr><td>收尾（result）</td><td>——</td><td>x &amp; 1</td><td>本层最终返回值</td></tr>
+    </table></div>
+    <div class="box"><div class="t">为什么 %rbx 能活得过递归调用？</div>
+      <code>andl $1, %ebx</code> 算出的 <code>x &amp; 1</code> 要等<b>递归返回后</b>才用。中间隔着一次 <code>call</code>，而 <code>%rbx</code> 是 callee-saved —— 递归进去的每一层想用 <code>%rbx</code> 都得<b>先把自己的旧值压栈</b>，返回前弹回来。于是每层帧里都存着自己那个 <code>x &amp; 1</code>，互不干扰。
+    </div>
+
+    <h3>8.3 亲眼看递归展开<span class="srcref">原第 67–73 页</span></h3>
+    <p>下面这个追踪器把每次调用的进栈、算 <code>x &amp; 1</code>、递归、回加、弹栈全部单步演出来，并画出<b>调用栈的帧序列</b>：</p>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：pcount_r 递归追踪器</span>
+        <label class="fld">x <input type="text" id="pcX" value="0xb5" size="14" spellcheck="false"></label>
+        <button class="p" id="pcGo">载入</button>
+        <button class="sm" id="pcNext">单步</button>
+        <button class="sm" id="pcRun">自动播放</button>
+        <button class="sm" id="pcReset">重来</button>
+        <button class="sm" data-pc="13">13（1101₂）</button>
+        <button class="sm" data-pc="0xff">0xff</button>
+      </div>
+      <div id="pcOut"></div>
+    </div>
+
+    <h3>8.4 关于递归的观察<span class="srcref">原第 74 页</span></h3>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>观察</th><th>依据</th></tr>
+      <tr><td><b>不需要特殊处理</b></td><td>栈帧让每次调用都有<b>私有存储</b>：保存的寄存器与局部变量、保存的返回指针</td></tr>
+      <tr><td><b>互不践踏</b></td><td>寄存器保存约定防止一次调用毁掉另一次的数据 —— <b>除非 C 代码自己越界</b>（第 9 讲的缓冲区溢出）</td></tr>
+      <tr><td><b>栈纪律 = 调用 / 返回模式</b></td><td>若 P 调用了 Q，Q 一定先于 P 返回 —— <b>后进先出（LIFO）</b></td></tr>
+      <tr><td><b>mutual recursion 也一样</b></td><td>P 调 Q、Q 调 P —— 约定不关心「是不是同一个函数」</td></tr>
+    </table></div>
+  </section>
+
+  <!-- ================= 9 ================= -->
+  <section id="s9">
+    <h2>9. 总结与测验<span class="srcref">原第 75 页</span></h2>
+    <p class="lede">用课件最后一页的要点清单收束，然后做一遍测验 —— 题目全部来自本讲的表格、例子与模拟器。</p>
+
+    <h3>9.1 x86-64 过程机制：要点清单<span class="srcref">原第 75 页</span></h3>
+    <ul>
+      <li><b>栈是过程调用 / 返回的正确数据结构</b>：若 P 调用 Q，则 Q 先于 P 返回。</li>
+      <li><b>递归（以及 mutual recursion）由普通调用约定自动搞定</b>，不需要任何特殊机制。</li>
+      <li>可以安全地把值放在<b>本帧的栈空间</b>里、放在 <b>callee-saved 寄存器</b>里。</li>
+      <li>要传的参数（第 7 个起）放在<b>栈顶</b>；结果通过 <code>%rax</code> 返回。</li>
+      <li><b>指针就是地址</b> —— 指向栈上的值，或指向全局的值。</li>
+    </ul>
+    <p>下一讲（机器级编程 IV：数据）会去看另一头：<b>数组、结构体、浮点数据在内存里怎么摆</b>。</p>
+
+    <h3>9.2 判断题</h3>
+    <p>先别翻回去看 —— 凭刚建立的直觉答。每题答完立刻判分并给出依据在本讲的哪一节。</p>
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：判断题（真 / 假）</span>
+        <button class="sm" id="tfReset">重来</button>
+      </div>
+      <div id="tfOut"></div>
+    </div>
+
+    <h3>9.3 选择题测验</h3>
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：本讲测验</span>
+        <button class="sm" id="qzReset">重来</button>
+      </div>
+      <div id="qzOut"></div>
+    </div>
+  </section>
+</main>
+
+</div>
+
+<div class="footer">
+  本页由原课件 PDF 翻译整理而成 · 数值计算与可视化均为页面内实时计算 · 可对照原课件页码阅读。
+</div>
+<button class="totop" id="toTop">↑ 顶部</button>
+
+<script>
+"use strict";
+/* ============================================================
+   机器级编程 III：过程 · 交互式课件 —— 全部逻辑
+   约定：所有计算在页面内实时完成；无效输入必须给出提示而不是抛错。
+   64 位运算一律用 BigInt；地址（栈演示用的小整数）用 Number。
+   ============================================================ */
+
+const $  = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+const MASK64 = (1n << 64n) - 1n;
+const SIGN64 = 1n << 63n;
+const TWO64  = 1n << 64n;
+
+const u64  = v => BigInt.asUintN(64, BigInt(v));
+const s64  = v => { const x = u64(v); return x >= SIGN64 ? x - TWO64 : x; };
+const hex64  = v => '0x' + u64(v).toString(16).toUpperCase().padStart(16, '0');
+const hexTrim = v => '0x' + u64(v).toString(16).toUpperCase();
+const hexN = n => '0x' + (n >>> 0).toString(16).toUpperCase();
+const decU = v => u64(v).toLocaleString('en-US');
+const decS = v => s64(v).toLocaleString('en-US');
+
+/** 解析用户输入：支持 0x / 0b / 十进制 / 负数。返回无符号 64 位 BigInt 或 null。 */
+function parseU64(str) {
+  const t = String(str).trim().replace(/[_,\s]/g, '');
+  if (!t) return null;
+  if (/^-[0-9]+$/.test(t) || /^-0[xX][0-9a-fA-F]+$/.test(t)) {
+    const p = parseU64(t.slice(1));
+    return p === null ? null : u64(-p);
+  }
+  try {
+    if (/^0[xX][0-9a-fA-F]+$/.test(t)) return u64(BigInt(t));
+    if (/^0[bB][01]+$/.test(t))        return u64(BigInt(t));
+    if (/^[0-9]+$/.test(t))            return u64(BigInt(t));
+  } catch (e) { return null; }
+  return null;
+}
+/** 解析 data-* 里的 "k=v;k=v" 形式 */
+function kvAttr(str) {
+  const out = {};
+  String(str).split(';').forEach(part => {
+    const i = part.indexOf('=');
+    if (i > 0) out[part.slice(0, i).trim()] = part.slice(i + 1).trim();
+  });
+  return out;
+}
+const badBox = msg => `<div class="box bad"><div class="t">输入无效</div>${esc(msg)}</div>`;
+
+/* ============================================================
+   1. 机制匹配器（s1）
+   ============================================================ */
+const MECH = {
+  ctl: {
+    t: '传递控制（passing control）',
+    rows: [
+      ['<b>去程</b>：跳到过程代码的开头', '<code>call label</code> —— 压入返回地址并跳转（本讲第 3 节）'],
+      ['<b>回程</b>：回到返回点', '<code>ret</code> —— 从栈里弹出地址并跳过去'],
+    ],
+    note: '没有 call/ret 之外的「函数机制」：跳过去、记住回来的路、跳回来，仅此而已。递归之所以可行，是因为「回来的路」存放在<b>栈</b>上 —— 每次调用有自己的一份。',
+  },
+  dat: {
+    t: '传递数据（passing data）',
+    rows: [
+      ['<b>参数</b>：前 6 个走寄存器', '<code>%rdi、%rsi、%rdx、%rcx、%r8、%r9</code>（本讲第 4 节）'],
+      ['<b>参数</b>：第 7 个起走栈', '调用者在<b>自己栈帧顶部</b>预先放好（argument build 区）'],
+      ['<b>返回值</b>', '<code>%rax</code>'],
+    ],
+    note: '「传参」没有任何专门指令 —— 调用者事先把值放进约定寄存器，被调方按同一张表去取。这张表就是 ABI 的一部分。',
+  },
+  mem: {
+    t: '内存管理（memory management）',
+    rows: [
+      ['<b>执行期间分配</b>', '<code>subq $N, %rsp</code> 在栈上开一块本地空间（本讲第 6 节）'],
+      ['<b>返回时释放</b>', '<code>addq $N, %rsp</code>（或 <code>popq</code>）把空间退回去'],
+    ],
+    note: 'Q 的 <code>int v[10]</code> 这种放不进寄存器的局部变量就住在这里；<code>return</code> 一执行、<code>%rsp</code> 一恢复，那块内存就成了「栈外的垃圾」—— 不擦除，但也不再属于任何帧。',
+  },
+};
+function renderMech(m) {
+  const g = MECH[m];
+  return `
+  <div class="readout" style="margin-top:0">
+    <dt>机制</dt><dd><b>${g.t}</b></dd>
+  </div>
+  <div class="tbl-wrap"><table class="tbl">
+    <tr><th>要做什么</th><th>靠什么实现</th></tr>
+    ${g.rows.map(r => `<tr><td>${r[0]}</td><td>${r[1]}</td></tr>`).join('')}
+  </table></div>
+  <div class="box" style="margin-bottom:0"><div class="t">为什么是这样</div>${g.note}</div>`;
+}
+
+/* ============================================================
+   2. push / pop 栈模拟器（s2）
+   ============================================================ */
+const STK_DEFAULTS = { '%rax': 15213n, '%rbx': 3000n, '%rcx': 18213n, '%rdx': 99n };
+const STK_REGS = ['%rax', '%rbx', '%rcx', '%rdx', '%rsi', '%rdi', '%r8', '%r9',
+                  '%r10', '%r11', '%r12', '%r13', '%r14', '%r15', '%rbp'];
+let stkState = null;
+function stkParse(seq) {
+  const toks = String(seq).split(/[,;，；]+/).map(s => s.trim()).filter(Boolean);
+  const prog = [];
+  for (const t of toks) {
+    const m = t.match(/^(pushq?|popq?)\s+([%]\w+)$/i);
+    if (!m) return null;
+    const reg = m[2].toLowerCase();
+    if (!STK_REGS.includes(reg)) return null;
+    prog.push({ op: m[1].toLowerCase().startsWith('push') ? 'push' : 'pop', reg });
+  }
+  return prog.length ? prog : null;
+}
+function stkBuild(prog) {
+  const regs = {};
+  STK_REGS.forEach((r, i) => { regs[r] = STK_DEFAULTS[r] !== undefined ? STK_DEFAULTS[r] : BigInt(0x100 + i); });
+  const mem = {};                 // 地址(Number) → BigInt
+  const garbage = {};             // 已弹出、内容残留的格子
+  let rsp = 0x120;
+  const steps = [{ rsp, mem: {}, regs: { ...regs }, done: null, garbage: {} }];
+  for (const ins of prog) {
+    let note = '';
+    if (ins.op === 'push') {
+      rsp -= 8;
+      mem[rsp] = regs[ins.reg];
+      delete garbage[rsp];
+      note = `<code>push ${esc(ins.reg)}</code>：<code>%rsp</code> 从 ${hexN(rsp + 8)} 减 8 变成 <b>${hexN(rsp)}</b>，把 ${esc(ins.reg)} 的值写到新栈顶 —— <b>栈向低地址生长</b>。`;
+    } else {
+      const touched = mem[rsp] !== undefined;
+      const v = touched ? mem[rsp] : 0n;
+      regs[ins.reg] = v;
+      note = `<code>pop ${esc(ins.reg)}</code>：读出 ${hexN(rsp)} 上的 ${touched ? hexTrim(v) : '（从未写过）'} 存进 ${esc(ins.reg)}，<code>%rsp</code> 加 8 变成 <b>${hexN(rsp + 8)}</b> —— <b>那个格子里的字节原样留在内存里</b>（垃圾），只是栈不再认它。`;
+      garbage[rsp] = true;
+      rsp += 8;
+    }
+    steps.push({ rsp, mem: { ...mem }, regs: { ...regs }, done: ins, garbage: { ...garbage } });
+  }
+  return steps;
+}
+function renderStk() {
+  const st = stkState;
+  if (!st) return `<div class="box" style="margin-bottom:0">点「载入」开始逐条执行。</div>`;
+  const step = st.steps[st.idx];
+  const regsRows = STK_REGS.filter(r => st.steps[0].regs[r] !== step.regs[r] || STK_DEFAULTS[r] !== undefined).slice(0, 6).map(r => {
+    const changed = step.done && step.done.op === 'pop' && step.done.reg === r;
+    return `<span class="chip ${changed ? 'ok' : 'gray'}" style="font-family:var(--font-mono)">${esc(r)} = ${hexTrim(step.regs[r])}</span>`;
+  }).join(' ');
+  const rows = [];
+  const top = 0x120;
+  const lowest = Math.max(step.rsp, top - 13 * 8);
+  for (let a = top; a >= lowest; a -= 8) {
+    const has = step.mem[a] !== undefined;
+    const garbage = !!step.garbage[a];
+    const isTop = a === step.rsp;
+    const tag = isTop ? '<span class="chip ok">%rsp · 栈顶</span>'
+      : garbage ? '<span class="chip warn">垃圾（已弹出，内存未变）</span>'
+      : has ? '<span class="chip gray">栈内</span>'
+      : a < step.rsp ? '<span class="chip gray">未使用</span>' : '<span class="chip gray">栈外</span>';
+    rows.push(`<tr class="${isTop ? 'hl' : ''}"><td class="mono">${hexN(a)}</td>
+      <td class="mono">${has ? hex64(step.mem[a]) : '——'}</td>
+      <td>${tag}</td></tr>`);
+  }
+  const progTxt = st.prog.map((p, i) => i === st.idx - 1
+    ? `<b style="color:var(--accent)">${p.op} ${esc(p.reg)}</b>`
+    : `${p.op} ${esc(p.reg)}`).join(' → ');
+  return `
+  <div class="readout" style="margin-top:0">
+    <dt>序列</dt><dd>${progTxt}${st.idx <= 0 ? '　<span style="font-family:var(--font-sans);color:var(--muted)">（尚未执行）</span>' : `　<span style="font-family:var(--font-sans);color:var(--muted)">已执行 ${st.idx} / ${st.prog.length} 条</span>`}</dd>
+    <dt>%rsp</dt><dd><b>${hexN(step.rsp)}</b>　<span style="font-family:var(--font-sans);color:var(--muted)">栈顶 = 地址最小的在栈元素</span></dd>
+    <dt>寄存器</dt><dd>${regsRows || '（未动）'}</dd>
+  </div>
+  <div class="tbl-wrap"><table class="tbl">
+    <tr><th>地址</th><th>8 字节内容</th><th>状态</th></tr>${rows.join('')}
+  </table></div>
+  <div class="box ${st.idx > 0 && step.done.op === 'pop' ? 'warn' : 'ok'}" style="margin-bottom:0"><div class="t">
+    ${st.idx <= 0 ? '按「单步」开始' : step.done.op === 'push' ? '压栈：先减 %rsp 再写内存' : '弹栈：先读内存再加 %rsp'}</div>
+    ${st.idx <= 0 ? '初始 <code>%rsp = 0x120</code>（沿用课件 call/ret 例子的地址风格）。寄存器初值：<code>%rax = 15213</code>、<code>%rbx = 3000</code>、<code>%rcx = 18213</code>、<code>%rdx = 99</code>，其余是占位数。'
+      : step.done.note}
+  </div>`;
+}
+
+/* ============================================================
+   3.3 call / ret 控制流追踪（s3）—— 课件四连图
+   ============================================================ */
+const CR_STATES = [
+  { rip: '0x400544', rsp: 0x120, stack: {}, hl: 'm-call',
+    t: '图 1 · call 即将执行', d: '<code>%rip</code> 正指着 <code>callq 400550</code>，<code>%rsp = 0x120</code>。返回地址 <code>0x400549</code>（call 的下一条指令）此刻还<b>没有</b>进栈。' },
+  { rip: '0x400550', rsp: 0x118, stack: { 0x118: '0x400549' }, hl: 'm2-mov',
+    t: '图 2 · call 执行完毕', d: 'call 做了两件事：把返回地址 <code>0x400549</code> 压进 <code>0x118</code>（<code>%rsp</code> 随之减 8），再把 <code>%rip</code> 改成 <code>0x400550</code> —— 控制已进入 <code>mult2</code>。' },
+  { rip: '0x400557', rsp: 0x118, stack: { 0x118: '0x400549' }, hl: 'm2-ret',
+    t: '图 3 · mult2 执行到 retq', d: '<code>mult2</code> 算完 <code>a*b</code> 放进 <code>%rax</code>，<code>%rip</code> 到达 <code>retq</code>。栈上 <code>0x118</code> 仍然躺着回家的路 <code>0x400549</code>。' },
+  { rip: '0x400549', rsp: 0x120, stack: { 0x118: 'GONE' }, hl: 'm-mov',
+    t: '图 4 · ret 执行完毕', d: 'ret 把 <code>0x118</code> 的 <code>0x400549</code> 弹出并装进 <code>%rip</code>，<code>%rsp</code> 回到 <code>0x120</code>。<code>0x118</code> 上的字节<b>还在内存里</b>，但已成了垃圾 —— 回到第 2 节那句「memory doesn\'t change」。' },
+];
+const CR_CODE = [
+  ['m-h',  '0000000000400540 &lt;multstore&gt;:'],
+  ['m-push','  400540: push   %rbx        # Save %rbx'],
+  ['m-movd','  400541: mov    %rdx,%rbx   # Save dest'],
+  ['m-call','  400544: callq  400550 &lt;mult2&gt;'],
+  ['m-mov' ,'  400549: mov    %rax,(%rbx) # Save at dest'],
+  ['m-pop' ,'  40054c: pop    %rbx'],
+  ['m-ret' ,'  40054d: retq'],
+  ['m-h',  '0000000000400550 &lt;mult2&gt;:'],
+  ['m2-mov','  400550: mov    %rdi,%rax   # a'],
+  ['m2-imul','  400553: imul   %rsi,%rax   # a * b'],
+  ['m2-ret','  400557: retq'],
+];
+let crIdx = -1;
+function renderCr() {
+  if (crIdx < 0) return `<div class="box" style="margin-bottom:0">按「下一步」逐张走完课件的四连图。</div>`;
+  const s = CR_STATES[crIdx];
+  const code = CR_CODE.map(([cls, txt]) =>
+    `<div style="font-family:var(--font-mono);font-size:13.5px;white-space:pre;${cls === s.hl ? 'background:var(--accent-soft);outline:2px solid var(--accent);border-radius:4px' : ''}">${txt}</div>`).join('');
+  const rows = [0x130, 0x128, 0x120, 0x118].map(a => {
+    const v = s.stack[a];
+    const isTop = a === s.rsp;
+    const val = v === 'GONE' ? '<span class="chip warn">垃圾（已弹出）</span>'
+      : v ? `<b class="mono">${v}</b> <span class="chip ok">返回地址</span>`
+      : '<span class="chip gray">空</span>';
+    return `<tr class="${isTop ? 'hl' : ''}"><td class="mono">${hexN(a)}</td><td>${val}</td>
+      <td class="mono">${isTop ? '<b>%rsp</b>' : ''}</td></tr>`;
+  }).join('');
+  return `
+  <div class="grid g2">
+    <div class="card"><h5>代码（${esc(s.rip)} 正在执行）</h5>${code}</div>
+    <div class="card"><h5>栈</h5>
+      <div class="tbl-wrap"><table class="tbl">
+        <tr><th>地址</th><th>内容</th><th></th></tr>${rows}
+      </table></div>
+      <div class="readout" style="margin-bottom:0">
+        <dt>%rip</dt><dd><b>${esc(s.rip)}</b></dd>
+        <dt>%rsp</dt><dd><b>${hexN(s.rsp)}</b></dd>
+      </div>
+    </div>
+  </div>
+  <div class="box ok" style="margin-bottom:0"><div class="t">${esc(s.t)}</div>${s.d}
+    <div style="margin-top:6px;font-size:13.5px;color:var(--muted)">进度：第 ${crIdx + 1} / 4 张（对应课件第 ${21 + crIdx} 页）</div>
+  </div>`;
+}
+
+/* ============================================================
+   3.4 返回地址计算器（s3）
+   ============================================================ */
+function renderRc(addr, len) {
+  const ret = addr + BigInt(len);
+  return `
+  <div class="readout" style="margin-top:0">
+    <dt>call 指令地址</dt><dd>${hex64(addr)}</dd>
+    <dt>编码长度</dt><dd>${len} 字节（${len === 5 ? 'E8 + rel32' : 'E8 + rel8'}）</dd>
+    <dt>返回地址</dt><dd><b>${hex64(ret)}</b>　<span style="font-family:var(--font-sans);color:var(--muted)">= ${hexTrim(addr)} + ${len}</span></dd>
+  </div>
+  <div class="box ok" style="margin-bottom:0"><div class="t">call 之后，栈顶那 8 个字节就是它</div>
+    <code>call</code> 会把 <b>${hex64(ret)}</b> 压栈 —— 它是「紧挨着 call 的下一条指令」的地址。
+    对应课件：callq 在 <code>0x400544</code>，5 字节编码，压进去的是 <code>0x400549</code>；
+    将来 <code>ret</code> 一弹，<code>%rip</code> 就变成它。
+    <br><span style="font-size:13.5px;color:var(--muted)">换句话说：函数想「回家」，根本不用记自己从哪来 —— 栈顶替它记着。</span>
+  </div>`;
+}
+
+/* ============================================================
+   4.1 参数分配器（s4）
+   ============================================================ */
+const ARG_REGS = ['%rdi', '%rsi', '%rdx', '%rcx', '%r8', '%r9'];
+function renderArg(n) {
+  const regRows = ARG_REGS.map((r, i) =>
+    `<tr class="${i < Math.min(n, 6) ? 'hl' : ''}"><td>第 ${i + 1} 个参数</td><td class="mono"><b>${i < n ? r : '—'}</b></td>
+     <td>${i < n ? '寄存器传递' : '（没有这个参数）'}</td></tr>`).join('');
+  const stackRows = [];
+  for (let k = 7; k <= n; k++) stackRows.push(
+    `<tr class="hl"><td>第 ${k} 个参数</td><td class="mono"><b>%rsp + ${8 * (k - 6)}</b></td>
+     <td>栈上（进入被调用者后，返回地址之上）</td></tr>`);
+  return `
+  <div class="readout" style="margin-top:0">
+    <dt>参数个数</dt><dd>${n} 个 <code>long</code></dd>
+    <dt>走寄存器</dt><dd>${Math.min(n, 6)} 个</dd>
+    <dt>走栈</dt><dd>${n > 6 ? `<b>${n - 6} 个</b>（调用者的参数构建区共 ${8 * (n - 6)} 字节）` : '<b>0 个</b> —— 根本不用为参数开栈（「Only allocate stack space when needed」）'}</dd>
+  </div>
+  <div class="tbl-wrap"><table class="tbl">
+    <tr><th>参数</th><th>座位</th><th>说明</th></tr>${regRows}${stackRows.join('')}
+  </table></div>
+  <div class="box ${n > 6 ? 'warn' : 'ok'}" style="margin-bottom:0"><div class="t">
+    ${n > 6 ? '从第 7 个开始「爆寄存器」' : '全部装进寄存器，一帧栈都不用开'}</div>
+    ${n > 6
+      ? `调用者必须在自己栈帧的<b>参数构建区</b>（argument build）里预先放好第 7…${n} 个参数：第 7 个放在它 <code>%rsp+0</code>、第 8 个在 <code>%rsp+8</code>……（进入被调用者后，因为多压了一个返回地址，第 7 个参数出现在 <code>%rsp+8</code>）。
+         <br>课件第 26 页的图把栈那一侧标成 <code>Arg 7 … Arg n</code> —— 第 7 个最靠近栈顶（地址最小）。`
+      : `课件第 26 页的原则：<b>「Only allocate stack space when needed」</b>。6 个以内全走寄存器，返回值走 <code>%rax</code>，一次调用连栈都不必动 —— 这也是很多小函数（比如第 6 节的 <code>incr</code>）完全没有栈帧的原因。`}
+  </div>`;
+}
+
+/* ============================================================
+   5.4 栈帧生长模拟器（s5）
+   ============================================================ */
+const FW_STEPS = [
+  { frames: ['yoo'], act: 'call who', d: '<code>yoo</code> 在跑，栈上只有它自己的一帧。接下来它要 <code>call who</code>。' },
+  { frames: ['yoo', 'who'], act: 'call who 完成', d: '<code>who</code> 的帧压在 <code>yoo</code> 之上（地址更低）。<code>%rsp</code> 滑到新帧的底端，<code>%rbp</code> 可以指向新帧的顶端。' },
+  { frames: ['yoo', 'who', 'amI'], act: 'call amI', d: '<code>who</code> 调用 <code>amI</code> —— 第 1 份 amI 帧。' },
+  { frames: ['yoo', 'who', 'amI', 'amI'], act: 'amI 调 amI（第 1 层递归）', d: '<b>同一个函数的第二份实例</b>。两帧互不相识：各自有各自的参数、局部变量、返回地址。' },
+  { frames: ['yoo', 'who', 'amI', 'amI', 'amI'], act: 'amI 调 amI（第 2 层递归，最深）', d: '三份 amI 实例同时活着 —— 这就是「可重入（reentrant）」。每帧都存着「回来后执行哪条指令」，所以三份返回地址各回各的调用点。' },
+  { frames: ['yoo', 'who', 'amI', 'amI'], act: '最内层 amI 返回', d: '内层先返回（<b>callee 永远先于 caller 返回</b>）。它的帧被释放：返回地址弹出，<code>%rsp</code> 上移。' },
+  { frames: ['yoo', 'who', 'amI'], act: '第二层 amI 返回', d: '按同样的方式逐层剥掉 —— 释放顺序与分配顺序严格相反（LIFO）。' },
+  { frames: ['yoo', 'who'], act: '第一层 amI 返回', d: '回到 <code>who</code>。<code>amI</code> 的三次调用分别用了三帧，彼此的数据零干扰 —— 这正是寄存器保存约定（第 7 节）要保证的事。' },
+  { frames: ['yoo'], act: 'who 返回', d: '<code>who</code> 的帧释放，控制回到 <code>yoo</code> 里 <code>who()</code> 的下一条。' },
+  { frames: [], act: 'yoo 返回', d: '栈空，回到 <code>yoo</code> 的调用者。整个过程没有引入任何一条新指令 —— 递归只是「同一套 call/ret 多跑几遍」。' },
+];
+let fwIdx = -1;
+function renderFw() {
+  if (fwIdx < 0) return `<div class="box" style="margin-bottom:0">按「下一步」看栈帧一帧帧长出来、再一帧帧缩回去。</div>`;
+  const st = FW_STEPS[fwIdx];
+  const n = st.frames.length;
+  const FH = 40, W = 460;
+  const H = 70 + Math.max(n, 1) * (FH + 8);
+  const rects = st.frames.map((f, i) => {
+    const y = 46 + i * (FH + 8);
+    const inner = f === 'amI' && i >= 2;
+    return `<rect x="120" y="${y}" width="220" height="${FH}" rx="7" fill="var(--paper-soft)" stroke="${inner ? 'var(--accent)' : 'var(--line)'}" ${inner ? 'stroke-width="2"' : ''}/>
+      <text x="230" y="${y + 25}" text-anchor="middle" font-size="14" fill="var(--ink)" font-family="var(--font-mono)">${f}${inner ? ` <tspan fill="var(--muted)" font-size="11">#${i - 1}</tspan>` : ''}</text>`;
+  }).join('');
+  const rspY = 46 + Math.max(n, 1) * (FH + 8) - 4;
+  const rbpY = n ? 46 + (n - 1) * (FH + 8) : rspY;
+  const markers = n ? `
+    <line x1="60" y1="${rbpY}" x2="118" y2="${rbpY}" stroke="var(--exp)" stroke-width="2"/>
+    <text x="56" y="${rbpY + 4}" text-anchor="end" font-size="12.5" fill="var(--exp)" font-family="var(--font-mono)">%rbp</text>
+    <line x1="60" y1="${rspY}" x2="118" y2="${rspY}" stroke="var(--sign)" stroke-width="2"/>
+    <text x="56" y="${rspY + 4}" text-anchor="end" font-size="12.5" fill="var(--sign)" font-family="var(--font-mono)">%rsp</text>` : '';
+  const chain = ['yoo', 'who', 'amI', 'amI', 'amI'];
+  const chainHtml = chain.map((c, i) => {
+    const cur = i === n - 1;
+    return `<span class="chip ${cur ? 'ok' : 'gray'}" style="font-family:var(--font-mono);${cur ? '' : 'opacity:.55'}">${c}</span>${i < 4 ? '<span style="color:var(--muted)">→</span>' : ''}`;
+  }).join(' ');
+  return `
+  <svg viewBox="0 0 ${W} ${H}" width="100%" style="max-width:${W}px;height:auto;display:block" role="img" aria-label="栈帧生长图">
+    <text x="14" y="24" font-size="12" fill="var(--muted)">高地址（栈底）</text>
+    <text x="14" y="${H - 10}" font-size="12" fill="var(--muted)">低地址（栈顶）</text>
+    <line x1="108" y1="40" x2="108" y2="${H - 26}" stroke="var(--line)" stroke-width="1.4"/>
+    <path d="M104 ${H - 30} L108 ${H - 22} L112 ${H - 30}" fill="none" stroke="var(--line)" stroke-width="1.4"/>
+    ${n ? rects : `<text x="230" y="70" text-anchor="middle" font-size="13" fill="var(--muted)" font-family="var(--font-mono)">（栈已空）</text>`}
+    ${markers}
+  </svg>
+  <div class="readout" style="margin-top:0">
+    <dt>当前帧序列</dt><dd>${n ? st.frames.join(' → ') : '（空）'}　<span style="font-family:var(--font-sans);color:var(--muted)">（从栈底往栈顶数）</span></dd>
+    <dt>调用链</dt><dd>${chainHtml}</dd>
+  </div>
+  <div class="box ok" style="margin-bottom:0"><div class="t">第 ${fwIdx + 1} / ${FW_STEPS.length} 步 · ${esc(st.act)}</div>${st.d}</div>`;
+}
+
+/* ============================================================
+   5.5 栈帧布局构造器（s5）
+   ============================================================ */
+let sfState = { in: false, loc: false, sav: false, arg: false, rbp: false };
+function renderSf() {
+  const st = sfState;
+  const row = (label, present, note, ptr) =>
+    `<tr class="${present ? 'hl' : ''}"><td>${ptr || ''}</td>
+     <td class="mono">${present ? '<b>' + label + '</b>' : '<span style="opacity:.45">' + label + '</span>'}</td>
+     <td>${note}</td></tr>`;
+  const bottomNote = st.arg
+    ? '参数构建区是本帧地址最低的区域，<code>%rsp</code> 停在这里。'
+    : '<code>%rsp</code> 停在本帧地址最低的已用区域。';
+  return `
+  <div class="tbl-wrap"><table class="tbl">
+    <tr><th style="width:70px">指针</th><th>区域（高地址 → 低地址）</th><th>说明</th></tr>
+    ${row('Caller 栈帧', true, '调用者的帧在更高地址', '')}
+    ${row('参数 7+（Arguments 7+）', st.in, st.in ? '调用者为本这次调用预放的参数（第 7 个起）' : '本次调用没超过 6 个参数 —— 不存在', '')}
+    ${row('返回地址（Return Addr）', true, '<code>call</code> 指令压入 —— 帧的「户口登记」', '')}
+    ${row('旧 %rbp（Old %rbp）', st.rbp, st.rbp ? '用 %rbp 作帧指针时，进入时先压旧值' : '不用帧指针就不压（可选）', st.rbp ? '<b style="color:var(--exp)">%rbp →</b>' : '')}
+    ${row('保存的寄存器', st.sav, st.sav ? 'callee-saved 寄存器的旧值（本讲第 7 节）' : '没有需要跨调用保活的寄存器', '')}
+    ${row('局部变量', st.loc, st.loc ? '放不进寄存器的局部变量（如数组）' : '局部变量全在寄存器里', '')}
+    ${row('参数构建区（Argument Build）', st.arg, st.arg ? '为本过程<b>即将发起的调用</b>预放的第 7+ 个参数' : '不调用别的函数、或参数不超过 6 个', '')}
+    ${row('（%rsp 停在这里）', true, bottomNote, '<b style="color:var(--sign)">%rsp →</b>')}
+  </table></div>
+  <div class="box" style="margin-bottom:0"><div class="t">读图的两个方向感</div>
+    <ul style="margin:6px 0 0">
+      <li><b>参数 7+ 是「别人为我准备的」</b>：在我进门前，调用者已经把它们压好，进门就能读；<b>参数构建区是「我为别人准备的」</b>：我要调用别的函数且参数超过 6 个时，先给它腾好。</li>
+      <li>整个帧只有<b>返回地址</b>是必有的（call 自动压）；其余区域全部「按需出现」。课件第 2 页的第二个学习目标 —— 指认栈帧里的返回地址 / 参数 / 保存的寄存器 / 局部变量 —— 对应的就是这张图。</li>
+    </ul>
+  </div>`;
+}
+
+/* ============================================================
+   6.2 call_incr 模拟器（s6）—— 纯计算辅助（供 C 交叉验证）
+   ============================================================ */
+/** call_incr 的最终返回值：v2 = 旧 v1；返回 (v1+d) + v1。位模式（无符号 64 位）。 */
+function ciFinal(v, d) {
+  const v1new = u64(BigInt(v) + BigInt(d));
+  return u64(v1new + u64(BigInt(v)));            // v1(新) + v2(旧 v1)
+}
+/** call_incr2 的最终返回值：x + v2 = x + 旧 v1。位模式。 */
+function c2Final(x, v, d) {
+  return u64(u64(BigInt(x)) + u64(BigInt(v)));
+}
+function ciBuild(v, d) {
+  const V = u64(BigInt(v)), D = u64(BigInt(d));
+  const RSP0 = 0x130;                            // 进入 call_incr 时的 %rsp（返回地址在 0x130）
+  const steps = [];
+  let rsp = RSP0;
+  let mem = { [RSP0]: 'RA' };                    // 'RA' = 返回地址
+  let garbage = {};
+  let r = { rax: null, rsi: null, rdi: null };
+  const push = (ins, inIncr, note, hlReg) =>
+    steps.push({ ins, inIncr, rsp, mem: { ...mem }, regs: { ...r }, note, hlReg, garbage: { ...garbage } });
+  push('（进入 call_incr）', false, '<code>%rsp = 0x130</code>，栈顶是返回地址。<code>call_incr</code> 没有参数，三个寄存器都还没用。');
+  rsp -= 16; mem[0x128] = 'U'; mem[0x120] = 'U';
+  push('subq $16, %rsp', false, '在自己帧里开 16 字节本地空间：<code>0x128</code> 将放 <code>v1</code>，<code>0x120</code> 暂时空着（16 字节是让 <code>%rsp</code> 保持对齐的惯例步长）。');
+  mem[0x128] = V;
+  push('movq $15213, 8(%rsp)', false, `把 <code>v1 = ${decS(V)}</code> 放进 <code>8(%rsp) = 0x128</code> —— <b>局部变量住进了栈</b>。`);
+  r.rsi = D;
+  push('movl $3000, %esi', false, `参数 <code>val = ${decS(D)}</code> 进 <code>%rsi</code>（第 2 个参数寄存器）。<code>movl</code> 顺带把 <code>%rsi</code> 高 32 位清零。`, 'rsi');
+  r.rdi = 0x128;
+  push('leaq 8(%rsp), %rdi', false, '参数 <code>p = &amp;v1 = 0x128</code> 进 <code>%rdi</code> —— <code>lea</code> 这次干的是本行：<b>算地址，不碰内存</b>。', 'rdi');
+  rsp = 0x118; mem[0x118] = 'RA';
+  push('call incr', false, '把返回地址压到 <code>0x118</code>，<code>%rsp = 0x118</code>，控制进入 <code>incr</code>。此刻 <code>%rdi</code> 指着 0x128（v1 的地址）、<code>%rsi</code> 是 val。');
+  r.rax = V;
+  push('movq (%rdi), %rax', true, `<code>x = *p = ${decS(V)}</code> —— 把 <code>v1</code> 从栈上读进 <code>%rax</code>。`, 'rax');
+  r.rsi = u64(BigInt.asIntN(64, BigInt(V) + BigInt(D)));
+  push('addq %rax, %rsi', true, `<code>y = x + val = ${decS(V)} + ${decS(D)} = <b>${decS(r.rsi)}</b></code>。`, 'rsi');
+  mem[0x128] = r.rsi;
+  push('movq %rsi, (%rdi)', true, `<code>*p = y</code> —— <b>0x128 上的 v1 被改写成 ${decS(r.rsi)}</b>！调用方栈上的数据被被调方经由指针修改 —— 这就是「传地址」的意义。`);
+  push('ret', true, `incr 返回：<code>%rax</code> 里留着 <code>x</code>（<b>旧</b> v1 = ${decS(V)}），弹出返回地址，<code>%rsp</code> 回到 0x120。`);
+  garbage[0x118] = true;
+  r.rax = ciFinal(V, D);
+  push('addq 8(%rsp), %rax', false, `<code>v1 + v2</code>：内存里的 <b>${decS(mem[0x128])}</b>（新 v1）加上 <code>%rax</code> 的 <b>${decS(V)}</b>（v2 = 旧 v1）= <b>${decS(r.rax)}</b>。`, 'rax');
+  rsp = RSP0; garbage[0x128] = true; garbage[0x120] = true;
+  push('addq $16, %rsp', false, '本地空间释放：0x128 / 0x120 退回「栈外」，但<b>内容原样残留</b>（垃圾），<code>%rsp</code> 回到 0x130。');
+  push('ret', false, `弹出返回地址，回到调用者。返回值 <b>${decS(r.rax)}</b> 在 <code>%rax</code> 里。`);
+  return { steps, v2: V, v1new: u64(BigInt(V) + BigInt(D)), final: r.rax };
+}
+let ciState = null;
+function renderCi() {
+  const st = ciState;
+  if (!st) return `<div class="box" style="margin-bottom:0">点「载入」开始逐条执行。</div>`;
+  const cur = st.idx >= 0 ? st.build.steps[st.idx] : null;
+  const rows = [0x130, 0x128, 0x120, 0x118].map(a => {
+    const v = cur ? cur.mem[a] : undefined;
+    const isTop = cur && a === cur.rsp;
+    const isGar = cur && !!cur.garbage[a];
+    const label = a === 0x130 ? '返回地址（call_incr 的）' : a === 0x128 ? 'v1' : a === 0x120 ? '（未用）' : '返回地址（incr 的）';
+    const val = v === undefined ? '<span class="chip gray">栈外</span>'
+      : v === 'RA' ? '<b class="mono">RtnAddr</b>'
+      : v === 'U' ? '<span class="chip gray">未初始化</span>'
+      : isGar ? `<span class="mono">${hex64(v)} = ${decS(v)}</span> <span class="chip warn">垃圾（内存未变）</span>`
+      : `<b class="mono">${hex64(v)}</b> = ${decS(v)}`;
+    return `<tr class="${isTop ? 'hl' : ''}"><td class="mono">${hexN(a)}</td><td>${val}</td><td>${label}</td><td class="mono">${isTop ? '<b>%rsp</b>' : ''}</td></tr>`;
+  }).join('');
+  const regChips = cur ? [['%rax', cur.regs.rax, cur.hlReg === 'rax'], ['%rsi', cur.regs.rsi, cur.hlReg === 'rsi'], ['%rdi', cur.regs.rdi, cur.hlReg === 'rdi']]
+    .map(([nm, v, hot]) => `<span class="chip ${hot ? 'ok' : 'gray'}" style="font-family:var(--font-mono)">${nm} = ${v === null ? '—' : hexTrim(v) + ' = ' + decS(v)}</span>`).join(' ') : '';
+  return `
+  <div class="readout" style="margin-top:0">
+    <dt>输入</dt><dd>v1 = ${decS(st.v)}，val = ${decS(st.d)}</dd>
+    <dt>进度</dt><dd>${st.idx + 1} / ${st.build.steps.length} 条　<span style="font-family:var(--font-sans);color:var(--muted)">（斜体 = incr 内部）</span></dd>
+    ${cur ? `<dt>寄存器</dt><dd>${regChips}</dd>` : ''}
+  </div>
+  <div class="tbl-wrap"><table class="tbl">
+    <tr><th>地址</th><th>内容</th><th>含义</th><th></th></tr>${rows}
+  </table></div>
+  <div class="steps">
+    ${st.build.steps.map((s, i) => `<div class="step${i <= st.idx ? ' on' : ''}">
+      <div class="h">${i <= st.idx ? '已执行' : '未执行'} · ${s.inIncr ? 'incr 内部' : 'call_incr'}</div>
+      <div class="m">${esc(s.ins)}</div>
+      <div class="e">${s.note}</div>
+    </div>`).join('')}
+  </div>
+  <div class="box ${st.idx >= st.build.steps.length - 1 ? 'ok' : ''}" style="margin-bottom:0"><div class="t">
+    ${st.idx >= st.build.steps.length - 1
+      ? `跑完了：返回值 = ${decS(st.build.final)} = ${hexTrim(st.build.final)}`
+      : '单步执行，盯住 0x128 上的 v1 在哪一步被改写。'}</div>
+    ${st.idx >= st.build.steps.length - 1
+      ? `三个数要分清：<b>v2 = ${decS(st.build.v2)}</b>（incr 的返回值 = 旧 v1）、<b>新 v1 = ${decS(st.build.v1new)}</b>（incr 经指针写回）、<b>返回值 = 新 v1 + v2 = ${decS(st.build.final)}</b>。C 语义等价于 <code>(v+d) + v</code>，已与编译执行的 C 程序逐例对过（见页脚）。`
+      : '对应课件第 45–53 页的 9 张栈结构图。'}
+  </div>`;
+}
+
+/* ============================================================
+   6.3 movl 零扩展实验台（s6）
+   ============================================================ */
+/** movl 写 32 位寄存器后，64 位寄存器的值：高 32 位清零。 */
+function u32ZeroExt(v) { return u64(BigInt(v) & 0xFFFFFFFFn); }
+function renderMl(v) {
+  const dirty = u64('0x1122334455667788');
+  const afterL = u32ZeroExt(v);
+  const afterQ = u64(BigInt.asIntN(32, BigInt(v) & 0xFFFFFFFFn)); // movq imm32 符号扩展
+  const low32 = u64(v & 0xFFFFFFFFn);
+  const fitsU32 = v >= 0n && v <= 0xFFFFFFFFn;
+  return `
+  <div class="readout" style="margin-top:0">
+    <dt>写入值</dt><dd>${decS(v)}　<span style="font-family:var(--font-sans);color:var(--muted)">（位模式 ${hexTrim(v)}）</span></dd>
+    <dt>%rax 执行前</dt><dd>${hex64(dirty)}　<span style="font-family:var(--font-sans);color:var(--muted)">故意放了个「脏」的高半段</span></dd>
+    <dt>movl $v, %eax 之后</dt><dd><b>${hex64(afterL)}</b>　<span style="font-family:var(--font-sans);color:var(--muted)">高 32 位被 <b>清零</b>，不是保留</span></dd>
+    <dt>对照：movq $v, %rsi</dt><dd>${hex64(afterQ)}　<span style="font-family:var(--font-sans);color:var(--muted)">imm32 <b>符号扩展</b>到 64 位</span></dd>
+  </div>
+  <div class="tbl-wrap"><table class="tbl">
+    <tr><th>写法</th><th>编码（objdump 实测）</th><th>长度</th><th>高 32 位</th></tr>
+    <tr class="hl"><td class="mono">movl $3000, %esi</td><td class="mono">be b8 0b 00 00</td><td class="mono"><b>5 字节</b></td><td>清零（写 %esi 即清 %rsi 高半）</td></tr>
+    <tr><td class="mono">movq $3000, %rsi</td><td class="mono">48 c7 c6 b8 0b 00 00</td><td class="mono">7 字节</td><td>符号扩展 imm32</td></tr>
+  </table></div>
+  <div class="box ${fitsU32 ? 'ok' : 'warn'}" style="margin-bottom:0"><div class="t">
+    ${fitsU32 ? '3000 一类的「小非负值」正是 movl 的主场' : '注意这个值：movl 装不下它'}</div>
+    ${fitsU32
+      ? `课件选 <code>movl $3000, %esi</code> 的两个理由：① 它把 <code>%rsi</code> 的高 32 位<b>清成 0</b>（x86-64 规定写 32 位寄存器就清高半段），于是 <code>%rsi</code> 恰好是干净的 3000；② 编码 5 字节，比 <code>movq</code> 的 7 字节<b>省 2 字节</b>（课件写 1 字节，见上方勘误框）。`
+      : `${decS(v)} 不是「0…2<sup>32</sup>−1」里的小非负值：movl 之后寄存器只剩低 32 位 ${hexTrim(low32)}（高 32 位清零）—— <b>不再等于原值</b>。试着把 ${decS(v)} 和上面 ${hexTrim(afterL)} 对照一下，「清零」的力度就看得见了。`}
+  </div>`;
+}
+
+/* ============================================================
+   7.3 寄存器分类表（s7）
+   ============================================================ */
+const REGS_INFO = [
+  { r: '%rax', role: '返回值', cls: 'caller', note: '返回值默认住这里；也是 caller-saved —— 调用一次就可能被改写。' },
+  { r: '%rdi', role: '参数 1', cls: 'caller', note: '第 1 个参数；caller-saved，跨调用不保。' },
+  { r: '%rsi', role: '参数 2', cls: 'caller', note: '第 2 个参数；caller-saved。' },
+  { r: '%rdx', role: '参数 3', cls: 'caller', note: '第 3 个参数；caller-saved。本讲 7.1 的事故就发生在它身上。' },
+  { r: '%rcx', role: '参数 4', cls: 'caller', note: '第 4 个参数；caller-saved。' },
+  { r: '%r8',  role: '参数 5', cls: 'caller', note: '第 5 个参数；caller-saved。' },
+  { r: '%r9',  role: '参数 6', cls: 'caller', note: '第 6 个参数；caller-saved。' },
+  { r: '%r10', role: '临时',   cls: 'caller', note: 'caller-saved 临时寄存器。' },
+  { r: '%r11', role: '临时',   cls: 'caller', note: 'caller-saved 临时寄存器。' },
+  { r: '%rbx', role: '临时',   cls: 'callee', note: 'callee-saved：谁想用，谁先 push 保存、返回前 pop 恢复。call_incr2 用它装 x。' },
+  { r: '%r12', role: '临时',   cls: 'callee', note: 'callee-saved。' },
+  { r: '%r13', role: '临时',   cls: 'callee', note: 'callee-saved。' },
+  { r: '%r14', role: '临时',   cls: 'callee', note: 'callee-saved。' },
+  { r: '%r15', role: '临时',   cls: 'callee', note: 'callee-saved —— <b>课件列表漏了它</b>，System V AMD64 ABI 明确把 R12–R15 都列为 callee-saved（见勘误框）。' },
+  { r: '%rbp', role: '可选帧指针', cls: 'callee', note: 'callee-saved；可以当帧指针用（指向旧 %rbp），也可以挪作普通数据用。' },
+  { r: '%rsp', role: '栈指针', cls: 'special', note: '特殊形式的 callee-saved：过程退出时必须恢复原值 —— 栈纪律本身在保证它。' },
+];
+let rqSel = -1;
+function renderRq(filter) {
+  const show = REGS_INFO.map((g, i) => ({ ...g, i })).filter(g =>
+    filter === 'all' || (filter === 'arg' ? g.role.startsWith('参数') : filter === 'caller' ? g.cls === 'caller' : g.cls === 'callee' || g.cls === 'special'));
+  const clsChip = g => g.cls === 'caller' ? '<span class="chip">caller-saved</span>'
+    : g.cls === 'callee' ? '<span class="chip ok">callee-saved</span>'
+    : '<span class="chip warn">特殊</span>';
+  const sel = rqSel >= 0 ? REGS_INFO[rqSel] : null;
+  return `
+  <div class="tbl-wrap"><table class="tbl">
+    <tr><th>寄存器</th><th>角色</th><th>保存类</th></tr>
+    ${show.map(g => `<tr class="${rqSel === g.i ? 'hl' : ''}" data-rq="${g.i}" style="cursor:pointer">
+      <td class="mono"><b>${g.r}</b></td><td>${g.role}</td><td>${clsChip(g)}</td></tr>`).join('')}
+  </table></div>
+  ${sel ? `<div class="box ok" style="margin-bottom:0"><div class="t">${esc(sel.r)} · ${esc(sel.role)}</div>${sel.note}
+    <div style="margin-top:6px;font-size:13.5px;color:var(--muted)">跨一次调用后它的值：${sel.cls === 'caller' ? '<b>不保证还在</b> —— 想留值，调用前自己存进栈（caller saved）' : sel.cls === 'callee' ? '<b>保证原封不动</b> —— 对方若想用，会先保存、返回前恢复（callee saved）' : '<b>%rsp 由 call/ret 与栈纪律维护</b>，过程退出时恢复原值'}</div>
+  </div>` : `<div class="box" style="margin-bottom:0">点任意一行看这个寄存器「跨一次调用」之后会发生什么。</div>`}`;
+}
+
+/* ============================================================
+   7.1 yoo / who 事故现场（s7）
+   ============================================================ */
+const YW_STEPS = [
+  { ins: 'yoo 执行中', rdx: null, hl: -1, d: '此时 %rdx 还没有内容。yoo 马上要往里放一个要紧的数。' },
+  { ins: 'movq $15213, %rdx', rdx: 15213n, hl: 1, d: '<code>%rdx = 15213</code>。yoo 的计划：<b>调用 who 回来后</b>把它加进 %rax —— 也就是说，这个值要<b>活过一次调用</b>。' },
+  { ins: 'call who', rdx: 15213n, hl: 2, d: '进入 who。<code>%rdx</code> 是 caller-saved —— <b>没有任何约定要求 who 保留它</b>。' },
+  { ins: 'who: subq $18213, %rdx', rdx: u64(15213n - 18213n), hl: 3, d: 'who 把 <code>%rdx</code> 当自己的工作寄存器：<code>15213 − 18213 = <b>−3000</b></code>（位模式 <code>0xFFFF…F448</code>）。who 没有错 —— 它根本不知道也不必知道 yoo 在 %rdx 里放了什么。' },
+  { ins: 'who ret', rdx: u64(15213n - 18213n), hl: 4, d: '回到 yoo。<code>%rdx</code> 里是 −3000，<b>15213 已经没了</b>。' },
+  { ins: 'addq %rdx, %rax', rdx: u64(15213n - 18213n), hl: 5, d: 'yoo 以为在加 15213，实际加的是 <b>−3000</b>。计算没错、指令没错 —— 错的是<b>没有任何约定说清谁该保住 %rdx</b>。' },
+];
+let ywIdx = -1;
+function renderYw() {
+  if (ywIdx < 0) return `<div class="box" style="margin-bottom:0">按「下一步」看 15213 是怎么变成 −3000 的。</div>`;
+  const s = YW_STEPS[ywIdx];
+  const code = [
+    ['yoo:', -1], ['  • • •', -1], ['  movq $15213, %rdx', 1], ['  call who', 2], ['  addq %rdx, %rax', 5], ['  • • •', -1], ['  ret', -1],
+    ['who:', -1], ['  • • •', -1], ['  subq $18213, %rdx', 3], ['  • • •', -1], ['  ret', 4],
+  ].map(([txt, step]) => `<div style="font-family:var(--font-mono);font-size:13.5px;white-space:pre;${step === s.hl ? 'background:var(--accent-soft);outline:2px solid var(--accent);border-radius:4px' : ''}">${esc(txt)}</div>`).join('');
+  return `
+  <div class="grid g2">
+    <div class="card"><h5>代码</h5>${code}</div>
+    <div class="card"><h5>关键寄存器</h5>
+      <div class="readout" style="margin-top:0">
+        <dt>%rdx</dt><dd>${s.rdx === null ? '—' : `<b>${hex64(s.rdx)}</b> = ${decS(s.rdx)}${s.rdx === 15213n ? '' : '　<span class="chip bad">被 who 覆写</span>'}`}</dd>
+        <dt>%rax</dt><dd>${ywIdx >= 5 ? '<b>' + hex64(u64(15213n - 18213n)) + '</b> = −3000（yoo 以为加的是 15213）' : '（未动）'}</dd>
+      </div>
+    </div>
+  </div>
+  <div class="box ${ywIdx >= 5 ? 'bad' : ''}" style="margin-bottom:0"><div class="t">第 ${ywIdx + 1} / ${YW_STEPS.length} 步 · ${esc(s.ins)}</div>${s.d}
+    ${ywIdx >= 5 ? '<br><b>出路只有两条</b>（下一小节）：要么 yoo 调用前把 15213 存进自己帧里（caller saved），要么规定谁用了 <code>%rdx</code> 谁负责恢复（callee saved）—— x86-64 的答案是把寄存器分成两拨，各自执行其中一种。' : ''}
+  </div>`;
+}
+
+/* ============================================================
+   7.4 call_incr2 模拟器（s7）
+   ============================================================ */
+function c2Build(x, v, d) {
+  const X = u64(BigInt(x)), V = u64(BigInt(v)), D = u64(BigInt(d));
+  const RSP0 = 0x140;
+  const steps = [];
+  let rsp = RSP0;
+  let mem = { [RSP0]: 'RA' };
+  let garbage = {};
+  let r = { rax: null, rsi: null, rdi: X, rbx: 0x1122334455667788n };   // rbx 放个「旧值」演示保存
+  const oldRbx = r.rbx;
+  const push = (ins, inIncr, note, hlReg) =>
+    steps.push({ ins, inIncr, rsp, mem: { ...mem }, regs: { ...r }, note, hlReg, garbage: { ...garbage } });
+  push('（进入 call_incr2）', false, `参数 <code>x = ${decS(X)}</code> 在 <code>%rdi</code>，<code>%rsp = 0x140</code>。<b>麻烦</b>：x 要活过对 incr 的调用，可 incr 的第 1 个参数也要 %rdi。`, 'rdi');
+  rsp = 0x138; mem[0x138] = oldRbx;
+  push('pushq %rbx', false, `callee-saved 的规矩先执行：<code>%rbx</code> 的旧值（${hexTrim(oldRbx)}）压到 <code>0x138</code> —— <b>Saved %rbx</b>。承诺开始兑现。`);
+  rsp = 0x128; mem[0x130] = 'U'; mem[0x128] = 'U';
+  push('subq $16, %rsp', false, '开 16 字节本地空间。此刻帧里自高到低：返回地址（0x140）、Saved %rbx（0x138）、未用（0x130）、未用（0x128）。');
+  r.rbx = X;
+  push('movq %rdi, %rbx', false, `<code>x</code> 搬进 <code>%rbx</code> —— <b>callee-saved 寄存器是「跨调用保活」的合法居所</b>。%rdi 腾出来给 incr 用。`, 'rbx');
+  mem[0x130] = V;
+  push('movq $15213, 8(%rsp)', false, `<code>v1 = ${decS(V)}</code> 放进 <code>8(%rsp) = 0x130</code>。`);
+  r.rsi = D;
+  push('movl $3000, %esi', false, `参数 <code>val = ${decS(D)}</code> 进 <code>%rsi</code>。`, 'rsi');
+  r.rdi = 0x130;
+  push('leaq 8(%rsp), %rdi', false, `参数 <code>p = &amp;v1 = 0x130</code> 进 <code>%rdi</code>（刚腾出来的位置）。`, 'rdi');
+  rsp = 0x120; mem[0x120] = 'RA';
+  push('call incr', false, '返回地址压到 0x120，进入 incr。');
+  r.rax = V;
+  push('movq (%rdi), %rax', true, `<code>x = *p = ${decS(V)}</code>。`, 'rax');
+  r.rsi = u64(BigInt.asIntN(64, BigInt(V) + BigInt(D)));
+  push('addq %rax, %rsi', true, `<code>y = ${decS(V)} + ${decS(D)} = ${decS(r.rsi)}</code>。`);
+  mem[0x130] = r.rsi;
+  push('movq %rsi, (%rdi)', true, `<code>*p = y</code>：0x130 上的 v1 变成 <b>${decS(r.rsi)}</b>。`);
+  push('ret', true, `incr 返回，<code>%rax = ${decS(V)}</code>（旧 v1），<code>%rsp</code> 回 0x128。`);
+  garbage[0x120] = true;
+  r.rax = c2Final(X, V, D);
+  push('addq %rbx, %rax', false, `<code>x + v2 = ${decS(X)} + ${decS(V)} = <b>${decS(r.rax)}</b></code> —— 全靠 <code>%rbx</code> 把 x 完好地带过了那次调用。`, 'rax');
+  rsp = 0x138; garbage[0x130] = true; garbage[0x128] = true;
+  push('addq $16, %rsp', false, '本地空间释放（内容照旧残留），<code>%rsp</code> 指回 Saved %rbx（0x138）。');
+  r.rbx = oldRbx; rsp = 0x140; garbage[0x138] = true;
+  push('popq %rbx', false, `<code>%rbx</code> 恢复成进入前的 ${hexTrim(oldRbx)} —— <b>callee-saved 的后半句承诺兑现</b>。`);
+  push('ret', false, `弹出返回地址，回到调用者。返回值 <b>${decS(r.rax)}</b> 在 <code>%rax</code>。`);
+  return { steps, final: r.rax, v2: V };
+}
+let c2State = null;
+function renderC2() {
+  const st = c2State;
+  if (!st) return `<div class="box" style="margin-bottom:0">点「载入」开始逐条执行。</div>`;
+  const cur = st.idx >= 0 ? st.build.steps[st.idx] : null;
+  const addrs = [0x140, 0x138, 0x130, 0x128, 0x120];
+  const rows = addrs.map(a => {
+    const v = cur ? cur.mem[a] : undefined;
+    const isTop = cur && a === cur.rsp;
+    const isGar = cur && !!cur.garbage[a];
+    const label = a === 0x140 ? '返回地址（call_incr2 的）' : a === 0x138 ? 'Saved %rbx' : a === 0x130 ? 'v1' : a === 0x128 ? '（未用）' : '返回地址（incr 的）';
+    const val = v === undefined ? '<span class="chip gray">栈外</span>'
+      : v === 'RA' ? '<b class="mono">RtnAddr</b>'
+      : v === 'U' ? '<span class="chip gray">未初始化</span>'
+      : typeof v === 'bigint'
+        ? `${isGar ? '<span class="mono">' + hex64(v) + ' = ' + decS(v) + '</span> <span class="chip warn">垃圾（内存未变）</span>' : '<b class="mono">' + hex64(v) + '</b> = ' + decS(v)}`
+      : '——';
+    return `<tr class="${isTop ? 'hl' : ''}"><td class="mono">${hexN(a)}</td><td>${val}</td><td>${label}</td><td class="mono">${isTop ? '<b>%rsp</b>' : ''}</td></tr>`;
+  }).join('');
+  const regChips = cur ? [['%rdi', cur.regs.rdi, cur.hlReg === 'rdi'], ['%rsi', cur.regs.rsi, cur.hlReg === 'rsi'],
+    ['%rax', cur.regs.rax, cur.hlReg === 'rax'], ['%rbx', cur.regs.rbx, cur.hlReg === 'rbx']]
+    .map(([nm, v, hot]) => `<span class="chip ${hot ? 'ok' : 'gray'}" style="font-family:var(--font-mono)">${nm} = ${v === null ? '—' : hexTrim(v) + ' = ' + decS(v)}</span>`).join(' ') : '';
+  return `
+  <div class="readout" style="margin-top:0">
+    <dt>输入</dt><dd>x = ${decS(st.x)}，v1 = ${decS(st.v)}，val = ${decS(st.d)}</dd>
+    <dt>进度</dt><dd>${st.idx + 1} / ${st.build.steps.length} 条　<span style="font-family:var(--font-sans);color:var(--muted)">（斜体 = incr 内部）</span></dd>
+    ${cur ? `<dt>寄存器</dt><dd>${regChips}</dd>` : ''}
+  </div>
+  <div class="tbl-wrap"><table class="tbl">
+    <tr><th>地址</th><th>内容</th><th>含义</th><th></th></tr>${rows}
+  </table></div>
+  <div class="steps">
+    ${st.build.steps.map((s, i) => `<div class="step${i <= st.idx ? ' on' : ''}">
+      <div class="h">${i <= st.idx ? '已执行' : '未执行'} · ${s.inIncr ? 'incr 内部' : 'call_incr2'}</div>
+      <div class="m">${esc(s.ins)}</div>
+      <div class="e">${s.note}</div>
+    </div>`).join('')}
+  </div>
+  <div class="box ${st.idx >= st.build.steps.length - 1 ? 'ok' : ''}" style="margin-bottom:0"><div class="t">
+    ${st.idx >= st.build.steps.length - 1 ? `跑完了：返回值 = ${decS(st.build.final)}（= x + 旧 v1）；%rbx 已恢复；0x130 上残留 ${decS(u64(BigInt(st.v) + BigInt(st.d)))}` : '单步执行，跟一遍 x 的完整旅程。'}</div>
+    ${st.idx >= st.build.steps.length - 1 ? 'C 语义等价于 <code>x + v</code>（v = 旧 v1），已与编译执行的 C 程序逐例对过（见页脚）。' : '对应课件第 58–65 页的 8 张栈结构图。'}
+  </div>`;
+}
+
+/* ============================================================
+   8.3 pcount_r 递归追踪器（s8）—— 纯计算辅助（供 C 交叉验证）
+   ============================================================ */
+/** 递归 popcount：与页面追踪器同一语义（x 按 64 位无符号）。 */
+function pcountR(x) {
+  x = u64(x);
+  if (x === 0n) return 0n;
+  return (x & 1n) + pcountR(x >> 1n);
+}
+function pcBuild(x0) {
+  const x = u64(BigInt(x0));
+  if (x >> 32n !== 0n) return null;              // 追踪器限 32 位，防步骤爆炸
+  const steps = [];
+  const stack = [];                              // {x, bit}
+  let rax = null;
+  const push = (ins, note) => steps.push({ ins, note, frames: stack.map(f => ({ ...f })), rax });
+  function enter(v) {
+    stack.push({ x: v, bit: null });
+    push(`call pcount_r（x = 0x${v.toString(16)}）`, `第 ${stack.length} 层：参数 <code>x = ${decU(v)}</code>（二进制 <code>${v.toString(2)}</code>）经 <code>%rdi</code> 进入。`);
+    if (v === 0n) {
+      push('testq %rdi, %rdi → je .L6', 'x == 0：<b>基准情形</b>。不用压 %rbx，直接带着 <code>%rax = 0</code> 返回。');
+      rax = 0n;
+      stack.pop();
+      push('ret（返回 0）', '把 0 交给上一层 —— 递归到此见底。');
+      return;
+    }
+    push('pushq %rbx', '要占用 callee-saved 的 <code>%rbx</code>，先把旧值压栈 —— <b>每一层帧都存着自己那份</b>。');
+    const b = v & 1n;
+    stack[stack.length - 1].bit = b;
+    push('movq %rdi, %rbx / andl $1, %ebx', `<code>%rbx = x &amp; 1 = ${b}</code>（本层的「末位」）。<code>andl</code> 写 32 位寄存器，<code>%rbx</code> 高 32 位清零 —— 对 0/1 无碍。`);
+    push('shrq %rdi', `<code>%rdi = x &gt;&gt; 1 = ${decU(v >> 1n)}</code> —— 递归参数就位（第 4 节的规矩：参数住在 %rdi）。`);
+    push('call pcount_r（递归）', `带着 <code>x &gt;&gt; 1</code> 递归下去。<code>%rbx</code> 里的 ${b} 由 callee-saved 约定保活。`);
+    enter(v >> 1n);
+    rax = (v & 1n) + rax;
+    push('addq %rbx, %rax', `递归返回了 <code>${decU(rax - (v & 1n))}</code>，加回本层的 <code>${b}</code> → <code>%rax = ${decU(rax)}</code>。`);
+    stack.pop();
+    push('popq %rbx / ret', `恢复本层保存的 %rbx 并返回 —— 本层帧释放，返回值 <b>${decU(rax)}</b> 在 %rax 里。`);
+  }
+  enter(x);
+  return { steps, result: rax, depth: x === 0n ? 1 : x.toString(2).length };
+}
+let pcState = null;
+function renderPc() {
+  const st = pcState;
+  if (!st) return `<div class="box" style="margin-bottom:0">点「载入」开始（x 限 32 位以内，防止步骤爆炸）。</div>`;
+  const cur = st.idx >= 0 ? st.steps[st.idx] : null;
+  const frames = cur ? cur.frames : [];
+  const F = frames.length;
+  const W = 520, FH = 30, H = 54 + Math.max(F, 1) * (FH + 6);
+  const rects = frames.map((f, i) => {
+    const y = 40 + i * (FH + 6);
+    return `<rect x="140" y="${y}" width="250" height="${FH}" rx="6" fill="var(--paper-soft)" stroke="${i === F - 1 ? 'var(--accent)' : 'var(--line)'}" ${i === F - 1 ? 'stroke-width="2"' : ''}/>
+      <text x="152" y="${y + 20}" font-size="12" fill="var(--ink)" font-family="var(--font-mono)">x=0x${f.x.toString(16)}${f.bit !== null ? `  bit=${f.bit}` : ''}</text>`;
+  }).join('');
+  return `
+  <div class="readout" style="margin-top:0">
+    <dt>x</dt><dd>0x${u64(st.x).toString(16)} = ${decU(st.x)}　<span style="font-family:var(--font-sans);color:var(--muted)">二进制 ${u64(st.x).toString(2)}</span></dd>
+    <dt>进度</dt><dd>${st.idx + 1} / ${st.steps.length} 步</dd>
+    <dt>递归深度</dt><dd>${st.depth} 层（= x 的二进制位数；x = 0 时 1 层即返回）</dd>
+    ${cur ? `<dt>当前 %rax</dt><dd>${cur.rax === null ? '—' : decU(cur.rax)}</dd>` : ''}
+  </div>
+  <svg viewBox="0 0 ${W} ${H}" width="100%" style="max-width:${W}px;height:auto;display:block" role="img" aria-label="递归调用栈">
+    <text x="14" y="24" font-size="12" fill="var(--muted)">调用栈（栈顶在最下）</text>
+    ${F ? rects : `<text x="140" y="60" font-size="13" fill="var(--muted)" font-family="var(--font-mono)">（空）</text>`}
+    ${F ? `<line x1="120" y1="${40 + (F - 1) * (FH + 6)}" x2="136" y2="${40 + (F - 1) * (FH + 6)}" stroke="var(--accent)" stroke-width="2"/>
+      <text x="116" y="${44 + (F - 1) * (FH + 6)}" text-anchor="end" font-size="12" fill="var(--accent)" font-family="var(--font-mono)">栈顶</text>` : ''}
+  </svg>
+  <div class="steps">
+    ${st.steps.map((s, i) => `<div class="step${i <= st.idx ? ' on' : ''}">
+      <div class="h">${i <= st.idx ? '已执行' : '未执行'}</div>
+      <div class="m">${esc(s.ins)}</div>
+      <div class="e">${s.note}</div>
+    </div>`).join('')}
+  </div>
+  <div class="box ${st.idx >= st.steps.length - 1 ? 'ok' : ''}" style="margin-bottom:0"><div class="t">
+    ${st.idx >= st.steps.length - 1 ? `递归跑完：pcount_r(${decU(st.x)}) = <b>${decU(st.result)}</b>` : '单步执行：先一层层压栈，见底后再一层层回加。'}</div>
+    ${st.idx >= st.steps.length - 1 ? `与硬件的 <code>popcount</code> 指令、与本页现算的位计数一致；本页的参考实现已用 C 重写并与 <code>__builtin_popcountll</code> 在上百万个输入上比对（见页脚）。第 5 讲的迭代版 <code>pcount_do</code> 算的是同一个数 —— <b>控制结构不同，机器机制相同</b>。` : '每一帧只保存两样自己的东西：%rbx 旧值与本层的 x &amp; 1。'}
+  </div>`;
+}
+
+/* ============================================================
+   9.2 判断题（s9）
+   ============================================================ */
+const TF_Q = [
+  { q: 'popq 把值弹进寄存器后，那个栈格子里的 8 个字节会被清零。', a: false,
+    why: '恰恰相反 —— 课件第 17 页整页强调「The memory doesn\'t change, only the value of %rsp」。弹栈只移动指针，旧格子里的数据原样残留（成为垃圾）。见 2.3 节。' },
+  { q: 'x86-64 的栈向高地址方向生长。', a: false,
+    why: '向<b>低地址</b>生长（grows toward lower addresses）：压栈是 <code>%rsp −= 8</code>。见 2.1 节。' },
+  { q: '第 7 个参数与第 1 个参数一样走寄存器传递，只是换成 %r10。', a: false,
+    why: '只有前 6 个走寄存器（%rdi…%r9）；第 7 个起由调用者压到栈上（参数构建区），进入被调用者后位于返回地址之上（%rsp+8）。%r10/%r11 是 caller-saved 临时寄存器，不承担传参。见 4.1 节。' },
+  { q: '%rbp 必须用作帧指针，否则函数无法返回。', a: false,
+    why: '%rbp 是<b>可选</b>的帧指针。返回只依赖栈上的返回地址（%rsp 就能定位），大量函数根本不用 %rbp。见 5.3、7.3 节。' },
+  { q: '被调用者可以随便改写 %rbx，只要自己最后记得 ret 就行。', a: false,
+    why: '%rbx 是 callee-saved：想用就<b>必须先保存旧值、返回前恢复</b>。「记得 ret」只管控制流，不管数据。见 7.3 节。' },
+  { q: '递归需要 CPU 提供专门的指令或机制来支持。', a: false,
+    why: '递归<b>不需要</b>任何专门指令或机制：栈帧让每次调用都有私有存储，寄存器保存约定防止互相践踏 —— 课件原话「Handled Without Special Consideration」。见 8.4 节。' },
+];
+let tfState = TF_Q.map(() => null);
+function renderTf() {
+  const done = tfState.filter(v => v !== null).length;
+  const right = TF_Q.filter((q, i) => tfState[i] === q.a).length;
+  return TF_Q.map((q, i) => {
+    const st = tfState[i];
+    const cls = st === null ? '' : st === q.a ? ' correct done' : ' wrong done';
+    return `<div class="puzzle${cls}" style="flex-direction:column;align-items:stretch">
+      <div class="q" style="white-space:normal">${i + 1}. ${q.q}</div>
+      <div class="btns">
+        <button class="sm" data-tf="${i}:1">真</button>
+        <button class="sm" data-tf="${i}:0">假</button>
+      </div>
+      <div class="exp"><span class="verdict">${st === null ? '' : st === q.a ? '✓ 判断正确' : '✗ 判断有误'}</span>
+        &nbsp;正确答案：<b>${q.a ? '真' : '假'}</b><br>${q.why}</div>
+    </div>`;
+  }).join('') + `<div class="box ${done === TF_Q.length && right === TF_Q.length ? 'ok' : ''}" style="margin-bottom:0">
+    <div class="t">进度：${done} / ${TF_Q.length}　答对 ${right}</div>
+    ${done === TF_Q.length ? (right === TF_Q.length ? '全对。' : '错题上方已给出依据所在的小节。') : '点「真 / 假」立刻判定。'}
+  </div>`;
+}
+
+/* ============================================================
+   9.3 选择题测验（s9）
+   ============================================================ */
+const QUIZ = [
+  { q: '<code>call label</code> 依次做哪两件事？',
+    o: ['把返回地址压栈，然后跳到 label', '跳到 label，然后把返回地址压栈', '把 %rip 压栈，然后跳到 label', '把 label 压栈，然后改 %rsp'], a: 0,
+    w: '先压返回地址（call 的下一条指令地址）再跳转。顺序反了就会被自己的代码地址糊弄。见 3.2 节。' },
+  { q: '课件例子里，执行 <code>callq 400550</code>（位于 0x400544）之后，栈顶 8 字节是什么？',
+    o: ['0x400544', '0x400550', '0x400549', '0x40054c'], a: 2,
+    w: '返回地址 = call 的地址 + 编码长度 = 0x400544 + 5 = 0x400549 —— 紧挨着的下一条指令 mov %rax,(%rbx)。见 3.3、3.4 节。' },
+  { q: '<code>ret</code> 执行后，<code>%rip</code> 变成什么？',
+    o: ['call 指令自己的地址', '从栈里弹出的那个地址', 'ret 的下一条指令的地址', '%rsp 的值'], a: 1,
+    w: 'ret = 弹出地址 + 跳过去。弹出的正是当年 call 压入的返回地址。见 3.2 节。' },
+  { q: '编译器写 <code>movl $3000, %esi</code> 而不是 <code>movq</code>，理由是（两条都对的那组）：',
+    o: ['movl 更快，movl 不设标志位', 'movl 会把 %rsi 高 32 位清零，而且编码更短', 'movl 是 64 位指令的别名', 'movq 在长模式下非法'], a: 1,
+    w: '写 32 位寄存器自动清零高半段 —— %rsi 得到干净的 3000；编码 5 字节比 movq 的 7 字节省 2 字节（课件写 1 字节，本页勘误按 2 字节）。见 6.3 节。' },
+  { q: '一个函数有 9 个 long 参数，第 8 个参数在<b>被调用者刚进入时</b>位于哪里？',
+    o: ['%r10', '%rsp + 8', '%rsp + 16', '%rbp + 8'], a: 2,
+    w: '进入时 %rsp 指着返回地址；参数 7 从 %rsp+8 开始，每个 8 字节 —— 第 8 个在 %rsp+16。见 4.1 节的分配器。' },
+  { q: '下面哪一组<b>全部</b>是 callee-saved？',
+    o: ['%rax, %rdx, %rcx', '%rbx, %r12, %r13, %r15', '%r10, %r11, %r9', '%rsi, %rdi, %r8'], a: 1,
+    w: 'callee-saved 是 %rbx、%r12–%r15（课件漏了 %r15，ABI 明确包含它），外加特殊的 %rbp 与 %rsp。%rax/参数寄存器/%r10/%r11 都是 caller-saved。见 7.3 节。' },
+  { q: '<code>call_incr2</code> 开头 <code>pushq %rbx</code> 的目的是？',
+    o: ['对齐 %rsp 到 16 字节', '占用 %rbx 前先保存它的旧值（返回前还要恢复）', '给 incr 传第 7 个参数', '保存返回地址'], a: 1,
+    w: '想占用 callee-saved 寄存器，必须先保存它的旧值（返回前 popq 恢复）。这不是对齐 —— 对齐由 subq $16 完成。见 7.4 节。' },
+  { q: '课件例子里 <code>call_incr()</code>（v1=15213，incr(&amp;v1, 3000)）的返回值是？',
+    o: ['15213', '18213', '3000', '33426'], a: 3,
+    w: 'incr 返回旧 v1 = 15213（v2），并把 v1 写成 18213；返回 v1+v2 = 18213 + 15213 = 33426。用 6.2 节的模拟器单步可验证。' },
+  { q: '<code>pcount_r</code> 里递归调用的参数为什么「已经在 %rdi 里」？',
+    o: ['call 会自动复制 %rdi', '因为上一条 shrq %rdi 把 x>>1 留在了 %rdi，而第一个参数恰好住 %rdi', '因为 %rdi 是 callee-saved', '因为 pushq %rbx 把参数顶到了栈上'], a: 1,
+    w: 'shrq %rdi 之后 %rdi = x>>1，正好是递归调用的第 1 个参数 —— 传参就是「把值放进约定的寄存器」，没有额外动作。见 8.1、8.2 节。' },
+  { q: '「栈纪律（stack discipline）」最核心的性质是？',
+    o: ['栈永远恰好 16 字节对齐', '若 P 调用了 Q，Q 一定先于 P 返回（LIFO）', '每帧的大小固定为 128 字节', '只有递归函数才有栈帧'], a: 1,
+    w: 'callee 先于 caller 返回 —— 后进先出。这一条让「每帧私有存储」成为可能，也是递归自动正确的根源。见 5.1、8.4 节。' },
+];
+let qzState = QUIZ.map(() => null);
+function renderQuiz() {
+  const answered = qzState.filter(v => v !== null).length;
+  const right = QUIZ.filter((q, i) => qzState[i] === q.a).length;
+  const list = QUIZ.map((q, i) => {
+    const sel = qzState[i];
+    const cls = sel === null ? '' : sel === q.a ? ' correct done' : ' wrong done';
+    return `<div class="puzzle${cls}" style="flex-direction:column;align-items:stretch">
+      <div class="q" style="white-space:normal"><b>${i + 1}.</b> ${q.q}</div>
+      <div style="display:flex;flex-wrap:wrap;gap:7px;margin-top:8px">
+        ${q.o.map((o, j) => `<button class="sm" data-qzo="${i}:${j}"
+          style="${sel === null ? '' : j === q.a ? 'border-color:var(--ok-bd);background:var(--ok-bg)'
+            : j === sel ? 'border-color:var(--bad-bd);background:var(--bad-bg)' : 'opacity:.6'}">
+          ${'ABCD'[j]}. ${o}</button>`).join('')}
+      </div>
+      <div class="exp"><span class="verdict">${sel === null ? '' : sel === q.a ? '✓ 正确' : '✗ 错误'}</span>
+        &nbsp;正确答案：<b>${'ABCD'[q.a]}. ${q.o[q.a]}</b><br>${q.w}</div>
+    </div>`;
+  }).join('');
+  const score = answered === 0 ? '' : `<div class="box ${right === QUIZ.length ? 'ok' : right >= QUIZ.length / 2 ? 'warn' : 'bad'}" style="margin-bottom:0">
+    <div class="t">已答 ${answered} / ${QUIZ.length} 题，答对 ${right} 题</div>
+    ${answered === QUIZ.length
+      ? (right === QUIZ.length ? '全对 —— 这一讲的四块（栈与 push/pop / call-ret / 调用约定 / 递归）都拿下了。'
+        : '错题上方已标出正确答案与依据，回到对应小节再看一遍即可。')
+      : '继续答题，每题都会立即给出解析。'}
+  </div>`;
+  return list + score;
+}
+
+/* ============================================================
+   初始化
+   ============================================================ */
+function initAll() {
+  /* --- 1. 机制匹配器 --- */
+  if ($('#mechOut')) {
+    const doMech = m => {
+      $$('#mechSeg button').forEach(b => b.classList.toggle('on', b.dataset.m === m));
+      $('#mechOut').innerHTML = renderMech(m);
+    };
+    $$('#mechSeg button').forEach(b => b.addEventListener('click', () => doMech(b.dataset.m)));
+    doMech('ctl');
+  }
+
+  /* --- 2. push/pop 模拟器 --- */
+  if ($('#stkOut')) {
+    const stkSeq = $('#stkSeq');
+    let stkTimer = null;
+    const doStk = load => {
+      if (load) {
+        const prog = stkParse(stkSeq.value);
+        if (!prog) { $('#stkOut').innerHTML = badBox('序列要形如 <code>push %rax, pop %rbx</code>：每条是 push/pushq 或 pop/popq 加一个寄存器名（%rax…%r15、%rbp），用逗号分隔。'); stkState = null; return; }
+        stkState = { prog, idx: 0, steps: stkBuild(prog) };
+      }
+      $('#stkOut').innerHTML = renderStk();
+    };
+    const stkStep = () => {
+      if (!stkState) { doStk(true); return; }
+      if (stkState.idx < stkState.prog.length) { stkState.idx++; doStk(false); }
+    };
+    $('#stkGo').addEventListener('click', () => { clearInterval(stkTimer); stkTimer = null; doStk(true); });
+    stkSeq.addEventListener('keydown', e => { if (e.key === 'Enter') { clearInterval(stkTimer); stkTimer = null; doStk(true); } });
+    $('#stkNext').addEventListener('click', stkStep);
+    $('#stkRun').addEventListener('click', () => {
+      if (!stkState) doStk(true);
+      clearInterval(stkTimer);
+      stkTimer = setInterval(() => {
+        if (!stkState || stkState.idx >= stkState.prog.length) { clearInterval(stkTimer); stkTimer = null; return; }
+        stkStep();
+      }, 700);
+    });
+    $('#stkReset').addEventListener('click', () => { clearInterval(stkTimer); stkTimer = null; stkState = null; $('#stkOut').innerHTML = renderStk(); });
+    $$('[data-stk]').forEach(b => b.addEventListener('click', () => {
+      stkSeq.value = b.dataset.stk; clearInterval(stkTimer); stkTimer = null; doStk(true);
+    }));
+    doStk(true);
+  }
+
+  /* --- 3.3 call/ret 追踪 --- */
+  if ($('#crOut')) {
+    let crTimer = null;
+    const doCr = () => {
+      $('#crOut').innerHTML = renderCr();
+      $('#crNext').textContent = crIdx >= CR_STATES.length - 1 ? '已完成' : `下一步（${crIdx + 2}/${CR_STATES.length}）`;
+    };
+    $('#crNext').addEventListener('click', () => { if (crIdx < CR_STATES.length - 1) { crIdx++; doCr(); } });
+    $('#crReset').addEventListener('click', () => { clearInterval(crTimer); crTimer = null; crIdx = -1; doCr(); });
+    $('#crRun').addEventListener('click', () => {
+      clearInterval(crTimer);
+      if (crIdx < 0) { crIdx = 0; doCr(); }
+      crTimer = setInterval(() => {
+        if (crIdx >= CR_STATES.length - 1) { clearInterval(crTimer); crTimer = null; return; }
+        crIdx++; doCr();
+      }, 900);
+    });
+    doCr();
+  }
+
+  /* --- 3.4 返回地址计算器 --- */
+  if ($('#rcOut')) {
+    const rcAddr = $('#rcAddr');
+    let rcLen = 5;
+    const doRc = () => {
+      const a = parseU64(rcAddr.value);
+      if (a === null || a > MASK64 - 5n) { $('#rcOut').innerHTML = badBox('地址要是 64 位以内的整数（支持 0x… 十六进制），且要给编码留出几个字节。'); return; }
+      $('#rcOut').innerHTML = renderRc(a, rcLen);
+    };
+    $$('#rcSeg button').forEach(b => b.addEventListener('click', () => {
+      rcLen = +b.dataset.l;
+      $$('#rcSeg button').forEach(x => x.classList.toggle('on', x === b));
+      doRc();
+    }));
+    $('#rcGo').addEventListener('click', doRc);
+    rcAddr.addEventListener('keydown', e => { if (e.key === 'Enter') doRc(); });
+    doRc();
+  }
+
+  /* --- 4.1 参数分配器 --- */
+  if ($('#argOut')) {
+    const argN = $('#argN');
+    const doArg = () => {
+      const t = String(argN.value).trim();
+      if (!/^[0-9]+$/.test(t) || +t > 16) { $('#argOut').innerHTML = badBox('参数个数要是 0…16 的整数（演示上限）。'); return; }
+      $('#argOut').innerHTML = renderArg(+t);
+    };
+    $('#argGo').addEventListener('click', doArg);
+    argN.addEventListener('keydown', e => { if (e.key === 'Enter') doArg(); });
+    $$('[data-arg]').forEach(b => b.addEventListener('click', () => { argN.value = b.dataset.arg; doArg(); }));
+    doArg();
+  }
+
+  /* --- 5.4 栈帧生长模拟器 --- */
+  if ($('#fwOut')) {
+    let fwTimer = null;
+    const doFw = () => {
+      $('#fwOut').innerHTML = renderFw();
+      $('#fwNext').textContent = fwIdx >= FW_STEPS.length - 1 ? '已完成' : `下一步（${fwIdx + 2}/${FW_STEPS.length}）`;
+    };
+    $('#fwNext').addEventListener('click', () => { if (fwIdx < FW_STEPS.length - 1) { fwIdx++; doFw(); } });
+    $('#fwReset').addEventListener('click', () => { clearInterval(fwTimer); fwTimer = null; fwIdx = -1; doFw(); });
+    $('#fwRun').addEventListener('click', () => {
+      clearInterval(fwTimer);
+      if (fwIdx < 0) { fwIdx = 0; doFw(); }
+      fwTimer = setInterval(() => {
+        if (fwIdx >= FW_STEPS.length - 1) { clearInterval(fwTimer); fwTimer = null; return; }
+        fwIdx++; doFw();
+      }, 1000);
+    });
+    doFw();
+  }
+
+  /* --- 5.5 栈帧布局构造器 --- */
+  if ($('#sfOut')) {
+    const doSf = () => { $('#sfOut').innerHTML = renderSf(); };
+    $$('[data-sf]').forEach(b => b.addEventListener('click', () => { sfState[b.dataset.sf] = !sfState[b.dataset.sf]; doSf(); }));
+    $('#sfClear').addEventListener('click', () => { sfState = { in: false, loc: false, sav: false, arg: false, rbp: false }; doSf(); });
+    doSf();
+  }
+
+  /* --- 6.2 call_incr 模拟器 --- */
+  if ($('#ciOut')) {
+    const ciV = $('#ciV'), ciD = $('#ciD');
+    let ciTimer = null;
+    const doCi = load => {
+      if (load) {
+        const v = parseU64(ciV.value), d = parseU64(ciD.value);
+        if (v === null || d === null) { ciState = null; $('#ciOut').innerHTML = badBox('初值与增量都要是 64 位整数（可带负号）。'); return; }
+        ciState = { v, d, build: ciBuild(v, d), idx: -1 };
+      }
+      $('#ciOut').innerHTML = renderCi();
+    };
+    const ciStep = () => {
+      if (!ciState) { doCi(true); return; }
+      if (ciState.idx < ciState.build.steps.length - 1) { ciState.idx++; doCi(false); }
+    };
+    $('#ciGo').addEventListener('click', () => { clearInterval(ciTimer); ciTimer = null; doCi(true); });
+    [ciV, ciD].forEach(el => el.addEventListener('keydown', e => { if (e.key === 'Enter') { clearInterval(ciTimer); ciTimer = null; doCi(true); } }));
+    $('#ciNext').addEventListener('click', ciStep);
+    $('#ciRun').addEventListener('click', () => {
+      if (!ciState) doCi(true);
+      clearInterval(ciTimer);
+      ciTimer = setInterval(() => {
+        if (!ciState || ciState.idx >= ciState.build.steps.length - 1) { clearInterval(ciTimer); ciTimer = null; return; }
+        ciStep();
+      }, 650);
+    });
+    $('#ciReset').addEventListener('click', () => { clearInterval(ciTimer); ciTimer = null; if (ciState) { ciState.idx = -1; doCi(false); } else doCi(true); });
+    doCi(true);
+  }
+
+  /* --- 6.3 movl 实验台 --- */
+  if ($('#mlOut')) {
+    const mlVal = $('#mlVal');
+    const doMl = () => {
+      const v = parseU64(mlVal.value);
+      if (v === null) { $('#mlOut').innerHTML = badBox('要是一个 64 位以内的整数（可带负号、支持 0x…）。'); return; }
+      $('#mlOut').innerHTML = renderMl(v);
+    };
+    $('#mlGo').addEventListener('click', doMl);
+    mlVal.addEventListener('keydown', e => { if (e.key === 'Enter') doMl(); });
+    $$('[data-ml]').forEach(b => b.addEventListener('click', () => { mlVal.value = b.dataset.ml; doMl(); }));
+    doMl();
+  }
+
+  /* --- 7.3 寄存器分类表 --- */
+  if ($('#rqOut')) {
+    const doRq = f => {
+      $$('#rqSeg button').forEach(b => b.classList.toggle('on', b.dataset.f === f));
+      $('#rqOut').innerHTML = renderRq(f);
+      $$('[data-rq]').forEach(tr => tr.addEventListener('click', () => {
+        rqSel = rqSel === +tr.dataset.rq ? -1 : +tr.dataset.rq;
+        $('#rqOut').innerHTML = renderRq(f);
+        $$('[data-rq]').forEach(tr2 => tr2.addEventListener('click', () => {
+          rqSel = rqSel === +tr2.dataset.rq ? -1 : +tr2.dataset.rq;
+          $('#rqOut').innerHTML = renderRq(f);
+        }));
+      }));
+    };
+    $$('#rqSeg button').forEach(b => b.addEventListener('click', () => doRq(b.dataset.f)));
+    doRq('all');
+  }
+
+  /* --- 7.1 yoo/who 事故现场 --- */
+  if ($('#ywOut')) {
+    let ywTimer = null;
+    const doYw = () => {
+      $('#ywOut').innerHTML = renderYw();
+      $('#ywNext').textContent = ywIdx >= YW_STEPS.length - 1 ? '已完成' : `下一步（${ywIdx + 2}/${YW_STEPS.length}）`;
+    };
+    $('#ywNext').addEventListener('click', () => { if (ywIdx < YW_STEPS.length - 1) { ywIdx++; doYw(); } });
+    $('#ywReset').addEventListener('click', () => { clearInterval(ywTimer); ywTimer = null; ywIdx = -1; doYw(); });
+    $('#ywRun').addEventListener('click', () => {
+      clearInterval(ywTimer);
+      if (ywIdx < 0) { ywIdx = 0; doYw(); }
+      ywTimer = setInterval(() => {
+        if (ywIdx >= YW_STEPS.length - 1) { clearInterval(ywTimer); ywTimer = null; return; }
+        ywIdx++; doYw();
+      }, 850);
+    });
+    doYw();
+  }
+
+  /* --- 7.4 call_incr2 模拟器 --- */
+  if ($('#c2Out')) {
+    const c2X = $('#c2X'), c2V = $('#c2V'), c2D = $('#c2D');
+    let c2Timer = null;
+    const doC2 = load => {
+      if (load) {
+        const x = parseU64(c2X.value), v = parseU64(c2V.value), d = parseU64(c2D.value);
+        if (x === null || v === null || d === null) { c2State = null; $('#c2Out').innerHTML = badBox('x、初值、增量都要是 64 位整数（可带负号）。'); return; }
+        c2State = { x, v, d, build: c2Build(x, v, d), idx: -1 };
+      }
+      $('#c2Out').innerHTML = renderC2();
+    };
+    const c2Step = () => {
+      if (!c2State) { doC2(true); return; }
+      if (c2State.idx < c2State.build.steps.length - 1) { c2State.idx++; doC2(false); }
+    };
+    $('#c2Go').addEventListener('click', () => { clearInterval(c2Timer); c2Timer = null; doC2(true); });
+    [c2X, c2V, c2D].forEach(el => el.addEventListener('keydown', e => { if (e.key === 'Enter') { clearInterval(c2Timer); c2Timer = null; doC2(true); } }));
+    $('#c2Next').addEventListener('click', c2Step);
+    $('#c2Run').addEventListener('click', () => {
+      if (!c2State) doC2(true);
+      clearInterval(c2Timer);
+      c2Timer = setInterval(() => {
+        if (!c2State || c2State.idx >= c2State.build.steps.length - 1) { clearInterval(c2Timer); c2Timer = null; return; }
+        c2Step();
+      }, 650);
+    });
+    $('#c2Reset').addEventListener('click', () => { clearInterval(c2Timer); c2Timer = null; if (c2State) { c2State.idx = -1; doC2(false); } else doC2(true); });
+    doC2(true);
+  }
+
+  /* --- 8.3 递归追踪器 --- */
+  if ($('#pcOut')) {
+    const pcX = $('#pcX');
+    let pcTimer = null;
+    const doPc = load => {
+      if (load) {
+        const x = parseU64(pcX.value);
+        if (x === null) { pcState = null; $('#pcOut').innerHTML = badBox('x 要是一个 64 位以内的整数（支持 0x…）。'); return; }
+        const b = pcBuild(x);
+        if (!b) { pcState = null; $('#pcOut').innerHTML = badBox('追踪器只演示 32 位以内的 x（递归深度 = x 的位数，超过会滚出几百步）。想看大数的结果，用 8.4 节的结论：机制完全相同。'); return; }
+        pcState = { x, steps: b.steps, result: b.result, depth: b.depth, idx: -1 };
+      }
+      $('#pcOut').innerHTML = renderPc();
+    };
+    const pcStep = () => {
+      if (!pcState) { doPc(true); return; }
+      if (pcState.idx < pcState.steps.length - 1) { pcState.idx++; doPc(false); }
+    };
+    $('#pcGo').addEventListener('click', () => { clearInterval(pcTimer); pcTimer = null; doPc(true); });
+    pcX.addEventListener('keydown', e => { if (e.key === 'Enter') { clearInterval(pcTimer); pcTimer = null; doPc(true); } });
+    $('#pcNext').addEventListener('click', pcStep);
+    $('#pcRun').addEventListener('click', () => {
+      if (!pcState) doPc(true);
+      clearInterval(pcTimer);
+      pcTimer = setInterval(() => {
+        if (!pcState || pcState.idx >= pcState.steps.length - 1) { clearInterval(pcTimer); pcTimer = null; return; }
+        pcStep();
+      }, 280);
+    });
+    $('#pcReset').addEventListener('click', () => { clearInterval(pcTimer); pcTimer = null; if (pcState) { pcState.idx = -1; doPc(false); } else doPc(true); });
+    $$('[data-pc]').forEach(b => b.addEventListener('click', () => { pcX.value = b.dataset.pc; clearInterval(pcTimer); pcTimer = null; doPc(true); }));
+    doPc(true);
+  }
+
+  /* --- 9.2 判断题 --- */
+  if ($('#tfOut')) {
+    const doTf = () => {
+      $('#tfOut').innerHTML = renderTf();
+      $$('[data-tf]').forEach(b => b.addEventListener('click', () => {
+        const [i, v] = b.dataset.tf.split(':');
+        if (tfState[+i] !== null) return;
+        tfState[+i] = v === '1'; doTf();
+      }));
+    };
+    $('#tfReset').addEventListener('click', () => { tfState = TF_Q.map(() => null); doTf(); });
+    doTf();
+  }
+
+  /* --- 9.3 选择题 --- */
+  if ($('#qzOut')) {
+    const doQz = () => {
+      $('#qzOut').innerHTML = renderQuiz();
+      $$('[data-qzo]').forEach(b => b.addEventListener('click', () => {
+        const [i, j] = b.dataset.qzo.split(':').map(Number);
+        if (qzState[i] !== null) return;
+        qzState[i] = j; doQz();
+      }));
+    };
+    $('#qzReset').addEventListener('click', () => { qzState = QUIZ.map(() => null); doQz(); });
+    doQz();
+  }
+}
+
+document.addEventListener('DOMContentLoaded', initAll);
+</script>
+</body>
+</html>

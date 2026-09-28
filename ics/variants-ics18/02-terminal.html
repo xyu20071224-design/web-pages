@@ -1,0 +1,3295 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-style="terminal" data-deck="ics18">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>系统级 I/O（System-Level I/O） · 交互式课件（中文）（深色终端版）</title>
+<style>
+/* ==========================================================================
+   base.css —— 结构基础样式（所有风格共用）
+   只使用 CSS 变量，不含任何具体配色；由各主题覆盖变量与少量结构规则。
+   ========================================================================== */
+
+:root{
+  /* 颜色（每个主题必须覆盖） */
+  --bg:#f6f7f9; --card:#fff; --ink:#15181d; --muted:#697586; --line:#e4e7ec;
+  --accent:#2563eb; --accent-ink:#fff; --accent-soft:#eaf1ff;
+  --sign:#e5484d; --exp:#0b7fd4; --frac:#18915a; --warn:#b45309;
+  --sign-bg:#fdecec; --sign-fg:#a3262b; --sign-bd:#f6cdcf;
+  --exp-bg:#e8f2fd;  --exp-fg:#0a5f9e;  --exp-bd:#c7ddf5;
+  --frac-bg:#e9f7ef; --frac-fg:#116b43; --frac-bd:#c8e8d5;
+  --ok-bg:#f2fbf6; --ok-bd:#9ed3b4; --bad-bg:#fff5f5; --bad-bd:#f1b5b8;
+  --warn-bg:#fffbeb; --gray-bg:#eef1f5; --gray-fg:#5b6472;
+  --paper-soft:#fcfdfe; --code-bg:#f1f3f7; --code-bd:#e6e9ef;
+  --tbl-head:#f7f9fc; --tbl-hover:#fafbfd;
+  --sel-bg:#eef1f5;
+
+  /* 字体 */
+  --font-sans:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",system-ui,sans-serif;
+  --font-mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+  --font-display:var(--font-sans);
+  --tracking-title:normal;
+
+  /* 形状 */
+  --radius:12px; --radius-sm:8px; --radius-pill:99px;
+  --border-w:1px; --shadow:0 1px 2px rgba(16,24,40,.06),0 1px 3px rgba(16,24,40,.1);
+  --shadow-card:none;
+  --card-border:var(--border-w) solid var(--line);
+
+  /* 布局 */
+  --page-max:1180px; --nav-w:236px; --gap:26px; --sec-pad:26px 28px;
+  --nav-sticky-top:64px; --anchor-offset:70px;
+  --font-size:16px; --line-height:1.75;
+}
+
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font-sans);
+  font-size:var(--font-size);line-height:var(--line-height);-webkit-font-smoothing:antialiased}
+img{max-width:100%}
+
+/* ---------- 顶栏 ---------- */
+.topbar{position:sticky;top:0;z-index:50;background:var(--card);border-bottom:1px solid var(--line)}
+.topbar-in{max-width:var(--page-max);margin:0 auto;padding:10px 22px;display:flex;align-items:center;gap:14px}
+.brand{font-weight:700;letter-spacing:var(--tracking-title);font-family:var(--font-display)}
+.brand small{font-weight:500;color:var(--muted);margin-left:8px;font-size:12.5px}
+.progress{margin-left:auto;display:flex;align-items:center;gap:10px;font-size:12.5px;color:var(--muted)}
+.progress .bar{width:150px;height:6px;border-radius:var(--radius-pill);background:var(--line);overflow:hidden}
+.progress .bar>i{display:block;height:100%;width:0;background:var(--accent);transition:width .25s}
+
+/* ---------- 主体布局 ---------- */
+.layout{max-width:var(--page-max);margin:0 auto;padding:22px;display:grid;
+  grid-template-columns:var(--nav-w) minmax(0,1fr);gap:var(--gap)}
+main{min-width:0}
+/* 长 URL / 长标识符没有断行点，会把容器整个撑破（窄屏尤其明显）。
+   只作用于文本容器；表格故意不加，让它走 .tbl-wrap 的横向滚动。 */
+main p,main li,main dd,main dt,main h2,main h3,main h4,main h5,
+main .box,main .card,main .readout,main .puzzle,main .step{overflow-wrap:anywhere}
+
+/* ---------- 目录 ---------- */
+nav.toc{position:sticky;top:var(--nav-sticky-top);align-self:start;max-height:calc(100vh - 84px);overflow:auto;padding-right:4px}
+nav.toc h4{margin:0 0 8px;font-size:12px;letter-spacing:.12em;color:var(--muted);text-transform:uppercase;font-weight:600}
+nav.toc a{display:block;padding:7px 11px;border-radius:var(--radius-sm);color:var(--ink);opacity:.78;
+  text-decoration:none;font-size:14.5px;border-left:2.5px solid transparent}
+nav.toc a:hover{background:var(--sel-bg);opacity:1}
+nav.toc a.active{background:var(--accent-soft);color:var(--accent);border-left-color:var(--accent);font-weight:600;opacity:1}
+nav.toc a .n{display:inline-block;min-width:20px;color:var(--muted);font-size:12.5px;font-variant-numeric:tabular-nums}
+nav.toc a.active .n{color:var(--accent)}
+nav.toc .sub{padding-left:26px;font-size:13.5px;opacity:.7}
+
+/* ---------- 章节 ---------- */
+section{background:var(--card);border:var(--card-border);border-radius:var(--radius);
+  padding:var(--sec-pad);margin-bottom:22px;box-shadow:var(--shadow);scroll-margin-top:var(--anchor-offset)}
+section>h2{margin:0 0 6px;font-size:25px;letter-spacing:-.01em;font-family:var(--font-display)}
+section>.lede{color:var(--muted);margin:0 0 20px;font-size:14.5px}
+h3{font-size:18.5px;margin:26px 0 10px;padding-left:11px;border-left:3.5px solid var(--accent);font-family:var(--font-display)}
+h4{font-size:16px;margin:18px 0 8px;font-family:var(--font-display)}
+h5{font-size:15px;font-family:var(--font-display)}
+p{margin:10px 0}
+ul,ol{margin:10px 0;padding-left:22px}
+li{margin:5px 0}
+code{font-family:var(--font-mono);font-size:.89em;background:var(--code-bg);border:1px solid var(--code-bd);border-radius:5px;padding:1px 5px}
+.mono{font-family:var(--font-mono)}
+a{color:var(--accent)}
+hr{border:0;border-top:1px dashed var(--line);margin:24px 0}
+.srcref{font-size:11.5px;color:var(--muted);font-weight:500;font-family:var(--font-sans);margin-left:8px;vertical-align:middle;white-space:nowrap;opacity:.75}
+.en{color:var(--muted);font-size:.92em}
+
+/* ---------- 栅格与卡片 ---------- */
+.grid{display:grid;gap:14px}
+.g2{grid-template-columns:repeat(2,minmax(0,1fr))}
+.g3{grid-template-columns:repeat(3,minmax(0,1fr))}
+/* 窄屏单列：必须用 minmax(0,1fr)。写成 1fr 时轨道最小宽度是 auto，
+   单元格里只要有长代码行（<pre>）就撑破容器，整页横向溢出。 */
+@media(max-width:820px){.g2,.g3{grid-template-columns:minmax(0,1fr)}}
+.card{border:var(--card-border);border-radius:var(--radius-sm);padding:15px 17px;background:var(--paper-soft);box-shadow:var(--shadow-card)}
+.card h5{margin:0 0 7px}
+.card.pad0{padding:0;overflow:hidden}
+
+/* ---------- 提示框 ---------- */
+.box{border:1px solid var(--line);border-left:4px solid var(--accent);background:var(--accent-soft);
+  border-radius:var(--radius-sm);padding:12px 16px;margin:14px 0}
+.box.warn{border-left-color:var(--warn);background:var(--warn-bg)}
+.box.bad{border-left-color:var(--sign);background:var(--bad-bg)}
+.box.ok{border-left-color:var(--frac);background:var(--ok-bg)}
+.box .t{font-weight:650;font-size:14.5px;margin-bottom:2px}
+
+/* ---------- 公式 ---------- */
+.formula{font-family:var(--font-mono);background:var(--paper-soft);border:1px solid var(--line);
+  border-radius:var(--radius-sm);padding:14px 17px;margin:14px 0;font-size:16.5px;text-align:center;overflow-x:auto}
+.formula.big{font-size:20px}
+
+/* ---------- 表格 ---------- */
+table.tbl{width:100%;border-collapse:collapse;font-size:14.5px;margin:14px 0}
+table.tbl th,table.tbl td{border:1px solid var(--line);padding:8px 11px;text-align:left;vertical-align:top}
+table.tbl th{background:var(--tbl-head);font-weight:650;font-size:13.5px;white-space:nowrap}
+table.tbl td.mono,table.tbl th.mono{font-family:var(--font-mono);font-size:13.5px}
+table.tbl tr:hover td{background:var(--tbl-hover)}
+/* 当前行高亮：interactive 表格用它标出「正在看的那一行」。
+   注意 --tbl-hover 是悬停色，深色皮肤下故意比底色亮，所以 hl 用同一套变量。 */
+table.tbl tr.hl td{background:var(--sel-bg)}
+.tbl-wrap{overflow-x:auto}
+
+/* ---------- 位串控件 ---------- */
+.fw{display:flex;flex-wrap:wrap;gap:8px 18px;align-items:flex-start;margin:4px 0 2px;min-width:0}
+.fgrp{min-width:0}
+.fcap{font-size:12px;color:var(--muted);margin-bottom:4px;font-weight:600}
+.fcap b{font-family:var(--font-mono);font-size:12.5px}
+.bits{display:flex;flex-wrap:wrap;gap:2px;font-family:var(--font-mono);margin:4px 0}
+.bits .b{width:25px;height:33px;display:flex;align-items:center;justify-content:center;
+  border-radius:6px;font-size:15px;cursor:pointer;user-select:none;border:1px solid transparent;
+  transition:transform .06s,background .12s;font-weight:600}
+.bits .b:hover{transform:translateY(-2px)}
+.bits .b.s{background:var(--sign-bg);color:var(--sign-fg);border-color:var(--sign-bd)}
+.bits .b.e{background:var(--exp-bg);color:var(--exp-fg);border-color:var(--exp-bd)}
+.bits .b.f{background:var(--frac-bg);color:var(--frac-fg);border-color:var(--frac-bd)}
+.bits .b.sel{outline:2px solid var(--ink);outline-offset:1px}
+.bits.sm .b{width:19px;height:26px;font-size:12px;border-radius:4px}
+.fgrp .bits{flex-wrap:wrap;max-width:100%;gap:2px}
+.fgrp.ge .bits{max-width:300px}
+
+/* ---------- 读数表 ---------- */
+.readout{display:grid;grid-template-columns:auto 1fr;gap:4px 16px;font-size:14.5px;margin:12px 0}
+.readout dt{color:var(--muted);font-weight:600;font-family:var(--font-mono);font-size:13.5px;padding-top:2px}
+.readout dd{margin:0;font-family:var(--font-mono)}
+
+/* ---------- 小标签 ---------- */
+.chip{display:inline-block;font-size:12.5px;padding:2px 9px;border-radius:var(--radius-pill);
+  background:var(--accent-soft);color:var(--accent);font-weight:600}
+.chip.ok{background:var(--frac-bg);color:var(--frac-fg)}
+.chip.bad{background:var(--sign-bg);color:var(--sign-fg)}
+.chip.warn{background:var(--warn-bg);color:var(--warn)}
+.chip.gray{background:var(--gray-bg);color:var(--gray-fg)}
+.kbd{font-family:var(--font-mono);font-size:13px;background:var(--code-bg);border:1px solid var(--code-bd);
+  border-bottom-width:2px;border-radius:6px;padding:1px 7px}
+
+/* ---------- 控件 ---------- */
+.ctrls{display:flex;flex-wrap:wrap;gap:9px;align-items:center;margin:12px 0}
+label.fld{display:inline-flex;align-items:center;gap:7px;font-size:14px;color:var(--ink);max-width:100%;flex-wrap:wrap;min-width:0}
+label.fld select,label.fld input{min-width:0;max-width:100%}
+input[type=text],input[type=number],select{font-family:var(--font-mono);font-size:14px;padding:6px 10px;
+  border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--card);color:var(--ink)}
+input[type=text]:focus,input[type=number]:focus,select:focus{outline:2px solid var(--accent-soft);border-color:var(--accent)}
+button{font-family:var(--font-sans);font-size:14px;font-weight:600;padding:7px 15px;border-radius:var(--radius-sm);
+  border:1px solid var(--line);background:var(--card);color:var(--ink);cursor:pointer}
+button:hover{background:var(--sel-bg)}
+button.p{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+button.sm{padding:4px 10px;font-size:13px}
+button.pill{border-radius:var(--radius-pill)}
+/* 按钮组默认不换行：项一多就会把 .ctrls 撑破。允许它缩到容器宽度并横向滚动。 */
+.seg{display:inline-flex;max-width:100%;border:1px solid var(--line);
+  border-radius:var(--radius-sm);overflow-x:auto;overflow-y:hidden}
+.seg button{border:0;border-radius:0;border-right:1px solid var(--line);padding:6px 13px}
+.seg button:last-child{border-right:0}
+.seg button.on{background:var(--accent);color:var(--accent-ink)}
+
+/* ---------- 分步演示 ---------- */
+/* .steps 是 .step 的包裹层（skill 词汇表里列了但一直没定义）——
+   仅给一点上下留白，步骤块自己的边距由 .step 负责。 */
+.steps{margin:12px 0}
+.step{border:1px solid var(--line);border-radius:var(--radius-sm);padding:11px 15px;margin:9px 0;
+  background:var(--paper-soft);opacity:.42;transition:opacity .2s}
+.step.on{opacity:1;background:var(--card)}
+.step .h{font-size:13px;font-weight:700;color:var(--accent);letter-spacing:.02em;margin-bottom:3px}
+.step .m{font-family:var(--font-mono);font-size:14.5px;overflow-x:auto}
+.step .e{font-size:13.5px;color:var(--muted);margin-top:3px}
+
+/* ---------- 折叠与答案 ---------- */
+.reveal{border:1px solid var(--line);border-radius:var(--radius-sm);padding:11px 15px;margin:8px 0;background:var(--paper-soft)}
+.reveal summary{cursor:pointer;font-weight:600;font-size:14.5px}
+.reveal[open]{background:var(--card)}
+.ans{margin-top:8px;padding-top:8px;border-top:1px dashed var(--line);font-size:14.5px}
+
+/* ---------- 判断题 ---------- */
+.puzzle{border:1px solid var(--line);border-radius:var(--radius-sm);padding:12px 15px;margin:9px 0;
+  display:flex;gap:13px;align-items:flex-start;background:var(--paper-soft)}
+.puzzle .q{font-family:var(--font-mono);font-size:15px;flex:1;min-width:0;overflow-x:auto;white-space:nowrap}
+.puzzle .q small{font-family:var(--font-sans);color:var(--muted);display:block;white-space:normal}
+.puzzle .btns{display:flex;gap:6px;flex-shrink:0}
+.puzzle.correct{border-color:var(--ok-bd);background:var(--ok-bg)}
+.puzzle.wrong{border-color:var(--bad-bd);background:var(--bad-bg)}
+.puzzle .exp{margin-top:9px;padding-top:9px;border-top:1px dashed var(--line);font-size:14.5px;
+  display:none;white-space:normal;font-family:var(--font-sans)}
+.puzzle.done .exp{display:block}
+.puzzle .exp .verdict{font-weight:700}
+
+/* ---------- 分布图 ---------- */
+.tick{stroke:#94a3b8;stroke-width:1.4}
+.tick.dn{stroke:var(--exp)}
+.tick.nm{stroke:var(--frac)}
+.ticklabel{font-size:9.5px;fill:var(--muted);font-family:var(--font-mono)}
+.axisline{stroke:var(--line);stroke-width:1.2}
+.axislabel{font-size:11px;fill:var(--muted)}
+
+/* ---------- 页脚 / 回到顶部 ---------- */
+.footer{max-width:var(--page-max);margin:0 auto;padding:8px 22px 40px;color:var(--muted);font-size:13px}
+.totop{position:fixed;right:22px;bottom:22px;z-index:40;box-shadow:var(--shadow);display:none}
+
+/* ---------- 响应式 ---------- */
+@media(max-width:960px){
+  .layout{grid-template-columns:1fr;padding:16px}
+  nav.toc{position:static;max-height:none;display:flex;flex-wrap:wrap;gap:6px;
+    background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:10px}
+  nav.toc h4{width:100%;margin-bottom:2px}
+  nav.toc a{border-left:0;padding:5px 10px;font-size:13px}
+  nav.toc .sub{display:none}
+  section{padding:20px 17px}
+}
+@media print{
+  nav.toc,.topbar,.totop{display:none}
+  .layout{display:block}
+  section{break-inside:avoid;box-shadow:none}
+}
+
+/* ==========================================================================
+   风格 B · 深色终端（Dark IDE / Terminal）
+   深灰底 · 霓虹强调色 · 等宽标题 · 左侧编号导轨 · 寄存器风格的位视图
+   ========================================================================== */
+
+:root{
+  --bg:#0b0f14; --card:#121821; --ink:#d8e2ee; --muted:#7c8b9e; --line:#202b38;
+  --accent:#22d3ee; --accent-ink:#04191e; --accent-soft:#0e2b34;
+  --sign:#ff5c57; --exp:#4cc2ff; --frac:#3ddc84; --warn:#ffb454;
+  --sign-bg:#2a1517; --sign-fg:#ff8a86; --sign-bd:#48211f;
+  --exp-bg:#0c2432;  --exp-fg:#7ad3ff;  --exp-bd:#123c52;
+  --frac-bg:#0d2a1c; --frac-fg:#6ee7a5; --frac-bd:#14452c;
+  --ok-bg:#0d2a1c; --ok-bd:#1d5c39; --bad-bg:#2a1517; --bad-bd:#5a2724;
+  --warn-bg:#2a2113; --gray-bg:#18202b; --gray-fg:#8fa0b4;
+  --paper-soft:#0e141c; --code-bg:#0a1017; --code-bd:#1d2836;
+  --tbl-head:#151d27; --tbl-hover:#141c26;
+  --sel-bg:#1a2431;
+
+  --font-sans:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",system-ui,sans-serif;
+  --font-mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+  --font-display:var(--font-mono);
+  --tracking-title:-.01em;
+
+  --radius:8px; --radius-sm:6px; --radius-pill:99px;
+  --border-w:1px;
+  --shadow:0 1px 0 rgba(0,0,0,.4),0 8px 24px -12px rgba(0,0,0,.6);
+  --shadow-card:none;
+  --card-border:1px solid var(--line);
+
+  --page-max:1240px; --nav-w:186px; --gap:22px;
+  --sec-pad:22px 24px; --nav-sticky-top:76px; --anchor-offset:80px;
+  --font-size:15.5px; --line-height:1.72;
+}
+
+body{background:
+  radial-gradient(1100px 520px at 12% -8%, rgba(34,211,238,.10), transparent 60%),
+  radial-gradient(900px 460px at 96% 4%, rgba(61,220,132,.07), transparent 62%),
+  var(--bg)}
+
+/* ---------- 顶栏：终端窗口标题条 ---------- */
+.topbar{background:rgba(13,18,25,.9);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+.topbar-in{padding:11px 22px;gap:12px}
+.brand{font-family:var(--font-mono);font-weight:600;font-size:15px}
+.brand::before{content:"● ● ●";color:#3b4a5a;letter-spacing:2px;margin-right:14px;font-size:11px;vertical-align:1px}
+.brand small{font-family:var(--font-mono);color:var(--muted);font-size:11.5px}
+.progress{font-family:var(--font-mono);font-size:11.5px;letter-spacing:.04em}
+.progress .bar{width:130px;height:5px;border-radius:var(--radius-pill);background:#18212c}
+.progress .bar>i{background:linear-gradient(90deg,#22d3ee,#3ddc84);box-shadow:0 0 10px rgba(34,211,238,.7)}
+
+/* ---------- 目录：编号导轨 ---------- */
+nav.toc a{font-family:var(--font-mono);font-size:13px;border-left:2px solid transparent;border-radius:0 6px 6px 0;
+  color:var(--muted)}
+nav.toc a:hover{color:var(--ink);background:var(--sel-bg)}
+nav.toc a.active{background:var(--accent-soft);color:var(--accent);border-left-color:var(--accent);
+  box-shadow:inset 0 0 24px -12px var(--accent)}
+nav.toc a .n{color:#4a5a6d;font-size:11.5px}
+nav.toc h4{font-family:var(--font-mono);font-size:10.5px;letter-spacing:.16em;color:#5b6b7e}
+
+/* ---------- 章节：面板 ---------- */
+section{box-shadow:var(--shadow);position:relative;overflow:hidden}
+section::before{content:"";position:absolute;inset:0 auto 0 0;width:2px;
+  background:linear-gradient(180deg,var(--accent),transparent 55%);opacity:.5}
+section>h2{font-family:var(--font-mono);font-size:22px;font-weight:600}
+section>h2::before{content:"❯ ";color:var(--accent)}
+section>.lede{font-family:var(--font-mono);font-size:13px;color:var(--muted)}
+h3{font-family:var(--font-mono);font-size:17px;border-left:3px solid var(--accent);letter-spacing:-.01em}
+h4,h5{font-family:var(--font-mono)}
+
+code{background:var(--code-bg);border-color:var(--code-bd);color:#8ee7f5}
+
+/* ---------- 卡片 / 盒 ---------- */
+.card{border-radius:var(--radius-sm);background:var(--paper-soft)}
+.box{border-radius:var(--radius-sm);border-left-width:3px;background:rgba(34,211,238,.05)}
+.box.warn{background:rgba(255,180,84,.06)}
+.box.bad{background:rgba(255,92,87,.06)}
+.box.ok{background:rgba(61,220,132,.06)}
+.box .t{font-family:var(--font-mono);font-size:13.5px}
+
+.formula{background:var(--code-bg);border-color:var(--code-bd);color:#a9ecf7;
+  box-shadow:inset 0 0 40px -20px rgba(34,211,238,.6)}
+
+/* ---------- 表格 ---------- */
+table.tbl th{background:var(--tbl-head);color:var(--muted);font-family:var(--font-mono);
+  font-size:12.5px;text-transform:uppercase;letter-spacing:.05em}
+table.tbl th,table.tbl td{border-color:var(--line)}
+table.tbl tbody tr:nth-child(even) td{background:rgba(255,255,255,.012)}
+
+/* ---------- 位视图：寄存器样式 ---------- */
+.fw{gap:10px 22px;padding:12px 14px;border:1px solid var(--line);border-radius:var(--radius-sm);
+  background:var(--code-bg)}
+.fcap{font-family:var(--font-mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase}
+.bits .b{width:26px;height:32px;border-radius:4px;font-family:var(--font-mono);font-weight:700;
+  border-width:1px;border-style:solid}
+.bits .b.s{background:var(--sign-bg);color:var(--sign-fg);border-color:var(--sign-bd);text-shadow:0 0 8px rgba(255,92,87,.5)}
+.bits .b.e{background:var(--exp-bg);color:var(--exp-fg);border-color:var(--exp-bd);text-shadow:0 0 8px rgba(76,194,255,.45)}
+.bits .b.f{background:var(--frac-bg);color:var(--frac-fg);border-color:var(--frac-bd);text-shadow:0 0 8px rgba(61,220,132,.4)}
+.bits .b:hover{transform:translateY(-2px);box-shadow:0 4px 14px -6px currentColor}
+.bits .b.sel{outline:2px solid var(--accent);outline-offset:1px}
+
+.readout dt{color:#6b7c91}
+.readout dd{color:var(--ink)}
+
+/* ---------- 控件：终端命令风 ---------- */
+input[type=text],input[type=number],select{background:var(--code-bg);border-color:var(--code-bd);color:var(--ink);
+  font-family:var(--font-mono)}
+input:focus,select:focus{border-color:var(--accent);outline:none;box-shadow:0 0 0 2px rgba(34,211,238,.18)}
+button{background:#161f2a;border-color:var(--line);color:var(--ink);font-family:var(--font-mono);font-size:13px}
+button:hover{border-color:var(--accent);color:var(--accent)}
+button.p{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);font-weight:700}
+button.p:hover{background:#5ee6f7;color:var(--accent-ink);box-shadow:0 0 18px -4px var(--accent)}
+.chip{font-family:var(--font-mono);font-size:11.5px;border-radius:4px}
+.seg{border-color:var(--line)}
+.seg button.on{background:var(--accent-soft);color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
+
+/* ---------- 分步演示：终端输出 ---------- */
+.step{border-radius:var(--radius-sm);background:var(--code-bg);border-color:var(--code-bd)}
+.step.on{border-color:#26374a;box-shadow:inset 0 0 30px -22px var(--accent)}
+.step .h{font-family:var(--font-mono);color:var(--accent);letter-spacing:.03em;font-size:12px}
+.step .h::before{content:"$ ";opacity:.7}
+
+/* ---------- 判断题 / 折叠 ---------- */
+.puzzle{background:var(--paper-soft);border-radius:var(--radius-sm)}
+.puzzle .q{color:#a9ecf7}
+.puzzle.correct{border-color:var(--ok-bd);background:rgba(61,220,132,.05)}
+.puzzle.wrong{border-color:var(--bad-bd);background:rgba(255,92,87,.05)}
+.reveal{background:var(--paper-soft)}
+
+.totop{background:#161f2a;border-color:var(--line);color:var(--accent);font-family:var(--font-mono)}
+.tick{stroke:#41556b}
+.axisline{stroke:#2a3949}
+
+@media(max-width:960px){
+  .brand::before{display:none}
+  .layout{padding:14px}
+  nav.toc{border-radius:var(--radius-sm)}
+}
+
+
+/* ---------- 风格切换条（构建时注入，各主题通用） ---------- */
+.stylebar{max-width:var(--page-max);margin:0 auto;padding:14px 22px 0;display:flex;gap:8px;
+  flex-wrap:wrap;align-items:center;font-size:12.5px;color:var(--muted)}
+.stylebar>span{font-weight:600}
+.stylebar a{text-decoration:none;padding:4px 11px;border:1px solid var(--line);border-radius:var(--radius-pill);
+  color:var(--muted);background:var(--card);font-weight:600}
+.stylebar a:hover{border-color:var(--accent);color:var(--accent)}
+.stylebar a.cur{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.stylebar>span{flex:0 0 auto}
+@media(max-width:960px){.stylebar{padding:12px 16px 0}}
+/* 25 讲之后药丸很多：窄屏折行会吃掉大半屏，改成单行横滑 */
+@media(max-width:820px){.stylebar{flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;
+  scrollbar-width:thin}.stylebar a{flex:0 0 auto;font-size:12px;padding:4px 10px}}
+
+</style>
+</head>
+<body>
+
+<header class="topbar"><div class="topbar-in">
+  <div class="brand">系统级 I/O System-Level I/O<small>《计算机系统导论》第 18 讲 · 深色终端版</small></div>
+  <div class="progress"><span id="pgText">学习进度 0%</span><span class="bar"><i id="pgBar"></i></span></div>
+</div></header>
+
+<div class="stylebar">
+  <span>风格：</span>
+  <a href="../ics18-zh.html">清爽蓝（原版）</a>
+  <a href="01-academic.html">学术讲义</a>
+  <a href="03-brutalist.html">新粗野</a>
+  <a href="04-glass.html">柔和玻璃</a>
+  <a href="index.html">◧ 全部预览</a>
+  <span style="opacity:.5">|</span>
+  <a href="../variants-ics01/index.html">↗ 第 1 讲 · 课程概述</a>
+  <a href="../variants-bits/index.html">↗ 第 2 讲 · 位、字节与整数</a>
+  <a href="../variants/index.html">↗ 第 3 讲 · 浮点数</a>
+  <a href="../variants-ics04/index.html">↗ 第 4 讲 · 机器级编程 I：基础</a>
+  <a href="../variants-ics05/index.html">↗ 第 5 讲 · 机器级编程 II：控制</a>
+  <a href="../variants-ics06/index.html">↗ 第 6 讲 · 机器级编程 III：过程</a>
+  <a href="../variants-ics07/index.html">↗ 第 7 讲 · 机器级编程 IV：数据</a>
+  <a href="../variants-ics08/index.html">↗ 第 8 讲 · 机器级编程 V：高级</a>
+  <a href="../variants-ics09/index.html">↗ 第 9 讲 · 处理器体系结构：ISA 与逻辑</a>
+  <a href="../variants-ics10/index.html">↗ 第 10 讲 · 处理器体系结构：顺序实现</a>
+  <a href="../variants-ics11/index.html">↗ 第 11 讲 · 处理器体系结构：流水线</a>
+  <a href="../variants-ics12/index.html">↗ 第 12 讲 · 存储层次结构</a>
+  <a href="../variants-ics13/index.html">↗ 第 13 讲 · 缓存存储器</a>
+  <a href="../variants-ics14/index.html">↗ 第 14 讲 · 代码优化</a>
+  <a href="../variants-ics15/index.html">↗ 第 15 讲 · 链接</a>
+  <a href="../variants-ics16/index.html">↗ 第 16 讲 · 异常控制流 I</a>
+  <a href="../variants-ics17/index.html">↗ 第 17 讲 · 异常控制流 II</a>
+  <a href="../variants-ics19/index.html">↗ 第 19 讲 · 虚拟内存 I</a>
+  <a href="../variants-ics20/index.html">↗ 第 20 讲 · 虚拟内存 II</a>
+  <a href="../variants-ics21/index.html">↗ 第 21 讲 · 动态内存分配</a>
+  <a href="../variants-ics22/index.html">↗ 第 22 讲 · 网络基础</a>
+  <a href="../variants-ics23/index.html">↗ 第 23 讲 · 网络编程</a>
+  <a href="../variants-ics24/index.html">↗ 第 24 讲 · 并发编程</a>
+  <a href="../variants-ics25/index.html">↗ 第 25 讲 · 同步</a>
+  <a href="../variants-lab/index.html">↗ Data Lab 实验</a>
+</div>
+
+<div class="layout">
+
+<nav class="toc">
+  <h4>目录</h4>
+  <a href="#s0"><span class="n">0</span>课程导览</a>
+  <a href="#s1"><span class="n">1</span>文件与 Unix I/O 接口</a>
+  <a href="#s2"><span class="n">2</span>文件类型与文本文件</a>
+  <a href="#s3"><span class="n">3</span>目录、层次与路径名</a>
+  <a href="#s4"><span class="n">4</span>打开、关闭、读、写与 short count</a>
+  <a href="#s5"><span class="n">5</span>文件元数据与 stat</a>
+  <a href="#s6"><span class="n">6</span>内核如何表示打开的文件</a>
+  <a href="#s7"><span class="n">7</span>文件描述符三例（ffiles 1/2/3）</a>
+  <a href="#s8"><span class="n">8</span>标准 I/O 与缓冲</a>
+  <a href="#s9"><span class="n">9</span>RIO：健壮的 I/O 包</a>
+  <a href="#s10"><span class="n">10</span>该用哪一种 I/O</a>
+  <a href="#s11"><span class="n">11</span>目录访问、延伸阅读与自测</a>
+</nav>
+
+<main>
+<!-- ================= 0 ================= -->
+  <section id="s0">
+    <h2>课程导览<span class="srcref">原第 1–3、40、51 页</span></h2>
+    <p class="lede">北京大学《计算机系统导论》第 18 讲：<b>系统级 I/O（System-Level I/O）</b>。程序要跟世界打交道就得读写文件、终端和网络 —— 这一讲先讲清楚最底层的 <b>Unix I/O</b>（<code>open</code>/<code>read</code>/<code>write</code>/<code>close</code>/<code>lseek</code>/<code>stat</code>），再顺手拆开架在它上面的两层：C 标准库的 <b>Standard I/O</b> 与 CS:APP 自带的 <b>RIO</b> 包。</p>
+
+    <div class="grid g3">
+      <div class="card"><h5>本讲提纲（原第 2 页）</h5>
+        <ol style="margin:0;padding-left:20px;font-size:14.5px">
+          <li>Unix I/O</li>
+          <li>元数据、共享与重定向</li>
+          <li>Standard I/O</li>
+          <li>RIO（robust I/O）包</li>
+          <li>结语</li>
+        </ol>
+      </div>
+      <div class="card"><h5>一句话核心</h5>
+        <p style="margin:0;font-size:14.5px">Linux 把一切都表示为文件，于是内核能对外只露出一套极简接口；而 <b>read 可能少读、write 可能少写</b>（short count），以及 <b>一次 <code>read</code>/<code>write</code> 就是一次内核调用</b>（&gt; 10 000 个时钟周期）这两件事，逼出了上面两层库：Standard I/O 与 RIO 各自用缓冲把它们包起来。</p>
+      </div>
+      <div class="card"><h5>和前后讲的衔接</h5>
+        <p style="margin:0;font-size:14.5px">第 16、17 讲的异常控制流给出了 <code>fork</code> 与信号；这一讲会看到 <b>fork 之后父子进程共享文件位置</b>、以及为什么信号处理器里只能用 Unix I/O。下一讲起进入虚拟内存 —— 而 <code>mmap</code> 与页缓存正是「文件」的另一层实现。</p>
+      </div>
+    </div>
+
+    <h3>0.1 三层 I/O 与原页码</h3>
+    <p>原第 3、40、51 页画的是同一张图：<b>应用程序</b>在顶上，底下叠着三层库，最下面是内核。第 3 页说这是「两套（system-level 与 C level）」，第 40 页更直白 —— 它们是 <b>two incompatible libraries</b>（两套互不兼容的库），都架在 Unix I/O 上。这张图就是全场地图：</p>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>主题</th><th>原课件页码</th><th>要回答的问题</th></tr>
+      <tr><td><b>Unix I/O 六个函数</b></td><td class="mono">4–17、41</td><td>文件是什么？<code>open/read/write/lseek/stat/close</code> 各自干什么、返回值怎么看？short count 什么时候出现？</td></tr>
+      <tr><td><b>元数据与共享</b></td><td class="mono">19–27</td><td><code>stat</code> 里有什么？描述符表、打开文件表、v-node 表怎么配合？<code>fork</code> 与 <code>dup2</code> 之后谁跟谁共享什么？</td></tr>
+      <tr><td><b>Standard I/O</b></td><td class="mono">33–38</td><td>流（stream）与缓冲是怎么回事？什么时候数据才真的落到 fd 上？</td></tr>
+      <tr><td><b>RIO 包</b></td><td class="mono">42–49</td><td><code>rio_readn</code>/<code>rio_readlineb</code>/<code>rio_readnb</code> 各自解决什么问题？内部缓冲怎么记账？</td></tr>
+      <tr><td><b>选型与陷阱</b></td><td class="mono">51–55</td><td>三种 I/O 各有优劣，什么场景该用哪一个？二进制文件为什么不能碰文本函数？</td></tr>
+      <tr><td><b>三条例题链</b></td><td class="mono">28–31、56–58</td><td><code>ffiles1/2/3</code> 三个小程序分别考描述符复制、fork 共享位置、<code>O_APPEND</code> + <code>dup</code> 的行为。</td></tr>
+    </table></div>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：三层 I/O 地图 —— 点任一函数，看它属于哪一层、谁在用它</span>
+      </div>
+      <div id="lyOut"></div>
+    </div>
+
+    <div class="box"><div class="t">本页使用说明</div>
+      标有「交互」的地方都能点击或输入，所有计算都在浏览器里实时完成。<a href="#s6">第 6 节的三表联动图</a>与 <a href="#s7">第 7 节的描述符模拟器</a>最值得反复玩：前者把「描述符表 / 打开文件表 / v-node 表」三张表按 <code>open</code>、<code>fork</code>、<code>dup2</code> 一步步搭起来，后者真的按 Unix 语义执行 <code>ffiles1/2/3</code> 三个程序并给出文件内容。页面里所有会判对错的基准（描述符表语义、<code>st_mode</code> 解码、系统调用计数、fork 后的输出顺序、测验答案）都已用真实系统调用与独立参考实现逐项交叉验证。
+    </div>
+  </section>
+
+  <!-- ================= 1 ================= -->
+  <section id="s1">
+    <h2>1. 文件与 Unix I/O 接口<span class="srcref">原第 4–5、41 页</span></h2>
+    <p class="lede">Unix I/O 的全部魔法来自一个极简的抽象：<b>文件就是一段字节序列</b>，而所有设备都被映射成文件。于是内核只需对外提供六个函数 —— 打开、关闭、读、写、改位置、取元数据。</p>
+
+    <h3>1.1 Linux 文件是 m 个字节的序列<span class="srcref">原第 4 页</span></h3>
+    <div class="formula">
+      <span>B<sub>0</sub>, B<sub>1</sub>, …, B<sub>k</sub>, …, B<sub>m−1</sub></span>
+    </div>
+    <p>课件用「Cool fact」形容接下来的事实：<b>所有 I/O 设备都表示为文件</b> —— 磁盘分区是 <code>/dev/sda2</code>，终端是 <code>/dev/tty2</code>；<b>连内核自己也表示为文件</b> —— 内核映像是 <code>/boot/vmlinuz-3.13.0-55-generic</code>，内核数据结构是 <code>/proc</code>。这套「文件到设备」的优雅映射，让内核能对外只导出一个简单接口。</p>
+
+    <h3>1.2 六个函数与「当前文件位置」<span class="srcref">原第 5、41 页</span></h3>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>要做的事</th><th>函数（原第 5 页）</th><th>原型（原第 41 页）</th></tr>
+      <tr><td>打开与关闭文件</td><td class="mono">open() · close()</td><td class="mono">int open(const char *path, int flags, mode_t mode);<br>int close(int fd);</td></tr>
+      <tr><td>读文件、写文件</td><td class="mono">read() · write()</td><td class="mono">ssize_t read(int fd, void *buffer, size_t max_count);<br>ssize_t write(int fd, void *buffer, size_t max_count);</td></tr>
+      <tr><td>改当前文件位置（seek）</td><td class="mono">lseek()</td><td class="mono">off_t lseek(int fd, off_t offset, int whence);</td></tr>
+      <tr><td>取文件元数据</td><td class="mono">stat() · fstat()</td><td class="mono">（见<a href="#s5">第 5 节</a>）</td></tr>
+    </table></div>
+    <p>其中「当前文件位置 = k」表示<b>下一次读或写要从哪个偏移开始</b>。课件第 5 页下方那条字节带正是这个意思：</p>
+    <div class="formula" style="text-align:left">
+      <div>B<sub>0</sub>&nbsp;&nbsp;B<sub>1</sub>&nbsp;&nbsp;•••&nbsp;&nbsp;B<sub>k−1</sub>&nbsp;&nbsp;|&nbsp;&nbsp;B<sub>k</sub>&nbsp;&nbsp;B<sub>k+1</sub>&nbsp;&nbsp;•••&nbsp;&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)">← 当前文件位置 = k：下一次读写从这里开始</span></div>
+    </div>
+    <p>课件在第 41 页把这两个原型又抄了一遍，并注明注释口径：<code>read</code> 从文件读<b>至多</b> <code>max_count</code> 个字节到缓冲区，返回实际读到的字节数；<code>write</code> 从缓冲区写<b>至多</b> <code>max_count</code> 个字节到文件，返回实际写出的字节数。两个「至多」就是 short count 的来源。</p>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：文件位置模拟器 —— read / write / lseek 各执行一次，看游标与字节怎么动</span>
+        <label class="fld">文件内容 <input type="text" id="fpText" value="hello, world" size="20" spellcheck="false"></label>
+        <label class="fld">操作
+          <select id="fpOp">
+            <option value="read">read(fd, buf, n)</option>
+            <option value="write">write(fd, buf, n)</option>
+            <option value="seek">lseek(fd, off, whence)</option>
+          </select>
+        </label>
+        <label class="fld">n / 写入文本 <input type="text" id="fpN" value="512" size="10" spellcheck="false"></label>
+        <label class="fld">offset <input type="text" id="fpOff" value="0" size="6" spellcheck="false"></label>
+        <label class="fld">whence
+          <select id="fpWhence">
+            <option value="SET">SEEK_SET</option>
+            <option value="CUR">SEEK_CUR</option>
+            <option value="END">SEEK_END</option>
+          </select>
+        </label>
+        <button class="p" id="fpGo">执行</button>
+        <button class="sm" id="fpReset">复位</button>
+        <button class="sm" data-fp="read=512">课件例：读 512 字节</button>
+        <button class="sm" data-fp="read=512">再读一次（看 EOF）</button>
+        <button class="sm" data-fp="write=AB">write(fd, &quot;AB&quot;, 2)</button>
+        <button class="sm" data-fp="seek=0;whence=SET">lseek 回开头</button>
+      </div>
+      <div id="fpOut"></div>
+    </div>
+
+    <div class="box ok"><div class="t">「至多」两个字是本讲的伏笔</div>
+      课件第 13 页写着：<code>read(fd, buf, 512)</code> 完全可能只返回 13 —— 这叫 <b>short count（短计数）</b>，它<b>不是错误</b>。第 41 页再把这条规矩抄一遍，因为后面 RIO 包的 <code>rio_readn</code> 等的就是它：<b>能出现 short count 的场景，正是 RIO 要替你兜住的场景</b>。
+    </div>
+  </section>
+
+  <!-- ================= 2 ================= -->
+  <section id="s2">
+    <h2>2. 文件类型与文本文件<span class="srcref">原第 6–7 页</span></h2>
+    <p class="lede">每个文件都有一个<b>类型</b>，表明它在系统里扮演什么角色。课件只挑三种深入（普通文件、目录、套接字），并顺带说明「文本文件」只是约定，<b>内核并不知道这个区别</b>。</p>
+
+    <h3>2.1 三种文件类型<span class="srcref">原第 6 页</span></h3>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>类型</th><th>课件定义</th><th>本讲后续</th></tr>
+      <tr><td><b>普通文件 regular file</b></td><td>包含任意数据（arbitrary data）</td><td>第 2.2 节展开；<code>read</code>/<code>write</code> 的主角</td></tr>
+      <tr><td><b>目录 directory</b></td><td>一组相关文件的<b>索引</b></td><td>第 3 节与第 11 节的 <code>opendir</code>/<code>readdir</code></td></tr>
+      <tr><td><b>套接字 socket</b></td><td>与另一台机器上的进程通信</td><td>第 9 节 RIO 要解决的正是套接字上的 short count</td></tr>
+    </table></div>
+    <p>课件还列了「超出本讲范围」的其它类型：命名管道（FIFOs）、符号链接、字符设备与块设备。</p>
+
+    <h3>2.2 文本文件、二进制文件与行尾<span class="srcref">原第 7 页</span></h3>
+    <p>普通文件里的数据是任意的，<b>应用程序</b>习惯把其中一部分叫「文本文件」：只含 ASCII 或 Unicode 字符的那些；其余一律叫二进制文件 —— 比如目标文件、JPEG 图片。课件特别强调一句：<b>Kernel doesn't know the difference!</b>（内核分不出这两种）。</p>
+    <ul>
+      <li><b>文本文件</b>是「文本行」的序列；<b>文本行</b>是以换行符结束的字符序列。</li>
+      <li>换行符就是 <code>0xa</code>，也就是 ASCII 的 <b>LF（line feed，换行）</b>。</li>
+      <li>行尾（EOL）指示符在不同系统上不一样：<b>Linux 与 Mac OS</b> 用 <code>'\n'</code>（<code>0xa</code>）；<b>Windows 与互联网协议</b>用 <code>'\r\n'</code>（<code>0xd 0xa</code>）—— 回车 <b>CR</b> 后跟换行 <b>LF</b>。</li>
+    </ul>
+    <p>课件这一页配了一张打字机照片，标出两个动作：<b>carriage return</b> 把字车推回行首（对应 <code>0xd</code>），<b>line feed</b> 把纸向上推进一行（对应 <code>0xa</code>）。电传打字机时代这两个动作是分开的机械操作，PC 时代的「换行」把它们合成了一个字符 —— 而 Windows 保留了 <code>0xd 0xa</code> 两个字节，Linux 只留了 <code>0xa</code>，于是跨平台文本才需要「转换行尾」。照片只作示意，理解这两个代码点就够了。</p>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：行尾与文件字节数 —— 同样的文本，LF 与 CRLF 差多少</span>
+        <label class="fld">每行文本 <input type="text" id="eolText" value="hello" size="16" spellcheck="false"></label>
+        <label class="fld">行数 <input type="text" id="eolLines" value="3" size="5" spellcheck="false"></label>
+        <label class="fld">行尾
+          <select id="eolKind">
+            <option value="LF">LF（Linux / Mac）：'\n' = 0x0a</option>
+            <option value="CRLF">CRLF（Windows / 互联网）：'\r\n' = 0x0d 0x0a</option>
+          </select>
+        </label>
+        <button class="p" id="eolGo">计算</button>
+        <button class="sm" data-eol="text=hello;lines=3;kind=LF">课件例：hello ×3（LF）</button>
+        <button class="sm" data-eol="text=hello;lines=3;kind=CRLF">同文本改 CRLF</button>
+      </div>
+      <div id="eolOut"></div>
+    </div>
+  </section>
+
+  <!-- ================= 3 ================= -->
+  <section id="s3">
+    <h2>3. 目录、层次与路径名<span class="srcref">原第 8–10 页</span></h2>
+    <p class="lede">目录不是「装着文件的盒子」，而是<b>一张把文件名映射到文件的链接表</b>。所有目录串成一棵以 <code>/</code> 为根的树；而「文件在哪」这件事，最终总是靠一个<b>路径名</b>加一个<b>工作目录</b>算出来的。</p>
+
+    <h3>3.1 目录 = 链接数组<span class="srcref">原第 8 页</span></h3>
+    <ul>
+      <li>目录由<b>一个链接（link）数组</b>组成：每个链接把一个<b>文件名</b>映射到一个文件。</li>
+      <li>每个目录至少有<b>两个条目</b>：<code>.</code>（dot）是指向自身的链接；<code>..</code>（dot dot）是指向目录层次中<b>父目录</b>的链接。</li>
+      <li>操纵目录的命令：<code>mkdir</code> 建空目录、<code>ls</code> 查看目录内容、<code>rmdir</code> 删除空目录。</li>
+    </ul>
+    <p>注意课件措辞：链接把 <b>文件名</b>映射到<b>文件</b>，而不是把目录映射到文件 —— 这也是为什么同一个文件可以有多个名字（硬链接），而 <code>.</code> 与 <code>..</code> 只是两个自动生成的链接条目。</p>
+
+    <h3>3.2 目录层次与工作目录<span class="srcref">原第 9 页</span></h3>
+    <p>所有文件组织成一棵层次树，根目录名为 <code>/</code>（slash）。课件画的树（下面用表格重建）里，<code>home</code> 下住着 <code>droh</code> 与 <code>bryant</code> 两位用户，<code>droh/hello.c</code> 就是后面路径名例子里那个文件：</p>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>路径</th><th>类型</th><th>说明</th></tr>
+      <tr><td class="mono">/bin/bash</td><td>普通文件</td><td>shell 本体</td></tr>
+      <tr><td class="mono">/dev/tty1</td><td>设备</td><td>一个终端（原第 4 页：终端也被表示成文件）</td></tr>
+      <tr><td class="mono">/etc/group · /etc/passwd</td><td>普通文件</td><td>系统配置</td></tr>
+      <tr><td class="mono">/home/droh/hello.c</td><td>普通文件</td><td>课件第 10 页的绝对路径名例子</td></tr>
+      <tr><td class="mono">/home/bryant</td><td>目录</td><td>课件第 10 页的当前工作目录（cwd）</td></tr>
+      <tr><td class="mono">/usr/include/stdio.h · /usr/include/sys/unistd.h</td><td>普通文件</td><td>标准库头文件</td></tr>
+      <tr><td class="mono">/usr/bin/vim</td><td>普通文件</td><td>编辑器</td></tr>
+    </table></div>
+    <p>内核为每个进程维护一个<b>当前工作目录（cwd）</b>，用 <code>cd</code> 命令修改。它是「相对路径名」的起点。</p>
+
+    <h3>3.3 两种路径名<span class="srcref">原第 10 页</span></h3>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>形式</th><th>规则</th><th>课件例子（cwd = <code>/home/bryant</code>）</th></tr>
+      <tr><td><b>绝对路径名</b></td><td>以 <code>/</code> 开头，从根开始写全路径</td><td class="mono">/home/droh/hello.c</td></tr>
+      <tr><td><b>相对路径名</b></td><td>从当前工作目录出发</td><td class="mono">../droh/hello.c</td></tr>
+    </table></div>
+    <p>两个例子指的是同一个文件：从 <code>/home/bryant</code> 出发，<code>..</code> 回到 <code>/home</code>，再进 <code>droh/</code> 就是了。</p>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：路径名解析器 —— 给 cwd 与路径，一步步算出它指向哪个文件</span>
+        <label class="fld">cwd <input type="text" id="pnCwd" value="/home/bryant" size="16" spellcheck="false"></label>
+        <label class="fld">路径名 <input type="text" id="pnPath" value="../droh/hello.c" size="22" spellcheck="false"></label>
+        <button class="p" id="pnGo">解析</button>
+        <button class="sm" data-pn="cwd=/home/bryant;path=../droh/hello.c">课件例：相对路径</button>
+        <button class="sm" data-pn="cwd=/home/bryant;path=/home/droh/hello.c">课件例：绝对路径</button>
+        <button class="sm" data-pn="cwd=/home/droh;path=./../bryant">上上下下</button>
+        <button class="sm" data-pn="cwd=/etc;path=../usr/include/sys/unistd.h">跳到内核头文件</button>
+      </div>
+      <div id="pnOut"></div>
+    </div>
+
+    <div class="box"><div class="t">顺带一提：cwd 是「每进程」的</div>
+      课件第 9 页说内核为 <b>每个进程</b>维护 cwd。这和<a href="#s6">第 6 节</a>要讲的「描述符表每进程一张、打开文件表全系统共享」是同一类分层思路：<b>进程私有的状态放进程里，全局的对象放内核里</b>。shell 里 <code>cd</code> 只改了它自己（以及它 <code>fork</code> 出来的子进程）的 cwd，别的进程纹丝不动。
+    </div>
+  </section>
+
+  <!-- ================= 4 ================= -->
+  <section id="s4">
+    <h2>4. 打开、关闭、读、写与 short count<span class="srcref">原第 11–17、41 页</span></h2>
+    <p class="lede">六个函数里最常打交道的四个。课件一页一个函数，每页都把「返回值」讲透 —— 因为<b>每一个返回值都可能是错误信号</b>，而 <code>read</code>/<code>write</code> 的返回值还多一层歧义：<b>比请求的少，不代表出错</b>。</p>
+
+    <h3>4.1 open：拿到一个小的整数<span class="srcref">原第 11 页</span></h3>
+    <p>打开文件就是<b>告诉内核你准备访问它</b>。返回值是一个小的标识整数 —— <b>文件描述符（file descriptor）</b>。<code>fd == -1</code> 表示出错。每个由 Linux shell 创建的进程，出生时就带着三个连着终端的打开文件：</p>
+    <div class="formula" style="text-align:left">
+      <div>int fd;   /* file descriptor */</div>
+      <div>if ((fd = open("/etc/hosts", O_RDONLY)) &lt; 0) {</div>
+      <div>&nbsp;&nbsp;&nbsp;&nbsp;perror("open");</div>
+      <div>&nbsp;&nbsp;&nbsp;&nbsp;exit(1);</div>
+      <div>}</div>
+    </div>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>fd</th><th>名称</th><th>含义</th></tr>
+      <tr><td class="mono">0</td><td>stdin</td><td>标准输入</td></tr>
+      <tr><td class="mono">1</td><td>stdout</td><td>标准输出</td></tr>
+      <tr><td class="mono">2</td><td>stderr</td><td>标准错误</td></tr>
+    </table></div>
+    <p>0/1/2 被占着，所以程序里第一次 <code>open</code> 拿到的一般是 <b>3</b> —— 这一点在<a href="#s7">第 7 节</a>的 <code>ffiles</code> 例题里会看到它的后果。</p>
+
+    <h3>4.2 close：连「显然不会失败」的函数也要查返回值<span class="srcref">原第 12 页</span></h3>
+    <p>关闭文件是告诉内核「用完了」。课件用两句话给出态度：<b>关闭一个已经关闭的文件，在多线程程序里是灾难的配方</b>；<b>教训：永远检查返回码 —— 哪怕 <code>close()</code> 这种看起来人畜无害的函数</b>。</p>
+
+    <h3>4.3 read 与 write：位置会动，返回值会短<span class="srcref">原第 13–14 页</span></h3>
+    <p>读文件 = <b>把字节从当前文件位置复制到内存，然后更新文件位置</b>；写文件同理，方向相反。课件的两个例子都声明了 <code>char buf[512]</code>：</p>
+    <div class="grid g2">
+      <div class="card"><h5>读（原第 13 页）</h5>
+        <p class="mono" style="margin:0;font-size:13px;white-space:pre-wrap">char buf[512];
+int fd;       /* file descriptor */
+int nbytes;   /* number of bytes read */
+
+/* Open file fd ...  */
+/* Then read up to 512 bytes from file fd */
+if ((nbytes = read(fd, buf, sizeof(buf))) &lt; 0) {
+    perror("read");
+    exit(1);
+}</p>
+      </div>
+      <div class="card"><h5>写（原第 14 页，括号已补全）</h5>
+        <p class="mono" style="margin:0;font-size:13px;white-space:pre-wrap">char buf[512];
+int fd;       /* file descriptor */
+int nbytes;   /* number of bytes read */
+
+/* Open the file fd ... */
+/* Then write up to 512 bytes from buf to file fd */
+if ((nbytes = write(fd, buf, sizeof(buf))) &lt; 0) {
+    perror("write");
+    exit(1);
+}</p>
+      </div>
+    </div>
+    <div class="box warn"><div class="t">勘误一：原第 14 页 <code>write</code> 那行的括号少了一个</div>
+      原课件第 14 页写的是 <code>if ((nbytes = write(fd, buf, sizeof(buf)) &lt; 0) {</code> —— 开括号四个、闭括号三个，而且 <code>&lt; 0</code> 落在了赋值里面，<b>这段代码根本编译不过</b>（本机 clang 实测：<code>error: expected ')'</code>）。同一课件第 13 页的 <code>read</code> 版本是对的，CS:APP 原书也是对的。本页按 <code>if ((nbytes = write(fd, buf, sizeof(buf))) &lt; 0) {</code> 呈现。
+    </div>
+    <p>两页的正文都强调：<b><code>nbytes &lt; 0</code> 才表示出错</b>；返回类型 <code>ssize_t</code> 是<b>有符号</b>整数（所以能表示 −1）；<b>short count（<code>nbytes &lt; sizeof(buf)</code>）完全可能出现，而且不是错误</b>。</p>
+
+    <h3>4.4 两个逐字节拷贝的例子<span class="srcref">原第 15、17 页</span></h3>
+    <p>课件用两个「把文件拷到标准输出」的程序做对照：前者一次搬 1 个字节，后者一次搬 <code>BUFSIZE</code> 个字节。两人的循环都是靠返回值控制：</p>
+    <div class="grid g2">
+      <div class="card"><h5>showfile1_nobuf.c（原第 15 页）</h5>
+        <p class="mono" style="margin:0;font-size:13px;white-space:pre-wrap">#include "csapp.h"
+
+int main(int argc, char *argv[])
+{
+    char c;
+    int infd = STDIN_FILENO;
+    if (argc == 2) {
+        infd = Open(argv[1], O_RDONLY, 0);
+    }
+    while(Read(infd, &amp;c, 1) != 0)
+        Write(STDOUT_FILENO, &amp;c, 1);
+    exit(0);
+} showfile1_nobuf.c</p>
+        <p style="margin:8px 0 0;font-size:13.5px;color:var(--muted)">演示：<code>linux&gt; strace ./showfile1_nobuf names.txt</code></p>
+      </div>
+      <div class="card"><h5>showfile2_buf.c（原第 17 页，声明已补）</h5>
+        <p class="mono" style="margin:0;font-size:13px;white-space:pre-wrap">#include "csapp.h"
+#define BUFSIZE 64
+
+int main(int argc, char *argv[])
+{
+    char buf[BUFSIZE];
+    int infd = STDIN_FILENO;
+    if (argc == 2) {
+        infd = Open(argv[1], O_RDONLY, 0);
+    }
+    while((nread = Read(infd, buf, BUFSIZE)) != 0)
+        Write(STDOUT_FILENO, buf, nread);
+    exit(0);
+} showfile2_buf.c</p>
+        <p style="margin:8px 0 0;font-size:13.5px;color:var(--muted)">演示：<code>linux&gt; strace ./showfile2_buf names.txt</code></p>
+      </div>
+    </div>
+    <div class="box warn"><div class="t">勘误二：原第 17 页漏了 <code>ssize_t nread;</code> 这一行声明</div>
+      原课件第 17 页的代码里只声明了 <code>char buf[BUFSIZE];</code> 与 <code>int infd</code>，却在循环里直接用 <code>nread</code> —— 本机 clang 实测：<code>error: use of undeclared identifier 'nread'</code>。<code>Read()</code> 的返回值是 <code>ssize_t</code>（和 Unix 的 <code>read</code> 一样），本页按 <code>ssize_t nread;</code> 补上呈现。
+    </div>
+
+    <h3>4.5 short count 什么时候出现<span class="srcref">原第 16、41 页</span></h3>
+    <div class="grid g2">
+      <div class="card"><h5>可能出现 short count</h5>
+        <ul style="margin:0;font-size:14.5px">
+          <li>读的时候遇到 <b>EOF（end-of-file）</b></li>
+          <li>从<b>终端</b>读文本行</li>
+          <li>读或写<b>网络套接字</b></li>
+        </ul>
+      </div>
+      <div class="card"><h5>绝不会出现 short count</h5>
+        <ul style="margin:0;font-size:14.5px">
+          <li>读磁盘文件（<b>除 EOF 之外</b>）</li>
+          <li>写磁盘文件</li>
+        </ul>
+      </div>
+    </div>
+    <p>课件给的结论只有一句：<b>最佳实践是永远为 short count 做好准备（best practice is to always allow for short counts）</b>。</p>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：short count 推演器 —— 选场景与参数，算这次调用返回多少、算不算错</span>
+        <label class="fld">场景
+          <select id="scDev">
+            <option value="disk-read">读磁盘文件（还剩若干字节）</option>
+            <option value="disk-eof">读磁盘文件（已到 EOF）</option>
+            <option value="disk-write">写磁盘文件</option>
+            <option value="tty">从终端读一行文本</option>
+            <option value="sock-read">从套接字读</option>
+            <option value="sock-write">往套接字写</option>
+          </select>
+        </label>
+        <label class="fld">请求字节数 n <input type="text" id="scN" value="512" size="7" spellcheck="false"></label>
+        <label class="fld">当前可用 / 已到达 <input type="text" id="scAvail" value="13" size="7" spellcheck="false"></label>
+        <button class="p" id="scGo">推演</button>
+        <button class="sm" data-sc="dev=disk-read;n=512;avail=13">课件例：读 512 只得到 13</button>
+        <button class="sm" data-sc="dev=disk-eof;n=512;avail=0">EOF 处再读</button>
+        <button class="sm" data-sc="dev=disk-write;n=512;avail=0">写磁盘文件</button>
+      </div>
+      <div id="scOut"></div>
+    </div>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：系统调用计数 —— 同一个文件，颗粒度决定内核被叫醒几次</span>
+        <label class="fld">文件字节数 <input type="text" id="cnN" value="1000" size="8" spellcheck="false"></label>
+        <label class="fld">BUFSIZE <input type="text" id="cnBuf" value="64" size="6" spellcheck="false"></label>
+        <button class="p" id="cnGo">计算</button>
+        <button class="sm" data-cn="n=1000;buf=64">1000 字节 / 64</button>
+        <button class="sm" data-cn="n=64;buf=64">正好一次读完</button>
+        <button class="sm" data-cn="n=65;buf=64">多出 1 字节</button>
+        <button class="sm" data-cn="n=0;buf=64">空文件</button>
+      </div>
+      <div id="cnOut"></div>
+    </div>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：返回值速查 —— 点一行，看这个返回值意味着什么</span>
+      </div>
+      <div id="rtOut"></div>
+    </div>
+  </section>
+
+  <!-- ================= 5 ================= -->
+  <section id="s5">
+    <h2>5. 文件元数据与 stat<span class="srcref">原第 19–20 页</span></h2>
+    <p class="lede">文件的内容之外，内核还为每个文件维护一份<b>元数据（metadata）</b> —— 也就是「关于数据的数据」。用户的程序只能通过 <code>stat</code> / <code>fstat</code> 两个函数看到它。</p>
+
+    <h3>5.1 struct stat：内核替你记着的东西<span class="srcref">原第 19 页</span></h3>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>字段</th><th>类型</th><th>含义（课件注释）</th></tr>
+      <tr><td class="mono">st_dev</td><td class="mono">dev_t</td><td>Device —— 设备</td></tr>
+      <tr><td class="mono">st_ino</td><td class="mono">ino_t</td><td>inode —— i 节点号</td></tr>
+      <tr><td class="mono">st_mode</td><td class="mono">mode_t</td><td>Protection and file type —— 保护位与文件类型</td></tr>
+      <tr><td class="mono">st_nlink</td><td class="mono">nlink_t</td><td>Number of hard links —— 硬链接数</td></tr>
+      <tr><td class="mono">st_uid</td><td class="mono">uid_t</td><td>User ID of owner —— 属主用户 ID</td></tr>
+      <tr><td class="mono">st_gid</td><td class="mono">gid_t</td><td>Group ID of owner —— 属主组 ID</td></tr>
+      <tr><td class="mono">st_rdev</td><td class="mono">dev_t</td><td>Device type (if inode device) —— 设备类型（若是设备文件）</td></tr>
+      <tr><td class="mono">st_size</td><td class="mono">off_t</td><td>Total size, in bytes —— 文件总大小（字节）</td></tr>
+      <tr><td class="mono">st_blksize</td><td class="mono">unsigned long</td><td>Blocksize for filesystem I/O —— 文件系统 I/O 的块大小</td></tr>
+      <tr><td class="mono">st_blocks</td><td class="mono">unsigned long</td><td>Number of blocks allocated —— 已分配的块数</td></tr>
+      <tr><td class="mono">st_atime</td><td class="mono">time_t</td><td>Time of last access —— 最后访问时间</td></tr>
+      <tr><td class="mono">st_mtime</td><td class="mono">time_t</td><td>Time of last modification —— 最后修改时间</td></tr>
+      <tr><td class="mono">st_ctime</td><td class="mono">time_t</td><td>Time of last change —— 最后变更时间（inode 变化）</td></tr>
+    </table></div>
+
+    <h3>5.2 statcheck.c：两个宏搞定一切<span class="srcref">原第 20 页</span></h3>
+    <p>课件用一个极短的例子展示元数据的用法：用 <code>S_ISREG</code> / <code>S_ISDIR</code> 判断类型，用 <code>st_mode &amp; S_IRUSR</code> 判断属主是否可读。程序跑三次，输出三种结果：</p>
+    <div class="grid g2">
+      <div class="card"><h5>statcheck.c</h5>
+        <p class="mono" style="margin:0;font-size:13px;white-space:pre-wrap">int main (int argc, char **argv)
+{
+    struct stat stat;
+    char *type, *readok;
+    Stat(argv[1], &amp;stat);
+    if (S_ISREG(stat.st_mode))     /* Determine file type */
+        type = "regular";
+    else if (S_ISDIR(stat.st_mode))
+        type = "directory";
+    else
+        type = "other";
+    if ((stat.st_mode &amp; S_IRUSR)) /* Check read access */
+        readok = "yes";
+    else
+        readok = "no";
+    printf("type: %s, read: %s\n", type, readok);
+    exit(0);
+} statcheck.c</p>
+      </div>
+      <div class="card"><h5>三次运行（原第 20 页原话）</h5>
+        <p class="mono" style="margin:0;font-size:13px;white-space:pre-wrap">linux&gt; ./statcheck statcheck.c
+type: regular, read: yes
+linux&gt; chmod 000 statcheck.c
+linux&gt; ./statcheck statcheck.c
+type: regular, read: no
+linux&gt; ./statcheck ..
+type: directory, read: yes</p>
+        <p style="margin:8px 0 0;font-size:13.5px;color:var(--muted)"><code>chmod 000</code> 把权限位全部清掉，于是 <code>st_mode &amp; S_IRUSR</code> 为 0 —— 但这个文件仍然是 regular。<b>类型位与权限位住在同一个 <code>st_mode</code> 里，互不影响</b>。</p>
+      </div>
+    </div>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：st_mode 解码器 —— 给一个八进制模式位，算出类型与权限</span>
+        <label class="fld">st_mode（八进制） <input type="text" id="mdIn" value="0100644" size="12" spellcheck="false"></label>
+        <button class="p" id="mdGo">解码</button>
+        <button class="sm" data-md="0100644">普通文件 644</button>
+        <button class="sm" data-md="0100000">chmod 000 之后</button>
+        <button class="sm" data-md="0040755">目录 755</button>
+        <button class="sm" data-md="0120777">符号链接</button>
+        <button class="sm" data-md="0140777">套接字</button>
+      </div>
+      <div id="mdOut"></div>
+    </div>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：struct stat 速查 —— 点字段看它在哪儿被用上</span>
+      </div>
+      <div id="stOut"></div>
+    </div>
+  </section>
+
+  <!-- ================= 6 ================= -->
+  <section id="s6">
+    <h2>6. 内核如何表示打开的文件<span class="srcref">原第 21–27 页</span></h2>
+    <p class="lede">这是本讲最值钱的一节：内核用<b>三张表</b>表示「哪些进程打开了哪些文件」。把它们摆在一起，<code>fork</code> 共享、<code>dup2</code> 重定向这些行为就不再是「规定」，而是<b>表结构决定的必然后果</b>。</p>
+
+    <h3>6.1 三张表<span class="srcref">原第 21 页</span></h3>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>表</th><th>作用域</th><th>表项里有什么</th></tr>
+      <tr><td><b>描述符表 Descriptor table</b></td><td><b>每个进程一张</b></td><td>一行一个 fd，指向「打开文件表」里的某个表项</td></tr>
+      <tr><td><b>打开文件表 Open file table</b></td><td><b>所有进程共享</b></td><td>文件位置（File pos）、引用计数 refcnt、文件访问模式（File access）、文件类型……</td></tr>
+      <tr><td><b>v-node 表 v-node table</b></td><td><b>所有进程共享</b></td><td>文件大小（File size）、文件访问、文件类型等 <code>stat</code> 结构信息</td></tr>
+    </table></div>
+    <p>课件第 21 页的例子是「两个描述符指向两个不同的打开文件」：<code>fd 1</code>（stdout）指向终端，<code>fd 4</code> 指向一个打开的磁盘文件；两个打开文件表表项的 refcnt 都是 1。页面下方那句总结很重要：<b>File pos is maintained per open file</b> —— 文件位置记在<b>打开文件表表项</b>上，不是记在描述符上，也不是记在 v-node 上。</p>
+
+    <h3>6.2 文件共享：两次 open = 两个表项<span class="srcref">原第 22 页</span></h3>
+    <p>两个不同的描述符也可以指向<b>同一个磁盘文件</b> —— 只要它们是通过<b>两次 <code>open</code></b>（同一个文件名参数）得到的：那会创建<b>两个独立的打开文件表表项</b>，各自有自己的 File pos，最终指向同一个 v-node。课件称之为「<b>逻辑上不同、物理上相同的文件</b>」。</p>
+
+    <h3>6.3 fork：子进程继承描述符，共享文件位置<span class="srcref">原第 23–24 页</span></h3>
+    <ul>
+      <li><b>fork 之前</b>：父子共用一套的前提还不存在，描述符表只有父进程的，打开文件表表项 refcnt 全为 1。</li>
+      <li><b>fork 之后</b>：子进程<b>继承</b>父进程的打开文件；子进程的描述符表与父进程<b>一模一样</b>，而每个打开文件表表项的 <b>refcnt 加 1</b>。</li>
+      <li>课件第 23 页还有一句关键补充：<b>exec 系列函数不会改变这个局面</b>（要用 <code>fcntl</code> 才能改）。</li>
+    </ul>
+    <div class="box"><div class="t">所以 fork 之后「文件位置」是共享的</div>
+      子进程的 fd1 与父进程的 fd1 指向<b>同一个打开文件表表项</b>，也就是<b>同一个 File pos</b>。父进程读走一个字节，子进程接着读到的就是下一个字节 —— 这正是<a href="#s7">第 7 节 <code>ffiles2.c</code></a> 那道题的答案来源。第 24 页图下标着「File is shared between processes」。
+    </div>
+
+    <h3>6.4 dup2：shell 重定向的全部秘密<span class="srcref">原第 25–27 页</span></h3>
+    <p>课件的设问是：<b>shell 是怎么实现 I/O 重定向的？</b></p>
+    <div class="formula" style="text-align:left">
+      <div>linux&gt; ls &gt; foo.txt&nbsp;&nbsp;&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)">/* 答：调用 dup2(oldfd, newfd) */</span></div>
+    </div>
+    <p><code>dup2(oldfd, newfd)</code> 做的事只有一件：<b>把（每进程的）描述符表里 <code>newfd</code> 那一项，改成和 <code>oldfd</code> 一样</b>。于是第 25 页画出 before/after 两张表：<code>dup2(4, 1)</code> 之前 <code>fd1 → a</code>，之后 <code>fd1 → b</code>（<code>fd4</code> 本来就指向 b）。</p>
+    <p>第 26、27 页把这个动作拆成两步：</p>
+    <ol>
+      <li><b>Step 1：打开要重定向到的文件</b> —— 发生在执行 shell 代码的子进程里，<b>exec 之前</b>。此刻 <code>fd1</code> 仍指向终端（File A），新开的 <code>fd4</code> 指向磁盘文件（File B）。</li>
+      <li><b>Step 2：调用 <code>dup2(4, 1)</code></b> —— 让 <code>fd 1</code>（stdout）指向 <code>fd 4</code> 所指的磁盘文件。图上随之变化：<b>File A 的 refcnt 变成 0</b>（stdout 原来那个表项没人引用了，被释放），<b>File B 的 refcnt 变成 2</b>（fd1 与 fd4 同时引用）。子进程接着 <code>exec</code>，程序以为自己还在往 stdout 写，其实全进了文件。</li>
+    </ol>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：三表联动图 —— 按步骤搭出描述符表 / 打开文件表 / v-node 表</span>
+        <div class="seg" id="ftSeg">
+          <button class="on" data-ft="0">① 初始 + open</button>
+          <button data-ft="1">② 再 open 一次</button>
+          <button data-ft="2">③ fork 之后</button>
+          <button data-ft="3">④ dup2(4,1)</button>
+        </div>
+        <button class="sm" data-ftset="3">跳到 dup2(4,1)</button>
+      </div>
+      <div id="ftOut"></div>
+    </div>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：重定向实验室 —— 亲手跑一遍 <code>ls &gt; foo.txt</code> 的两步</span>
+        <label class="fld">程序写往 stdout 的字节 <input type="text" id="rdText" value="hello, stdout" size="16" spellcheck="false"></label>
+        <button class="p" id="rdStep">执行下一步</button>
+        <button class="sm" id="rdReset">复位</button>
+        <button class="sm" data-rd="all">一次跑完</button>
+      </div>
+      <div id="rdOut"></div>
+      <div class="box" style="margin-bottom:0"><div class="t">原课件没有给出 <code>ls</code> 的具体输出</div>
+        这个练习关心的不是「<code>ls</code> 打印了什么」，而是<b>那些字节去了哪里</b>。输入框里的内容是示意用的：它代表「子程序往 fd 1 写出去的字节」，换个内容不影响结论。</div>
+    </div>
+  </section>
+
+  <!-- ================= 7 ================= -->
+  <section id="s7">
+    <h2>7. 文件描述符三例（ffiles 1 / 2 / 3）<span class="srcref">原第 28–31、56–58 页</span></h2>
+    <p class="lede">三小段程序，把第 6 节的三张表考了个遍。<code>ffiles1</code> 考 <b>dup2</b>、<code>ffiles2</code> 考 <b>fork 后的共享文件位置</b>、<code>ffiles3</code> 考 <b>O_APPEND 与 dup 的叠加</b>。课件第 56–58 页把前两个又原样问了一遍（标题改成 Fun with File Descriptors 1/2），并补了第三个。</p>
+
+    <h3>7.1 ffiles1.c：dup2 之后谁跟谁共享<span class="srcref">原第 28–29、56 页</span></h3>
+    <p>三次 <code>open</code> 同一个文件，各自建一个打开文件表表项（三个独立的 File pos，全在 0）；然后 <code>Dup2(fd2, fd3)</code>：</p>
+    <div class="grid g2">
+      <div class="card"><h5>程序（原第 28 页）</h5>
+        <p class="mono" style="margin:0;font-size:13px;white-space:pre-wrap">#include "csapp.h"
+
+int main(int argc, char *argv[])
+{
+    int fd1, fd2, fd3;
+    char c1, c2, c3;
+    char *fname = argv[1];
+    fd1 = Open(fname, O_RDONLY, 0);
+    fd2 = Open(fname, O_RDONLY, 0);
+    fd3 = Open(fname, O_RDONLY, 0);
+    Dup2(fd2, fd3);
+    Read(fd1, &amp;c1, 1);
+    Read(fd2, &amp;c2, 1);
+    Read(fd3, &amp;c3, 1);
+    printf("c1 = %c, c2 = %c, c3 = %c\n", c1, c2, c3);
+    return 0;
+} ffiles1.c</p>
+      </div>
+      <div class="card"><h5>答案（原第 29 页）</h5>
+        <p style="margin:0;font-size:15px"><b>文件内容为“abcde”时输出：</b></p>
+        <p class="mono" style="margin:6px 0 0;font-size:15px">c1 = a, c2 = a, c3 = b</p>
+        <p style="margin:10px 0 0;font-size:14px">课件在 <code>Dup2(fd2, fd3);</code> 旁边标注了 <code>dup2(oldfd, newfd)</code>，提醒参数次序：<b>把 newfd 改成 oldfd 的副本</b>。</p>
+        <ul style="margin:8px 0 0;font-size:14px">
+          <li><code>fd1</code>、<code>fd2</code>、<code>fd3</code> 是三次 <code>open</code> 的产物，本来就是<b>三个独立表项</b>，位置都在 0。</li>
+          <li><code>Dup2(fd2, fd3)</code> 让 <code>fd3</code> 指向 <code>fd2</code> 的表项 —— <b>只复制描述符表的一格</b>，不新建打开文件表表项。</li>
+          <li>于是前两次读各自从位置 0 拿到 <code>a</code>，第三次读走的是 <b>fd2 那个表项</b>（位置已推进到 1），拿到 <code>b</code>。</li>
+        </ul>
+      </div>
+    </div>
+
+    <h3>7.2 ffiles2.c：fork 之后谁先读到第二个字节<span class="srcref">原第 30–31、57 页</span></h3>
+    <p>这个程序的精彩之处在一个看似无关的细节：<code>int s = getpid() &amp; 0x1;</code> <b>写在 fork 之前</b>，所以父子拿到的 <code>s</code> 是同一个值（父进程 pid 的奇偶）。父睡 <code>s</code> 秒、子睡 <code>1−s</code> 秒 —— <b>必然有一个睡 0 秒、另一个睡 1 秒</b>，于是「谁先读第二个字节」完全由父进程 pid 的奇偶决定。</p>
+    <div class="grid g2">
+      <div class="card"><h5>程序（原第 30 页）</h5>
+        <p class="mono" style="margin:0;font-size:13px;white-space:pre-wrap">#include "csapp.h"
+
+int main(int argc, char *argv[])
+{
+    int fd1;
+    int s = getpid() &amp; 0x1;
+    char c1, c2;
+    char *fname = argv[1];
+    fd1 = Open(fname, O_RDONLY, 0);
+    Read(fd1, &amp;c1, 1);
+    if (fork()) { /* Parent */
+        sleep(s);
+        Read(fd1, &amp;c2, 1);
+        printf("Parent: c1 = %c, c2 = %c\n", c1, c2);
+    } else { /* Child */
+        sleep(1-s);
+        Read(fd1, &amp;c2, 1);
+        printf("Child: c1 = %c, c2 = %c\n", c1, c2);
+    }
+    return 0;
+} ffiles2.c</p>
+        <p style="margin:8px 0 0;font-size:13.5px;color:var(--muted)">课件第 31 页下方还有一行：<b>Bonus: Which way does it go?</b></p>
+      </div>
+      <div class="card"><h5>两种可能的输出（原第 31 页原话）</h5>
+        <p class="mono" style="margin:0;font-size:14px;white-space:pre-wrap">Child: c1 = a, c2 = b
+Parent: c1 = a, c2 = c
+
+Parent: c1 = a, c2 = b
+Child: c1 = a, c2 = c</p>
+        <p style="margin:10px 0 0;font-size:14px">两种都出现，但<b>不是随机的</b>：<code>c1</code> 恒为 <code>a</code>（fork 之前父进程已经读走第一个字节，父子共享的那个 File pos 现在是 1），而<b>第二个字节 <code>b</code> 归先醒来（睡 0 秒）的那个进程</b>，后醒的只能拿到 <code>c</code>。</p>
+      </div>
+    </div>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：fork 顺序判定 —— 先猜「谁先读」，再看依据</span>
+        <div class="seg" id="f2Seg">
+          <button class="on" data-f2p="0">父 pid 为偶数（s = 0）</button>
+          <button data-f2p="1">父 pid 为奇数（s = 1）</button>
+        </div>
+        <button class="sm" id="f2Go">判定我的选择</button>
+        <button class="sm" id="f2Reset">重来</button>
+      </div>
+      <div id="forkOut"></div>
+    </div>
+
+    <h3>7.3 ffiles3.c：O_APPEND 与 dup 叠在一起<span class="srcref">原第 58 页</span></h3>
+    <p>课件最后一页「Fun with File Descriptors (3)」只给了题面：<b>What would be the contents of the resulting file?</b>（结果文件里会是什么内容？）注意三个 fd 的来历各不相同：<code>fd1</code> 是读写打开并截断、<code>fd3</code> 是 <b>O_APPEND</b> 打开、<code>fd2</code> 是 <code>dup(fd1)</code> 来的。</p>
+    <div class="formula" style="text-align:left">
+      <div>fd1 = Open(fname, O_CREAT|O_TRUNC|O_RDWR, S_IRUSR|S_IWUSR);</div>
+      <div>Write(fd1, "pqrs", 4);</div>
+      <div>fd3 = Open(fname, O_APPEND|O_WRONLY, 0);</div>
+      <div>Write(fd3, "jklmn", 5);</div>
+      <div>fd2 = dup(fd1);&nbsp;&nbsp;/* Allocates descriptor */</div>
+      <div>Write(fd2, "wxyz", 4);</div>
+      <div>Write(fd3, "ef", 2);</div>
+    </div>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：ffiles3 先猜后验 —— 选一个你认为的文件内容</span>
+        <button class="sm" id="afGo">提交答案</button>
+        <button class="sm" id="afReset">重来</button>
+      </div>
+      <div id="ansOut"></div>
+    </div>
+
+    <h3>7.4 通用模拟器：按 Unix 语义执行这几个程序<span class="srcref">综合原第 21–31、56–58 页</span></h3>
+    <p>下面的模拟器实现的是<b>第 6 节那三张表</b>：描述符表 + 打开文件表 + 一个虚拟文件。它按真实语义处理 <code>O_APPEND</code>（每次写之前先把位置移到文件末尾）、<code>dup</code>/<code>dup2</code>（共享同一个表项）、<code>close</code>（引用计数减一，归零才释放表项）。默认值就是 <code>ffiles1.c</code>，改几行就能自己出题。</p>
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：描述符模拟器 —— 单步执行，看三张表与文件内容一起变</span>
+        <button class="p" id="ffRun">重新执行</button>
+        <button class="sm" id="ffStep">单步</button>
+        <button class="sm" id="ffAll">跑到底</button>
+        <button class="sm" data-ff="ff1">载入 ffiles1</button>
+        <button class="sm" data-ff="ff3">载入 ffiles3</button>
+        <button class="sm" data-ff="redir">载入重定向例</button>
+      </div>
+      <label class="fld" style="display:block;margin:4px 0 10px">程序（<code>open</code> / <code>dup</code> / <code>dup2</code> / <code>close</code> / <code>read</code> / <code>write</code> / <code>lseek</code> / <code>printf</code>；文件叫 <code>fname</code>，终端是 fd 0/1/2）
+        <textarea id="ffSrc" rows="9" spellcheck="false" style="width:100%;font-family:var(--font-mono);font-size:13.5px;margin-top:6px"></textarea>
+      </label>
+      <div id="ffOut"></div>
+    </div>
+
+    <div class="box ok"><div class="t">三个程序其实在考同一件事</div>
+      「谁会共享文件位置」——<code>ffiles1</code> 里 <code>dup2</code> 让两个 fd <b>共享</b>位置，<code>ffiles2</code> 里 <code>fork</code> 让父子<b>共享</b>位置，<code>ffiles3</code> 里 <code>dup</code> 让两个 fd <b>共享</b>位置、而 <code>O_APPEND</code> 的表项每次写都<b>先跳到末尾</b>。把这三条刻进脑子，本讲的例题就都能手算了。
+    </div>
+  </section>
+
+  <!-- ================= 8 ================= -->
+  <section id="s8">
+    <h2>8. 标准 I/O 与缓冲<span class="srcref">原第 33–38 页</span></h2>
+    <p class="lede">C 标准库（<code>libc.so</code>）在一套文件描述符之上，又造了一层更高级的接口：<b>流（stream）</b>。它替你做缓冲、替你处理 short count，代价是<b>你再也看不到元数据、也不能在信号处理器里用它</b>。</p>
+
+    <h3>8.1 标准 I/O 函数与流<span class="srcref">原第 33–34 页</span></h3>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>用途</th><th>函数（原第 33 页）</th></tr>
+      <tr><td>打开 / 关闭文件</td><td class="mono">fopen · fclose</td></tr>
+      <tr><td>读写字节</td><td class="mono">fread · fwrite</td></tr>
+      <tr><td>读写文本行</td><td class="mono">fgets · fputs</td></tr>
+      <tr><td>格式化读写</td><td class="mono">fscanf · fprintf</td></tr>
+    </table></div>
+    <p>课件注明这些函数「文档在 K&amp;R 的附录 B」。<b>标准 I/O 把打开的文件建模成流</b> —— 一个流是「<b>一个文件描述符 + 一块内存缓冲</b>」的抽象；C 程序出生时带着三个流，定义在 <code>stdio.h</code>：</p>
+    <div class="formula" style="text-align:left">
+      <div>#include &lt;stdio.h&gt;</div>
+      <div>extern FILE *stdin;&nbsp;&nbsp;/* standard input&nbsp;&nbsp;(descriptor 0) */</div>
+      <div>extern FILE *stdout; /* standard output (descriptor 1) */</div>
+      <div>extern FILE *stderr; /* standard error&nbsp;&nbsp;(descriptor 2) */</div>
+    </div>
+    <p>注意注释里写的 <code>descriptor 0/1/2</code>：<b>流是壳，底下还是那三个 fd</b>。</p>
+
+    <h3>8.2 为什么要缓冲<span class="srcref">原第 35 页</span></h3>
+    <ul>
+      <li>应用程序经常<b>一次读写一个字符</b>：<code>getc</code>、<code>putc</code>、<code>ungetc</code>、<code>gets</code>、<code>fgets</code>（比如「一次一个字符读一行文本，遇到换行停下」）。</li>
+      <li>而 <code>read</code> 和 <code>write</code> <b>需要陷入内核（kernel call）</b>，课件给的量级是 <b>&gt; 10 000 个时钟周期</b>。</li>
+      <li>于是有了<b>带缓冲的读</b>：用 Unix 的 <code>read</code> 一次抓一整块字节；用户的输入函数从这个缓冲里<b>一个字节一个字节地拿</b>；<b>缓冲空了就再抓一块</b>。</li>
+    </ul>
+    <div class="formula" style="text-align:left">
+      <div>Buffer：&nbsp;&nbsp;[ 已经读走的 | 还没读的 ]&nbsp;&nbsp;&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)">/* 原第 35 页原话：Buffer / already read / unread */</span></div>
+    </div>
+
+    <h3>8.3 写方向的缓冲：数据什么时候才真的出门<span class="srcref">原第 36–37 页</span></h3>
+    <p>课件的图把 <code>printf</code> 一连调用六次，看着 <code>buf</code> 一格一格被填满，最后 <code>fflush(stdout)</code> 才引发一次 <code>write(1, buf, 6)</code>：</p>
+    <div class="formula" style="text-align:left">
+      <div>printf("h"); printf("e"); printf("l"); printf("l"); printf("o"); printf("\n");</div>
+      <div>buf：&nbsp;h&nbsp;&nbsp;e&nbsp;&nbsp;l&nbsp;&nbsp;l&nbsp;&nbsp;o&nbsp;&nbsp;\n&nbsp;&nbsp;·&nbsp;&nbsp;·</div>
+      <div>fflush(stdout);&nbsp;&nbsp;→&nbsp;&nbsp;write(1, buf, 6);</div>
+    </div>
+    <p>课件的原文结论：<b>缓冲在遇到 “\n”、调用 fflush、或者 exit / 从 main 返回时被冲（flush）到输出 fd</b>。第 37 页用 <code>strace</code> 让你亲眼看这件事 —— 程序里连着六次 <code>printf</code>，系统调用层面只有<b>一次</b> <code>write</code>：</p>
+    <div class="grid g2">
+      <div class="card"><h5>hello.c（原第 37 页）</h5>
+        <p class="mono" style="margin:0;font-size:13px;white-space:pre-wrap">#include &lt;stdio.h&gt;
+
+int main()
+{
+    printf("h");
+    printf("e");
+    printf("l");
+    printf("l");
+    printf("o");
+    printf("\n");
+    fflush(stdout);
+    exit(0);
+}</p>
+      </div>
+      <div class="card"><h5>strace 输出（原第 37 页）</h5>
+        <p class="mono" style="margin:0;font-size:13px;white-space:pre-wrap">linux&gt; strace ./hello
+execve("./hello", ["hello"], [/* ... */]).
+...
+write(1, "hello\n", 6)               = 6
+...
+exit_group(0)                        = ?</p>
+        <p style="margin:8px 0 0;font-size:13.5px;color:var(--muted)">六个 <code>printf</code> 换不来六次系统调用 —— 这一次 <code>write</code> 送出的正是缓冲里的 <code>"hello\n"</code> 六个字节，返回值 <code>= 6</code>。</p>
+      </div>
+    </div>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：stdio 缓冲模拟器 —— 逐个 printf，看缓冲与 write 各发生几次</span>
+        <label class="fld">要打印的文本 <input type="text" id="sbText" value="hello" size="18" spellcheck="false"></label>
+        <label class="fld">缓冲模式
+          <select id="sbMode">
+            <option value="line">行缓冲（连着终端，遇 \n 冲）</option>
+            <option value="block">块缓冲（连文件/管道，满才冲）</option>
+          </select>
+        </label>
+        <label class="fld">缓冲容量 <input type="text" id="sbSize" value="1024" size="6" spellcheck="false"></label>
+        <div class="seg" id="sbAct">
+          <button class="on" data-sb="flush">结尾 fflush(stdout)</button>
+          <button data-sb="exit">结尾 exit(0) / return main</button>
+        </div>
+        <button class="p" id="sbGo">逐字符打印</button>
+        <button class="sm" data-sb2="hello">课件例：hello + \n</button>
+        <button class="sm" data-sb2="12345678">块缓冲快满的例子</button>
+      </div>
+      <div id="sbOut"></div>
+    </div>
+
+    <div class="box warn"><div class="t">课件没写缓冲有多大 —— 参数交给你</div>
+      原第 35、36 页只讲了「有缓冲」与「什么时候冲」，<b>没有给出缓冲区容量</b>（glibc 对终端的行缓冲常是 1024 字节、对普通文件常取 <code>BUFSIZ</code>，但这是实现细节，不同版本不同）。上方的容量输入框默认 1024 只是为了让「块缓冲什么时候满」看得见；<b>结论（缓冲把 N 次小写变成少数几次系统调用）与具体容量无关</b>。
+    </div>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：showfile3_stdio.c 一行一行地拷贝（原第 38 页）</span>
+        <label class="fld">每行长度 <input type="text" id="flLine" value="16" size="6" spellcheck="false"></label>
+        <label class="fld">行数 <input type="text" id="flLines" value="5" size="6" spellcheck="false"></label>
+        <button class="p" id="flGo">模拟 fgets / fprintf 的调用</button>
+      </div>
+      <div id="flOut"></div>
+    </div>
+  </section>
+
+  <!-- ================= 9 ================= -->
+  <section id="s9">
+    <h2>9. RIO：健壮的 I/O 包<span class="srcref">原第 39–49 页</span></h2>
+    <p class="lede">课件第 39、40 页的分隔页先把话说重：Standard I/O 与 RIO 是<b>两套互不兼容的库</b>，都架在 Unix I/O 上。RIO 是 CS:APP 自带的「教学用包装」（课件原话：15-213 special wrappers）—— 它替你处理<b>错误检查、信号、short count</b> 这三件烦心事。</p>
+
+    <h3>9.1 两类函数<span class="srcref">原第 42–43 页</span></h3>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>类别</th><th>函数</th><th>用途与要点</th></tr>
+      <tr><td><b>无缓冲</b>的二进制输入输出</td><td class="mono">rio_readn · rio_writen</td><td>接口与 Unix 的 <code>read</code>/<code>write</code> 相同；<b>特别适合在网络套接字上搬运数据</b>。返回：成功则为传输的字节数，<b>rio_readn 只在遇到 EOF 时返回 short count</b>，出错为 −1；<b>rio_writen 永不返回 short count</b>。只有在「你知道要读多少字节」时才用它。</td></tr>
+      <tr><td><b>带缓冲</b>的文本行与二进制输入</td><td class="mono">rio_readlineb · rio_readnb</td><td>从内部缓冲里高效地读文本行或二进制数据。<b>带缓冲的例程是线程安全的，可以在同一个描述符上任意交错调用</b>。</td></tr>
+    </table></div>
+    <p>课件还给了下载地址：<code>http://csapp.cs.cmu.edu/3e/code.html</code>，两个文件 <code>src/csapp.c</code> 与 <code>include/csapp.h</code>。另外 <code>rio_readn</code> 与 <code>rio_writen</code> 的调用也可以在同一描述符上<b>任意交错</b>（它们不共享任何缓冲状态）。</p>
+
+    <h3>9.2 rio_readn 的实现<span class="srcref">原第 44 页</span></h3>
+    <p>短短二十行，把「short count 不是错」这条规矩用循环兜住了。三个细节值得盯着看：<b>EINTR（被信号处理器打断）要重试</b>、<b>读到 0（EOF）要跳出</b>、<b>返回值是 n − nleft</b>。</p>
+    <div class="formula" style="text-align:left">
+      <div>ssize_t rio_readn(int fd, void *usrbuf, size_t n)</div>
+      <div>{</div>
+      <div>&nbsp;&nbsp;&nbsp;&nbsp;size_t nleft = n;</div>
+      <div>&nbsp;&nbsp;&nbsp;&nbsp;ssize_t nread;</div>
+      <div>&nbsp;&nbsp;&nbsp;&nbsp;char *bufp = usrbuf;</div>
+      <div>&nbsp;&nbsp;&nbsp;&nbsp;while (nleft &gt; 0) {</div>
+      <div>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;if ((nread = read(fd, bufp, nleft)) &lt; 0) {</div>
+      <div>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;if (errno == EINTR) /* Interrupted by sig handler return */</div>
+      <div>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;nread = 0;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; /* and call read() again */</div>
+      <div>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;else</div>
+      <div>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;return -1;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; /* errno set by read() */</div>
+      <div>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}</div>
+      <div>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;else if (nread == 0)</div>
+      <div>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;break;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; /* EOF */</div>
+      <div>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;nleft -= nread;</div>
+      <div>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;bufp += nread;</div>
+      <div>&nbsp;&nbsp;&nbsp;&nbsp;}</div>
+      <div>&nbsp;&nbsp;&nbsp;&nbsp;return (n - nleft);&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; /* Return &gt;= 0 */</div>
+      <div>}</div>
+    </div>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：rio_readn 逐步 —— 给「要读 n 字节」与「文件还剩多少」，看 read 被调用几次</span>
+        <label class="fld">请求 n <input type="text" id="rnIn" value="10" size="6" spellcheck="false"></label>
+        <label class="fld">文件剩余字节 <input type="text" id="rnAvail" value="4" size="6" spellcheck="false"></label>
+        <label class="fld">第一次 read 返回 EINTR
+          <select id="rnEintr"><option value="0">否</option><option value="1">是</option></select>
+        </label>
+        <button class="p" id="rnGo">逐步推演</button>
+        <button class="sm" data-rn="n=10;avail=10;e=0">正好读满</button>
+        <button class="sm" data-rn="n=10;avail=4;e=0">文件不够长 → short count</button>
+        <button class="sm" data-rn="n=10;avail=10;e=1">被信号打断一次</button>
+      </div>
+      <div id="rnOut"></div>
+    </div>
+
+    <h3>9.3 rio_readlineb / rio_readnb：带缓冲的输入<span class="srcref">原第 45–46 页</span></h3>
+    <div class="formula" style="text-align:left">
+      <div>void rio_readinitb(rio_t *rp, int fd);</div>
+      <div>ssize_t rio_readlineb(rio_t *rp, void *usrbuf, size_t maxlen);</div>
+      <div>ssize_t rio_readnb(rio_t *rp, void *usrbuf, size_t n);</div>
+      <div><span style="font-family:var(--font-sans);color:var(--muted)">/* Return: num. bytes read if OK, 0 on EOF, -1 on error */</span></div>
+    </div>
+    <ul>
+      <li><code>rio_readlineb</code> 读一条<b>文本行</b>，最多 <code>maxlen</code> 字节，存进 <code>usrbuf</code>；<b>特别适合从网络套接字读文本行</b>。停止条件有三个：<b>读满 maxlen 字节</b>、<b>遇到 EOF</b>、<b>遇到换行符 <code>'\n'</code></b>。</li>
+      <li><code>rio_readnb</code> 读<b>至多 n 字节</b>；停止条件两个：读满/EOF。</li>
+      <li>两者可以在同一个描述符上<b>任意交错</b>调用 —— 它们共用同一个缓冲。</li>
+      <li>课件第 46 页的警告：<b>不要与 rio_readn 交错</b>（<code>rio_readn</code> 绕过缓冲直接读内核，会让缓冲里已预读的字节「看不见」）。</li>
+    </ul>
+
+    <h3>9.4 缓冲的记账方式<span class="srcref">原第 47–48 页</span></h3>
+    <p>课件第 47 页把文件画成两段：<b>已经进了缓冲的部分</b>（还能再分成「已被用户读走」与「还没读」）与<b>还没见过的部分</b>。第 48 页给出 <code>rio_t</code> 的全部字段 —— 只有三个变量在记账：</p>
+    <div class="grid g2">
+      <div class="card"><h5>rio_t（原第 48 页）</h5>
+        <p class="mono" style="margin:0;font-size:13px;white-space:pre-wrap">typedef struct {
+    int rio_fd;                /* descriptor for this internal buf */
+    int rio_cnt;               /* unread bytes in internal buf */
+    char *rio_bufptr;          /* next unread byte in internal buf */
+    char rio_buf[RIO_BUFSIZE]; /* internal buffer */
+} rio_t;</p>
+      </div>
+      <div class="card"><h5>三个变量怎么配合</h5>
+        <ul style="margin:0;font-size:14.5px">
+          <li><code>rio_cnt</code>：缓冲里<b>还没被用户读走</b>的字节数 —— 和<a href="#s1">第 1 节</a>的「当前文件位置」是一回事，只不过位置管的是文件，<code>rio_cnt</code> 管的是缓冲。</li>
+          <li><code>rio_bufptr</code>：缓冲里<b>下一个待读字节</b>的指针。</li>
+          <li>缓冲空了（<code>rio_cnt == 0</code>）才再调一次 <code>read</code> 抓 <code>RIO_BUFSIZE</code> 个字节进来。</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：RIO 缓冲区模拟器 —— 逐行 / 逐块读，看 rio_cnt 与底层 read 次数</span>
+        <label class="fld">文件内容（<code>\n</code> 表示换行） <input type="text" id="riText" value="hello\nworld\nbye" size="22" spellcheck="false"></label>
+        <label class="fld">RIO_BUFSIZE <input type="text" id="riBuf" value="8" size="5" spellcheck="false"></label>
+        <label class="fld">调用
+          <select id="riOp">
+            <option value="line4">rio_readlineb(&amp;rio, buf, 4)</option>
+            <option value="line64">rio_readlineb(&amp;rio, buf, 64)</option>
+            <option value="nb3">rio_readnb(&amp;rio, buf, 3)</option>
+            <option value="nb5">rio_readnb(&amp;rio, buf, 5)</option>
+            <option value="n3">rio_readn(fd, buf, 3)（绕过缓冲）</option>
+          </select>
+        </label>
+        <button class="p" id="riGo">执行这次调用</button>
+        <button class="sm" id="riReset">重新初始化</button>
+        <button class="sm" data-ri="size=8">课件例：RIO_BUFSIZE = 8</button>
+        <button class="sm" data-ri="size=64">一次缓冲够读好几行</button>
+      </div>
+      <div id="riOut"></div>
+    </div>
+
+    <h3>9.5 RIO 版拷贝程序<span class="srcref">原第 49 页</span></h3>
+    <div class="grid g2">
+      <div class="card"><h5>showfile4_rio.c（原第 49 页的代码）</h5>
+        <p class="mono" style="margin:0;font-size:13px;white-space:pre-wrap">#include "csapp.h"
+#define MLINE 1024
+
+int main(int argc, char *argv[])
+{
+    rio_t rio;
+    char buf[MLINE];
+    int infd = STDIN_FILENO;
+    ssize_t nread = 0;
+    if (argc == 2) {
+        infd = Open(argv[1], O_RDONLY, 0);
+    }
+    Rio_readinitb(&amp;rio, infd);
+    while((nread = Rio_readlineb(&amp;rio, buf, MLINE)) != 0)
+        Rio_writen(STDOUT_FILENO, buf, nread);
+    exit(0);
+} showfile4_rio.c</p>
+      </div>
+      <div class="card"><h5>演示与三条 I/O 路线的对照</h5>
+        <p class="mono" style="margin:0;font-size:13px;white-space:pre-wrap">linux&gt; strace ./showfile4_rio names.txt</p>
+        <p style="margin:10px 0 0;font-size:14px">同一个「按行拷贝」的任务，课件给了三个版本：</p>
+        <ul style="margin:6px 0 0;font-size:14px">
+          <li><code>showfile1_nobuf.c</code>（原第 15 页）：一次 1 字节，系统调用最多；</li>
+          <li><code>showfile3_stdio.c</code>（原第 38 页）：<code>fgets</code> + <code>fprintf</code>；</li>
+          <li><code>showfile4_rio.c</code>（本页）：<code>Rio_readlineb</code> + <code>Rio_writen</code>。</li>
+        </ul>
+        <p style="margin:8px 0 0;font-size:14px">选哪个，就是<a href="#s10">第 10 节</a>要回答的问题。</p>
+      </div>
+    </div>
+    <div class="box warn"><div class="t">勘误三：原第 49 页代码块右下角的文件名标错了</div>
+      原课件第 49 页代码块末尾写的是 <code>showfile4_stdio.c</code>，但同一页的演示命令是 <code>strace ./showfile4_rio names.txt</code>，代码里调用的也是 <code>Rio_readinitb</code>/<code>Rio_readlineb</code>/<code>Rio_writen</code> —— 这是 RIO 版程序，文件名应为 <code>showfile4_rio.c</code>（第 38 页的 <code>showfile3_stdio.c</code> 才是 stdio 版）。本页按 <code>showfile4_rio.c</code> 呈现。
+    </div>
+  </section>
+
+  <!-- ================= 10 ================= -->
+  <section id="s10">
+    <h2>10. 该用哪一种 I/O<span class="srcref">原第 51–55 页</span></h2>
+    <p class="lede">三套接口摆在一起，第 51 页替所有人问了那句最实际的话：<b>Which ones should you use in your programs?</b> 答案不是「哪个最好」，而是「<b>按场景选</b>」—— 而且总原则是：<b>能用高级的，就别用低级的</b>。</p>
+
+    <h3>10.1 Unix I/O 的优缺点<span class="srcref">原第 52 页</span></h3>
+    <div class="grid g2">
+      <div class="card"><h5>优点</h5>
+        <ul style="margin:0;font-size:14.5px">
+          <li>最<b>通用</b>、开销最低的 I/O 形式；</li>
+          <li>所有其它 I/O 包都是用它实现的；</li>
+          <li>提供了访问<b>文件元数据</b>的函数；</li>
+          <li><b>async-signal-safe</b>（异步信号安全），可以在信号处理器里安全使用。</li>
+        </ul>
+      </div>
+      <div class="card"><h5>缺点</h5>
+        <ul style="margin:0;font-size:14.5px">
+          <li>处理 short count 很<b>棘手、易错</b>；</li>
+          <li>高效地读文本行需要某种缓冲，同样棘手易错；</li>
+          <li>这两个问题分别由 Standard I/O 与 RIO 包解决。</li>
+        </ul>
+      </div>
+    </div>
+
+    <h3>10.2 Standard I/O 的优缺点<span class="srcref">原第 53 页</span></h3>
+    <div class="grid g2">
+      <div class="card"><h5>优点</h5>
+        <ul style="margin:0;font-size:14.5px">
+          <li>缓冲通过减少 <code>read</code>/<code>write</code> <b>系统调用次数</b>提高效率；</li>
+          <li><b>short count 被自动处理</b>。</li>
+        </ul>
+      </div>
+      <div class="card"><h5>缺点</h5>
+        <ul style="margin:0;font-size:14.5px">
+          <li>不提供访问文件<b>元数据</b>的函数；</li>
+          <li>函数<b>不是 async-signal-safe</b>，不适合信号处理器；</li>
+          <li>不适合在网络套接字上输入输出 —— 流与套接字上的限制互相打架，且文档很少（CS:APP3e 10.11 节）。</li>
+        </ul>
+      </div>
+    </div>
+
+    <h3>10.3 选型规则<span class="srcref">原第 54 页</span></h3>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>什么时候</th><th>用哪个</th><th>为什么</th></tr>
+      <tr><td>处理<b>磁盘或终端</b>文件</td><td>Standard I/O</td><td>缓冲效率 + 自动处理 short count</td></tr>
+      <tr><td>在<b>信号处理器</b>里</td><td>raw Unix I/O</td><td>只有它是 async-signal-safe</td></tr>
+      <tr><td>需要<b>绝对最高性能</b>的少数场合</td><td>raw Unix I/O</td><td>最少的一层封装</td></tr>
+      <tr><td>读写<b>网络套接字</b></td><td>RIO</td><td>套接字上 short count 是常态；<b>避免在套接字上用 Standard I/O</b></td></tr>
+    </table></div>
+    <p>总原则原话：<b>use the highest-level I/O functions you can</b> —— 很多 C 程序员一辈子只用 Standard I/O 就够了；<b>但要确保你真的理解你在用的函数</b>。</p>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：场景 → 选一个 I/O 方案（选完立刻判分并给依据）</span>
+        <button class="sm" id="chReset">重来</button>
+      </div>
+      <div id="chOut"></div>
+    </div>
+
+    <h3>10.4 二进制文件：三个禁忌<span class="srcref">原第 55 页</span></h3>
+    <p>课件的「Aside」把 <b>Work with binary files</b> 单列一页。二进制文件是<b>任意字节的序列</b>，<b>包括 <code>0x00</code> 这个值</b>。于是有几类函数你<b>永远不要</b>用在二进制文件上：</p>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>禁忌</th><th>例子</th><th>为什么</th></tr>
+      <tr><td>面向文本的 I/O</td><td class="mono">fgets · scanf · rio_readlineb</td><td>它们会<b>解释行尾字符</b>（遇到 <code>'\n'</code> 就停）</td></tr>
+      <tr><td>替代方案</td><td class="mono">rio_readn · rio_readnb</td><td>按<b>字节数</b>读，不做任何解释</td></tr>
+      <tr><td>字符串函数</td><td class="mono">strlen · strcpy · strcat</td><td>它们把<b>字节值 0 当作字符串结束</b>特殊对待</td></tr>
+    </table></div>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：二进制字节流遇上文本函数 —— 同一个缓冲，五种解读</span>
+        <label class="fld">字节流（hex，可用空格） <input type="text" id="bfIn" value="61 62 63 00 64 65 0a 66 67" size="34" spellcheck="false"></label>
+        <label class="fld">rio_readn / readnb 的 n <input type="text" id="bfN" value="9" size="5" spellcheck="false"></label>
+        <button class="p" id="bfGo">解读</button>
+        <button class="sm" data-bf="61 62 63 00 64 65 0a 66 67;n=9">含 0x00 与换行</button>
+        <button class="sm" data-bf="68 65 6c 6c 6f 0a;n=6">纯文本</button>
+        <button class="sm" data-bf="00 01 02 03;n=4">全是控制字节</button>
+      </div>
+      <div id="bfOut"></div>
+    </div>
+  </section>
+
+  <!-- ================= 11 ================= -->
+  <section id="s11">
+    <h2>11. 目录访问、延伸阅读与自测<span class="srcref">原第 59–60 页</span></h2>
+    <p class="lede">最后一步怎么由「文件名」走到「文件内容」：遍历目录。课件只用一页给出推荐做法与三件套函数，然后就收在两张书单上。</p>
+
+    <h3>11.1 访问目录：只推荐读条目<span class="srcref">原第 59 页</span></h3>
+    <ul>
+      <li>对目录<b>唯一推荐</b>的操作是：<b>读它的条目</b>（read its entries）。</li>
+      <li><code>dirent</code> 结构：保存一个目录条目的信息；<code>DIR</code> 结构：保存「正在遍历」的目录信息。</li>
+      <li>三件套：<code>opendir</code> 打开、<code>readdir</code> 逐个取、<code>closedir</code> 关闭。</li>
+    </ul>
+    <div class="formula" style="text-align:left">
+      <div>#include &lt;sys/types.h&gt;</div>
+      <div>#include &lt;dirent.h&gt;</div>
+      <div>{</div>
+      <div>&nbsp;&nbsp;&nbsp;&nbsp;DIR *directory;</div>
+      <div>&nbsp;&nbsp;&nbsp;&nbsp;struct dirent *de;</div>
+      <div>&nbsp;&nbsp;&nbsp;&nbsp;...</div>
+      <div>&nbsp;&nbsp;&nbsp;&nbsp;if (!(directory = opendir(dir_name)))</div>
+      <div>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;error("Failed to open directory");</div>
+      <div>&nbsp;&nbsp;&nbsp;&nbsp;...</div>
+      <div>&nbsp;&nbsp;&nbsp;&nbsp;while (0 != (de = readdir(directory))) {</div>
+      <div>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;printf("Found file: %s\n", de-&gt;d_name);</div>
+      <div>&nbsp;&nbsp;&nbsp;&nbsp;}</div>
+      <div>&nbsp;&nbsp;&nbsp;&nbsp;...</div>
+      <div>&nbsp;&nbsp;&nbsp;&nbsp;closedir(directory);</div>
+      <div>}</div>
+    </div>
+    <p>循环条件 <code>0 != (de = readdir(directory))</code> 和<a href="#s4">第 4 节</a>里那几个 <code>Read(...) != 0</code> 是同一个套路：<b>用「非零即失败」的返回值控制循环</b>。别忘了 <code>.</code> 与 <code>..</code> 也在这串条目里 —— 它们是每个目录天生就有的两个链接。</p>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：readdir 遍历模拟器 —— 换目录，看返回值序列</span>
+        <label class="fld">目录
+          <select id="ddSel">
+            <option value="/home/bryant">/home/bryant</option>
+            <option value="/home/droh">/home/droh</option>
+            <option value="/etc">/etc</option>
+            <option value="/usr/include">/usr/include</option>
+            <option value="/usr/include/sys">/usr/include/sys</option>
+          </select>
+        </label>
+        <label class="fld">是否隐藏 <code>.</code> / <code>..</code>
+          <select id="ddDot"><option value="1">显示（像真实的 readdir）</option><option value="0">只显示子项</option></select>
+        </label>
+        <button class="p" id="ddGo">遍历</button>
+      </div>
+      <div id="ddOut"></div>
+    </div>
+
+    <h3>11.2 延伸阅读<span class="srcref">原第 60 页</span></h3>
+    <div class="grid g2">
+      <div class="card"><h5>The Unix bible</h5>
+        <p style="margin:0;font-size:14.5px">W. Richard Stevens &amp; Stephen A. Rago, <i>Advanced Programming in the Unix Environment</i>, 2<sup>nd</sup> Edition, Addison Wesley, 2005.<br><span style="color:var(--muted)">课件注：更新自 Stevens 1993 年的经典教材。</span></p>
+      </div>
+      <div class="card"><h5>The Linux bible</h5>
+        <p style="margin:0;font-size:14.5px">Michael Kerrisk, <i>The Linux Programming Interface</i>, No Starch Press, 2010.<br><span style="color:var(--muted)">课件注：百科式、权威。</span></p>
+      </div>
+    </div>
+
+    <h3>11.3 本讲测验<span class="srcref">10 题 · 覆盖原第 4–60 页</span></h3>
+    <p>每题选完立刻判分并给出解析。答错不要紧 —— 解析里写清了依据在本讲的哪一节、原课件哪一页。</p>
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：本讲测验</span>
+        <button class="sm" id="qzReset">重来</button>
+      </div>
+      <div id="qzOut"></div>
+    </div>
+
+    <div class="box ok"><div class="t">本讲到此收尾</div>
+      一句话回忆整条主线：<b>文件 = 字节序列 → 六个系统调用 → read/write 会有 short count → 三张表决定共享与重定向 → 缓冲把短读写变成长读写 → 按场景在 Unix I/O / Standard I/O / RIO 之间选</b>。下一讲开始虚拟内存，<code>mmap</code> 会把这些「文件」映射进地址空间。
+    </div>
+  </section>
+</main>
+
+</div>
+
+<div class="footer">
+  本页由原课件 PDF 翻译整理而成 · 数值计算与可视化均为页面内实时计算 · 可对照原课件页码阅读。
+</div>
+<button class="totop" id="toTop">↑ 顶部</button>
+
+<script>
+"use strict";
+/* ============================================================
+   系统级 I/O（System-Level I/O）· 第 18 讲 —— 交互式课件全部逻辑
+   约定：所有计算在页面内实时完成；无效输入必须给出提示而不是抛错。
+   本页不产生判分基准的部分（分步图示、词表）只做呈现。
+
+   顶层以 function 声明的
+     fdNewState / fdExec / fdParse / fdRun          描述符表 + 打开文件表语义
+     modeDecode                                     st_mode 解码
+     syscallCounts                                  showfile1/2 的系统调用次数
+     shortCount                                     短计数推演
+     rioRefill / rioReadlineb / rioReadnb / rioReadnSim   RIO 缓冲记账
+     stdioTrace                                     stdio 缓冲刷新模型
+     bfViews                                        二进制字节流的五种解读
+     pathResolve / TREE_SPEC                        目录树与路径名解析
+     forkOrder2                                     fork 后共享文件位置的推演
+   是判分基准，由 tools/verify_ics18.js 与真实系统调用（clang 编译的参考实现）
+   逐项比对（0 项不一致）。
+   ============================================================ */
+
+const $  = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const badBox = msg => `<div class="box bad"><div class="t">输入无效</div>${esc(msg)}</div>`;
+const kvAttr = str => {
+  const out = {};
+  String(str).split(';').forEach(part => {
+    const i = part.indexOf('=');
+    if (i > 0) out[part.slice(0, i).trim()] = part.slice(i + 1).trim();
+  });
+  return out;
+};
+const group3 = s => String(s).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+const fmtNum = v => group3(String(v));
+
+/* ---------- 字节与文本（不依赖 TextEncoder，node 沙箱里也能跑） ---------- */
+function strToBytes(s) {
+  const out = [];
+  for (const ch of String(s)) {
+    const c = ch.codePointAt(0);
+    if (c < 0x80) out.push(c);
+    else if (c < 0x800) out.push(0xc0 | (c >> 6), 0x80 | (c & 0x3f));
+    else if (c < 0x10000) out.push(0xe0 | (c >> 12), 0x80 | ((c >> 6) & 0x3f), 0x80 | (c & 0x3f));
+    else out.push(0xf0 | (c >> 18), 0x80 | ((c >> 12) & 0x3f), 0x80 | ((c >> 6) & 0x3f), 0x80 | (c & 0x3f));
+  }
+  return out;
+}
+/** 字节 → 文本：按 UTF-8 解码（这样中文能原样显示回来）；不是合法 UTF-8 的字节按 Latin-1 显示一个字符 */
+function bytesToStr(b) {
+  const bytes = Array.from(b, x => x & 0xff);
+  let out = '', i = 0;
+  while (i < bytes.length) {
+    const c = bytes[i];
+    if (c < 0x80) { out += String.fromCharCode(c); i++; }
+    else if (c >= 0xc0 && c < 0xe0 && i + 1 < bytes.length && (bytes[i + 1] & 0xc0) === 0x80) {
+      out += String.fromCharCode(((c & 0x1f) << 6) | (bytes[i + 1] & 0x3f)); i += 2;
+    } else if (c >= 0xe0 && c < 0xf0 && i + 2 < bytes.length &&
+               (bytes[i + 1] & 0xc0) === 0x80 && (bytes[i + 2] & 0xc0) === 0x80) {
+      out += String.fromCharCode(((c & 0x0f) << 12) | ((bytes[i + 1] & 0x3f) << 6) | (bytes[i + 2] & 0x3f)); i += 3;
+    } else if (c >= 0xf0 && i + 3 < bytes.length && (bytes[i + 1] & 0xc0) === 0x80 &&
+               (bytes[i + 2] & 0xc0) === 0x80 && (bytes[i + 3] & 0xc0) === 0x80) {
+      const cp = ((c & 0x07) << 18) | ((bytes[i + 1] & 0x3f) << 12) |
+                 ((bytes[i + 2] & 0x3f) << 6) | (bytes[i + 3] & 0x3f);
+      out += String.fromCodePoint(cp); i += 4;
+    } else { out += String.fromCharCode(c); i++; }
+  }
+  return out;
+}
+const hexOf = b => Array.from(b, x => (x & 0xff).toString(16).toUpperCase().padStart(2, '0')).join(' ');
+const hexNoSpace = b => Array.from(b, x => (x & 0xff).toString(16).padStart(2, '0')).join('');
+
+/** 解析非负十进制/十六进制整数；非法或越界返回 null */
+function parseUInt(str, max) {
+  const t = String(str).trim().replace(/[_,\s]/g, '');
+  if (!t) return null;
+  let v = null;
+  if (/^0[xX][0-9a-fA-F]+$/.test(t)) v = parseInt(t.slice(2), 16);
+  else if (/^0[0-7]+$/.test(t) && t.length > 1) v = parseInt(t.slice(1), 8);
+  else if (/^[0-9]+$/.test(t)) v = parseInt(t, 10);
+  if (v === null || !isFinite(v) || v < 0) return null;
+  if (max !== undefined && v > max) return null;
+  return v;
+}
+/** 八进制专用（st_mode：允许 0100644 写法） */
+function parseOct(str) {
+  const t = String(str).trim().replace(/[_,\s]/g, '').replace(/^0[oO]/, '');
+  if (!/^[0-7]+$/.test(t)) return null;
+  return parseInt(t, 8);
+}
+/** 十六进制字节串："61 62 0a" / "61620a" → 字节数组；非法返回 null */
+function parseHexBytes(str) {
+  const t = String(str).trim().replace(/[,\s]/g, '').replace(/^0[xX]/, '');
+  if (!t || !/^[0-9a-fA-F]+$/.test(t)) return null;
+  if (t.length % 2) return null;
+  const out = [];
+  for (let i = 0; i < t.length; i += 2) out.push(parseInt(t.slice(i, i + 2), 16));
+  return out;
+}
+
+/** 一排字节格（.bits 词汇表）；marks[i] ∈ {cls, sel, dim, title} */
+function byteStrip(bytes, marks, addrBase) {
+  marks = marks || {};
+  const cells = bytes.map((b, i) => {
+    const m = marks[i] || {};
+    const cls = ['b', m.cls || '', m.sel ? 'sel' : ''].filter(Boolean).join(' ');
+    const st = m.dim ? ';opacity:.45' : '';
+    const ttl = m.title ? ` title="${esc(m.title)}"` : '';
+    return `<span class="${cls}" style="width:26px${st}"${ttl}>${b.toString(16).toUpperCase().padStart(2, '0')}</span>`;
+  }).join('');
+  const ruler = bytes.map((_, i) =>
+    `<span class="b" style="width:26px;background:transparent;color:var(--muted);font-size:9.5px">${
+      addrBase === undefined ? i : (addrBase + i)}</span>`).join('');
+  return `<div class="bits">${cells}</div>${addrBase === undefined ? '' : `<div class="bits">${ruler}</div>`}`;
+}
+
+/* ============================================================
+   判分基准 1：描述符表 / 打开文件表 / 虚拟文件
+   —— 对应原课件第 21–31、56–58 页的语义
+   ============================================================ */
+
+/** 初始状态：终端一个打开文件表表项（refcnt=3，fd 0/1/2 都指向它）+ 磁盘文件 */
+function fdNewState(initText) {
+  return {
+    file: strToBytes(initText === undefined ? 'abcde' : initText),
+    term: [],
+    oft: [{ term: true, refcnt: 3, pos: 0, rd: false, wr: true, append: true }],
+    fdt: { 0: 0, 1: 0, 2: 0 },
+    vars: { 0: 0, 1: 1, 2: 2 },   /* 字面量 0/1/2 也能当描述符用（write 1 "x"、dup2 fd 1） */
+  };
+}
+function fdClone(st) {
+  return {
+    file: st.file.slice(), term: st.term.slice(),
+    oft: st.oft.map(e => Object.assign({}, e)),
+    fdt: Object.assign({}, st.fdt),
+    vars: Object.assign({}, st.vars),
+  };
+}
+function fdLowestFree(st) {
+  let fd = 0;
+  while (st.fdt[fd] !== undefined) fd++;
+  return fd;
+}
+const FLAG_OK = ['O_RDONLY', 'O_WRONLY', 'O_RDWR', 'O_APPEND', 'O_TRUNC', 'O_CREAT'];
+/** 把 "O_RDWR|O_CREAT|O_TRUNC" 解析成集合；不合法返回 null */
+function fdFlags(s) {
+  const out = {};
+  const parts = String(s).split('|').map(x => x.trim()).filter(Boolean);
+  for (const p of parts) {
+    if (FLAG_OK.indexOf(p) < 0) return null;
+    out[p] = true;
+  }
+  const acc = (out.O_RDONLY ? 1 : 0) + (out.O_WRONLY ? 1 : 0) + (out.O_RDWR ? 1 : 0);
+  if (acc !== 1) return null;
+  if (out.O_TRUNC && !(out.O_WRONLY || out.O_RDWR)) return null;
+  return out;
+}
+const ERR = why => ({ t: 'err', v: -1, why });
+const INTOK = v => ({ t: 'int', v });
+const BYTES = b => ({ t: 'bytes', v: b });
+
+/** 执行一条指令（就地修改 st）；返回 { ret, note, extra } */
+function fdExec(st, op) {
+  const fdOf = name => {
+    const v = st.vars[name];
+    return (typeof v === 'number' && st.fdt[v] !== undefined) ? v : null;
+  };
+  const entryOf = name => {
+    const fd = fdOf(name);
+    return fd === null ? null : st.oft[st.fdt[fd]];
+  };
+  switch (op.k) {
+    case 'open': {
+      const fl = fdFlags(op.flags || '');
+      if (!fl) return { ret: ERR('标志非法（必须且只能有一个访问模式）'), note: 'open 失败' };
+      const fd = fdLowestFree(st);
+      if (fl.O_TRUNC) st.file = [];
+      st.oft.push({ term: false, refcnt: 1, pos: 0,
+        rd: !!(fl.O_RDONLY || fl.O_RDWR), wr: !!(fl.O_WRONLY || fl.O_RDWR),
+        append: !!fl.O_APPEND });
+      st.fdt[fd] = st.oft.length - 1;
+      st.vars[op.fd] = fd;
+      return { ret: INTOK(fd),
+        note: `在最小的空闲描述符 <b>${fd}</b> 上新建一个打开文件表表项 at${st.oft.length - 1}`
+          + (fl.O_TRUNC ? '，并因 <code>O_TRUNC</code> 把文件清空' : '')
+          + (fl.O_APPEND ? '，且带 <code>O_APPEND</code>（每次写之前先跳到末尾）' : '') };
+    }
+    case 'dup': case 'dup2': {
+      const src = fdOf(op.a);
+      if (src === null) return { ret: ERR(`fd ${op.a} 无效`), note: `${op.k} 失败：EBADF` };
+      if (op.k === 'dup') {
+        const fd = fdLowestFree(st);
+        st.oft[st.fdt[src]].refcnt++;
+        st.fdt[fd] = st.fdt[src];
+        st.vars[op.b] = fd;
+        return { ret: INTOK(fd), note: `新描述符 <b>${fd}</b> 与 ${op.a} 指向<b>同一个</b>打开文件表表项（refcnt → ${st.oft[st.fdt[src]].refcnt}）` };
+      }
+      const dst = st.vars[op.b];
+      if (typeof dst !== 'number') return { ret: ERR(`fd ${op.b} 未定义`), note: `dup2 失败：第二个参数应该是已存在的描述符或字面量 1` };
+      if (dst === src) return { ret: INTOK(dst), note: 'newfd 与 oldfd 相同 —— 什么都不做，直接返回' };
+      if (st.fdt[dst] !== undefined) {
+        const old = st.oft[st.fdt[dst]];
+        old.refcnt--;
+        const gone = old.refcnt === 0;
+        if (gone) { /* 表项被释放（真实内核里此处还文件对象） */ }
+        st.fdt[dst] = st.fdt[src];
+        st.oft[st.fdt[src]].refcnt++;
+        return { ret: INTOK(dst),
+          note: `<b>${op.b}</b> 原来指向的表项 refcnt 减到 ${old.refcnt}${gone ? '（归零 → 释放）' : ''}；现在它也指向 ${op.a} 的表项（refcnt → ${st.oft[st.fdt[src]].refcnt}）` };
+      }
+      st.fdt[dst] = st.fdt[src];
+      st.oft[st.fdt[src]].refcnt++;
+      return { ret: INTOK(dst), note: `${op.b} 指向 ${op.a} 的表项（refcnt → ${st.oft[st.fdt[src]].refcnt}）` };
+    }
+    case 'close': {
+      const fd = fdOf(op.a);
+      if (fd === null) return { ret: ERR(`fd ${op.a} 无效`), note: 'close 失败：EBADF' };
+      const e = st.oft[st.fdt[fd]];
+      e.refcnt--;
+      delete st.fdt[fd];
+      return { ret: INTOK(0), note: `释放描述符 ${fd}；表项 refcnt → ${e.refcnt}${e.refcnt === 0 ? '（归零 → 打开文件表表项被释放）' : ''}` };
+    }
+    case 'lseek': {
+      const e = entryOf(op.a);
+      if (!e) return { ret: ERR(`fd ${op.a} 无效`), note: 'lseek 失败：EBADF' };
+      if (e.term) return { ret: ERR('终端不可定位'), note: 'lseek 失败：ESPIPE' };
+      const base = op.whence === 'CUR' ? e.pos : op.whence === 'END' ? st.file.length : 0;
+      const np = base + op.off;
+      if (np < 0) return { ret: ERR('结果位置为负'), note: 'lseek 失败：EINVAL' };
+      const old = e.pos;
+      e.pos = np;
+      return { ret: INTOK(np), note: `文件位置 ${old} → <b>${np}</b>` };
+    }
+    case 'read': {
+      const fd = fdOf(op.a);
+      if (fd === null) return { ret: ERR(`fd ${op.a} 无效`), note: 'read 失败：EBADF' };
+      const e = st.oft[st.fdt[fd]];
+      if (e.term) return { ret: ERR('本模拟器不模拟终端输入'), note: 'read 失败：本页不读终端' };
+      if (!e.rd) return { ret: ERR('描述符不可读'), note: 'read 失败：EBADF（用 O_WRONLY 打开的描述符不能读）' };
+      const avail = Math.max(0, st.file.length - e.pos);
+      const k = Math.min(op.n, avail);
+      const got = st.file.slice(e.pos, e.pos + k);
+      e.pos += k;
+      if (op.b) st.vars[op.b] = got;
+      return { ret: BYTES(got),
+        note: k === 0
+          ? `文件位置已在末尾 → 返回 <b>0</b>（EOF，不是错误）`
+          : `从位置 ${e.pos - k} 读走 ${k} 个字节${k < op.n ? ` —— <b>short count</b>（请求 ${op.n}，还剩 ${avail}），不是错误` : ''}` };
+    }
+    case 'write': {
+      const fd = fdOf(op.a);
+      if (fd === null) return { ret: ERR(`fd ${op.a} 无效`), note: 'write 失败：EBADF' };
+      const e = st.oft[st.fdt[fd]];
+      if (!e.wr) return { ret: ERR('描述符不可写'), note: 'write 失败：EBADF（用 O_RDONLY 打开的描述符不能写）' };
+      const data = strToBytes(op.text);
+      if (e.term) {
+        st.term = st.term.concat(data);
+        return { ret: INTOK(data.length), note: `写到<b>终端</b>（fd ${fd} 指向终端）：<code>${esc(op.text)}</code>` };
+      }
+      if (e.append) e.pos = st.file.length;
+      while (st.file.length < e.pos) st.file.push(0);   /* 越过末尾写 → 空洞补 0（真实文件语义） */
+      for (let i = 0; i < data.length; i++) st.file[e.pos + i] = data[i];
+      const at = e.pos;
+      e.pos += data.length;
+      return { ret: INTOK(data.length), note: `从位置 ${at} 写入 ${data.length} 个字节${e.append ? '（<code>O_APPEND</code>：写前先跳到末尾）' : ''}` };
+    }
+    case 'printf': {
+      const s = fdFormat(op.fmt, op.args, st);
+      const e = st.oft[st.fdt[1]];
+      if (!e) return { ret: ERR('fd 1 已关闭'), note: 'printf 失败：fd 1 已经被关掉了' };
+      const data = strToBytes(s);
+      if (e.term) st.term = st.term.concat(data);
+      else {
+        if (e.append) e.pos = st.file.length;
+        while (st.file.length < e.pos) st.file.push(0);
+        for (let i = 0; i < data.length; i++) st.file[e.pos + i] = data[i];
+        e.pos += data.length;
+      }
+      return { ret: INTOK(data.length),
+        note: `printf 走的是 fd 1${e.term ? '（终端）' : '（已被 dup2 重定向到文件）'}：<code>${esc(s)}</code>` };
+    }
+    default:
+      return { ret: ERR('认不出这条指令'), note: '解析失败' };
+  }
+}
+/** printf 的 %c / %s / %% 替换；其它格式原样保留（\n、\t 照 C 的语义换成控制字符） */
+function fdFormat(fmt, names, st) {
+  let i = 0;
+  const s = String(fmt).replace(/%[cs%]/g, m => {
+    if (m === '%%') return '%';
+    const nm = names[i++];
+    const v = st.vars[nm === undefined ? '' : nm];
+    if (v === undefined) return '';
+    const t = typeof v === 'string' ? v : (Array.isArray(v) ? bytesToStr(v) : String(v));
+    return m === '%s' ? t : (t.length ? t[0] : '?');
+  });
+  return s.replace(/\\n/g, '\n').replace(/\\t/g, '\t');
+}
+
+/** 逐行解析小程序；返回 { ok, ops, error }。
+ *  两种写法都认：C 风格 `fd1 = open("fname", O_RDONLY)` / `dup2(fd1, fd2)`，
+ *  以及更短的 `open fd1 fname O_RDONLY`（页面里的快捷程序用的就是第一种，和课件代码长一样）。 */
+function fdNormalize(line) {
+  const s = String(line).trim().replace(/;+\s*$/, '');
+  if (!s) return '';
+  let m;
+  if ((m = /^(\w+)\s*=\s*open\(\s*"([^"]*)"\s*,\s*([^)]+?)\s*\)$/.exec(s))) return `open ${m[1]} ${m[2]} ${m[3]}`;
+  if ((m = /^(\w+)\s*=\s*dup\(\s*(\w+)\s*\)$/.exec(s))) return `dup ${m[1]} ${m[2]}`;
+  if ((m = /^dup2\(\s*(\w+)\s*,\s*(\w+)\s*\)$/.exec(s))) return `dup2 ${m[1]} ${m[2]}`;
+  if ((m = /^close\(\s*(\w+)\s*\)$/.exec(s))) return `close ${m[1]}`;
+  if ((m = /^read\(\s*(\w+)\s*,\s*(\w+)\s*,\s*(\d+)\s*\)$/.exec(s))) return `read ${m[1]} ${m[2]} ${m[3]}`;
+  if ((m = /^write\(\s*(\w+)\s*,\s*"([^"]*)"\s*\)$/.exec(s))) return `write ${m[1]} "${m[2]}"`;
+  if ((m = /^lseek\(\s*(\w+)\s*,\s*(-?\d+)\s*,\s*(SET|CUR|END)\s*\)$/i.exec(s))) return `lseek ${m[1]} ${m[2]} ${m[3].toUpperCase()}`;
+  if ((m = /^printf\(\s*"((?:[^"\\]|\\.)*)"\s*(?:,\s*(.*?))?\s*\)$/.exec(s))) return `printf "${m[1]}"${m[2] ? ' ' + m[2] : ''}`;
+  return s;
+}
+function fdParse(src) {
+  const ops = [];
+  const lines = String(src).split('\n');
+  for (let ln = 0; ln < lines.length; ln++) {
+    let s = fdNormalize(lines[ln].replace(/\/\*[\s\S]*?\*\//g, ' ').replace(/\/\/.*$/, ''));
+    if (!s) continue;
+    const E = msg => ({ ok: false, ops: [], error: { line: ln + 1, msg } });
+    const toks = [];
+    const re = /"([^"]*)"|(\S+)/g;
+    let m;
+    while ((m = re.exec(s)) !== null) toks.push(m[1] !== undefined ? { s: true, v: m[1] } : { s: false, v: m[2] });
+    const kw = String(toks[0].v).toLowerCase();
+    const arg = k => (toks[k] ? toks[k].v : undefined);
+    if (kw === 'open') {
+      if (!/^[A-Za-z_]\w*$/.test(arg(1) || '')) return E('open 的第一个参数应该是描述符变量名（如 fd1）');
+      if (toks.length < 4) return E('open 需要三个参数：open <fd> <文件> <标志>');
+      if (arg(2) !== 'fname') return E('本模拟器里文件只有 <code>fname</code> 一个');
+      if (!fdFlags(arg(3) || '')) return E(`认不出这组标志：${arg(3)}（可用 O_RDONLY / O_WRONLY / O_RDWR / O_APPEND / O_TRUNC / O_CREAT，用 | 连）`);
+      ops.push({ k: 'open', fd: arg(1), flags: arg(3) });
+    } else if (kw === 'dup' || kw === 'dup2') {
+      if (!arg(1) || !arg(2)) return E(`${kw} 需要两个参数：${kw} <fdA> <fdB>`);
+      /* dup 的写法是「新 = dup(旧)」：第一个参数是新描述符变量，第二个是被复制的那个 */
+      ops.push(kw === 'dup' ? { k: 'dup', a: arg(2), b: arg(1) } : { k: 'dup2', a: arg(1), b: arg(2) });
+    } else if (kw === 'close') {
+      if (!arg(1)) return E('close 需要一个参数：close <fd>');
+      ops.push({ k: 'close', a: arg(1) });
+    } else if (kw === 'read') {
+      if (!arg(1) || !arg(2)) return E('read 需要三个参数：read <fd> <变量> <字节数>');
+      const n = parseUInt(arg(3));
+      if (n === null) return E(`read 的字节数应为非负整数，得到「${arg(3)}」`);
+      ops.push({ k: 'read', a: arg(1), b: arg(2), n });
+    } else if (kw === 'write') {
+      if (!arg(1) || !toks[2] || !toks[2].s) return E('write 需要两个参数：write <fd> "要写的文本"（文本要带引号）');
+      ops.push({ k: 'write', a: arg(1), text: toks[2].v });
+    } else if (kw === 'lseek') {
+      const off = parseInt(String(arg(2)), 10);
+      const wh = String(arg(3) || 'SET').toUpperCase();
+      if (!arg(1) || !isFinite(off)) return E('lseek 需要三个参数：lseek <fd> <偏移> <SET|CUR|END>');
+      if (['SET', 'CUR', 'END'].indexOf(wh) < 0) return E(`whence 只能是 SET / CUR / END，得到「${arg(3)}」`);
+      ops.push({ k: 'lseek', a: arg(1), off, whence: wh });
+    } else if (kw === 'printf') {
+      if (!toks[1] || !toks[1].s) return E('printf 的第一个参数必须是带引号的格式串');
+      ops.push({ k: 'printf', fmt: toks[1].v, args: toks.slice(2).map(t => t.v) });
+    } else {
+      return E(`认不出这条指令：${s}`);
+    }
+  }
+  if (!ops.length) return { ok: false, ops: [], error: { line: 1, msg: '程序是空的' } };
+  return { ok: true, ops, error: null };
+}
+
+/** 跑完整个程序：返回每一步的快照，供单步演示用 */
+function fdRun(src, initText) {
+  const p = fdParse(src);
+  if (!p.ok) return { ok: false, error: p.error, steps: [] };
+  let st = fdNewState(initText);
+  const steps = [{ i: 0, text: '（初始状态）', note: 'fd 0/1/2 都指向终端；文件 fname 的内容如下。', ret: null, state: fdClone(st) }];
+  for (const op of p.ops) {
+    const r = fdExec(st, op);
+    steps.push({ i: steps.length, text: fdOpText(op), note: r.note, ret: r.ret, state: fdClone(st) });
+  }
+  return { ok: true, steps, error: null, parse: p };
+}
+function fdOpText(op) {
+  if (op.k === 'open') return `${op.fd} = open("fname", ${op.flags})`;
+  if (op.k === 'dup') return `${op.b} = dup(${op.a})`;
+  if (op.k === 'dup2') return `dup2(${op.a}, ${op.b})`;
+  if (op.k === 'close') return `close(${op.a})`;
+  if (op.k === 'read') return `read(${op.a}, ${op.b}, ${op.n})`;
+  if (op.k === 'write') return `write(${op.a}, "${op.text}", ${op.text.length})`;
+  if (op.k === 'lseek') return `lseek(${op.a}, ${op.off}, SEEK_${op.whence})`;
+  if (op.k === 'printf') return `printf("${op.fmt}"${op.args.length ? ', ' + op.args.join(', ') : ''})`;
+  return op.k;
+}
+/** 结果记号：与 C 参考实现逐项比对用（int → 数字，bytes → r:hex，err → -1） */
+function fdRetToken(ret) {
+  if (ret === null) return '';
+  if (ret.t === 'err') return '-1';
+  if (ret.t === 'int') return String(ret.v);
+  return 'r:' + hexNoSpace(ret.v);
+}
+
+/* ============================================================
+   判分基准 2：st_mode 解码（原第 19–20 页）
+   ============================================================ */
+const S_IFMT = 0o170000, S_IFSOCK = 0o140000, S_IFLNK = 0o120000, S_IFREG = 0o100000,
+      S_IFBLK = 0o060000, S_IFDIR = 0o040000, S_IFCHR = 0o020000, S_IFIFO = 0o010000;
+const MODE_BITS = [
+  ['S_IRUSR', 0o400, '属主可读'], ['S_IWUSR', 0o200, '属主可写'], ['S_IXUSR', 0o100, '属主可执行'],
+  ['S_IRGRP', 0o040, '同组可读'], ['S_IWGRP', 0o020, '同组可写'], ['S_IXGRP', 0o010, '同组可执行'],
+  ['S_IROTH', 0o004, '其他人可读'], ['S_IWOTH', 0o002, '其他人可写'], ['S_IXOTH', 0o001, '其他人可执行'],
+  ['S_ISUID', 0o4000, 'set-user-ID'], ['S_ISGID', 0o2000, 'set-group-ID'], ['S_ISVTX', 0o1000, 'sticky 位'],
+];
+/** 文件类型判定（与 C 的 S_ISREG/S_ISDIR 同义） */
+function modeKind(mode) {
+  const t = mode & S_IFMT;
+  if (t === S_IFREG) return 'regular';
+  if (t === S_IFDIR) return 'directory';
+  if (t === S_IFSOCK) return 'socket';
+  if (t === S_IFLNK) return 'symbolic link';
+  if (t === S_IFBLK) return 'block device';
+  if (t === S_IFCHR) return 'character device';
+  if (t === S_IFIFO) return 'FIFO (named pipe)';
+  return 'other';
+}
+/** 还原 statcheck.c 的两行输出：类型 + 属主可读 */
+function modeDecode(mode) {
+  const kind = modeKind(mode);
+  const isReg = (mode & S_IFMT) === S_IFREG;
+  const isDir = (mode & S_IFMT) === S_IFDIR;
+  const readok = (mode & 0o400) ? 'yes' : 'no';
+  return { kind, isReg, isDir, readok, typeLabel: isReg ? 'regular' : isDir ? 'directory' : 'other',
+           perms: MODE_BITS.filter(([, bit]) => (mode & bit) !== 0).map(([n]) => n) };
+}
+
+/* ============================================================
+   判分基准 3：showfile1 / showfile2 的系统调用次数（原第 15、17 页）
+   ============================================================ */
+/** 磁盘文件读不会出现 short count（原第 16 页）：每次 Read 都读满 BUFSIZE，末尾一次读 0 */
+function syscallCounts(n, buf) {
+  const N = Math.max(0, Math.floor(n)), B = Math.max(1, Math.floor(buf));
+  const reads1 = N + 1, writes1 = N;                       /* 一次 1 字节 */
+  const full = Math.floor(N / B), rem = N % B;
+  const reads2 = full + (rem ? 1 : 0) + 1, writes2 = full + (rem ? 1 : 0);
+  return { n: N, buf: B, reads1, writes1, reads2, writes2,
+           calls1: reads1 + writes1, calls2: reads2 + writes2 };
+}
+
+/* ============================================================
+   判分基准 4：short count 推演（原第 16、41 页）
+   ============================================================ */
+/** 课件明写的两张清单：可能出现短计数的场景 vs 绝不会出现的场景 */
+const SHORT_RULES = {
+  'disk-read':       { can: true,  why: '读磁盘文件只有在<b>遇到 EOF</b> 时才会短计数', err: false },
+  'disk-eof':        { can: true,  why: '读到文件末尾，read 返回 0 —— 这是 EOF，不是错误', err: false },
+  'disk-write':      { can: false, why: '写磁盘文件绝不会短计数', err: false },
+  'tty':             { can: true,  why: '从终端读文本行会出现短计数', err: false },
+  'sock-read':       { can: true,  why: '读写网络套接字会出现短计数', err: false },
+  'sock-write':      { can: true,  why: '读写网络套接字会出现短计数', err: false },
+};
+/** 返回这次调用的返回值与判定 */
+function shortCount(scn, n, avail) {
+  const rule = SHORT_RULES[scn];
+  if (!rule) return null;
+  const N = Math.max(0, Math.floor(n)), A = Math.max(0, Math.floor(avail));
+  let ret, detail;
+  switch (scn) {
+    case 'disk-read':
+      ret = Math.min(N, A);
+      detail = A < N ? `文件只剩 ${A} 个字节，于是这次读<b>短了</b>（但这不是错误）` : `文件里有 ${A} 个字节，够读满 ${N} 个`;
+      break;
+    case 'disk-eof': ret = 0; detail = '位置已在文件末尾，返回 0 表示 EOF'; break;
+    case 'disk-write': ret = N; detail = `写磁盘文件必定写满：请求 ${N} 个就返回 ${N}`; break;
+    case 'tty': ret = A; detail = `终端上敲了这一行共 ${A} 个字节（含行尾），read 就返回 ${A} —— 比请求的 ${N} 少，这就是短计数`; break;
+    case 'sock-read': ret = Math.min(N, A); detail = `套接字上此刻到达了 ${A} 个字节，read 就返回 ${A}`; break;
+    case 'sock-write': ret = Math.min(N, A === 0 ? N : A); detail = A === 0 ? `写套接字一般会写满 ${N} 个` : `接收方窗口只剩 ${A}，write 可能只写出去 ${A} 个`; break;
+    default: return null;
+  }
+  const isShort = ret !== N && ret >= 0;
+  return { ret, isShort, isErr: false, can: rule.can, why: rule.why, detail };
+}
+
+/* ============================================================
+   判分基准 5：RIO 的缓冲记账（原第 44–48 页）
+   ============================================================ */
+/** 一个 rio_t 的运行时状态 */
+function rioNew(fileText, bufsize) {
+  return { file: strToBytes(fileText), pos: 0, cnt: 0, buf: [], bufptr: 0, size: Math.max(1, bufsize), reads: 0, ops: [] };
+}
+/** 底层 rio_read：缓冲空则 read 一次；返回本次拿到的字节数组（≤ n） */
+function rioRefill(r) {
+  const avail = Math.max(0, r.file.length - r.pos);
+  const k = Math.min(r.size, avail);
+  const got = r.file.slice(r.pos, r.pos + k);
+  r.pos += k;
+  r.cnt = k;
+  r.buf = got;
+  r.bufptr = 0;
+  r.reads++;
+  return k;
+}
+/** rio_read(rp, usrbuf, n)：从缓冲里取至多 n 个字节 */
+function rioReadN_(r, n) {
+  while (r.cnt <= 0) {
+    if (rioRefill(r) <= 0) return { t: 'int', v: 0, bytes: [] };
+  }
+  const k = Math.min(n, r.cnt);
+  const got = r.buf.slice(r.bufptr, r.bufptr + k);
+  r.bufptr += k;
+  r.cnt -= k;
+  return { t: 'bytes', v: got, bytes: got };
+}
+function rioReadlineb(r, maxlen) {
+  const out = [];
+  for (let n = 1; n < maxlen; n++) {
+    const rc = rioReadN_(r, 1);
+    if (rc.t === 'int' && rc.v === 0) { if (n === 1) return { t: 'int', v: 0, bytes: [] }; break; }
+    out.push(rc.bytes[0]);
+    if (rc.bytes[0] === 0x0a) break;
+  }
+  return { t: 'int', v: out.length, bytes: out };
+}
+function rioReadnb(r, n) {
+  const out = [];
+  let left = n;
+  while (left > 0) {
+    const rc = rioReadN_(r, left);
+    if (rc.t === 'int' && rc.v === 0) break;
+    out.push.apply(out, rc.bytes);
+    left -= rc.bytes.length;
+  }
+  return { t: 'int', v: out.length, bytes: out };
+}
+/** rio_readn：绕过缓冲，直接从文件位置读（原第 44 页） */
+function rioReadnSim(r, n, eintrFirst) {
+  let nleft = n, calls = 0, retried = 0;
+  const out = [];
+  while (nleft > 0) {
+    calls++;
+    r.reads++;                                                     /* 系统调用已经发生 */
+    if (eintrFirst && calls === 1) { retried++; continue; }        /* 第一次被信号打断，errno = EINTR */
+    const avail = Math.max(0, r.file.length - r.pos);
+    if (avail === 0) break;                                        /* EOF：读返回 0，跳出循环 */
+    const k = Math.min(nleft, avail);
+    for (let j = 0; j < k; j++) out.push(r.file[r.pos + j]);
+    r.pos += k;
+    nleft -= k;
+  }
+  return { t: 'int', v: n - nleft, bytes: out, calls, retried };
+}
+/** 一步一步跑一串 RIO 调用，返回每步结果（供页面展示与交叉验证） */
+function rioSim(fileText, bufsize, kinds) {
+  const r = rioNew(fileText, bufsize);
+  const steps = [];
+  for (const spec of kinds) {
+    const before = { cnt: r.cnt, bufptr: r.bufptr, reads: r.reads };
+    let res;
+    if (spec.k === 'line') res = rioReadlineb(r, spec.n);
+    else if (spec.k === 'nb') res = rioReadnb(r, spec.n);
+    else res = rioReadnSim(r, spec.n, !!spec.eintr);
+    steps.push({ spec, res, before, after: { cnt: r.cnt, bufptr: r.bufptr, reads: r.reads },
+                 buf: r.buf.slice(), bufptr: r.bufptr, pos: r.pos });
+  }
+  return { steps, reads: r.reads, filePos: r.pos };
+}
+
+/* ============================================================
+   判分基准 6：stdio 缓冲模型（原第 36 页）
+   ============================================================ */
+/**
+ * 逐个 printf 文本；随后 printf("\n")；最后按 tail 收尾。
+ * mode = 'line'（连终端，遇 \n 冲）| 'block'（连文件，缓冲满才冲）
+ * 返回 { steps, writes, flushes }；writes 是每次真正落到 fd 上的那些 write 调用。
+ */
+function stdioTrace(text, mode, size, tail) {
+  const S = Math.max(1, size);
+  let buf = '';
+  const writes = [], steps = [];
+  const flush = (why) => {
+    if (!buf.length) return;
+    writes.push({ data: buf, n: buf.length, why });
+    steps.push({ kind: 'write', data: buf, why, bufAfter: '' });
+    buf = '';
+  };
+  const put = ch => {
+    buf += ch;
+    let flushed = false;
+    if (mode === 'line' && ch === '\n') { flush('遇到 "\\n"'); flushed = true; }
+    else if (mode === 'block' && buf.length >= S) { flush('缓冲满'); flushed = true; }
+    steps.push({ kind: 'printf', ch, bufAfter: buf, flushed });
+  };
+  for (const ch of String(text)) put(ch);
+  put('\n');
+  if (tail === 'fflush') flush('fflush(stdout)');
+  else flush('exit(0) / 从 main 返回');
+  return { steps, writes, totalWrites: writes.length, bufLeft: buf };
+}
+
+/* ============================================================
+   判分基准 7：二进制字节流的五种解读（原第 55 页）
+   ============================================================ */
+function bfViews(bytes, n) {
+  const B = Array.from(bytes);
+  const zero = B.indexOf(0);
+  const nl = B.indexOf(0x0a);
+  const strLen = zero < 0 ? B.length : zero;                       /* strlen / strcpy 视角 */
+  const fgetsLen = nl < 0 ? B.length : nl + 1;                     /* fgets / rio_readlineb：遇 \n 停 */
+  const readnLen = Math.min(Math.max(0, n), B.length);             /* rio_readn / rio_readnb：按字节数 */
+  return { total: B.length, strLen, fgetsLen, readnLen,
+           zeroAt: zero, nlAt: nl,
+           strBytes: B.slice(0, strLen), fgetsBytes: B.slice(0, fgetsLen), readnBytes: B.slice(0, readnLen) };
+}
+
+/* ============================================================
+   判分基准 8：目录树与路径名解析（原第 8–10 页）
+   ============================================================ */
+const TREE_SPEC = [
+  ['/bin', 'dir'], ['/bin/bash', 'file'],
+  ['/dev', 'dir'], ['/dev/tty1', 'file'],
+  ['/etc', 'dir'], ['/etc/group', 'file'], ['/etc/passwd', 'file'],
+  ['/home', 'dir'], ['/home/droh', 'dir'], ['/home/droh/hello.c', 'file'],
+  ['/home/bryant', 'dir'],
+  ['/usr', 'dir'], ['/usr/include', 'dir'], ['/usr/include/stdio.h', 'file'],
+  ['/usr/include/sys', 'dir'], ['/usr/include/sys/unistd.h', 'file'],
+  ['/usr/bin', 'dir'], ['/usr/bin/vim', 'file'],
+];
+const TREE = (() => { const m = {}; for (const [p, t] of TREE_SPEC) m[p] = t; return m; })();
+/** 词法归约：把 path 按 / 拆开，逐段处理 . 与 ..（.. 在根处仍是根） */
+function lexResolve(cwd, path) {
+  const p = String(path).trim();
+  const start = p.startsWith('/') ? [] : String(cwd).trim().split('/').filter(Boolean);
+  const segs = start;
+  for (const raw of p.split('/')) {
+    if (raw === '' || raw === '.') continue;
+    if (raw === '..') { if (segs.length) segs.pop(); continue; }
+    segs.push(raw);
+  }
+  return '/' + segs.join('/');
+}
+/** 解析路径名：返回绝对路径、类型、以及逐段的走法 */
+function pathResolve(cwd, path) {
+  const p = String(path).trim();
+  if (!p) return { ok: false, msg: '路径名不能为空' };
+  if (p.includes('\0')) return { ok: false, msg: '路径名里有非法字节' };
+  const abs = lexResolve(cwd, p);
+  const type = TREE[abs] || (abs === '/' ? 'dir' : null);
+  const steps = [];
+  const segs = String(p).startsWith('/') ? [] : String(cwd).trim().split('/').filter(Boolean);
+  steps.push({ at: '/' + segs.join('/'), what: String(p).startsWith('/') ? '绝对路径：从根 / 出发' : `相对路径：从 cwd ${cwd} 出发` });
+  for (const raw of p.split('/')) {
+    if (raw === '' || raw === '.') { if (raw === '.') steps.push({ at: '/' + segs.join('/'), what: '「.」：当前目录，不动' }); continue; }
+    if (raw === '..') { if (segs.length) segs.pop(); steps.push({ at: '/' + segs.join('/'), what: '「..」：退到父目录' }); continue; }
+    segs.push(raw);
+    steps.push({ at: '/' + segs.join('/'), what: `进入「${raw}」` });
+  }
+  return { ok: true, abs, type, steps, isAbs: String(p).startsWith('/') };
+}
+
+/* ============================================================
+   判分基准 9：fork 之后谁先读（原第 30–31 页）
+   ============================================================ */
+/** parity = 父进程 pid & 1；返回两个进程的输出顺序与各自读到的字节 */
+function forkOrder2(parity) {
+  const sParent = parity & 1, sChild = 1 - sParent;
+  const first = sParent === 0 ? 'Parent' : 'Child';
+  const second = first === 'Parent' ? 'Child' : 'Parent';
+  const line = who => `${who}: c1 = a, c2 = ${who === first ? 'b' : 'c'}`;
+  return { sParent, sChild, first, second, order: [line(first), line(second)], lines: [line(first), line(second)] };
+}
+
+/* ============================================================
+   判分基准 10：场景 → 选哪种 I/O（原第 52–54 页）
+   ============================================================ */
+const IO_SCEN = [
+  { id: 'disk', q: '读写磁盘上的文本文件', a: 'stdio',
+    w: '原第 54 页：When working with disk or terminal files → 用 Standard I/O。它缓冲、自动处理 short count，还能用 fgets 之类方便的函数。' },
+  { id: 'tty', q: '读终端输入、写终端输出', a: 'stdio',
+    w: '同上：磁盘或终端文件都用 Standard I/O。终端上的 short count 由库替你处理。' },
+  { id: 'signal', q: '在信号处理器（信号处理函数）里读写', a: 'unix',
+    w: '原第 52、54 页：只有 Unix I/O 是 async-signal-safe，标准 I/O 的函数不能在这里用（可能有锁与全局状态）。' },
+  { id: 'meta', q: '需要拿到文件的元数据（st_mode、st_size……）', a: 'unix',
+    w: '原第 53 页：Standard I/O 不提供访问文件元数据的函数；stat/fstat 属于 Unix I/O。' },
+  { id: 'sock-line', q: '从网络套接字上按行读文本', a: 'rio',
+    w: '原第 54 页：读写网络套接字时用 RIO；原第 45 页说 rio_readlineb 特别适合从套接字读文本行。' },
+  { id: 'sock-bin', q: '在套接字上搬运定长二进制数据', a: 'rio',
+    w: '原第 43 页：rio_readn/rio_writen 的接口和 read/write 一样，特别适合在套接字上搬运数据；原第 55 页说二进制数据不要用文本函数。' },
+  { id: 'perf', q: '极少数需要绝对最高性能的场合', a: 'unix',
+    w: '原第 54 页：In rare cases when you need absolute highest performance → 用 raw Unix I/O。' },
+  { id: 'sock-stdio', q: '在套接字上用 printf / fgets 做网络通信', a: 'none',
+    w: '原第 53、54 页：标准 I/O 不适合在套接字上输入输出，And avoid using standard I/O on sockets —— 这是要避开的做法。' },
+];
+const IO_NAMES = { unix: 'raw Unix I/O', stdio: 'Standard I/O', rio: 'RIO', none: '哪个都不合适（要避开）' };
+
+/* ============================================================
+   测验题库（依据全部来自原课件，逐题给出页码）
+   ============================================================ */
+const QUIZ = [
+  { q: 'Linux 里的一个文件本质上是什么？',
+    o: ['一个装着字节的盒子', '一段从 B<sub>0</sub> 到 B<sub>m−1</sub> 的字节序列', '一个 inode 编号', '一段按记录组织的表'],
+    a: 1, w: '原第 4 页：A Linux file is a sequence of m bytes: B<sub>0</sub>, B<sub>1</sub>, …, B<sub>m−1</sub>。文件没有记录、没有格式，就是字节。' },
+  { q: '一个刚被 Linux shell 创建出来的进程，身上有几个已经打开的文件？',
+    o: ['0 个', '1 个（stdout）', '3 个：0/1/2，都连着终端', '看程序而定'],
+    a: 2, w: '原第 11 页：每个由 shell 创建的进程出生时都带着三个连着终端的打开文件 —— 0 标准输入、1 标准输出、2 标准错误。' },
+  { q: '<code>read(fd, buf, 512)</code> 返回 13，说明？',
+    o: ['出错了，应该重试', '发生了 short count —— 读到了 13 个字节，这不是错误', 'fd 无效', '缓冲区对齐不对'],
+    a: 1, w: '原第 13 页：Short counts (nbytes &lt; sizeof(buf)) are possible and are not errors! 只有返回值 &lt; 0 才是出错。' },
+  { q: '下面哪种情况<b>不会</b>出现 short count？',
+    o: ['从终端读文本行', '读网络套接字', '写磁盘文件', '读磁盘文件时遇到 EOF'],
+    a: 2, w: '原第 16 页的两张清单：可能出现 short count 的是「读遇 EOF、读终端文本行、读写套接字」；绝不会出现的是「读磁盘文件（除 EOF 外）、写磁盘文件」。' },
+  { q: '对同一个文件名连续调用两次 <code>open</code>，会发生什么？',
+    o: ['第二次返回同一个 fd', '创建两个打开文件表表项，各自有独立的 File pos', '两个 fd 共享同一个 File pos', '第二次调用失败'],
+    a: 1, w: '原第 22 页：两次 open 会得到两个不同的描述符，指向两个不同的打开文件表表项，但最终指向同一个 v-node —— 「逻辑上不同、物理上相同的文件」。因此各自有自己的文件位置。' },
+  { q: '<code>fork</code> 之后，子进程与父进程的打开文件是什么关系？',
+    o: ['各复制一份，文件位置互相独立', '子进程表与父进程相同，每个打开文件表表项 refcnt 加 1，文件位置共享', '子进程继承文件名，但不继承文件位置', '子进程的描述符表是空的'],
+    a: 1, w: '原第 24 页：Child’s table same as parent’s, and +1 to each refcnt。因为指向同一批打开文件表表项，父进程读走一个字节，子进程接到的就是下一个字节。' },
+  { q: '<code>dup2(4, 1)</code> 干了什么？',
+    o: ['把 fd 1 的内容复制到 fd 4', '把描述符表的第 1 格改成指向 fd 4 所指的打开文件表表项', '关闭 fd 4', '新建一个打开文件表表项'],
+    a: 1, w: '原第 25 页：Copies (per-process) descriptor table entry oldfd to entry newfd。原第 27 页的图显示 fd 1 原来的表项 refcnt 归 0，File B 的 refcnt 变成 2 —— 这正是 <code>ls &gt; foo.txt</code> 的实现方式。' },
+  { q: '文件内容为 “abcde” 时，<code>ffiles1.c</code> 输出什么？',
+    o: ['c1 = a, c2 = b, c3 = c', 'c1 = a, c2 = a, c3 = b', 'c1 = a, c2 = a, c3 = a', 'c1 = b, c2 = a, c3 = c'],
+    a: 1, w: '原第 29 页的答案就是 <code>c1 = a, c2 = a, c3 = b</code>。前两个 fd 是两次独立 open（各自位置 0），第三个 fd 被 dup2 接到了 fd2 的表项上，所以读到 fd2 推进后的位置 1。' },
+  { q: '标准 I/O 的缓冲在什么时候被冲到输出 fd 上？',
+    o: ['只在进程退出时', '遇到 “\\n”、调用 fflush、或者调用 exit / 从 main 返回时', '每次 printf 都冲', '缓冲区满才冲，别的时候不冲'],
+    a: 1, w: '原第 36 页：Buffer flushed to output fd on “\\n”, call to fflush or exit, or return from main。' },
+  { q: '<code>rio_readlineb</code> 什么时候停下来？',
+    o: ['只读满 maxlen 就停', '读满 maxlen、遇到 EOF、或遇到换行符 \'\\n\'', '只在遇到换行时停', '只在遇到 EOF 时停'],
+    a: 1, w: '原第 45 页的 Stopping conditions 列了三条：maxlen bytes read / EOF encountered / Newline (\'\\n\') encountered。' },
+  { q: '为什么二进制文件不能喂给 <code>fgets</code> / <code>strlen</code>？',
+    o: ['二进制文件太大', '前者解释行尾字符、后者把字节 0 当作字符串结束', '它们只能处理 ASCII 编码的整数', '它们会修改文件'],
+    a: 1, w: '原第 55 页：面向文本的 I/O（fgets、scanf、rio_readlineb）会解释 EOL 字符；字符串函数（strlen、strcpy、strcat）把字节值 0 当作字符串结束。二进制数据请用 rio_readn / rio_readnb。' },
+];
+
+/* ============================================================
+   0 三层 I/O 地图
+   ============================================================ */
+const LAYERS = [
+  { id: 'app', name: 'C application program', sub: '你的程序', items: [], note:
+    '应用程序只调用下面三层的函数 —— 它并不知道（通常也不关心）底下发生了什么。' },
+  { id: 'stdio', name: 'Standard I/O 函数', sub: 'libc.so 提供', items:
+    [['fopen', 1, '打开流'], ['fdopen', 1, '把已有 fd 包成流'], ['fread', 0, '读字节'], ['fwrite', 0, '写字节'],
+     ['fscanf', 0, '格式化读'], ['fprintf', 0, '格式化写'], ['sscanf', 0, '从字符串解析'], ['sprintf', 0, '格式化到字符串'],
+     ['fgets', 0, '读一行'], ['fputs', 0, '写一行'], ['fflush', 0, '冲缓冲'], ['fseek', 0, '定位'], ['fclose', 0, '关闭流']],
+    note: '课件第 3、40、51 页的图上列出了这批函数。<b>它没有访问文件元数据的函数</b>，也不是 async-signal-safe。' },
+  { id: 'rio', name: 'RIO 函数', sub: 'CS:APP 自带包装', items:
+    [['rio_readn', 0, '无缓冲读 n 字节'], ['rio_writen', 0, '无缓冲写 n 字节'],
+     ['rio_readinitb', 1, '把 fd 绑到一个 rio_t'], ['rio_readlineb', 0, '带缓冲读一行'], ['rio_readnb', 0, '带缓冲读 n 字节']],
+    note: '<code>rio_readn</code>/<code>rio_writen</code> 接口与 <code>read</code>/<code>write</code> 相同；后三个共用同一块内部缓冲。' },
+  { id: 'unix', name: 'Unix I/O 函数', sub: '通过系统调用访问', items:
+    [['open', 1, '打开文件'], ['read', 0, '读'], ['write', 0, '写'], ['lseek', 0, '改文件位置'],
+     ['stat', 0, '取元数据'], ['close', 0, '关闭']],
+    note: '这一层就是内核导出的接口 —— 六个函数，一次系统调用一次陷入内核（&gt; 10 000 个时钟周期）。' },
+  { id: 'kernel', name: 'Linux kernel', sub: '设备 / 文件系统 / 页缓存', items: [], note:
+    '所有 I/O 设备都被表示成文件，连内核自己也是（<code>/proc</code>、<code>/boot/vmlinuz-…</code>）。' },
+];
+let lySel = 'read';
+function renderLayers() {
+  const rows = LAYERS.map(L => {
+    const chips = L.items.map(([n, , d]) => {
+      const on = lySel === n;
+      return `<span class="chip${on ? '' : ' gray'}" data-ly="${esc(n)}" title="${esc(d)}"
+        style="margin:2px 3px;cursor:pointer${on ? '' : ';opacity:.85'}">${esc(n)}</span>`;
+    }).join('');
+    const hit = L.items.some(([n]) => n === lySel);
+    return `<div class="card" style="${hit ? 'border-color:var(--accent)' : 'opacity:.92'};margin:0">
+      <h5 style="margin:0 0 4px">${esc(L.name)} <span class="en" style="font-weight:400">${esc(L.sub)}</span></h5>
+      ${chips || `<p style="margin:0;font-size:13.5px;color:var(--muted)">${L.note}</p>`}
+    </div>`;
+  }).join('<div style="text-align:center;color:var(--muted);font-size:12px">▼ 调用 / 被调用</div>');
+  let info = { n: lySel, d: '', l: '' };
+  for (const L of LAYERS) for (const [n, , d] of L.items) if (n === lySel) info = { n, d, l: L.name };
+  $('#lyOut').innerHTML = `
+    <div class="grid" style="gap:8px;margin-bottom:10px">${rows}</div>
+    <div class="box ok" style="margin-bottom:0"><div class="t"><code>${esc(info.n)}</code> —— 属于「${esc(info.l)}」层</div>
+      ${esc(info.d)}。原第 3、40、51 页三次画这张图：[第 3 页]把三套接口与内核分开画，[第 40 页]强调 Standard I/O 与 RIO 是两套互不兼容的库，[第 51 页]把整张图又抄一遍并问「你该用哪一个」。答案在第 10 节。
+    </div>`;
+}
+
+/* ============================================================
+   1 文件位置模拟器
+   ============================================================ */
+function fpState() { return { text: 'hello, world', pos: 0, log: [] }; }
+const FP = fpState();
+function renderFilePos(msg) {
+  const bytes = strToBytes(FP.text);
+  const marks = {};
+  bytes.forEach((b, i) => { marks[i] = { cls: i < FP.pos ? 'e' : 'f', title: `偏移 ${i}` }; });
+  if (FP.pos < bytes.length) marks[FP.pos].sel = true;
+  const logRows = FP.log.slice(-8).map((l, i, arr) =>
+    `<tr${i === arr.length - 1 ? ' class="hl"' : ''}><td class="mono">${esc(l.op)}</td><td class="mono">${l.ret}</td>
+      <td style="font-size:13px">${l.note}</td></tr>`).join('');
+  const last = FP.log.length ? FP.log[FP.log.length - 1] : null;
+  $('#fpOut').innerHTML = `
+    <div class="readout">
+      <dt>文件内容</dt><dd class="mono">${esc(FP.text) || '<span class="en">（空文件）</span>'}</dd>
+      <dt>长度</dt><dd class="mono">${bytes.length} 字节</dd>
+      <dt>当前文件位置</dt><dd class="mono"><b>${FP.pos}</b>${FP.pos >= bytes.length ? '（已在末尾：read 会返回 0，即 EOF）' : ''}</dd>
+    </div>
+    <div class="fgrp"><div class="fcap">蓝 = 已读过 / 写过的部分 · 绿 = 还没碰过 · 白框 = 下一次读写的位置</div>
+      ${bytes.length ? byteStrip(bytes, marks, 0) : '<p class="en" style="margin:0">空文件：位置只能是 0，read 立刻返回 0。</p>'}
+    </div>
+    ${msg || ''}
+    ${logRows ? `<div class="tbl-wrap"><table class="tbl">
+      <tr><th>调用</th><th>返回值</th><th>发生了什么</th></tr>${logRows}</table></div>` : ''}
+    <div class="box" style="margin-bottom:0"><div class="t">课件里的那条「当前文件位置」</div>
+      原第 5 页画的 <code>B<sub>0</sub> … B<sub>k−1</sub> | B<sub>k</sub> …</code> 就是下面这条分界线：位置左边的字节已经读过，<code>read</code> 从 <code>B<sub>k</sub></code> 开始搬；<code>lseek</code> 可以把这条线搬到任何非负偏移。
+    </div>`;
+}
+function fpApply(op, arg) {
+  const bytes = strToBytes(FP.text);
+  if (op === 'read') {
+    const avail = Math.max(0, bytes.length - FP.pos);
+    const k = Math.min(arg, avail);
+    const got = bytes.slice(FP.pos, FP.pos + k);
+    FP.pos += k;
+    FP.log.push({ op: `read(fd, buf, ${arg})`, ret: String(k),
+      note: k === 0 ? '位置已在末尾 → 返回 0（EOF）'
+        : `搬走 ${k} 个字节<code>${esc(bytesToStr(got))}</code>${k < arg ? ` —— <b>short count</b>：请求 ${arg} 只得到 ${k}，这不是错误` : ''}，位置 → ${FP.pos}` });
+  } else if (op === 'write') {
+    const data = strToBytes(arg);
+    const out = bytes.slice(0, Math.min(FP.pos, bytes.length));
+    while (out.length < FP.pos) out.push(0);
+    for (let i = 0; i < data.length; i++) out[FP.pos + i] = data[i];
+    const tail = bytes.slice(FP.pos + data.length);
+    FP.text = bytesToStr(out.concat(tail));
+    FP.pos += data.length;
+    FP.log.push({ op: `write(fd, "${esc(arg)}", ${data.length})`, ret: String(data.length),
+      note: `在位置 ${FP.pos - data.length} 覆写 ${data.length} 个字节，位置 → ${FP.pos}` });
+  } else if (op === 'lseek') {
+    const base = arg.whence === 'CUR' ? FP.pos : arg.whence === 'END' ? bytes.length : 0;
+    const np = base + arg.off;
+    if (np < 0) { FP.log.push({ op: `lseek(fd, ${arg.off}, SEEK_${arg.whence})`, ret: '−1', note: '结果位置为负 → 返回 −1（EINVAL）' }); return; }
+    FP.log.push({ op: `lseek(fd, ${arg.off}, SEEK_${arg.whence})`, ret: String(np), note: `位置 ${FP.pos} → ${np}` });
+    FP.pos = np;
+  }
+}
+
+/* ============================================================
+   2 行尾与字节数
+   ============================================================ */
+function eolCompute(text, lines, kind) {
+  const body = strToBytes(text), eol = kind === 'CRLF' ? [0x0d, 0x0a] : [0x0a];
+  const out = [];
+  for (let i = 0; i < lines; i++) { out.push.apply(out, body); out.push.apply(out, eol); }
+  return { bytes: out, per: body.length + eol.length, total: out.length };
+}
+function renderEol() {
+  const text = $('#eolText').value;
+  const lines = parseUInt($('#eolLines').value, 100000);
+  if (lines === null) { $('#eolOut').innerHTML = badBox('行数请给 0 到 100000 之间的整数。'); return; }
+  const kind = $('#eolKind').value;
+  const r = eolCompute(text, lines, kind);
+  const show = r.bytes.slice(0, 48);
+  const marks = {};
+  r.bytes.slice(0, 48).forEach((b, i) => { if (b === 0x0d || b === 0x0a) marks[i] = { cls: 's', title: b === 0x0d ? 'CR 0x0d' : 'LF 0x0a' }; });
+  const other = kind === 'CRLF' ? 'LF（0x0a）' : 'CRLF（0x0d 0x0a）';
+  $('#eolOut').innerHTML = `
+    <div class="readout">
+      <dt>每行占用</dt><dd class="mono">${strToBytes(text).length} 字节文本 + ${kind === 'CRLF' ? 2 : 1} 字节行尾 = <b>${r.per}</b> 字节</dd>
+      <dt>全文件</dt><dd class="mono">${lines} 行 × ${r.per} = <b>${r.total}</b> 字节</dd>
+      <dt>行尾字符</dt><dd class="mono">${kind === 'CRLF' ? "0x0d 0x0a（CR LF，回车 + 换行）" : "0x0a（LF，换行）"}</dd>
+    </div>
+    ${show.length ? `<div class="fgrp"><div class="fcap">前 ${show.length} 个字节（红 = 行尾字符）${r.bytes.length > show.length ? '，其余略' : ''}</div>${byteStrip(show, marks)}</div>` : ''}
+    <div class="box warn" style="margin-bottom:0"><div class="t">换一种行尾，字节数就变了</div>
+      同样 ${lines} 行文本，改成 ${other} 会得到 <b>${(strToBytes(text).length + (kind === 'CRLF' ? 1 : 2)) * lines}</b> 字节 —— 每行差一个字节。
+      课件第 7 页说得很直接：<b>Linux 与 Mac 用 <code>'\n'</code>（0xa）</b>，<b>Windows 与互联网协议用 <code>'\r\n'</code>（0xd 0xa）</b>，而<b>内核并不知道文本与二进制的区别</b>，它只会老老实实把 <code>0x0d</code> 也当成一个普通字节。所以在 Linux 上打开 Windows 的文件，行尾会多出一个看不见的 <code>^M</code>。
+    </div>`;
+}
+
+/* ============================================================
+   3 路径名解析器
+   ============================================================ */
+function renderPath(msg) {
+  const cwd = $('#pnCwd').value.trim();
+  const path = $('#pnPath').value.trim();
+  if (!cwd) { $('#pnOut').innerHTML = badBox('cwd 不能为空 —— 例如 /home/bryant。'); return; }
+  if (!lexNode(cwd)) { $('#pnOut').innerHTML = badBox(`课件第 9 页的树里没有目录「${cwd}」`); return; }
+  const r = pathResolve(cwd, path);
+  if (!r.ok) { $('#pnOut').innerHTML = badBox(r.msg); return; }
+  const rows = r.steps.map((s, i) =>
+    `<tr${i === r.steps.length - 1 ? ' class="hl"' : ''}><td class="mono">${esc(s.at)}</td><td style="font-size:13.5px">${esc(s.what)}</td></tr>`).join('');
+  const typeChip = r.type === 'file' ? '<span class="chip ok">普通文件</span>'
+    : r.type === 'dir' ? '<span class="chip">目录</span>' : '<span class="chip bad">不存在（ENOENT）</span>';
+  $('#pnOut').innerHTML = `
+    <div class="readout">
+      <dt>起点</dt><dd class="mono">${esc(cwd)}${r.isAbs ? '（被绝对路径忽略）' : '（cwd）'}</dd>
+      <dt>路径名</dt><dd class="mono">${esc(path)}${r.isAbs ? ' <span class="chip gray">绝对路径</span>' : ' <span class="chip gray">相对路径</span>'}</dd>
+      <dt>解析结果</dt><dd class="mono"><b>${esc(r.abs)}</b> ${typeChip}</dd>
+    </div>
+    ${msg || ''}
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>走到</th><th>这一步在做什么</th></tr>${rows}</table></div>
+    <div class="box ok" style="margin-bottom:0"><div class="t">课件第 9 页的那棵树</div>
+      <code>/</code> 下面有 <code>bin dev etc home usr</code>；<code>/home</code> 下有 <code>droh/</code> 与 <code>bryant/</code>；<code>hello.c</code> 住在 <code>/home/droh/</code> 里。
+      本节的解析器就在这棵树上走：<b><code>.</code> 原地不动、<code>..</code> 退回父目录（在根上退不动）</b>。注意 <code>/home/bryant</code> 是个目录，<code>/etc/passwd</code> 是普通文件 —— 两者的区别只在 <code>st_mode</code> 的类型位里（<a href="#s5">第 5 节</a>）。
+    </div>`;
+}
+const lexNode = p => TREE[p] || (p === '/' ? 'dir' : null);
+
+/* ============================================================
+   4 short count / 系统调用计数 / 返回值速查
+   ============================================================ */
+function renderShort() {
+  const scn = $('#scDev').value;
+  const n = parseUInt($('#scN').value, 1e9), av = parseUInt($('#scAvail').value, 1e9);
+  if (n === null || av === null) { $('#scOut').innerHTML = badBox('请求字节数与可用字节数都请给非负整数。'); return; }
+  const r = shortCount(scn, n, av);
+  if (!r) { $('#scOut').innerHTML = badBox('未知场景。'); return; }
+  const verdict = r.isShort
+    ? '<span class="chip warn">short count</span> <b>但不是错误</b> —— 返回值为负才是错误'
+    : (r.ret === 0 && scn === 'disk-eof'
+      ? '<span class="chip gray">EOF</span> 返回 0，循环该结束了（课件第 15、17 页的 <code>!= 0</code> 就是这个判断）'
+      : '<span class="chip ok">没有 short count</span> 请求多少就返回多少');
+  $('#scOut').innerHTML = `
+    <div class="readout">
+      <dt>这次调用</dt><dd class="mono"><b>read/write 返回 ${r.ret}</b></dd>
+      <dt>请求字节数</dt><dd class="mono">${n}</dd>
+      <dt>判定</dt><dd>${verdict}</dd>
+      <dt>课件依据</dt><dd style="font-family:var(--font-sans)">${r.why}</dd>
+    </div>
+    <div class="box ${r.isShort ? 'warn' : 'ok'}" style="margin-bottom:0"><div class="t">${r.isShort ? '短计数发生了' : '这一次没有短计数'}</div>
+      ${r.detail}。课件第 16、41 页把结论压缩成一句话：<b>最佳实践是永远为 short count 做好准备</b>（always allow for short counts）。
+    </div>`;
+}
+function renderCounts() {
+  const n = parseUInt($('#cnN').value, 1e7), b = parseUInt($('#cnBuf').value, 1e7);
+  if (n === null || b === null || b === 0) { $('#cnOut').innerHTML = badBox('文件字节数请给非负整数，BUFSIZE 请给正整数。'); return; }
+  const c = syscallCounts(n, b);
+  $('#cnOut').innerHTML = `
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>程序</th><th>read 调用</th><th>write 调用</th><th>合计陷入内核</th><th>怎么算的</th></tr>
+      <tr><td><b>showfile1_nobuf.c</b><span class="srcref">原第 15 页</span></td>
+        <td class="mono">${fmtNum(c.reads1)}</td><td class="mono">${fmtNum(c.writes1)}</td>
+        <td class="mono"><b>${fmtNum(c.calls1)}</b></td>
+        <td style="font-size:13px">一次 1 字节：${fmtNum(c.n)} 次读 + 最后那次返回 0 的读 = ${fmtNum(c.reads1)}；写 ${fmtNum(c.writes1)}</td></tr>
+      <tr><td><b>showfile2_buf.c</b><span class="srcref">原第 17 页</span></td>
+        <td class="mono">${fmtNum(c.reads2)}</td><td class="mono">${fmtNum(c.writes2)}</td>
+        <td class="mono"><b>${fmtNum(c.calls2)}</b></td>
+        <td style="font-size:13px">每次搬 ${fmtNum(c.buf)} 字节：⌊${fmtNum(c.n)}/${fmtNum(c.buf)}⌋${c.n % c.buf ? ' + 1 次不满的读' : ''} + 最后返回 0 的读；写同数</td></tr>
+    </table></div>
+    <div class="box ok" style="margin-bottom:0"><div class="t">省下来的就是时间</div>
+      ${fmtNum(c.calls2)} vs ${fmtNum(c.calls1)} —— 少了 <b>${fmtNum(c.calls1 - c.calls2)}</b> 次系统调用。课件第 35 页给的量级是每次系统调用 <b>&gt; 10 000 个时钟周期</b>，这就是为什么要有缓冲。
+      这里的算法依赖课件第 16 页的一条事实：<b>读磁盘文件除了 EOF 不会短计数</b>，所以每次 <code>Read</code> 都能读满 <code>BUFSIZE</code>（本页的计数已用真实的 read/write 循环在 C 里逐项核对）。
+    </div>`;
+}
+const RET_TABLE = [
+  ['open 成功', '≥ 3 的整数', 'ok', '返回最小的空闲文件描述符。0/1/2 已经被 stdin/stdout/stderr 占着，所以通常是 3。'],
+  ['open 失败', '−1', 'bad', '出错时返回 −1（课件第 11 页：fd == −1 indicates that an error occurred），并设置 errno。'],
+  ['read 读满', 'n', 'ok', '请求 n 个就拿到 n 个 —— 磁盘文件（除 EOF 外）与写磁盘文件都走这条路。'],
+  ['read 短计数', 'k < n（≥ 0）', 'warn', '读到 EOF、终端读行、套接字读写时可能出现。<b>不是错误</b>（课件第 13、16 页）。'],
+  ['read/write 到末尾', '0', 'gray', 'read 在文件末尾返回 0，课件第 15、17 页的 <code>while(Read(...) != 0)</code> 靠它跳出循环。'],
+  ['read/write 出错', '−1', 'bad', 'nbytes < 0 才是错误（课件第 13、14 页）。比如用 O_RDONLY 打开的描述符去 write。'],
+  ['close 成功', '0', 'ok', '课件第 12 页：Moral —— 连 close() 这种看起来人畜无害的函数也要检查返回码。'],
+];
+function renderRetTable() {
+  const rows = RET_TABLE.map(([k, v, cls, w], i) =>
+    `<tr data-rt="${i}" style="cursor:pointer"><td>${k}</td>
+      <td class="mono"><span class="chip ${cls}">${v}</span></td>
+      <td style="font-size:13.5px">${w}</td></tr>`).join('');
+  $('#rtOut').innerHTML = `<div class="tbl-wrap"><table class="tbl">
+    <tr><th>情况</th><th>返回值</th><th>说明</th></tr>${rows}</table></div>`;
+}
+
+/* ============================================================
+   5 st_mode 解码 / struct stat 速查
+   ============================================================ */
+function renderMode() {
+  const mode = parseOct($('#mdIn').value);
+  if (mode === null || mode > 0o177777) { $('#mdOut').innerHTML = badBox('请给一个八进制模式位，例如 0100644（最多 6 位八进制）。'); return; }
+  const d = modeDecode(mode);
+  const bits = MODE_BITS.map(([n, bit, cn]) => {
+    const on = (mode & bit) !== 0;
+    return `<tr${on ? ' class="hl"' : ''}><td class="mono">${n}</td><td class="mono">${bit.toString(8).padStart(4, '0')}</td>
+      <td>${cn}</td><td>${on ? '<span class="chip ok">置位</span>' : '<span class="chip gray">未置位</span>'}</td></tr>`;
+  }).join('');
+  $('#mdOut').innerHTML = `
+    <div class="readout">
+      <dt>st_mode</dt><dd class="mono">0${mode.toString(8)} <span class="en">（十进制 ${mode}）</span></dd>
+      <dt>类型位</dt><dd class="mono">st_mode &amp; S_IFMT = 0${(mode & S_IFMT).toString(8).padStart(6, '0')} → <b>${d.kind}</b></dd>
+      <dt>权限位</dt><dd class="mono">st_mode &amp; 0777 = 0${(mode & 0o777).toString(8).padStart(3, '0')}</dd>
+      <dt>statcheck 输出</dt><dd class="mono">type: ${d.typeLabel}, read: ${d.readok}</dd>
+    </div>
+    <div class="box ${d.readok === 'no' ? 'warn' : 'ok'}" style="margin-bottom:0"><div class="t">S_ISREG / S_ISDIR 与 st_mode &amp; S_IRUSR</div>
+      statcheck.c 只做两件事：先用 <code>S_ISREG</code>（<code>st_mode &amp; S_IFMT == S_IFREG</code>）与 <code>S_ISDIR</code> 判类型，再用 <code>st_mode &amp; S_IRUSR</code> 判「属主可读」。
+      当前模式的 <code>S_IRUSR</code> ${d.readok === 'yes' ? '<b>置位</b> → 打印 read: yes' : '<b>没有置位</b> → 打印 read: no（这就是课件第 20 页 <code>chmod 000</code> 那一次的来历）'}，而类型位与权限位互不影响 —— 清掉权限不会让普通文件变成别的类型。
+    </div>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>宏</th><th>八进制</th><th>含义</th><th>本模式</th></tr>${bits}</table></div>`;
+}
+const STAT_FIELDS = [
+  ['st_dev', 'dev_t', 'Device —— 设备', '知道文件在哪个设备上；同一设备内的 inode 号才唯一。'],
+  ['st_ino', 'ino_t', 'inode —— i 节点号', '文件的「身份证号」；两个文件名指向同一个 inode 就是硬链接（对应 st_nlink）。'],
+  ['st_mode', 'mode_t', 'Protection and file type —— 保护位与类型', 'statcheck.c 用的就是它：类型位判 regular/directory，<code>S_IRUSR</code> 判属主可读。'],
+  ['st_nlink', 'nlink_t', 'Number of hard links —— 硬链接数', '目录天生至少 2（<code>.</code> 与 <code>..</code> 就是链接）。'],
+  ['st_uid', 'uid_t', 'User ID of owner —— 属主用户 ID', '决定「属主」三个权限位对谁生效。'],
+  ['st_gid', 'gid_t', 'Group ID of owner —— 属主组 ID', '决定「同组」三个权限位对谁生效。'],
+  ['st_rdev', 'dev_t', 'Device type (if inode device) —— 设备类型', '只有设备文件才有意义（原第 6 页提到的字符/块设备）。'],
+  ['st_size', 'off_t', 'Total size, in bytes —— 文件大小（字节）', '这正是「文件是 m 个字节的序列」里的 m。'],
+  ['st_blksize', 'unsigned long', 'Blocksize for filesystem I/O —— 文件系统 I/O 块大小', '内核建议的 I/O 粒度；与用户缓冲（Standard I/O / RIO_BUFSIZE）不是一回事。'],
+  ['st_blocks', 'unsigned long', 'Number of blocks allocated —— 已分配块数', '实际占用的块数，可能小于 <code>st_size/blksize</code>（稀疏文件）。'],
+  ['st_atime', 'time_t', 'Time of last access —— 最后访问时间', '读文件会更新它（很多文件系统挂在 noatime 下就不更新了）。'],
+  ['st_mtime', 'time_t', 'Time of last modification —— 最后修改时间', '文件<b>内容</b>变了才更新 —— 写入会改它。'],
+  ['st_ctime', 'time_t', 'Time of last change —— 最后变更时间', 'inode <b>元数据</b>变了（权限、属主、链接数）就更新，与内容无关。'],
+];
+/* ============================================================
+   6 三表联动 / 重定向实验室
+   ============================================================ */
+/** 按 step 生成三表状态：0 初始+open，1 再 open，2 fork，3 dup2(4,1) */
+function ftModel(step) {
+  const OFT = [{ kind: 'terminal', refcnt: 3, pos: '—', access: '读? 写✓', append: true, id: 'File A（终端）' }];
+  const FD = [{ fd: 0, e: 0, proc: 'p' }, { fd: 1, e: 0, proc: 'p' }, { fd: 2, e: 0, proc: 'p' }];
+  if (step >= 0) { OFT.push({ kind: 'disk', refcnt: 1, pos: 0, access: '写', append: false, id: 'File B（磁盘）' }); FD.push({ fd: 3, e: 1, proc: 'p' }); }
+  if (step >= 1) { OFT.push({ kind: 'disk', refcnt: 1, pos: 0, access: '写', append: false, id: 'File C（磁盘，第二次 open）' }); FD.push({ fd: 4, e: 2, proc: 'p' }); }
+  if (step >= 2) {
+    for (const e of OFT) e.refcnt++;
+    for (const row of FD.slice()) FD.push({ fd: row.fd, e: row.e, proc: 'c' });
+  }
+  if (step >= 3) {
+    const oldE = FD.find(r => r.fd === 1 && r.proc === 'p').e;
+    OFT[oldE].refcnt--;
+    const src = FD.find(r => r.fd === 4 && r.proc === 'p').e;
+    OFT[src].refcnt++;
+    FD.find(r => r.fd === 1 && r.proc === 'p').e = src;
+  }
+  return { OFT, FD };
+}
+const FT_STEPS = [
+  ['① open 一个磁盘文件 → fd 3', '每一步都只动描述符表的一格或打开文件表的一个计数 —— 这就是全部机制。'],
+  ['② 再 open 一次同一个文件 → fd 4', '原第 22 页：两次 open = 两个打开文件表表项，各有自己的 File pos（两个 0）。'],
+  ['③ fork 之后', '原第 24 页：子进程的描述符表与父进程一模一样，每个表项的 refcnt 加 1。文件位置共享（同一个表项）。'],
+  ['④ dup2(4, 1) —— 重定向', '原第 27 页：fd 1 改成指向 fd 4 的表项（refcnt → 2）；它原来指向的终端表项少一个引用。'],
+];
+function renderFdTable(step) {
+  const m = ftModel(step);
+  const fdRows = m.FD.sort((a, b) => a.fd - b.fd || (a.proc < b.proc ? -1 : 1)).map(r => {
+    const e = m.OFT[r.e];
+    const hl = (step >= 3 && r.fd === 1);
+    return `<tr${hl ? ' class="hl"' : ''}><td class="mono">${r.proc === 'p' ? '父' : '子'} fd ${r.fd}</td>
+      <td class="mono">${r.proc === 'p' ? '' : '（fork 拷贝）'}→ ${esc(e.id)}</td></tr>`;
+  }).join('');
+  const oftRows = m.OFT.map((e, i) => {
+    const holder = m.FD.filter(r => r.e === i).map(r => `${r.proc === 'p' ? '父' : '子'}fd${r.fd}`);
+    return `<tr><td class="mono">表项 ${i} · ${esc(e.id)}</td><td class="mono">${e.pos}</td>
+      <td class="mono">${e.refcnt}</td><td class="mono">${esc(e.access)}</td>
+      <td style="font-size:13px">${holder.length ? holder.join(' · ') : '<span class="chip bad">没人引用</span>'}</td></tr>`;
+  }).join('');
+  const notes = ['fd 0/1/2 由 shell 从同一个终端表项复制而来，因此 refcnt 记作 3；文件 fname 是第一次 open 新建的表项，位置 0。',
+                 '两个独立表项、两个独立的 File pos —— 但它们最终指向同一个 v-node（同一份文件数据）。',
+                 'fork 只拷贝描述符表，<b>不拷贝打开文件表</b>：所以父子共享 File pos，而 refcnt 各加 1。',
+                 'dup2 之后 fd 1 与 fd 4 共享同一个表项（同一个 File pos）：往 stdout 写就是往这个文件写。'];
+  $('#ftOut').innerHTML = `
+    <div class="grid g2">
+      <div><div class="fcap">描述符表（每进程一张）</div>
+        <div class="tbl-wrap"><table class="tbl"><tr><th>描述符</th><th>指向</th></tr>${fdRows}</table></div></div>
+      <div><div class="fcap">打开文件表（全系统共享） + v-node</div>
+        <div class="tbl-wrap"><table class="tbl"><tr><th>表项</th><th>File pos</th><th>refcnt</th><th>访问</th><th>被谁引用</th></tr>${oftRows}</table></div></div>
+    </div>
+    <div class="box ok" style="margin-bottom:0"><div class="t">${esc(FT_STEPS[step][0])}</div>${notes[step]}</div>`;
+}
+function rdSteps() {
+  return [
+    { t: '初始状态', state: 0, note: '子进程（shell 的副本）的 fd 1 还指着终端。' },
+    { t: 'Step 1 · open("foo.txt", O_WRONLY|O_CREAT|O_TRUNC)', state: 1, note: '在子进程里、<b>exec 之前</b>打开目标文件，拿到 fd 4。此刻 fd 1 仍是终端。' },
+    { t: 'Step 2 · dup2(4, 1)', state: 3, note: '把描述符表的第 1 格改成 fd 4 的表项 —— 这就是重定向的全部动作。' },
+    { t: 'Step 3 · exec', state: 3, note: 'exec 不改变打开文件（原第 23 页），程序以为自己还在写 stdout。' },
+    { t: 'Step 4 · 程序往 fd 1 写字节', state: 3, note: '字节落进 foo.txt。原来该显示在屏幕上的内容进了文件 —— 这就是 <code>ls &gt; foo.txt</code>。' },
+  ];
+}
+let rdCur = -1;
+function renderRedirect() {
+  const steps = rdSteps();
+  const st = steps[Math.min(rdCur < 0 ? 0 : rdCur, steps.length - 1)];
+  const m = ftModel(st.state);
+  const fd1 = m.FD.find(r => r.fd === 1 && r.proc === 'p').e;
+  const target = m.OFT[fd1];
+  const lines = steps.map((s, i) => {
+    const on = i <= (rdCur < 0 ? 0 : rdCur);
+    return `<div class="step${on ? ' on' : ''}"><div class="h">${esc(s.t)}</div><div class="e">${s.note}</div></div>`;
+  }).join('');
+  const txt = $('#rdText').value || '(空)';
+  const done = rdCur >= steps.length - 1;
+  $('#rdOut').innerHTML = `
+    ${lines}
+    <div class="readout" style="margin-top:10px">
+      <dt>fd 1 现在指向</dt><dd class="mono"><b>${esc(target.id)}</b>（refcnt ${target.refcnt}）</dd>
+      <dt>该文件内容</dt><dd class="mono">${done ? `<code>${esc(txt)}</code> —— 程序写给 stdout 的 ${strToBytes(txt).length} 个字节` : '<span class="en">（还没有字节写进去）</span>'}</dd>
+      <dt>屏幕上看到</dt><dd class="mono">${done ? '<span class="chip gray">什么都没有</span> 全被重定向走了' : '<span class="en">（重定向还没发生）</span>'}</dd>
+    </div>
+    <div class="box" style="margin-bottom:0"><div class="t">refcnt 是按「有多少个描述符指向它」实时算的</div>
+      原第 27 页的示意图里，dup2(4,1) 之后旧表项的 refcnt 记作 <b>0</b>（那张图按 1 起算）；本页按真实的描述符数算，所以终端表项从 3 降到 2。
+      两种记法说的是同一件事：<b>fd 1 不再引用终端，转而与 fd 4 共享那个磁盘文件的表项</b>。谁真正决定「字节去哪」，看的是描述符表这一格 —— 不是 fd 的名字。
+    </div>`;
+}
+
+/* ============================================================
+   7 fork 判定 / ffiles3 猜到 / 描述符模拟器
+   ============================================================ */
+let f2Parity = 0, f2Pick = null;
+function renderFork() {
+  const r = forkOrder2(f2Parity);
+  const opts = [
+    { who: 'first-Parent', label: '父进程先读到第二个字节', lines: ['Parent: c1 = a, c2 = b', 'Child: c1 = a, c2 = c'] },
+    { who: 'first-Child', label: '子进程先读到第二个字节', lines: ['Child: c1 = a, c2 = b', 'Parent: c1 = a, c2 = c'] },
+  ];
+  const correct = r.first === 'Parent' ? 'first-Parent' : 'first-Child';
+  const btns = opts.map(o => {
+    const answered = f2Pick !== null;
+    const cls = answered ? (o.who === correct ? 'chip ok' : (o.who === f2Pick ? 'chip bad' : 'chip gray')) : '';
+    return answered
+      ? `<span class="${cls}" style="cursor:default;padding:6px 12px">${esc(o.label)}${o.who === correct ? ' ✓' : ''}</span>`
+      : `<button class="sm" data-f2a="${o.who}">${esc(o.label)}</button>`;
+  }).join(' ');
+  const verdict = f2Pick === null ? '<span class="en">先选一个再点「判定我的选择」</span>'
+    : f2Pick === correct ? '<span class="chip ok">✓ 正确</span>' : '<span class="chip bad">✗ 再想想</span>';
+  $('#forkOut').innerHTML = `
+    <div class="readout">
+      <dt>父进程 pid 的奇偶</dt><dd class="mono">${f2Parity ? '奇数 → s = 1' : '偶数 → s = 0'}</dd>
+      <dt>谁睡 0 秒</dt><dd class="mono">${esc(r.first)}（s = ${r.first === 'Parent' ? r.sParent : r.sChild}）；另一个睡 ${1 - (r.first === 'Parent' ? r.sParent : r.sChild)} 秒</dd>
+      <dt>你的选择</dt><dd>${verdict}</dd>
+    </div>
+    <div class="ctrls" style="margin:6px 0">${btns}</div>
+    ${f2Pick !== null ? `<div class="box ${f2Pick === correct ? 'ok' : 'bad'}" style="margin-bottom:0"><div class="t">实际输出</div>
+      <p class="mono" style="margin:0 0 8px">${r.lines.map(esc).join('<br>')}</p>
+      <b>为什么是它：</b>fork 之前父进程已经读走 <code>a</code>，父子共享的那个 File pos 现在是 1（原第 24 页：文件在进程间共享）。
+      <code>int s = getpid() &amp; 0x1;</code> 写在 fork <b>之前</b>，父子拿到的 <code>s</code> 是同一个值，而父睡 <code>s</code>、子睡 <code>1−s</code> —— 所以谁睡 0 秒，谁就先读到 <code>b</code>，另一个只能拿到 <code>c</code>。
+      <code>c1</code> 在两行里永远是 <code>a</code>，因为它是在 fork 之前读的。课件第 31 页那两个方框，正是这两种情形的两张快照。
+    </div>` : ''}`;
+}
+const AF_OPTS = ['pqrsjklmnwxyzef', 'pqrswxyznef', 'pqrswxyzejklmn', 'pqrsjklmn', 'pqrswxyzef'];
+let afPick = null;
+function renderAns() {
+  const truth = fdRun(AF_PROG, '');
+  const final = truth.ok ? bytesToStr(truth.steps[truth.steps.length - 1].state.file) : '?';
+  const btns = AF_OPTS.map(o => {
+    if (afPick === null) return `<button class="sm" data-af="${esc(o)}"><code>${esc(o)}</code></button>`;
+    const isTruth = o === final, isPick = o === afPick;
+    const cls = isTruth ? 'chip ok' : isPick ? 'chip bad' : 'chip gray';
+    return `<span class="${cls}" style="padding:6px 12px"><code>${esc(o)}</code>${isTruth ? ' ✓' : ''}</span>`;
+  }).join(' ');
+  const just = '<b>推演：</b>' +
+    '<code>Write(fd1, "pqrs", 4)</code> → 文件 <code>pqrs</code>，fd1 位置 4；' +
+    '<code>fd3 = open(..., O_APPEND|O_WRONLY)</code> 是<b>另一个表项</b>，<code>Write(fd3, "jklmn", 5)</code> 先跳到末尾再写 → <code>pqrsjklmn</code>，fd3 位置 9；' +
+    '<code>fd2 = dup(fd1)</code> 让 fd2 <b>共享 fd1 的表项</b>（位置 4），<code>Write(fd2, "wxyz", 4)</code> 于是从偏移 4 覆写 4 个字节，把 <code>jklm</code> 盖成 <code>wxyz</code> → <code>pqrswxyzn</code>，fd1/fd2 位置 8；' +
+    '最后 <code>Write(fd3, "ef", 2)</code> 因为 <code>O_APPEND</code> 又跳到末尾（偏移 9）追加 → <code>pqrswxyznef</code>。';
+  $('#ansOut').innerHTML = `
+    <div class="ctrls" style="margin:0 0 8px">${btns}</div>
+    ${afPick === null ? '<p class="en" style="margin:0">原课件这一页只给了题面，没有给答案 —— 先猜一个。</p>'
+      : `<div class="box ${afPick === final ? 'ok' : 'bad'}" style="margin-bottom:0"><div class="t">${afPick === final ? '✓ 正确' : '✗ 不对'}</div>
+        <p style="margin:0 0 8px">结果文件的内容是 <code>${esc(final)}</code>（${strToBytes(final).length} 字节）：</p>${just}
+        <p style="margin:8px 0 0">想一步步看，就在下面的模拟器里点「载入 ffiles3」再单步 —— 本页的引擎已与本机真实的 <code>open/write/dup</code> 系统调用逐项比对过（0 项不一致）。</p></div>`}`;
+}
+const AF_PROG = `fd1 = open("fname", O_RDWR|O_CREAT|O_TRUNC)
+write fd1 "pqrs"
+fd3 = open("fname", O_WRONLY|O_APPEND)
+write fd3 "jklmn"
+fd2 = dup(fd1)
+write fd2 "wxyz"
+write fd3 "ef"`;
+const FF_PROGS = {
+  ff1: `fd1 = open("fname", O_RDONLY)
+fd2 = open("fname", O_RDONLY)
+fd3 = open("fname", O_RDONLY)
+dup2 fd2 fd3
+read fd1 c1 1
+read fd2 c2 1
+read fd3 c3 1
+printf "c1 = %c, c2 = %c, c3 = %c\\n" c1 c2 c3`,
+  ff3: AF_PROG,
+  redir: `fd4 = open("fname", O_WRONLY|O_CREAT|O_TRUNC)
+dup2 fd4 1
+write 1 "hello, stdout"
+printf "printf 也走 fd 1 —— 这句同样落进文件\\n"`,
+};
+const FF = { res: null, cur: 0, src: '' };
+function renderFdSim() {
+  if (!FF.res) return;
+  if (!FF.res.ok) {
+    $('#ffOut').innerHTML = badBox(`第 ${FF.res.error.line} 行：${FF.res.error.msg}`);
+    return;
+  }
+  const steps = FF.res.steps;
+  const cur = Math.max(0, Math.min(FF.cur, steps.length - 1));
+  const s = steps[cur], st = s.state;
+  const progRows = steps.slice(1).map((x, i) => {
+    const idx = i + 1;
+    const ret = x.ret === null ? '' : x.ret.t === 'err' ? '−1' : x.ret.t === 'bytes'
+      ? `${x.ret.v.length}${x.ret.v.length ? ' (' + esc(bytesToStr(x.ret.v)) + ')' : ''}` : String(x.ret.v);
+    return `<tr${idx === cur ? ' class="hl"' : ''} data-ffs="${idx}" style="cursor:pointer">
+      <td class="mono" style="font-size:12.5px">${esc(x.text)}</td><td class="mono">${ret}</td></tr>`;
+  }).join('');
+  const fdRows = Object.keys(st.fdt).map(Number).sort((a, b) => a - b).map(fd => {
+    const e = st.oft[st.fdt[fd]];
+    const isFile = !e.term;
+    return `<tr><td class="mono">${fd}</td><td class="mono">${isFile ? `文件表项 ${st.fdt[fd]}` : '终端'}</td>
+      <td class="mono">${isFile ? (e.pos) : '—'}</td><td class="mono">${e.refcnt}</td>
+      <td class="mono" style="font-size:12.5px">${e.rd ? 'r' : '−'}${e.wr ? 'w' : '−'}${e.append ? ' +O_APPEND' : ''}</td></tr>`;
+  }).join('');
+  $('#ffOut').innerHTML = `
+    <div style="display:flex;gap:14px;flex-wrap:wrap;align-items:flex-start">
+      <div style="flex:1;min-width:260px">
+        <div class="fcap">程序（点行跳转）</div>
+        <div class="tbl-wrap"><table class="tbl" style="margin:0"><tr><th>指令</th><th>返回值</th></tr>${progRows}</table></div>
+      </div>
+      <div style="flex:1;min-width:260px">
+        <div class="fcap">描述符表（每进程一张）</div>
+        <div class="tbl-wrap"><table class="tbl" style="margin:0"><tr><th>fd</th><th>指向</th><th>File pos</th><th>refcnt</th><th>访问</th></tr>${fdRows}</table></div>
+        <div class="readout" style="margin-top:10px">
+          <dt>变量</dt><dd class="mono">${Object.keys(st.vars).length ? Object.keys(st.vars).map(k => `${esc(k)} = ${typeof st.vars[k] === 'number' ? st.vars[k] : `<code>${esc(bytesToStr(st.vars[k]))}</code>`}`).join('　') : '<span class="en">（还没有）</span>'}</dd>
+          <dt>终端输出</dt><dd class="mono">${st.term.length ? esc(bytesToStr(st.term)) : '<span class="en">（空）</span>'}</dd>
+        </div>
+      </div>
+    </div>
+    <div class="fgrp" style="margin-top:12px"><div class="fcap">虚拟文件 fname（蓝 = 已写过，绿 = 尚未写到的部分）</div>
+      ${st.file.length ? byteStrip(st.file, Object.fromEntries(st.file.map((_, i) => [i, { cls: 'e' }])), 0)
+        : '<p class="en" style="margin:0">（空文件 —— 被 O_TRUNC 截断，或还没写过）</p>'}</div>
+    <div class="box ${s.ret && s.ret.t === 'err' ? 'bad' : ''}" style="margin:12px 0 0">
+      <div class="t">第 ${cur} 步：${esc(s.text)}</div>${s.note}</div>`;
+}
+
+/* ============================================================
+   8 stdio 缓冲 / fgets 逐行
+   ============================================================ */
+let sbTail = 'flush';
+function renderStdio() {
+  const text = $('#sbText').value;
+  const mode = $('#sbMode').value;
+  const size = parseUInt($('#sbSize').value, 1e7);
+  if (size === null || size === 0) { $('#sbOut').innerHTML = badBox('缓冲容量请给正整数。'); return; }
+  const r = stdioTrace(text, mode, size, sbTail);
+  const rows = r.steps.filter(s => s.kind === 'printf').map((s, i) =>
+    `<tr><td class="mono">printf("${esc(s.ch === '\n' ? '\\n' : s.ch)}")</td>
+      <td class="mono" style="font-size:12.5px">${esc(s.bufAfter) || '<span class="en">（已冲空）</span>'}</td>
+      <td>${s.flushed ? '<span class="chip warn">触发一次 write</span>' : ''}</td></tr>`).join('');
+  const wr = r.writes.map((w, i) =>
+    `<tr><td class="mono">write(1, "${esc(w.data.replace('\n', '\\n'))}", ${w.n})</td><td class="mono">= ${w.n}</td>
+      <td style="font-size:13px">因为${w.why}</td></tr>`).join('');
+  $('#sbOut').innerHTML = `
+    <div class="readout">
+      <dt>printf 次数</dt><dd class="mono">${r.steps.filter(s => s.kind === 'printf').length} 次（含最后那个 "\\n"）</dd>
+      <dt>真正的 write</dt><dd class="mono"><b>${r.totalWrites}</b> 次</dd>
+      <dt>收尾方式</dt><dd class="mono">${sbTail === 'flush' ? 'fflush(stdout)' : 'exit(0) / 从 main 返回'}</dd>
+    </div>
+    <div class="tbl-wrap"><table class="tbl"><tr><th>调用</th><th>缓冲里的内容</th><th></th></tr>${rows}</table></div>
+    ${wr ? `<div class="tbl-wrap"><table class="tbl"><tr><th>落到 fd 上的系统调用</th><th>返回</th><th>为什么现在冲</th></tr>${wr}</table></div>` : ''}
+    <div class="box ok" style="margin-bottom:0"><div class="t">${r.totalWrites === 1 ? '六次 printf，一次 write —— 和课件第 36、37 页一致' : `${r.steps.length} 次写入缓冲，${r.totalWrites} 次真正落到 fd 上`}</div>
+      课件第 36 页的结论：缓冲在<b>遇到 “\\n”</b>、<b>调用 fflush</b>、<b>或者 exit / 从 main 返回</b>时被冲到输出 fd。
+      ${mode === 'line' ? '当前是<b>行缓冲</b>（连终端）：一遇到 “\\n” 就冲。' : '当前是<b>块缓冲</b>（连文件/管道）：只有缓冲满（或收尾）才冲 —— 所以内容会成块地出门。'}
+    </div>`;
+}
+function renderFgets() {
+  const L = parseUInt($('#flLine').value, 1e6), n = parseUInt($('#flLines').value, 1e5);
+  if (L === null || n === null || L === 0) { $('#flOut').innerHTML = badBox('每行长度请给正整数，行数请给非负整数。'); return; }
+  const total = (L + 1) * n;                 /* fgets 读到的每一行都包含 '\n' */
+  const calls = n + 1;                       /* 最后那次返回 NULL */
+  const stdioReads = 1 + Math.floor(total / 4096);  /* 默认 BUFSIZ 级别的量级提示 */
+  $('#flOut').innerHTML = `
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>量</th><th>值</th><th>说明</th></tr>
+      <tr><td>文件总字节数</td><td class="mono">${fmtNum(total)}</td><td>每行 ${L} 个字符 + 1 个 '\\n'，共 ${n} 行</td></tr>
+      <tr><td><code>fgets(buf, MLINE, infile)</code> 调用次数</td><td class="mono">${fmtNum(calls)}</td><td>每行一次，最后还有一次返回 <code>NULL</code> 用来结束 <code>while</code> 循环（<code>while(fgets(...) != NULL)</code>）</td></tr>
+      <tr><td>每次最多搬多少</td><td class="mono">MLINE = 1024</td><td>课件第 38 页的 <code>#define MLINE 1024</code>：一行超过 1023 个字符就会被截成多次返回</td></tr>
+      <tr><td>底层 read 的量级</td><td class="mono">约 ${fmtNum(stdioReads)} 次</td><td>标准 I/O 自己按块读（容量是实现细节，这里按 4096 估算量级）；你调用的 <code>fgets</code> 次数与底层 <code>read</code> 次数<b>不是一回事</b></td></tr>
+    </table></div>
+    <div class="box" style="margin-bottom:0"><div class="t">这就是「缓冲把 short count 藏起来」的地方</div>
+      你写的是「读一行」（<code>fgets</code>），库做的是「抓一大块、再一行一行切给你」。所以 Application 层看不到 short count —— 原第 53 页把这条列为 Standard I/O 的优点之一。
+    </div>`;
+}
+
+/* ============================================================
+   9 rio_readn / RIO 缓冲模拟器
+   ============================================================ */
+function renderRioReadn() {
+  const n = parseUInt($('#rnIn').value, 1e7), av = parseUInt($('#rnAvail').value, 1e7);
+  if (n === null || av === null) { $('#rnOut').innerHTML = badBox('请求 n 与文件剩余字节都请给非负整数。'); return; }
+  const eintr = $('#rnEintr').value === '1';
+  const file = [];
+  for (let i = 0; i < av; i++) file.push(97 + (i % 26));
+  const r = rioNew(bytesToStr(file), 4 * 1024);
+  const res = rioReadnSim(r, n, eintr);
+  const rows = [];
+  let left = n, calls = 0;
+  while (left > 0 && calls < 40) {
+    calls++;
+    const isEintr = eintr && calls === 1;
+    if (isEintr) { rows.push(`read(fd, bufp, ${left})  →  <b>−1</b>（errno = EINTR）→ nread = 0，继续循环`); continue; }
+    const room = Math.max(0, av - (n - left));
+    const k = Math.min(left, room);
+    rows.push(`read(fd, bufp, ${left})  →  <b>${k}</b>${k === 0 ? '（EOF）→ break' : ''}`);
+    if (k === 0) break;
+    left -= k;
+  }
+  const steps = rows.map((t, i) => `<div class="step on"><div class="h">第 ${i + 1} 次循环</div><div class="m">${t}</div></div>`).join('');
+  const short = res.v < n;
+  $('#rnOut').innerHTML = `
+    <div class="readout">
+      <dt>返回值</dt><dd class="mono"><b>${res.v}</b> (= n − nleft = ${n} − ${n - res.v})</dd>
+      <dt>拿到几个字节</dt><dd class="mono">${res.v}${short && res.v > 0 ? ' —— <b>short count</b>（只在遇到 EOF 时才会发生）' : ''}</dd>
+      <dt>真正的 read 调用</dt><dd class="mono">${res.calls}${res.retried ? `（其中 ${res.retried} 次被信号打断后重试）` : ''}</dd>
+      <dt>文件位置</dt><dd class="mono">前进到 ${r.pos}</dd>
+    </div>
+    ${steps}
+    <div class="box ${short ? 'warn' : 'ok'}" style="margin-bottom:0"><div class="t">${res.v === n ? '读满了 —— 没有 short count' : res.v === 0 ? '什么都没读到：已经到文件末尾（返回 0）' : 'short count：只有 EOF 能让 rio_readn 少返回'}</div>
+      原第 43 页的原话：<b>rio_readn returns short count only if it encounters EOF</b>，所以「只在你知道要读多少字节时才用它」。
+      代码里的两个分支值得记牢：<code>errno == EINTR</code> 时把 <code>nread</code> 置 0 然后<b>重来</b>；<code>nread == 0</code> 时 <b>break</b>。
+    </div>`;
+}
+const RI = { text: 'hello\nworld\nbye', size: 8, ops: [] };
+function renderRio() {
+  /* 输入框里打不出真的换行，所以约定「\n」表示换行（与 C 里的写法一致） */
+  const text = $('#riText').value.replace(/\\n/g, '\n').replace(/\\t/g, '\t');
+  const size = parseUInt($('#riBuf').value, 1e5);
+  if (size === null || size === 0) { $('#riOut').innerHTML = badBox('RIO_BUFSIZE 请给正整数。'); return; }
+  if (text !== RI.text || size !== RI.size) { RI.text = text; RI.size = size; RI.ops = []; }
+  const sim = rioSim(RI.text, RI.size, RI.ops);
+  const fileBytes = strToBytes(RI.text);
+  const last = sim.steps.length ? sim.steps[sim.steps.length - 1] : null;
+  const buf = last ? last.buf : [];
+  const marks = {};
+  buf.forEach((_, i) => { marks[i] = { cls: i < (last ? last.bufptr : 0) ? 'f' : 'e' }; });
+  const fileMarks = {};
+  const posNow = last ? last.pos : 0;
+  fileBytes.forEach((_, i) => { fileMarks[i] = { cls: i < posNow ? 'e' : 'f' }; });
+  const logRows = sim.steps.map((s, i) => {
+    const spec = s.spec;
+    const call = spec.k === 'line' ? `rio_readlineb(&rio, buf, ${spec.n})`
+      : spec.k === 'nb' ? `rio_readnb(&rio, buf, ${spec.n})` : `rio_readn(fd, buf, ${spec.n})${spec.eintr ? '（被信号打断一次）' : ''}`;
+    const retv = s.res.t === 'bytes' ? `${s.res.v.length} 字节` : String(s.res.v);
+    const content = s.res.bytes && s.res.bytes.length ? `<code>${esc(bytesToStr(s.res.bytes).replace(/\n/g, '\\n'))}</code>` : '<span class="en">（无）</span>';
+    return `<tr${i === sim.steps.length - 1 ? ' class="hl"' : ''}><td class="mono" style="font-size:12.5px">${call}</td>
+      <td class="mono">${retv}</td><td class="mono" style="font-size:12.5px">${content}</td>
+      <td class="mono">${s.after.cnt}</td><td class="mono">${s.after.reads - s.before.reads}</td></tr>`;
+  }).join('');
+  $('#riOut').innerHTML = `
+    <div class="fgrp"><div class="fcap">文件内容（蓝 = 内核已经搬进缓冲 / 已被读走，绿 = 还没见过）</div>
+      ${byteStrip(fileBytes, fileMarks, 0)}</div>
+    <div class="fgrp" style="margin-top:10px"><div class="fcap">rio_buf / rio_bufptr / rio_cnt（绿 = 已被用户读走，蓝 = 还没读的 ${last ? last.after.cnt : 0} 个字节）</div>
+      ${buf.length ? byteStrip(buf, marks, 0) : '<p class="en" style="margin:0">缓冲空的 —— <code>rio_cnt == 0</code>，下次调用会先 read 一块进来。</p>'}
+      <div class="readout">
+        <dt>RIO_BUFSIZE</dt><dd class="mono">${RI.size}</dd>
+        <dt>rio_cnt</dt><dd class="mono">${last ? last.after.cnt : 0}</dd>
+        <dt>rio_bufptr</dt><dd class="mono">在缓冲里的第 ${last ? last.bufptr : 0} 个字节</dd>
+        <dt>底层 read 次数</dt><dd class="mono"><b>${sim.reads}</b></dd>
+        <dt>文件位置</dt><dd class="mono">${sim.filePos} / ${fileBytes.length}</dd>
+      </div>
+    </div>
+    ${logRows ? `<div class="tbl-wrap"><table class="tbl">
+      <tr><th>调用</th><th>返回</th><th>拿到的内容</th><th>调用后 rio_cnt</th><th>本次 read</th></tr>${logRows}</table></div>` : ''}
+    <div class="box" style="margin-bottom:0"><div class="t">${RI.ops.length ? '对着三个字段读这张表' : '先执行几次调用'}</div>
+      <code>rio_cnt</code> 数的是<b>缓冲里还没被用户读走的字节</b>；<code>rio_bufptr</code> 是下一个待读的位置；只有当 <code>rio_cnt == 0</code> 时才会再发一次 <code>read</code>。
+      连续调用几次 <code>rio_readlineb</code> 会看到：<b>一次 read 抓进来的字节，够后面好几次调用慢慢用完</b>；而一旦中间插进 <code>rio_readn</code>（它绕过缓冲直接读内核），文件位置就跳到缓冲覆盖范围之外 —— 这正是原第 46 页警告「不要把它与带缓冲的函数交错」的原因，试试看。
+    </div>`;
+}
+
+/* ============================================================
+   10 选型判定 / 二进制陷阱
+   ============================================================ */
+const chState = IO_SCEN.map(() => null);
+function renderChoose() {
+  const answered = chState.filter(v => v !== null).length;
+  const right = IO_SCEN.filter((s, i) => chState[i] === s.a).length;
+  const list = IO_SCEN.map((s, i) => {
+    const sel = chState[i];
+    const cls = sel === null ? '' : sel === s.a ? ' correct done' : ' wrong done';
+    const opts = ['stdio', 'rio', 'unix', 'none'];
+    return `<div class="puzzle${cls}" style="flex-direction:column;align-items:stretch">
+      <div class="q" style="white-space:normal"><b>${i + 1}.</b> ${esc(s.q)}</div>
+      <div style="display:flex;flex-wrap:wrap;gap:7px;margin-top:8px">
+        ${opts.map(o => `<button class="sm" data-cho="${i}:${o}"
+          style="${sel === null ? '' : o === s.a ? 'border-color:var(--ok-bd);background:var(--ok-bg)'
+            : o === sel ? 'border-color:var(--bad-bd);background:var(--bad-bg)' : 'opacity:.6'}">${IO_NAMES[o]}</button>`).join('')}
+      </div>
+      <div class="exp"><span class="verdict">${sel === null ? '' : sel === s.a ? '✓ 正确' : '✗ 错误'}</span>
+        &nbsp;正确答案：<b>${IO_NAMES[s.a]}</b><br>${s.w}</div>
+    </div>`;
+  }).join('');
+  const score = answered === 0 ? '' : `<div class="box ${right === IO_SCEN.length ? 'ok' : right >= IO_SCEN.length / 2 ? 'warn' : 'bad'}" style="margin-bottom:0">
+    <div class="t">已答 ${answered} / ${IO_SCEN.length} 题，答对 ${right} 题</div>
+    ${answered === IO_SCEN.length ? (right === IO_SCEN.length ? '全对 —— 选型规则（原第 54 页）都记住了。' : '错题上方已给出依据，回第 10 节读一遍规则表。') : '继续答题，每题立即判分。'}</div>`;
+  $('#chOut').innerHTML = list + score;
+}
+function renderBinFile() {
+  const bytes = parseHexBytes($('#bfIn').value);
+  const n = parseUInt($('#bfN').value, 1e6);
+  if (!bytes || !bytes.length) { $('#bfOut').innerHTML = badBox('请给十六进制字节，例如 61 62 63 00 64（两位一组，可以用空格分开）。'); return; }
+  if (n === null) { $('#bfOut').innerHTML = badBox('n 请给非负整数。'); return; }
+  const v = bfViews(bytes, n);
+  const marks = {};
+  bytes.forEach((b, i) => { marks[i] = { cls: b === 0 ? 's' : b === 0x0a ? 'e' : '', title: `偏移 ${i}` }; });
+  $('#bfOut').innerHTML = `
+    <div class="fgrp"><div class="fcap">字节流（红 = 0x00，蓝 = 换行 0x0a）</div>${byteStrip(bytes, marks, 0)}</div>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>谁来读</th><th>结果</th><th>为什么</th></tr>
+      <tr><td class="mono">strlen / strcpy（字符串函数）</td><td class="mono">${v.strLen} 字节${v.strLen ? `：<code>${esc(bytesToStr(v.strBytes))}</code>` : ''}</td>
+        <td>把字节 <code>0x00</code> 看作字符串结束${v.zeroAt < 0 ? ' —— 这份数据里没有 0x00，所以正好读完' : `（在偏移 ${v.zeroAt} 处遇到 0x00）`}</td></tr>
+      <tr><td class="mono">fgets / rio_readlineb（面向文本）</td><td class="mono">${v.fgetsLen} 字节${v.fgetsLen ? `：<code>${esc(bytesToStr(v.fgetsBytes).replace(/\n/g, '\\n'))}</code>` : ''}</td>
+        <td>遇到换行 <code>'\\n'</code> 就停${v.nlAt < 0 ? ' —— 这份数据里没有换行，于是读到末尾' : `（在偏移 ${v.nlAt} 处）`}；<b>它不会因为 0x00 停下</b>，但返回的缓冲里一旦有 0x00，接下来的字符串操作就会出错</td></tr>
+      <tr><td class="mono">rio_readn / rio_readnb（按字节数）</td><td class="mono">${v.readnLen} 字节${v.readnLen ? `：<code>${esc(bytesToStr(v.readnBytes))}</code>` : ''}</td>
+        <td>只按你给的 n = ${n} 来搬，<b>不解释任何字节值</b> —— 二进制数据的正确读法</td></tr>
+    </table></div>
+    <div class="box warn" style="margin-bottom:0"><div class="t">原第 55 页的两条禁忌</div>
+      二进制文件是<b>任意字节的序列，包括字节值 0x00</b>。所以：<b>不要用面向文本的 I/O</b>（fgets、scanf、rio_readlineb —— 它们会解释行尾字符），<b>也不要用字符串函数</b>（strlen、strcpy、strcat —— 它们把 0 当作字符串结束）。要读二进制，请用 <code>rio_readn</code> 或 <code>rio_readnb</code>。
+    </div>`;
+}
+
+/* ============================================================
+   11 readdir 遍历 / 测验
+   ============================================================ */
+const DIR_KIDS = {
+  '/home/bryant': ['（空目录）'], '/home/droh': ['hello.c'], '/etc': ['group', 'passwd'],
+  '/usr/include': ['stdio.h', 'sys'], '/usr/include/sys': ['unistd.h'],
+};
+function renderReaddir() {
+  const dir = $('#ddSel').value;
+  const showDot = $('#ddDot').value === '1';
+  const kids = DIR_KIDS[dir] || [];
+  const entries = [];
+  if (showDot) {
+    entries.push({ n: '.', kind: 'dir', note: '指向自己的链接' });
+    const parent = dir.replace(/\/[^/]*$/, '') || '/';
+    entries.push({ n: '..', kind: 'dir', note: `指向父目录 ${parent} 的链接` });
+  }
+  for (const k of kids) {
+    if (k === '（空目录）') continue;
+    const full = (dir === '/' ? '' : dir) + '/' + k;
+    entries.push({ n: k, kind: lexNode(full) || 'file', note: lexNode(full) === 'dir' ? '目录' : '普通文件' });
+  }
+  const rows = entries.map((e, i) => {
+    const de = e.kind === 'dir' ? `de->d_type = DT_DIR` : `de->d_type = DT_REG`;
+    return `<tr><td class="mono">第 ${i + 1} 次 readdir</td><td class="mono"><b>${esc(e.n)}</b></td>
+      <td class="mono" style="font-size:12.5px">${de}</td><td style="font-size:13px">${esc(e.note)}</td></tr>`;
+  }).join('');
+  $('#ddOut').innerHTML = `
+    <div class="readout">
+      <dt>opendir("${esc(dir)}")</dt><dd class="mono">返回非 NULL 的 <code>DIR *</code>（成功）</dd>
+      <dt>readdir 调用</dt><dd class="mono">${entries.length} 次返回条目 + 1 次返回 <code>NULL</code>（循环结束）</dd>
+      <dt>子项数</dt><dd class="mono">${kids.filter(k => k !== '（空目录）').length}${showDot ? '（不含 . 与 ..）' : ''}</dd>
+    </div>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>调用</th><th>de-&gt;d_name</th><th>类型</th><th>说明</th></tr>${rows}
+      <tr><td class="mono">最后一次 readdir</td><td class="mono">NULL</td><td class="mono">—</td>
+        <td>返回 0（空指针）表示遍历完 —— <code>while (0 != (de = readdir(directory)))</code> 就在这里跳出</td></tr>
+    </table></div>
+    <div class="box ok" style="margin-bottom:0"><div class="t">原第 8 页说过：每个目录至少有 <code>.</code> 与 <code>..</code> 两个条目</div>
+      ${showDot ? '上表里它们排在最前面 —— 真实的 <code>readdir</code> 也是先给你这两个（顺序由文件系统决定，这里按课件树的最简情形给出）。'
+        : '把上面的选择切回「显示」，就能看到这两个天生就有的链接条目。'}读目录时如果不想处理它们，代码里要显式跳过 <code>"."</code> 与 <code>".."</code>。
+    </div>`;
+}
+const chQuizState = QUIZ.map(() => null);
+function renderQuiz() {
+  const answered = chQuizState.filter(v => v !== null).length;
+  const right = QUIZ.filter((q, i) => chQuizState[i] === q.a).length;
+  const list = QUIZ.map((q, i) => {
+    const sel = chQuizState[i];
+    const cls = sel === null ? '' : sel === q.a ? ' correct done' : ' wrong done';
+    return `<div class="puzzle${cls}" style="flex-direction:column;align-items:stretch">
+      <div class="q" style="white-space:normal"><b>${i + 1}.</b> ${q.q}</div>
+      <div style="display:flex;flex-wrap:wrap;gap:7px;margin-top:8px">
+        ${q.o.map((o, j) => `<button class="sm" data-qzo="${i}:${j}"
+          style="${sel === null ? '' : j === q.a ? 'border-color:var(--ok-bd);background:var(--ok-bg)'
+            : j === sel ? 'border-color:var(--bad-bd);background:var(--bad-bg)' : 'opacity:.6'}">
+          ${'ABCD'[j]}. ${o}</button>`).join('')}
+      </div>
+      <div class="exp"><span class="verdict">${sel === null ? '' : sel === q.a ? '✓ 正确' : '✗ 错误'}</span>
+        &nbsp;正确答案：<b>${'ABCD'[q.a]}. ${q.o[q.a]}</b><br>${q.w}</div>
+    </div>`;
+  }).join('');
+  const score = answered === 0 ? '' : `<div class="box ${right === QUIZ.length ? 'ok' : right >= QUIZ.length / 2 ? 'warn' : 'bad'}" style="margin-bottom:0">
+    <div class="t">已答 ${answered} / ${QUIZ.length} 题，答对 ${right} 题</div>
+    ${answered === QUIZ.length
+      ? (right === QUIZ.length ? '全对 —— 这一讲可以过了。' : '错题上方已标出正确答案与依据，回对应小节再看一遍即可。')
+      : '继续答题，每题都会立即给出解析。'}
+  </div>`;
+  $('#qzOut').innerHTML = list + score;
+}
+
+/* ============================================================
+   初始化
+   ============================================================ */
+function initNav() {
+  const secs = $$('main section');
+  const links = $$('nav.toc a');
+  if ('IntersectionObserver' in window && secs.length) {
+    const io = new IntersectionObserver(entries => {
+      entries.forEach(en => {
+        if (en.isIntersecting) links.forEach(a => a.classList.toggle('active', a.getAttribute('href') === '#' + en.target.id));
+      });
+    }, { rootMargin: '-72px 0px -70% 0px', threshold: 0 });
+    secs.forEach(s => io.observe(s));
+  }
+  const bar = $('#pgBar'), txt = $('#pgText'), top = $('#toTop');
+  const onScroll = () => {
+    const h = document.documentElement;
+    const max = h.scrollHeight - h.clientHeight;
+    const p = max > 0 ? Math.min(100, Math.round(h.scrollTop / max * 100)) : 0;
+    if (bar) bar.style.width = p + '%';
+    if (txt) txt.textContent = '学习进度 ' + p + '%';
+    if (top) top.style.display = h.scrollTop > 600 ? 'block' : 'none';
+  };
+  window.addEventListener('scroll', onScroll, { passive: true });
+  onScroll();
+  if (top) top.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
+}
+
+function initAll() {
+  initNav();
+
+  /* ---------- 0 三层地图 ---------- */
+  renderLayers();
+
+  /* ---------- 1 文件位置 ---------- */
+  function doFp() {
+    const op = $('#fpOp').value;
+    if (op === 'read') {
+      const n = parseUInt($('#fpN').value, 1e7);
+      if (n === null) { $('#fpOut').innerHTML = badBox('read 的字节数请给非负整数。'); return; }
+      fpApply('read', n);
+    } else if (op === 'write') {
+      fpApply('write', $('#fpN').value);
+    } else {
+      const off = parseInt($('#fpOff').value, 10);
+      if (!isFinite(off)) { $('#fpOut').innerHTML = badBox('offset 请给一个整数（可负）。'); return; }
+      fpApply('lseek', { off, whence: $('#fpWhence').value });
+    }
+    renderFilePos();
+  }
+  $('#fpGo').addEventListener('click', doFp);
+  ['#fpN', '#fpOff'].forEach(id => $(id).addEventListener('keydown', e => { if (e.key === 'Enter') doFp(); }));
+  $('#fpText').addEventListener('change', () => {
+    FP.text = $('#fpText').value; FP.pos = Math.min(FP.pos, strToBytes(FP.text).length); FP.log = []; renderFilePos();
+  });
+  $('#fpReset').addEventListener('click', () => {
+    FP.text = $('#fpText').value || 'hello, world'; FP.pos = 0; FP.log = []; renderFilePos();
+  });
+  $$('[data-fp]').forEach(b => b.addEventListener('click', () => {
+    const kv = kvAttr(b.dataset.fp);
+    if (kv.whence) $('#fpWhence').value = kv.whence;
+    if (kv.read !== undefined) { $('#fpOp').value = 'read'; $('#fpN').value = kv.read; }
+    if (kv.write !== undefined) { $('#fpOp').value = 'write'; $('#fpN').value = kv.write; }
+    if (kv.seek !== undefined) { $('#fpOp').value = 'seek'; $('#fpOff').value = kv.seek; }
+    doFp();
+  }));
+  FP.text = $('#fpText').value;
+  renderFilePos();
+
+  /* ---------- 2 行尾 ---------- */
+  function doEol() { renderEol(); }
+  $('#eolGo').addEventListener('click', doEol);
+  ['#eolText', '#eolLines'].forEach(id => $(id).addEventListener('keydown', e => { if (e.key === 'Enter') doEol(); }));
+  $('#eolKind').addEventListener('change', doEol);
+  $$('[data-eol]').forEach(b => b.addEventListener('click', () => {
+    const kv = kvAttr(b.dataset.eol);
+    if (kv.text !== undefined) $('#eolText').value = kv.text;
+    if (kv.lines !== undefined) $('#eolLines').value = kv.lines;
+    if (kv.kind !== undefined) $('#eolKind').value = kv.kind;
+    doEol();
+  }));
+  doEol();
+
+  /* ---------- 3 路径名 ---------- */
+  function doPn() { renderPath(); }
+  $('#pnGo').addEventListener('click', doPn);
+  ['#pnCwd', '#pnPath'].forEach(id => $(id).addEventListener('keydown', e => { if (e.key === 'Enter') doPn(); }));
+  $$('[data-pn]').forEach(b => b.addEventListener('click', () => {
+    const kv = kvAttr(b.dataset.pn);
+    if (kv.cwd !== undefined) $('#pnCwd').value = kv.cwd;
+    if (kv.path !== undefined) $('#pnPath').value = kv.path;
+    doPn();
+  }));
+  doPn();
+
+  /* ---------- 4 short count / 调用计数 / 返回值 ---------- */
+  function doSc() { renderShort(); }
+  $('#scGo').addEventListener('click', doSc);
+  ['#scN', '#scAvail'].forEach(id => $(id).addEventListener('keydown', e => { if (e.key === 'Enter') doSc(); }));
+  $('#scDev').addEventListener('change', doSc);
+  $$('[data-sc]').forEach(b => b.addEventListener('click', () => {
+    const kv = kvAttr(b.dataset.sc);
+    if (kv.dev !== undefined) $('#scDev').value = kv.dev;
+    if (kv.n !== undefined) $('#scN').value = kv.n;
+    if (kv.avail !== undefined) $('#scAvail').value = kv.avail;
+    doSc();
+  }));
+  doSc();
+  function doCn() { renderCounts(); }
+  $('#cnGo').addEventListener('click', doCn);
+  ['#cnN', '#cnBuf'].forEach(id => $(id).addEventListener('keydown', e => { if (e.key === 'Enter') doCn(); }));
+  $$('[data-cn]').forEach(b => b.addEventListener('click', () => {
+    const kv = kvAttr(b.dataset.cn);
+    if (kv.n !== undefined) $('#cnN').value = kv.n;
+    if (kv.buf !== undefined) $('#cnBuf').value = kv.buf;
+    doCn();
+  }));
+  doCn();
+  renderRetTable();
+
+  /* ---------- 5 st_mode / struct stat ---------- */
+  function doMd() { renderMode(); }
+  $('#mdGo').addEventListener('click', doMd);
+  $('#mdIn').addEventListener('keydown', e => { if (e.key === 'Enter') doMd(); });
+  $$('[data-md]').forEach(b => b.addEventListener('click', () => { $('#mdIn').value = b.dataset.md; doMd(); }));
+  doMd();
+  let stSel = -1;
+  function doSt(i) {
+    stSel = i;
+    const rows = STAT_FIELDS.map((f, j) =>
+      `<tr data-stf="${j}"${j === stSel ? ' class="hl"' : ''} style="cursor:pointer">
+        <td class="mono">${esc(f[0])}</td><td class="mono">${esc(f[1])}</td><td style="font-size:13.5px">${esc(f[2])}</td></tr>`).join('');
+    const f = STAT_FIELDS[stSel];
+    $('#stOut').innerHTML = `<div class="tbl-wrap"><table class="tbl">
+      <tr><th>字段</th><th>类型</th><th>课件注释</th></tr>${rows}</table></div>
+      <div class="box ${stSel < 0 ? '' : 'ok'}" style="margin-bottom:0">${stSel < 0
+        ? '点击任意一行，看这个字段在什么时候被用到。<b>注意：</b>课件第 19 页的 stat 是「内核维护的元数据」—— 用户程序只能通过 <code>stat</code>/<code>fstat</code> 读它，不能直接写。'
+        : `<div class="t"><code>${esc(f[0])}</code>（${esc(f[1])}）—— ${esc(f[2])}</div>${f[3]}`}</div>`;
+  }
+  doSt(-1);
+
+  /* ---------- 6 三表联动 / 重定向 ---------- */
+  function doFt(step) {
+    $$('#ftSeg button').forEach(x => x.classList.toggle('on', Number(x.dataset.ft) === step));
+    renderFdTable(step);
+  }
+  $$('#ftSeg button').forEach(b => b.addEventListener('click', () => doFt(Number(b.dataset.ft))));
+  $$('[data-ftset]').forEach(b => b.addEventListener('click', () => doFt(Number(b.dataset.ftset))));
+  doFt(0);
+  function doRd() {
+    const steps = rdSteps();
+    rdCur = Math.min(rdCur + 1, steps.length - 1);
+    renderRedirect();
+  }
+  $('#rdStep').addEventListener('click', doRd);
+  $('#rdReset').addEventListener('click', () => { rdCur = -1; renderRedirect(); });
+  $$('[data-rd]').forEach(b => b.addEventListener('click', () => { rdCur = rdSteps().length - 1; renderRedirect(); }));
+  $('#rdText').addEventListener('change', () => { if (rdCur >= 0) renderRedirect(); });
+  renderRedirect();
+
+  /* ---------- 7 fork 判定 / ffiles3 / 描述符模拟器 ---------- */
+  $$('#f2Seg button').forEach(b => b.addEventListener('click', () => {
+    $$('#f2Seg button').forEach(x => x.classList.remove('on'));
+    b.classList.add('on');
+    f2Parity = parseInt(b.dataset.f2p, 10);
+    f2Pick = null;
+    renderFork();
+  }));
+  $('#f2Go').addEventListener('click', () => { renderFork(); });
+  $('#f2Reset').addEventListener('click', () => { f2Pick = null; renderFork(); });
+  renderFork();
+  $('#afGo').addEventListener('click', renderAns);
+  $('#afReset').addEventListener('click', () => { afPick = null; renderAns(); });
+  renderAns();
+  function doFf(runFromText) {
+    if (runFromText) FF.src = $('#ffSrc').value;
+    FF.res = fdRun(FF.src);
+    FF.cur = 0;
+    renderFdSim();
+  }
+  $('#ffRun').addEventListener('click', () => doFf(true));
+  $('#ffStep').addEventListener('click', () => {
+    if (!FF.res || !FF.res.ok) { doFf(true); return; }
+    FF.cur = Math.min(FF.cur + 1, FF.res.steps.length - 1);
+    renderFdSim();
+  });
+  $('#ffAll').addEventListener('click', () => {
+    if (!FF.res || !FF.res.ok) { doFf(true); return; }
+    FF.cur = FF.res.steps.length - 1;
+    renderFdSim();
+  });
+  $$('[data-ff]').forEach(b => b.addEventListener('click', () => {
+    $('#ffSrc').value = FF_PROGS[b.dataset.ff] || FF_PROGS.ff1;
+    doFf(true);
+  }));
+  document.addEventListener('click', e => {
+    const row = e.target.closest('[data-ffs]');
+    if (row && FF.res && FF.res.ok) { FF.cur = parseInt(row.dataset.ffs, 10); renderFdSim(); }
+  });
+  $('#ffSrc').value = FF_PROGS.ff1;
+  doFf(true);
+
+  /* ---------- 8 stdio 缓冲 / fgets ---------- */
+  $$('#sbAct button').forEach(b => b.addEventListener('click', () => {
+    $$('#sbAct button').forEach(x => x.classList.toggle('on', x === b));
+    sbTail = b.dataset.sb;
+    renderStdio();
+  }));
+  $('#sbGo').addEventListener('click', renderStdio);
+  ['#sbText', '#sbSize'].forEach(id => $(id).addEventListener('keydown', e => { if (e.key === 'Enter') renderStdio(); }));
+  $('#sbMode').addEventListener('change', renderStdio);
+  $$('[data-sb2]').forEach(b => b.addEventListener('click', () => {
+    $('#sbText').value = b.dataset.sb2; renderStdio();
+  }));
+  renderStdio();
+  $('#flGo').addEventListener('click', renderFgets);
+  ['#flLine', '#flLines'].forEach(id => $(id).addEventListener('keydown', e => { if (e.key === 'Enter') renderFgets(); }));
+  renderFgets();
+
+  /* ---------- 9 rio_readn / RIO 缓冲 ---------- */
+  $('#rnGo').addEventListener('click', renderRioReadn);
+  ['#rnIn', '#rnAvail'].forEach(id => $(id).addEventListener('keydown', e => { if (e.key === 'Enter') renderRioReadn(); }));
+  $('#rnEintr').addEventListener('change', renderRioReadn);
+  $$('[data-rn]').forEach(b => b.addEventListener('click', () => {
+    const kv = kvAttr(b.dataset.rn);
+    if (kv.n !== undefined) $('#rnIn').value = kv.n;
+    if (kv.avail !== undefined) $('#rnAvail').value = kv.avail;
+    if (kv.e !== undefined) $('#rnEintr').value = kv.e;
+    renderRioReadn();
+  }));
+  renderRioReadn();
+  $('#riGo').addEventListener('click', () => {
+    const v = $('#riOp').value;
+    const spec = v === 'line4' ? { k: 'line', n: 4 } : v === 'line64' ? { k: 'line', n: 64 }
+      : v === 'nb3' ? { k: 'nb', n: 3 } : v === 'nb5' ? { k: 'nb', n: 5 } : { k: 'readn', n: 3 };
+    RI.text = $('#riText').value;
+    const size = parseUInt($('#riBuf').value, 1e5);
+    if (size === null || size === 0) { $('#riOut').innerHTML = badBox('RIO_BUFSIZE 请给正整数。'); return; }
+    RI.size = size;
+    if (RI.ops.length >= 12) RI.ops = RI.ops.slice(-11);
+    RI.ops.push(spec);
+    renderRio();
+  });
+  $('#riReset').addEventListener('click', () => { RI.ops = []; renderRio(); });
+  $('#riText').addEventListener('change', () => { RI.text = $('#riText').value.replace(/\\n/g, '\n').replace(/\\t/g, '\t'); RI.ops = []; renderRio(); });
+  $('#riBuf').addEventListener('change', () => { RI.ops = []; renderRio(); });
+  $$('[data-ri]').forEach(b => b.addEventListener('click', () => {
+    const kv = kvAttr(b.dataset.ri);
+    if (kv.size !== undefined) $('#riBuf').value = kv.size;
+    RI.ops = []; renderRio();
+  }));
+  renderRio();
+
+  /* ---------- 10 选型 / 二进制 ---------- */
+  renderChoose();
+  $('#chReset').addEventListener('click', () => { chState.fill(null); renderChoose(); });
+  function doBf() { renderBinFile(); }
+  $('#bfGo').addEventListener('click', doBf);
+  ['#bfIn', '#bfN'].forEach(id => $(id).addEventListener('keydown', e => { if (e.key === 'Enter') doBf(); }));
+  $$('[data-bf]').forEach(b => b.addEventListener('click', () => {
+    const parts = b.dataset.bf.split(';');
+    if (parts[0]) $('#bfIn').value = parts[0];
+    const kv = kvAttr(parts[1] || '');
+    if (kv.n !== undefined) $('#bfN').value = kv.n;
+    doBf();
+  }));
+  doBf();
+
+  /* ---------- 11 readdir / 测验 ---------- */
+  $('#ddGo').addEventListener('click', renderReaddir);
+  ['#ddSel', '#ddDot'].forEach(id => $(id).addEventListener('change', renderReaddir));
+  renderReaddir();
+  renderQuiz();
+  $('#qzReset').addEventListener('click', () => { chQuizState.fill(null); renderQuiz(); });
+
+  /* ---------- 全局事件委托（点选类交互） ---------- */
+  document.addEventListener('click', e => {
+    const ly = e.target.closest('[data-ly]');
+    if (ly) { lySel = ly.dataset.ly; renderLayers(); return; }
+    const rt = e.target.closest('[data-rt]');
+    if (rt) { const i = parseInt(rt.dataset.rt, 10); rt.closest('table').querySelectorAll('tr').forEach(r => r.classList.remove('hl')); rt.classList.add('hl'); return; }
+    const stf = e.target.closest('[data-stf]');
+    if (stf) { doSt(parseInt(stf.dataset.stf, 10)); return; }
+    const f2a = e.target.closest('[data-f2a]');
+    if (f2a) { f2Pick = f2a.dataset.f2a; renderFork(); return; }
+    const af = e.target.closest('[data-af]');
+    if (af) { afPick = af.dataset.af; renderAns(); return; }
+    const cho = e.target.closest('[data-cho]');
+    if (cho) {
+      const [i, o] = cho.dataset.cho.split(':');
+      if (chState[Number(i)] !== null) return;
+      chState[Number(i)] = o; renderChoose(); return;
+    }
+    const qzo = e.target.closest('[data-qzo]');
+    if (qzo) {
+      const [i, j] = qzo.dataset.qzo.split(':').map(Number);
+      if (chQuizState[i] !== null) return;
+      chQuizState[i] = j; renderQuiz(); return;
+    }
+  });
+}
+
+document.addEventListener('DOMContentLoaded', initAll);
+</script>
+</body>
+</html>

@@ -1,0 +1,2688 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-style="brutalist" data-deck="ics24">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>并发编程 · 交互式课件（中文）（新粗野版）</title>
+<style>
+/* ==========================================================================
+   base.css —— 结构基础样式（所有风格共用）
+   只使用 CSS 变量，不含任何具体配色；由各主题覆盖变量与少量结构规则。
+   ========================================================================== */
+
+:root{
+  /* 颜色（每个主题必须覆盖） */
+  --bg:#f6f7f9; --card:#fff; --ink:#15181d; --muted:#697586; --line:#e4e7ec;
+  --accent:#2563eb; --accent-ink:#fff; --accent-soft:#eaf1ff;
+  --sign:#e5484d; --exp:#0b7fd4; --frac:#18915a; --warn:#b45309;
+  --sign-bg:#fdecec; --sign-fg:#a3262b; --sign-bd:#f6cdcf;
+  --exp-bg:#e8f2fd;  --exp-fg:#0a5f9e;  --exp-bd:#c7ddf5;
+  --frac-bg:#e9f7ef; --frac-fg:#116b43; --frac-bd:#c8e8d5;
+  --ok-bg:#f2fbf6; --ok-bd:#9ed3b4; --bad-bg:#fff5f5; --bad-bd:#f1b5b8;
+  --warn-bg:#fffbeb; --gray-bg:#eef1f5; --gray-fg:#5b6472;
+  --paper-soft:#fcfdfe; --code-bg:#f1f3f7; --code-bd:#e6e9ef;
+  --tbl-head:#f7f9fc; --tbl-hover:#fafbfd;
+  --sel-bg:#eef1f5;
+
+  /* 字体 */
+  --font-sans:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",system-ui,sans-serif;
+  --font-mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+  --font-display:var(--font-sans);
+  --tracking-title:normal;
+
+  /* 形状 */
+  --radius:12px; --radius-sm:8px; --radius-pill:99px;
+  --border-w:1px; --shadow:0 1px 2px rgba(16,24,40,.06),0 1px 3px rgba(16,24,40,.1);
+  --shadow-card:none;
+  --card-border:var(--border-w) solid var(--line);
+
+  /* 布局 */
+  --page-max:1180px; --nav-w:236px; --gap:26px; --sec-pad:26px 28px;
+  --nav-sticky-top:64px; --anchor-offset:70px;
+  --font-size:16px; --line-height:1.75;
+}
+
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font-sans);
+  font-size:var(--font-size);line-height:var(--line-height);-webkit-font-smoothing:antialiased}
+img{max-width:100%}
+
+/* ---------- 顶栏 ---------- */
+.topbar{position:sticky;top:0;z-index:50;background:var(--card);border-bottom:1px solid var(--line)}
+.topbar-in{max-width:var(--page-max);margin:0 auto;padding:10px 22px;display:flex;align-items:center;gap:14px}
+.brand{font-weight:700;letter-spacing:var(--tracking-title);font-family:var(--font-display)}
+.brand small{font-weight:500;color:var(--muted);margin-left:8px;font-size:12.5px}
+.progress{margin-left:auto;display:flex;align-items:center;gap:10px;font-size:12.5px;color:var(--muted)}
+.progress .bar{width:150px;height:6px;border-radius:var(--radius-pill);background:var(--line);overflow:hidden}
+.progress .bar>i{display:block;height:100%;width:0;background:var(--accent);transition:width .25s}
+
+/* ---------- 主体布局 ---------- */
+.layout{max-width:var(--page-max);margin:0 auto;padding:22px;display:grid;
+  grid-template-columns:var(--nav-w) minmax(0,1fr);gap:var(--gap)}
+main{min-width:0}
+/* 长 URL / 长标识符没有断行点，会把容器整个撑破（窄屏尤其明显）。
+   只作用于文本容器；表格故意不加，让它走 .tbl-wrap 的横向滚动。 */
+main p,main li,main dd,main dt,main h2,main h3,main h4,main h5,
+main .box,main .card,main .readout,main .puzzle,main .step{overflow-wrap:anywhere}
+
+/* ---------- 目录 ---------- */
+nav.toc{position:sticky;top:var(--nav-sticky-top);align-self:start;max-height:calc(100vh - 84px);overflow:auto;padding-right:4px}
+nav.toc h4{margin:0 0 8px;font-size:12px;letter-spacing:.12em;color:var(--muted);text-transform:uppercase;font-weight:600}
+nav.toc a{display:block;padding:7px 11px;border-radius:var(--radius-sm);color:var(--ink);opacity:.78;
+  text-decoration:none;font-size:14.5px;border-left:2.5px solid transparent}
+nav.toc a:hover{background:var(--sel-bg);opacity:1}
+nav.toc a.active{background:var(--accent-soft);color:var(--accent);border-left-color:var(--accent);font-weight:600;opacity:1}
+nav.toc a .n{display:inline-block;min-width:20px;color:var(--muted);font-size:12.5px;font-variant-numeric:tabular-nums}
+nav.toc a.active .n{color:var(--accent)}
+nav.toc .sub{padding-left:26px;font-size:13.5px;opacity:.7}
+
+/* ---------- 章节 ---------- */
+section{background:var(--card);border:var(--card-border);border-radius:var(--radius);
+  padding:var(--sec-pad);margin-bottom:22px;box-shadow:var(--shadow);scroll-margin-top:var(--anchor-offset)}
+section>h2{margin:0 0 6px;font-size:25px;letter-spacing:-.01em;font-family:var(--font-display)}
+section>.lede{color:var(--muted);margin:0 0 20px;font-size:14.5px}
+h3{font-size:18.5px;margin:26px 0 10px;padding-left:11px;border-left:3.5px solid var(--accent);font-family:var(--font-display)}
+h4{font-size:16px;margin:18px 0 8px;font-family:var(--font-display)}
+h5{font-size:15px;font-family:var(--font-display)}
+p{margin:10px 0}
+ul,ol{margin:10px 0;padding-left:22px}
+li{margin:5px 0}
+code{font-family:var(--font-mono);font-size:.89em;background:var(--code-bg);border:1px solid var(--code-bd);border-radius:5px;padding:1px 5px}
+.mono{font-family:var(--font-mono)}
+a{color:var(--accent)}
+hr{border:0;border-top:1px dashed var(--line);margin:24px 0}
+.srcref{font-size:11.5px;color:var(--muted);font-weight:500;font-family:var(--font-sans);margin-left:8px;vertical-align:middle;white-space:nowrap;opacity:.75}
+.en{color:var(--muted);font-size:.92em}
+
+/* ---------- 栅格与卡片 ---------- */
+.grid{display:grid;gap:14px}
+.g2{grid-template-columns:repeat(2,minmax(0,1fr))}
+.g3{grid-template-columns:repeat(3,minmax(0,1fr))}
+/* 窄屏单列：必须用 minmax(0,1fr)。写成 1fr 时轨道最小宽度是 auto，
+   单元格里只要有长代码行（<pre>）就撑破容器，整页横向溢出。 */
+@media(max-width:820px){.g2,.g3{grid-template-columns:minmax(0,1fr)}}
+.card{border:var(--card-border);border-radius:var(--radius-sm);padding:15px 17px;background:var(--paper-soft);box-shadow:var(--shadow-card)}
+.card h5{margin:0 0 7px}
+.card.pad0{padding:0;overflow:hidden}
+
+/* ---------- 提示框 ---------- */
+.box{border:1px solid var(--line);border-left:4px solid var(--accent);background:var(--accent-soft);
+  border-radius:var(--radius-sm);padding:12px 16px;margin:14px 0}
+.box.warn{border-left-color:var(--warn);background:var(--warn-bg)}
+.box.bad{border-left-color:var(--sign);background:var(--bad-bg)}
+.box.ok{border-left-color:var(--frac);background:var(--ok-bg)}
+.box .t{font-weight:650;font-size:14.5px;margin-bottom:2px}
+
+/* ---------- 公式 ---------- */
+.formula{font-family:var(--font-mono);background:var(--paper-soft);border:1px solid var(--line);
+  border-radius:var(--radius-sm);padding:14px 17px;margin:14px 0;font-size:16.5px;text-align:center;overflow-x:auto}
+.formula.big{font-size:20px}
+
+/* ---------- 表格 ---------- */
+table.tbl{width:100%;border-collapse:collapse;font-size:14.5px;margin:14px 0}
+table.tbl th,table.tbl td{border:1px solid var(--line);padding:8px 11px;text-align:left;vertical-align:top}
+table.tbl th{background:var(--tbl-head);font-weight:650;font-size:13.5px;white-space:nowrap}
+table.tbl td.mono,table.tbl th.mono{font-family:var(--font-mono);font-size:13.5px}
+table.tbl tr:hover td{background:var(--tbl-hover)}
+/* 当前行高亮：interactive 表格用它标出「正在看的那一行」。
+   注意 --tbl-hover 是悬停色，深色皮肤下故意比底色亮，所以 hl 用同一套变量。 */
+table.tbl tr.hl td{background:var(--sel-bg)}
+.tbl-wrap{overflow-x:auto}
+
+/* ---------- 位串控件 ---------- */
+.fw{display:flex;flex-wrap:wrap;gap:8px 18px;align-items:flex-start;margin:4px 0 2px;min-width:0}
+.fgrp{min-width:0}
+.fcap{font-size:12px;color:var(--muted);margin-bottom:4px;font-weight:600}
+.fcap b{font-family:var(--font-mono);font-size:12.5px}
+.bits{display:flex;flex-wrap:wrap;gap:2px;font-family:var(--font-mono);margin:4px 0}
+.bits .b{width:25px;height:33px;display:flex;align-items:center;justify-content:center;
+  border-radius:6px;font-size:15px;cursor:pointer;user-select:none;border:1px solid transparent;
+  transition:transform .06s,background .12s;font-weight:600}
+.bits .b:hover{transform:translateY(-2px)}
+.bits .b.s{background:var(--sign-bg);color:var(--sign-fg);border-color:var(--sign-bd)}
+.bits .b.e{background:var(--exp-bg);color:var(--exp-fg);border-color:var(--exp-bd)}
+.bits .b.f{background:var(--frac-bg);color:var(--frac-fg);border-color:var(--frac-bd)}
+.bits .b.sel{outline:2px solid var(--ink);outline-offset:1px}
+.bits.sm .b{width:19px;height:26px;font-size:12px;border-radius:4px}
+.fgrp .bits{flex-wrap:wrap;max-width:100%;gap:2px}
+.fgrp.ge .bits{max-width:300px}
+
+/* ---------- 读数表 ---------- */
+.readout{display:grid;grid-template-columns:auto 1fr;gap:4px 16px;font-size:14.5px;margin:12px 0}
+.readout dt{color:var(--muted);font-weight:600;font-family:var(--font-mono);font-size:13.5px;padding-top:2px}
+.readout dd{margin:0;font-family:var(--font-mono)}
+
+/* ---------- 小标签 ---------- */
+.chip{display:inline-block;font-size:12.5px;padding:2px 9px;border-radius:var(--radius-pill);
+  background:var(--accent-soft);color:var(--accent);font-weight:600}
+.chip.ok{background:var(--frac-bg);color:var(--frac-fg)}
+.chip.bad{background:var(--sign-bg);color:var(--sign-fg)}
+.chip.warn{background:var(--warn-bg);color:var(--warn)}
+.chip.gray{background:var(--gray-bg);color:var(--gray-fg)}
+.kbd{font-family:var(--font-mono);font-size:13px;background:var(--code-bg);border:1px solid var(--code-bd);
+  border-bottom-width:2px;border-radius:6px;padding:1px 7px}
+
+/* ---------- 控件 ---------- */
+.ctrls{display:flex;flex-wrap:wrap;gap:9px;align-items:center;margin:12px 0}
+label.fld{display:inline-flex;align-items:center;gap:7px;font-size:14px;color:var(--ink);max-width:100%;flex-wrap:wrap;min-width:0}
+label.fld select,label.fld input{min-width:0;max-width:100%}
+input[type=text],input[type=number],select{font-family:var(--font-mono);font-size:14px;padding:6px 10px;
+  border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--card);color:var(--ink)}
+input[type=text]:focus,input[type=number]:focus,select:focus{outline:2px solid var(--accent-soft);border-color:var(--accent)}
+button{font-family:var(--font-sans);font-size:14px;font-weight:600;padding:7px 15px;border-radius:var(--radius-sm);
+  border:1px solid var(--line);background:var(--card);color:var(--ink);cursor:pointer}
+button:hover{background:var(--sel-bg)}
+button.p{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+button.sm{padding:4px 10px;font-size:13px}
+button.pill{border-radius:var(--radius-pill)}
+/* 按钮组默认不换行：项一多就会把 .ctrls 撑破。允许它缩到容器宽度并横向滚动。 */
+.seg{display:inline-flex;max-width:100%;border:1px solid var(--line);
+  border-radius:var(--radius-sm);overflow-x:auto;overflow-y:hidden}
+.seg button{border:0;border-radius:0;border-right:1px solid var(--line);padding:6px 13px}
+.seg button:last-child{border-right:0}
+.seg button.on{background:var(--accent);color:var(--accent-ink)}
+
+/* ---------- 分步演示 ---------- */
+/* .steps 是 .step 的包裹层（skill 词汇表里列了但一直没定义）——
+   仅给一点上下留白，步骤块自己的边距由 .step 负责。 */
+.steps{margin:12px 0}
+.step{border:1px solid var(--line);border-radius:var(--radius-sm);padding:11px 15px;margin:9px 0;
+  background:var(--paper-soft);opacity:.42;transition:opacity .2s}
+.step.on{opacity:1;background:var(--card)}
+.step .h{font-size:13px;font-weight:700;color:var(--accent);letter-spacing:.02em;margin-bottom:3px}
+.step .m{font-family:var(--font-mono);font-size:14.5px;overflow-x:auto}
+.step .e{font-size:13.5px;color:var(--muted);margin-top:3px}
+
+/* ---------- 折叠与答案 ---------- */
+.reveal{border:1px solid var(--line);border-radius:var(--radius-sm);padding:11px 15px;margin:8px 0;background:var(--paper-soft)}
+.reveal summary{cursor:pointer;font-weight:600;font-size:14.5px}
+.reveal[open]{background:var(--card)}
+.ans{margin-top:8px;padding-top:8px;border-top:1px dashed var(--line);font-size:14.5px}
+
+/* ---------- 判断题 ---------- */
+.puzzle{border:1px solid var(--line);border-radius:var(--radius-sm);padding:12px 15px;margin:9px 0;
+  display:flex;gap:13px;align-items:flex-start;background:var(--paper-soft)}
+.puzzle .q{font-family:var(--font-mono);font-size:15px;flex:1;min-width:0;overflow-x:auto;white-space:nowrap}
+.puzzle .q small{font-family:var(--font-sans);color:var(--muted);display:block;white-space:normal}
+.puzzle .btns{display:flex;gap:6px;flex-shrink:0}
+.puzzle.correct{border-color:var(--ok-bd);background:var(--ok-bg)}
+.puzzle.wrong{border-color:var(--bad-bd);background:var(--bad-bg)}
+.puzzle .exp{margin-top:9px;padding-top:9px;border-top:1px dashed var(--line);font-size:14.5px;
+  display:none;white-space:normal;font-family:var(--font-sans)}
+.puzzle.done .exp{display:block}
+.puzzle .exp .verdict{font-weight:700}
+
+/* ---------- 分布图 ---------- */
+.tick{stroke:#94a3b8;stroke-width:1.4}
+.tick.dn{stroke:var(--exp)}
+.tick.nm{stroke:var(--frac)}
+.ticklabel{font-size:9.5px;fill:var(--muted);font-family:var(--font-mono)}
+.axisline{stroke:var(--line);stroke-width:1.2}
+.axislabel{font-size:11px;fill:var(--muted)}
+
+/* ---------- 页脚 / 回到顶部 ---------- */
+.footer{max-width:var(--page-max);margin:0 auto;padding:8px 22px 40px;color:var(--muted);font-size:13px}
+.totop{position:fixed;right:22px;bottom:22px;z-index:40;box-shadow:var(--shadow);display:none}
+
+/* ---------- 响应式 ---------- */
+@media(max-width:960px){
+  .layout{grid-template-columns:1fr;padding:16px}
+  nav.toc{position:static;max-height:none;display:flex;flex-wrap:wrap;gap:6px;
+    background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:10px}
+  nav.toc h4{width:100%;margin-bottom:2px}
+  nav.toc a{border-left:0;padding:5px 10px;font-size:13px}
+  nav.toc .sub{display:none}
+  section{padding:20px 17px}
+}
+@media print{
+  nav.toc,.topbar,.totop{display:none}
+  .layout{display:block}
+  section{break-inside:avoid;box-shadow:none}
+}
+
+/* ==========================================================================
+   风格 C · 新粗野主义（Neo-brutalism）
+   厚黑描边 · 硬投影 · 高饱和色块 · 顶部大字报 + 药丸导航
+   ========================================================================== */
+
+:root{
+  --bg:#fdf3d7; --card:#fffdf5; --ink:#111111; --muted:#5b564a; --line:#111111;
+  --accent:#ff3d68; --accent-ink:#fff; --accent-soft:#ffe3ea;
+  --sign:#e01b24; --exp:#0b6fd4; --frac:#0f9d58; --warn:#c2410c;
+  --sign-bg:#ffdfe0; --sign-fg:#b3141c; --sign-bd:#111;
+  --exp-bg:#dcecff;  --exp-fg:#0a5aa8;  --exp-bd:#111;
+  --frac-bg:#dcf7e5; --frac-fg:#0b7a45; --frac-bd:#111;
+  --ok-bg:#e3fbe9; --ok-bd:#111; --bad-bg:#ffe6e6; --bad-bd:#111;
+  --warn-bg:#fff0d6; --gray-bg:#efe9d8; --gray-fg:#4a463c;
+  --paper-soft:#fffdf5; --code-bg:#fff8e1; --code-bd:#111;
+  --tbl-head:#ffe9a8; --tbl-hover:#fffbe8;
+  --sel-bg:#ffe9a8;
+
+  --font-sans:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",system-ui,sans-serif;
+  --font-mono:ui-monospace,"SF Mono",Menlo,Consolas,"Liberation Mono",monospace;
+  --font-display:var(--font-sans);
+  --tracking-title:-.02em;
+
+  --radius:4px; --radius-sm:4px; --radius-pill:99px;
+  --border-w:2px;
+  --shadow:5px 5px 0 var(--line); --shadow-card:4px 4px 0 var(--line);
+  --card-border:2px solid var(--line);
+
+  --page-max:1200px; --nav-w:auto; --gap:0px;
+  --sec-pad:24px 26px; --nav-sticky-top:0px; --anchor-offset:150px;
+  --font-size:16px; --line-height:1.72;
+}
+
+body{background:
+  repeating-linear-gradient(45deg, rgba(17,17,17,.028) 0 12px, transparent 12px 24px),
+  var(--bg)}
+
+/* ---------- 顶栏：大字报（不吸顶，避免与吸顶药丸导航重叠） ---------- */
+.topbar{position:static;background:var(--accent);border-bottom:3px solid var(--line);color:#fff}
+.topbar-in{padding:12px 22px;max-width:var(--page-max)}
+.brand{font-weight:900;font-size:22px;letter-spacing:var(--tracking-title);
+  text-transform:none;text-shadow:2px 2px 0 rgba(17,17,17,.55)}
+.brand small{color:#fff;opacity:.9;font-weight:700;font-size:12px;letter-spacing:.02em}
+.progress{color:#fff;font-weight:700;font-size:12.5px}
+.progress .bar{width:150px;height:12px;border-radius:0;background:#fff;border:2px solid var(--line);overflow:hidden}
+.progress .bar>i{background:repeating-linear-gradient(45deg,#111 0 6px,#ffd93d 6px 12px)}
+
+/* ---------- 导航：横排药丸，吸顶 ---------- */
+.layout{display:block;max-width:var(--page-max);padding:0 22px 26px}
+nav.toc{position:sticky;top:0;z-index:45;display:flex;flex-wrap:wrap;gap:6px;align-items:center;
+  max-height:none;overflow:visible;padding:10px 0;margin:0 0 18px;
+  background:var(--bg);border-bottom:3px solid var(--line)}
+nav.toc h4{width:100%;margin:0 0 2px;font-size:11px;letter-spacing:.16em;color:var(--muted)}
+nav.toc a{border:2px solid var(--line);border-radius:var(--radius-pill);background:var(--card);
+  padding:4px 11px;font-size:12px;font-weight:700;border-left-width:2px;white-space:nowrap;
+  box-shadow:2px 2px 0 var(--line)}
+nav.toc a:hover{background:var(--sel-bg);transform:translate(1px,1px);box-shadow:1px 1px 0 var(--line)}
+nav.toc a.active{background:var(--ink);color:#ffd93d;box-shadow:1px 1px 0 var(--line)}
+nav.toc a .n{color:inherit;opacity:.6;font-weight:800;min-width:auto;margin-right:5px}
+nav.toc .sub{display:none}
+
+/* ---------- 章节：粗框卡片 ---------- */
+section{box-shadow:var(--shadow);margin-bottom:26px;background:var(--card)}
+section>h2{font-size:27px;font-weight:900;display:inline-block;background:var(--ink);color:#ffd93d;
+  padding:3px 14px;margin:0 0 12px;border-radius:2px}
+section>h2 .srcref{color:#ffd93d;opacity:.65}
+section>.lede{font-weight:600;color:var(--muted);margin-bottom:18px}
+h3{font-size:19px;font-weight:900;border-left:0;padding:0 0 0 14px;position:relative;margin-top:28px}
+h3::before{content:"";position:absolute;left:0;top:.28em;width:8px;height:.95em;background:var(--accent);
+  border:2px solid var(--line)}
+h4,h5{font-weight:800}
+code{background:var(--code-bg);border:2px solid var(--line);border-radius:3px;font-weight:600}
+
+/* ---------- 卡片 / 盒：硬投影 + 位移 hover ---------- */
+.card{box-shadow:var(--shadow-card);border-radius:var(--radius);transition:transform .08s,box-shadow .08s}
+.card:hover{transform:translate(2px,2px);box-shadow:2px 2px 0 var(--line)}
+.box{border:2px solid var(--line);border-left-width:8px;border-radius:var(--radius);background:var(--accent-soft);
+  box-shadow:var(--shadow-card)}
+.box.warn{background:var(--warn-bg)}
+.box.bad{background:var(--bad-bg)}
+.box.ok{background:var(--ok-bg)}
+.box .t{font-weight:900;font-size:15px}
+
+.formula{background:#fff;border:2px solid var(--line);border-radius:var(--radius);font-weight:700;
+  box-shadow:var(--shadow-card)}
+.formula.big{font-size:21px}
+
+/* ---------- 表格：粗网格 ---------- */
+table.tbl th,table.tbl td{border:2px solid var(--line);padding:8px 12px}
+table.tbl th{background:var(--tbl-head);font-weight:900;font-size:13px}
+table.tbl tbody tr:nth-child(even) td{background:#fffdf0}
+table.tbl tr:hover td{background:var(--tbl-hover)}
+
+/* ---------- 位视图：色块方格 ---------- */
+.fw{gap:10px 20px;padding:14px;border:2px dashed var(--line);border-radius:var(--radius);background:#fff}
+.fcap{font-weight:800;font-size:11.5px;letter-spacing:.06em;text-transform:uppercase}
+.bits{gap:3px}
+.bits .b{width:26px;height:32px;border-radius:3px;border:2px solid var(--line);font-weight:900}
+.bits .b.s{background:var(--sign-bg);color:var(--sign-fg)}
+.bits .b.e{background:var(--exp-bg);color:var(--exp-fg)}
+.bits .b.f{background:var(--frac-bg);color:var(--frac-fg)}
+.bits .b:hover{transform:translate(1px,1px)}
+.bits .b.sel{outline:3px solid var(--accent);outline-offset:0}
+.bits.sm .b{width:20px;height:26px;font-size:11.5px}
+
+.readout dt{color:var(--muted);font-weight:800}
+
+/* ---------- 控件：可按的实体按钮 ---------- */
+input[type=text],input[type=number],select{border:2px solid var(--line);border-radius:var(--radius);
+  background:#fff;font-weight:700}
+input:focus,select:focus{outline:none;box-shadow:3px 3px 0 var(--line)}
+button{border:2px solid var(--line);border-radius:var(--radius);font-weight:800;background:#fff;
+  box-shadow:3px 3px 0 var(--line);transition:transform .08s,box-shadow .08s}
+button:hover{background:var(--sel-bg);transform:translate(1px,1px);box-shadow:2px 2px 0 var(--line)}
+button.p{background:var(--accent);color:#fff}
+button.p:hover{background:#ff2456}
+button:active{transform:translate(3px,3px);box-shadow:0 0 0 var(--line)}
+.chip{border:2px solid var(--line);border-radius:var(--radius-pill);background:#fff;color:var(--ink);
+  font-weight:800;font-size:12px}
+.chip.ok{background:var(--frac-bg);color:var(--frac-fg)}
+.chip.bad{background:var(--sign-bg);color:var(--sign-fg)}
+.chip.warn{background:var(--warn-bg);color:var(--warn)}
+.chip.gray{background:var(--gray-bg)}
+.seg{border:2px solid var(--line);border-radius:var(--radius);box-shadow:3px 3px 0 var(--line)}
+.seg button{border-right:2px solid var(--line);box-shadow:none;border:0;border-radius:0}
+.seg button:hover{transform:none}
+.seg button.on{background:var(--ink);color:#ffd93d}
+
+/* ---------- 分步演示 ---------- */
+.step{border:2px solid var(--line);border-radius:var(--radius);background:#fff;box-shadow:3px 3px 0 var(--line)}
+.step.on{background:#fffdf5}
+.step .h{color:var(--accent);font-weight:900;font-size:13px;letter-spacing:.02em}
+.step .m{font-weight:600}
+.step .e{color:var(--muted)}
+
+/* ---------- 判断题 ---------- */
+.puzzle{border:2px solid var(--line);border-radius:var(--radius);background:#fff}
+.puzzle.correct{background:var(--ok-bg)}
+.puzzle.wrong{background:var(--bad-bg)}
+.puzzle .q{font-weight:700}
+.reveal{border:2px solid var(--line);border-radius:var(--radius);background:#fff;
+  box-shadow:3px 3px 0 var(--line)}
+.reveal[open]{background:#fffdf5}
+
+.totop{border:2px solid var(--line);box-shadow:4px 4px 0 var(--line);background:#ffd93d;font-weight:900}
+.tick{stroke:#7a6f52}
+.tick.nm{stroke:var(--frac)}
+.tick.dn{stroke:var(--exp)}
+.axisline{stroke:var(--line)}
+
+/* ---------- 响应式 ---------- */
+@media(max-width:960px){
+  .topbar-in{padding:10px 16px}
+  .brand{font-size:18px}
+  .layout{padding:0 16px 20px}
+  nav.toc{gap:6px;padding:10px 0}
+  nav.toc a{padding:4px 10px;font-size:12px}
+  section{padding:20px 16px}
+  section>h2{font-size:22px}
+  .progress .bar{width:90px}
+}
+
+
+/* ---------- 风格切换条（构建时注入，各主题通用） ---------- */
+.stylebar{max-width:var(--page-max);margin:0 auto;padding:14px 22px 0;display:flex;gap:8px;
+  flex-wrap:wrap;align-items:center;font-size:12.5px;color:var(--muted)}
+.stylebar>span{font-weight:600}
+.stylebar a{text-decoration:none;padding:4px 11px;border:1px solid var(--line);border-radius:var(--radius-pill);
+  color:var(--muted);background:var(--card);font-weight:600}
+.stylebar a:hover{border-color:var(--accent);color:var(--accent)}
+.stylebar a.cur{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.stylebar>span{flex:0 0 auto}
+@media(max-width:960px){.stylebar{padding:12px 16px 0}}
+/* 25 讲之后药丸很多：窄屏折行会吃掉大半屏，改成单行横滑 */
+@media(max-width:820px){.stylebar{flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;
+  scrollbar-width:thin}.stylebar a{flex:0 0 auto;font-size:12px;padding:4px 10px}}
+
+</style>
+</head>
+<body>
+
+<header class="topbar"><div class="topbar-in">
+  <div class="brand">并发编程 Concurrent Programming<small>《计算机系统导论》第 24 讲 · 新粗野版</small></div>
+  <div class="progress"><span id="pgText">学习进度 0%</span><span class="bar"><i id="pgBar"></i></span></div>
+</div></header>
+
+<div class="stylebar">
+  <span>风格：</span>
+  <a href="../ics24-zh.html">清爽蓝（原版）</a>
+  <a href="01-academic.html">学术讲义</a>
+  <a href="02-terminal.html">深色终端</a>
+  <a href="04-glass.html">柔和玻璃</a>
+  <a href="index.html">◧ 全部预览</a>
+  <span style="opacity:.5">|</span>
+  <a href="../variants-ics01/index.html">↗ 第 1 讲 · 课程概述</a>
+  <a href="../variants-bits/index.html">↗ 第 2 讲 · 位、字节与整数</a>
+  <a href="../variants/index.html">↗ 第 3 讲 · 浮点数</a>
+  <a href="../variants-ics04/index.html">↗ 第 4 讲 · 机器级编程 I：基础</a>
+  <a href="../variants-ics05/index.html">↗ 第 5 讲 · 机器级编程 II：控制</a>
+  <a href="../variants-ics06/index.html">↗ 第 6 讲 · 机器级编程 III：过程</a>
+  <a href="../variants-ics07/index.html">↗ 第 7 讲 · 机器级编程 IV：数据</a>
+  <a href="../variants-ics08/index.html">↗ 第 8 讲 · 机器级编程 V：高级</a>
+  <a href="../variants-ics09/index.html">↗ 第 9 讲 · 处理器体系结构：ISA 与逻辑</a>
+  <a href="../variants-ics10/index.html">↗ 第 10 讲 · 处理器体系结构：顺序实现</a>
+  <a href="../variants-ics11/index.html">↗ 第 11 讲 · 处理器体系结构：流水线</a>
+  <a href="../variants-ics12/index.html">↗ 第 12 讲 · 存储层次结构</a>
+  <a href="../variants-ics13/index.html">↗ 第 13 讲 · 缓存存储器</a>
+  <a href="../variants-ics14/index.html">↗ 第 14 讲 · 代码优化</a>
+  <a href="../variants-ics15/index.html">↗ 第 15 讲 · 链接</a>
+  <a href="../variants-ics16/index.html">↗ 第 16 讲 · 异常控制流 I</a>
+  <a href="../variants-ics17/index.html">↗ 第 17 讲 · 异常控制流 II</a>
+  <a href="../variants-ics18/index.html">↗ 第 18 讲 · 系统级 I/O</a>
+  <a href="../variants-ics19/index.html">↗ 第 19 讲 · 虚拟内存 I</a>
+  <a href="../variants-ics20/index.html">↗ 第 20 讲 · 虚拟内存 II</a>
+  <a href="../variants-ics21/index.html">↗ 第 21 讲 · 动态内存分配</a>
+  <a href="../variants-ics22/index.html">↗ 第 22 讲 · 网络基础</a>
+  <a href="../variants-ics23/index.html">↗ 第 23 讲 · 网络编程</a>
+  <a href="../variants-ics25/index.html">↗ 第 25 讲 · 同步</a>
+  <a href="../variants-lab/index.html">↗ Data Lab 实验</a>
+</div>
+
+<div class="layout">
+
+<nav class="toc">
+  <h4>目录</h4>
+  <a href="#s0"><span class="n">0</span>课程导览</a>
+  <a href="#s1"><span class="n">1</span>并发为什么难：四类陷阱</a>
+  <a href="#s2"><span class="n">2</span>案例：printf 死锁</a>
+  <a href="#s3"><span class="n">3</span>迭代服务器与阻塞</a>
+  <a href="#s4"><span class="n">4</span>方案① 基于进程</a>
+  <a href="#s5"><span class="n">5</span>方案② 基于事件</a>
+  <a href="#s6"><span class="n">6</span>方案③ 基于线程</a>
+  <a href="#s7"><span class="n">7</span>线程内存模型</a>
+  <a href="#s8"><span class="n">8</span>共享变量与竞争</a>
+  <a href="#s9"><span class="n">9</span>性能对比</a>
+  <a href="#s10"><span class="n">10</span>总结与测验</a>
+</nav>
+
+<main>
+<!-- ================= 0 ================= -->
+  <section id="s0">
+    <h2>课程导览<span class="srcref">原第 1 页</span></h2>
+    <p class="lede">北京大学《计算机系统导论》第 24 讲：<b>并发编程（Concurrent Programming）</b>。这一讲回答一个工程问题：<b>一个服务器怎么同时伺候多个客户端？</b>课件给了三条路 —— 多进程、事件驱动、多线程 —— 并在这三条路上把并发的四种典型灾难（竞争、死锁、活锁、饥饿）逐个点出来。</p>
+
+    <div class="grid g3">
+      <div class="card"><h5>本讲提纲</h5>
+        <ol style="margin:0;padding-left:20px;font-size:14.5px">
+          <li>并发为什么难：四种灾难的名字</li>
+          <li>案例：信号处理器里的 <code>printf</code> 死锁</li>
+          <li>迭代服务器：第二个客户为什么会卡住</li>
+          <li>三种并发方案的取舍</li>
+          <li>方案① 基于进程：<code>fork</code>、引用计数、僵尸回收</li>
+          <li>方案② 基于事件：<code>select</code> 事件循环</li>
+          <li>方案③ 基于线程：Pthreads 与线程内存模型</li>
+          <li>共享变量为什么会竞争</li>
+        </ol>
+      </div>
+      <div class="card"><h5>一句话核心</h5>
+        <p style="margin:0;font-size:14.5px">「并发」= 多个逻辑控制流在时间上<b>交叠</b>。交叠带来两个后果：<b>并行能提速</b>，但<b>共享状态会被交错访问</b>。课件第 2 页的原话是：人的脑子习惯顺序思维，而「穷举一个计算机系统里全部可能的事件序列」至少是容易出错的，而且经常根本做不到。</p>
+      </div>
+      <div class="card"><h5>和前后讲的衔接</h5>
+        <p style="margin:0;font-size:14.5px">上一讲的网络编程让你写出了第一个能跑的服务器；这一讲解释它<b>只能服务一个客户</b>的结构性原因，然后给出三种修法。课件第 11 页说明：并发里还有很多方面超出本课范围，<b>接下来几讲</b>会陆续展开（同步与信号量在第 25 讲）。</p>
+      </div>
+    </div>
+
+    <h3>0.1 本讲结构与原页码</h3>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>主题</th><th>原课件页码</th><th>要回答的问题</th></tr>
+      <tr><td><b>并发灾难与案例</b></td><td class="mono">2–12</td><td>并发到底难在哪？为什么在信号处理器里调用 <code>printf</code> 会死锁？</td></tr>
+      <tr><td><b>迭代服务器的瓶颈</b></td><td class="mono">13–18</td><td>第二个客户端在哪个系统调用上阻塞？为什么「一次一个」是不可接受的？</td></tr>
+      <tr><td><b>方案① 基于进程</b></td><td class="mono">19–31</td><td><code>fork</code> 之后父子各持有什么？描述符引用计数怎么变？为什么要回收僵尸子进程？</td></tr>
+      <tr><td><b>方案② 基于事件</b></td><td class="mono">32–34</td><td>一个控制流怎么手动交错多个逻辑流？代价是什么？</td></tr>
+      <tr><td><b>方案③ 基于线程</b></td><td class="mono">35–50</td><td>线程和进程差在哪？哪些内存是共享的、哪些是私有的？</td></tr>
+      <tr><td><b>共享变量与竞争</b></td><td class="mono">51–61</td><td>为什么「传指针给线程」会出问题？实测数据长什么样？</td></tr>
+    </table></div>
+
+    <div class="box"><div class="t">本页使用说明</div>
+      标有 <span class="chip gray">可交互</span> 处都能点击或输入，所有计算在浏览器里实时完成。<a href="#s2">第 2 节的 printf 死锁模拟</a>、<a href="#s3">第 3 节的交错时间线</a>、<a href="#s9">第 9 节的竞争复现器与进度图</a>最值得反复玩。页面里所有「判对错」的基准（死锁可达性、并发判定、交错可达的值集合、进度图轨迹计数）都已用独立参考实现<b>穷举</b>交叉验证。
+    </div>
+
+    <div class="box warn"><div class="t">阅读提示：课件有 5 页是「只有标题 + 照片」的幻灯片</div>
+      原课件第 3、4、8、9、10 页正文只有大标题（<code>Data Race</code> / <code>Deadlock</code> / <code>Livelock</code> / <code>Starvation</code>），配图是<b>照片和剪贴画</b>（撞车的照片、红色/黄色/银色小汽车俯视图、环岛车流照片、一张写着 “THE ROUNDABOUT OF FAILURE” 的交通拥堵照片）。本页不嵌这些照片（它们是装饰），只在 <a href="#s1">第 1 节</a>用文字说明每页画的是什么，以及课件在文字里给出的定义（第 11 页给出了竞争/死锁/饥饿的定义，<b>没有</b>给出活锁的文字定义 —— 那两页只有环岛照片）。
+    </div>
+  </section>
+
+  <!-- ================= 1 ================= -->
+  <section id="s1">
+    <h2>1. 并发为什么难：四类陷阱<span class="srcref">原第 2–5、8–12 页</span></h2>
+    <p class="lede">课件先用四页「一页一个词 + 一张图」的方式把并发的四种灾难摆出来，再用第 11 页的提纲把它们归成三类。这一节按原页码重建这张「灾难清单」。</p>
+
+    <h3>1.1 「并发编程很难」的原文理由<span class="srcref">原第 2 页</span></h3>
+    <div class="grid g3">
+      <div class="card"><h5>人的脑子是顺序的</h5><p style="margin:0;font-size:14.5px">The human mind tends to be sequential —— 我们习惯「先发生 A，再发生 B」，而并发程序里没有这种保证。</p></div>
+      <div class="card"><h5>时间的概念常常骗人</h5><p style="margin:0;font-size:14.5px">The notion of time is often misleading —— 两条语句在源码里相邻，运行时的<b>间隔</b>却可能是任意长。</p></div>
+      <div class="card"><h5>穷举事件序列做不到</h5><p style="margin:0;font-size:14.5px">「思考一个计算机系统里全部可能的事件序列」至少是 <span class="en">error prone</span>（容易出错），而且 <span class="en">frequently impossible</span>（经常根本不可能）。</p></div>
+    </div>
+
+    <h3>1.2 灾难清单（第 11 页的原文分类）<span class="srcref">原第 11 页</span></h3>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>类别</th><th>课件原文定义</th><th>课件给的例子</th><th>原页码</th></tr>
+      <tr><td><b>竞争</b><br><span class="en">Races</span></td><td>结果取决于系统里别处<b>任意的调度决策</b>（outcome depends on arbitrary scheduling decisions elsewhere in the system）</td><td>「谁抢到飞机上最后一个座位？」</td><td class="mono">3、11</td></tr>
+      <tr><td><b>死锁</b><br><span class="en">Deadlock</span></td><td><b>不恰当的资源分配</b>阻止了前进（improper resource allocation prevents forward progress）</td><td>交通路口互相堵死（traffic gridlock）</td><td class="mono">4、5、11</td></tr>
+      <tr><td><b>活锁</b><br><span class="en">Livelock</span></td><td class="mono">原课件未给文字定义（第 8、9 页只有标题 + 环岛照片）</td><td>第 8 页：环岛车流示意；第 9 页：一张 “THE ROUNDABOUT OF FAILURE” 的拥堵照片</td><td class="mono">8、9</td></tr>
+      <tr><td><b>饥饿 / 公平</b><br><span class="en">Starvation / Fairness</span></td><td>外部事件与/或系统调度决策可能阻止某个子任务前进（external events and/or system scheduling decisions can prevent sub-task progress）</td><td>「排队时总有人插到你前面」</td><td class="mono">10、11</td></tr>
+    </table></div>
+    <p>第 10 页用三句话把「饥饿」讲清楚（配图是一辆黄色小汽车的俯视图）：<b>「黄车必须让绿车」</b>（Yellow must yield to green）、<b>「绿车连绵不断」</b>（Continuous stream of green cars）、<b>「整个系统在前进，但某些个体无限期等待」</b>（Overall system makes progress, but some individuals wait indefinitely）。</p>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：四类灾难卡片 —— 点一类看它的定义、原图和本讲哪个案例对应</span>
+        <div class="seg" id="trSeg">
+          <button class="on" data-tr="race">竞争</button>
+          <button data-tr="dead">死锁</button>
+          <button data-tr="live">活锁</button>
+          <button data-tr="star">饥饿</button>
+        </div>
+      </div>
+      <div id="trOut"></div>
+    </div>
+
+    <div class="box warn"><div class="t">勘误 / 补充：第 11 页的「三类」与「四页标题」对不齐</div>
+      第 11 页把经典问题分成 <b>Races / Deadlock / Starvation</b> 三类，但第 8–9 页单独用了两页讲 <b>Livelock</b>，却没有把它列进第 11 页的分类里，也没有给文字定义。本页按原样呈现：分类表照抄第 11 页的三种，另加一行说明活锁<b>只有两页图片、没有文字定义</b>（不代课件补定义）。
+    </div>
+
+    <h3>1.3 第 12 页：难归难，但必要<span class="srcref">原第 12 页</span></h3>
+    <p>第 12 页是过渡页，两行大字：<b>「It may be hard, but …」</b> 与 <b>「it can be useful and sometimes necessary! more and more necessary!」</b>（可能有难度，但它有用、有时是必需的，而且越来越必需）。这一页之后，课件就开始动真格了 —— 从第 13 页起全部围绕「怎么让服务器同时服务多个客户」。</p>
+  </section>
+
+  <!-- ================= 2 ================= -->
+  <section id="s2">
+    <h2>2. 案例：信号处理器里的 printf 死锁<span class="srcref">原第 5–7 页</span></h2>
+    <p class="lede">这是本讲唯一一个「能完整看到机制」的案例：<b>信号处理器打断了一次 <code>printf</code>，而处理器自己又调用 <code>printf</code></b> —— 第 7 页解释了为什么这会死锁。</p>
+
+    <h3>2.1 出事的代码<span class="srcref">原第 5、6 页</span></h3>
+    <p>课件第 5、6 页反复给出同一段 <code>catch_child</code>（第 6 页配上 <code>main</code>，用一千万次循环去「撞」这个竞态）：</p>
+    <div class="formula" style="text-align:left">
+      <div>void catch_child(int signo) {</div>
+      <div>&nbsp;&nbsp;printf("Child exited!\n");&nbsp;&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)">// this call may reenter printf/puts! BAD! DEADLOCK!</span></div>
+      <div>&nbsp;&nbsp;while (waitpid(-1, NULL, WNOHANG) &gt; 0) continue;&nbsp;&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)">// reap all children</span></div>
+      <div>}</div>
+    </div>
+    <p>第 6 页的 <code>main</code> 用一个 100 万次的 <code>fork</code> 循环来暴露它，右侧输出里滚过的是 <code>Child #0 started</code> … <code>Child #5889 started</code> 夹杂着 <code>Child exited!</code>。课件在第 6 页提出的问题是：<b>Testing Printf Deadlock</b> —— 这么测能测出死锁吗？下面这套状态机把机制摊开给你看。</p>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：printf 重入死锁 —— 一步一步走，或直接穷举所有交错</span>
+        <button class="p" id="pfdStep">下一步</button>
+        <button class="p" id="pfdRun">走到底</button>
+        <button class="sm" id="pfdReset">重来</button>
+        <button class="sm" data-pfd="signal-early">场景：信号在加锁前到达</button>
+        <button class="sm" data-pfd="signal-mid">场景：信号在持锁时到达</button>
+      </div>
+      <div id="pfdOut"></div>
+    </div>
+
+    <h3>2.2 第 7 页：为什么 printf 需要锁<span class="srcref">原第 7 页</span></h3>
+    <p>课件第 7 页的三句话：<b><code>printf</code>（以及 <code>fprintf</code>、<code>sprintf</code>）实现的是带缓冲的 I/O</b>（buffered I/O）；<b>访问共享缓冲区需要锁</b>（require locks to access to shared buffers）。页面中间那张图把文件缓冲拆成四段，并标出「当前文件位置」：</p>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>区段（课件原词）</th><th>含义</th></tr>
+      <tr><td><code>no longer in buffer</code></td><td>已经移出缓冲区（早就刷走了）</td></tr>
+      <tr><td class="mono">already read</td><td>已被用户程序读走的部分</td></tr>
+      <tr><td class="mono">unread</td><td>已读入缓冲区、还没被用户程序取走的部分</td></tr>
+      <tr><td class="mono">unseen</td><td>还没读进缓冲区的部分</td></tr>
+    </table></div>
+    <p>「已缓冲部分」（Buffered Portion）= <code>already read</code> + <code>unread</code> 这两段；「当前文件位置」（Current File Position）落在 <code>unread</code> 段的左边界上 —— 也就是「用户程序下一次读从这里开始」。<b>这个位置与整块缓冲区都是多个线程/处理器共享的状态</b>，所以每次 <code>printf</code> 都要先拿锁再改它。</p>
+
+    <div class="box bad"><div class="t">死锁链条（把第 5、6、7 页串起来）</div>
+      <ol style="margin:6px 0 0;padding-left:20px">
+        <li>主流程调用 <code>printf</code> → 它内部 <b>Acquire lock</b>（课件第 5 页把这两步画成 <code>Acquire</code> / <code>lock</code>）；</li>
+        <li><code>SIGCHLD</code> 到达，内核<b>打断</b>主流程，跳到 <code>catch_child</code>；</li>
+        <li>处理器里第一句又是 <code>printf</code> → 它 <b>再次</b>去 Acquire 同一把锁；</li>
+        <li>锁不是可重入的（non-recursive），持有者是「被打断的自己」，永远不会释放 → <b>死锁</b>。第 5 页把它写成 <code>I^{lock}_{curr} → I^{signal}_{next}</code>：当前的加锁指令之后紧跟信号处理器。</li>
+      </ol>
+    </div>
+
+    <div class="box ok"><div class="t">为什么这属于「难测试」的一类 bug</div>
+      死锁只在<b>特定交错</b>下发生：信号必须在 <b>Acquire 之后、Release 之前</b>这个窄窗口里到达。第 6 页那段「一千万次循环 + 大量 fork」正是在赌这个窗口；页面里的模拟器会把「所有合法交错」都列出来，你可以直接看到<b>窗口有多大、有多少种交错会死锁</b>。
+    </div>
+  </section>
+
+  <!-- ================= 3 ================= -->
+  <section id="s3">
+    <h2>3. 迭代服务器与阻塞<span class="srcref">原第 13–18 页</span></h2>
+    <p class="lede">先看清楚问题本身：课件第 14–17 页用同一条时间线连画四页，把「迭代服务器一次只服务一个连接」的后果逐步放大 —— 直到第 17 页给出结论。</p>
+
+    <h3>3.1 迭代回显服务器<span class="srcref">原第 13、14、21 页</span></h3>
+    <p>课件第 13 页复习上一讲的服务器骨架：<code>socket → bind → listen → accept → 会话(rio_readlineb/rio_writen) → close</code>，客户端对应 <code>socket → connect → 会话 → close</code>。第 14 页的时间线只有一对客户端/服务器：<code>connect</code>/<code>accept</code> 对上，然后 <code>write</code>/<code>read</code>、<code>call read</code>/<code>read</code>、<code>close</code>/<code>close</code>。第 21 页给出完整源码 <code>echoserverp.c</code> 的迭代版本：<code>while (1) { Accept(...); echo(connfd); Close(connfd); }</code>，下面两条注释就是它的全部职责 —— <b>接受一个连接请求</b>、<b>一直处理回显请求直到客户端终止</b>。</p>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：迭代服务器交错时间线 —— 单步走完第 14 → 15 → 17 页</span>
+        <button class="p" id="tlStep">下一步</button>
+        <button class="p" id="tlAuto">自动播放</button>
+        <button class="sm" id="tlJump">跳到「卡住」那一刻</button>
+        <button class="sm" id="tlReset">重来</button>
+      </div>
+      <div id="tlOut"></div>
+    </div>
+
+    <h3>3.2 第二个客户端在哪里阻塞<span class="srcref">原第 16 页</span></h3>
+    <p>第 16 页标题就是问题：<b>Where Does Second Client Block?</b> 它给了三条「看起来会阻塞、实际不会」的答案，逐条排除：</p>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>调用</th><th>会不会阻塞</th><th>课件给的理由</th></tr>
+      <tr><td><code>connect</code></td><td><b>不会</b></td><td>服务器端 TCP 管理器会<b>排队</b>（queues request），这叫 <b>listen backlog</b>；即使连接还没被 accept，<code>connect</code> 也照样返回</td></tr>
+      <tr><td><code>rio_writen</code></td><td><b>不会</b></td><td>服务器端 TCP 管理器会<b>缓冲</b>输入数据（buffers input data）</td></tr>
+      <tr><td><code>rio_readlineb</code></td><td><b>会</b></td><td>服务器<b>还没写过任何东西</b>给它读（Server hasn’t written anything for it to read yet）</td></tr>
+    </table></div>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：三个调用，哪个真的会阻塞？</span>
+        <button class="sm" id="blkReset">重来</button>
+      </div>
+      <div id="blkOut"></div>
+    </div>
+
+    <h3>3.3 结论：结构缺陷<span class="srcref">原第 17 页</span></h3>
+    <p>第 17 页把三件事叠在同一时刻：<b>客户端 1 在等用户输入</b>（User goes out to lunch / Client 1 blocks waiting for user to type in data）、<b>服务器阻塞在 read 上等客户端 1 的数据</b>（Server blocks waiting to read data from Client 1）、<b>客户端 2 卡在 read 上等服务器</b>（Client 2 blocks waiting for from server）。于是整条链被一个人「出去吃午饭」卡死。</p>
+    <div class="box ok"><div class="t">课件的结论与出路（第 17 页原文）</div>
+      <b>Solution: use concurrent servers instead</b> —— 并发服务器用<b>多条并发流</b>在同一时间服务多个客户端（Concurrent servers use multiple concurrent flows to serve multiple clients at the same time）。
+    </div>
+
+    <h3>3.4 第 18 页：三条路<span class="srcref">原第 18 页</span></h3>
+    <p>第 18 页给出三种写并发服务器的方法，本讲剩下的篇幅就是逐个展开。它们的区别只有两条轴：<b>谁来交错这些逻辑流</b>（内核自动 / 程序员手动），以及<b>这些流共不共享地址空间</b>：</p>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>方案</th><th>谁交错逻辑流</th><th>地址空间</th><th>课件原话</th></tr>
+      <tr><td><b>1. 基于进程</b><br><span class="en">Process-based</span></td><td><b>内核自动</b>交错（Kernel automatically interleaves）</td><td>每条流有<b>自己私有的地址空间</b></td><td>Kernel automatically interleaves multiple logical flows</td></tr>
+      <tr><td><b>2. 基于事件</b><br><span class="en">Event-based</span></td><td><b>程序员手动</b>交错（Programmer manually interleaves）</td><td>全部流<b>共享同一地址空间</b></td><td>Uses technique called I/O multiplexing</td></tr>
+      <tr><td><b>3. 基于线程</b><br><span class="en">Thread-based</span></td><td><b>内核自动</b>交错</td><td>每条流<b>共享同一地址空间</b></td><td>Hybrid of process-based and event-based</td></tr>
+    </table></div>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：三种并发方案对照图 —— 切换方案，看地址空间与交错者怎么变</span>
+        <div class="seg" id="mmSeg">
+          <button class="on" data-mm="proc">① 基于进程</button>
+          <button data-mm="evt">② 基于事件</button>
+          <button data-mm="thr">③ 基于线程</button>
+        </div>
+      </div>
+      <div id="mmOut"></div>
+    </div>
+  </section>
+
+  <!-- ================= 4 ================= -->
+  <section id="s4">
+    <h2>4. 方案① 基于进程<span class="srcref">原第 19–31 页</span></h2>
+    <p class="lede">第 19–20 页先把「每个客户端 fork 一个进程」画在时间线上，第 21–27 页把代码一行行补全，第 28–31 页解释 <code>fork</code> 之后的资源账。</p>
+
+    <h3>4.1 两个客户端的交错<span class="srcref">原第 19、20 页</span></h3>
+    <p>第 19 页：客户端 1 连上后父进程 <code>fork</code> 出 child 1，child 1 阻塞在 <code>read</code> 上等客户端 1（用户出去吃午饭），<b>而父进程回到 <code>accept</code> 继续等下一个</b>。第 20 页加上客户端 2：父进程 <code>ret accept</code> → <code>fork</code> child 2，child 2 直接读写、<code>close</code>；两个子进程互不干扰。这就是并发服务器的第一个可行结构。</p>
+
+    <h3>4.2 代码：从迭代版到并发版<span class="srcref">原第 21–27 页</span></h3>
+    <p>课件用第 22–26 页五页做「动画式补全」（同一份 <code>echoserverp.c</code> 逐页添加代码行），第 27 页补上信号处理器。补全的顺序本身就是考点：</p>
+    <div class="steps">
+      <div class="step on"><div class="h">第 22 页 · 先 fork</div><div class="m">if (Fork() == 0) { echo(connfd); Close(connfd); exit(0); }</div><div class="e">子进程负责服务客户，然后自己退出。</div></div>
+      <div class="step on"><div class="h">第 23 页 · 加上 Signal 与三次 Close</div><div class="m">Signal(SIGCHLD, sigchld_handler); … Close(listenfd);  /* 子进程 */ … Close(connfd); /* 父进程 */</div><div class="e">子进程关掉自己的监听描述符；父进程关掉自己那份 connfd —— 第 24 页专门问了一个 <b>Why?</b></div></div>
+      <div class="step on"><div class="h">第 27 页 · sigchld_handler</div><div class="m">while (waitpid(-1, 0, WNOHANG) &gt; 0) ;</div><div class="e">回收<b>所有</b>僵尸子进程（Reap all zombie children）。</div></div>
+    </div>
+    <div class="box"><div class="t">第 25 页是「没有被改动的」那一页</div>
+      第 24、25 页内容与第 23 页完全相同 —— 第 24 页多加了一句 <b>Why?</b>，第 25 页则原封不动，是动画的过渡帧。本页把它们合并成上面的分步演示，不重复四遍。
+    </div>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：accept + fork 三步图解（对应原第 28 页那张三格图）</span>
+        <button class="p" id="fkStep">下一步</button>
+        <button class="sm" id="fkReset">重来</button>
+      </div>
+      <div id="fkOut"></div>
+    </div>
+
+    <h3>4.3 fork 之后的资源账<span class="srcref">原第 29、30 页</span></h3>
+    <p>第 29 页的三句话是本节的核心：<b>每个客户端由独立的子进程处理</b>；<b>它们之间没有共享状态</b>（No shared state between them）；<b>父进程与子进程各有一份 <code>listenfd</code> 和 <code>connfd</code> 的副本</b>。</p>
+    <p>第 30 页把「两份副本」的后果讲全了 —— 内核给每个 socket/打开文件维护一个<b>引用计数</b>（reference count），<code>fork</code> 之后 <code>refcnt(connfd) = 2</code>，而<b>连接要等引用计数归零才会真正关闭</b>：</p>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：connfd 引用计数与僵尸回收 —— 点按钮推进，看 refcnt 什么时候归零</span>
+        <button class="p" id="rcStep">下一步</button>
+        <button class="sm" id="rcReset">重来</button>
+      </div>
+      <div id="rcOut"></div>
+    </div>
+
+    <h3>4.4 优缺点<span class="srcref">原第 31 页</span></h3>
+    <div class="grid g2">
+      <div class="card"><h5>优点（第 31 页原文）</h5>
+        <ul style="margin:0;font-size:14.5px">
+          <li>+ 能并发处理多个连接</li>
+          <li>+ <b>干净的共享模型</b>：描述符<b>不共享</b>、全局变量<b>不共享</b>、文件表<b>共享</b></li>
+          <li>+ 简单直接</li>
+        </ul>
+      </div>
+      <div class="card"><h5>缺点（第 31 页原文）</h5>
+        <ul style="margin:0;font-size:14.5px">
+          <li>– 进程控制有额外开销</li>
+          <li>– 进程之间共享数据<b>不平凡</b>（课件注明：本例太简单，演示不出这一点）</li>
+        </ul>
+      </div>
+    </div>
+    <div class="box warn"><div class="t">勘误提示：第 31 页「共享模型」那三行的对应关系</div>
+      第 31 页把 <code>clean sharing model</code> 展开成三行：<code>descriptors (no)</code>、<code>file tables (yes)</code>、<code>global variables (no)</code>。这三行说的是 <b>fork 出来的父子进程之间「共不共享」</b>：描述符表和全局变量<b>各有各的副本</b>（no），而打开文件表<b>是共享的</b>（yes，这正是第 30 页引用计数的来源）。第 29 页说「No shared state between them」指的是<b>可写的程序状态</b>；两句并不矛盾，但只看第 31 页的三行很容易读反，本页按「父↔子」这个主语写清楚。
+    </div>
+  </section>
+
+  <!-- ================= 5 ================= -->
+  <section id="s5">
+    <h2>5. 方案② 基于事件<span class="srcref">原第 32–34 页</span></h2>
+    <p class="lede">第二条路是<b>不用多进程、也不用多线程</b>：一个控制流，自己维护一张「活跃连接表」，反复问内核「哪些描述符现在有输入？」—— 这就是 I/O 多路复用（I/O multiplexing）。</p>
+
+    <h3>5.1 事件循环的三段结构<span class="srcref">原第 32 页</span></h3>
+    <p>第 32 页把服务器要做的事写成「维护一张活跃连接表 + 反复做四件事」：</p>
+    <div class="steps">
+      <div class="step on"><div class="h">维护集合</div><div class="m">Server maintains set of active connections</div><div class="e">实现上就是一个 <b>connfd 的数组</b>（Array of connfd’s）。</div></div>
+      <div class="step on"><div class="h">① 找出有输入的描述符</div><div class="m">Determine which descriptors (connfd’s or listenfd) have pending inputs</div><div class="e">用 <code>select</code> 这类函数实现；<b>「有输入到达」这件事本身就是一个事件</b>（arrival of pending input is an event）。</div></div>
+      <div class="step on"><div class="h">② 若是 listenfd 有输入</div><div class="m">If listenfd has input, then accept connection</div><div class="e">并把新的 <code>connfd</code> 加进数组（add new connfd to array）。</div></div>
+      <div class="step on"><div class="h">③ 服务所有有输入的 connfd</div><div class="m">Service all connfd’s with pending inputs</div><div class="e">这一步是真正干活的回显。课件注明：<code>select</code> 版本服务器的细节在书上。</div></div>
+    </div>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：select 事件循环 —— 注入事件、轮询一次，看这一步该服务谁</span>
+        <button class="p" id="svPoll">轮询一次（select）</button>
+        <button class="sm" id="svInjectListen">模拟：新连接到达 listenfd</button>
+        <button class="sm" id="svInjectData">模拟：某个 connfd 有数据</button>
+        <button class="sm" id="svReset">重置</button>
+      </div>
+      <div id="svOut"></div>
+    </div>
+
+    <h3>5.2 第 33 页那张表：活跃描述符 vs 待处理输入<span class="srcref">原第 33 页</span></h3>
+    <p>第 33 页把「活跃描述符」（Active Descriptors）与「待处理输入」（Pending Inputs）并排画成两张 10 格的表，并点明 <code>listenfd = 3</code>、其余格子装的是各个 <code>connfd</code>；第 0、1、2 格（原页放大为 28pt 的两行）分别是 <code>10</code>、<code>7</code>、<code>4</code>，第 5、6 格是 <code>12</code>、<code>5</code>，其余的 <code>-1</code> 表示<b>空闲</b>，第 9 格还额外标了 <b>Never Used</b>。原页在两列之间标了 <b>Active</b> / <b>Inactive</b> 两个大字，并配了「Active Anything happened?」的批注。</p>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>格子</th><th>Active Descriptors</th><th>Pending Inputs</th><th>原页标注</th></tr>
+      <tr><td class="mono">0</td><td class="mono">10</td><td class="mono">10</td><td>放大行</td></tr>
+      <tr><td class="mono">1</td><td class="mono">7</td><td class="mono">7</td><td>放大行</td></tr>
+      <tr><td class="mono">2</td><td class="mono">4</td><td class="mono">4</td><td>放大行</td></tr>
+      <tr><td class="mono">3</td><td class="mono">-1</td><td class="mono">-1</td><td>Inactive</td></tr>
+      <tr><td class="mono">4</td><td class="mono">-1</td><td class="mono">-1</td><td>Inactive</td></tr>
+      <tr><td class="mono">5</td><td class="mono">12</td><td class="mono">12</td><td>Active</td></tr>
+      <tr><td class="mono">6</td><td class="mono">5</td><td class="mono">5</td><td>Active</td></tr>
+      <tr><td class="mono">7</td><td class="mono">-1</td><td class="mono">-1</td><td>Inactive</td></tr>
+      <tr><td class="mono">8</td><td class="mono">-1</td><td class="mono">-1</td><td>Inactive</td></tr>
+      <tr><td class="mono">9</td><td class="mono">-1</td><td class="mono">-1</td><td>Never Used</td></tr>
+    </table></div>
+    <div class="box warn"><div class="t">重建说明（两张表为什么会一模一样）</div>
+      原页这一格的两列在同一瞬间取值相同 —— 这正是这张图想说的：<b>「活跃」是服务器的登记状态，「待处理输入」是内核此刻的状态</b>，两者可以相同也可以不同；<code>select</code> 的返回值就是「两张表的差集非空」这件事。原页有一处需要说明：被放大成 28pt 的三行（第 0、1、2 格）在提取时与两处批注文字 <code>Active</code> / <code>Anything happened?</code> 叠在一行，本页按格子对齐拆开写。若要看原始版面请对照原课件第 33 页。
+    </div>
+
+    <h3>5.3 优缺点<span class="srcref">原第 34 页</span></h3>
+    <div class="grid g2">
+      <div class="card"><h5>优点（第 34 页原文）</h5>
+        <ul style="margin:0;font-size:14.5px">
+          <li>+ 只有<b>一个逻辑控制流、一个地址空间</b></li>
+          <li>+ 可以用调试器<b>单步跟踪</b>（Can single-step with a debugger）</li>
+          <li>+ <b>没有</b>进程或线程的控制开销</li>
+          <li>+ 高性能 Web 服务器与搜索引擎的首选（课件举例：<code>Node.js</code>、<code>nginx</code>、<code>Tornado</code>）</li>
+        </ul>
+      </div>
+      <div class="card"><h5>缺点（第 34 页原文）</h5>
+        <ul style="margin:0;font-size:14.5px">
+          <li>– 写起来比进程/线程方案<b>复杂得多</b></li>
+          <li>– <b>难以提供细粒度并发</b>：例如「HTTP 请求头只到了一半」怎么处理</li>
+          <li>– <b>无法利用多核</b>（Cannot take advantage of multi-core）</li>
+          <li>– 理由是：<b>只有单个控制流线程</b>（Single thread of control）</li>
+        </ul>
+      </div>
+    </div>
+    <div class="box"><div class="t">三条缺点的共同根源</div>
+      事件方案把「交错」这件事从内核接管到<b>程序员手里</b>（第 18 页原话：Programmer manually interleaves multiple logical flows）。控制权换来了<b>可单步、可全局优化、零切换开销</b>，代价是<b>任何一处阻塞都会卡住所有人</b>，而且一个核就是一条流水线 —— 第 34 页最后那条「Single thread of control」正是「用不上多核」的原因。
+    </div>
+  </section>
+
+  <!-- ================= 6 ================= -->
+  <section id="s6">
+    <h2>6. 方案③ 基于线程<span class="srcref">原第 35、44–50 页</span></h2>
+    <p class="lede">课件第 35 页对第三条路的介绍只有两句：<b>和方案① 非常像</b>，只是<b>用线程代替了进程</b>。「非常像」四个字背后是内存模型的巨大差别 —— 那是<a href="#s7">第 7 节</a>的内容；这一节先把 Pthreads 这套 API 和服务器代码补齐。</p>
+
+    <h3>6.1 Pthreads 接口<span class="srcref">原第 44 页</span></h3>
+    <p>第 44 页把 Pthreads 定义成「<b>供 C 程序操纵线程的标准接口，约 60 个函数</b>」，并按四组列出常用函数：</p>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：Pthreads 函数速查 —— 点分组筛选</span>
+        <div class="seg" id="ptSeg">
+          <button class="on" data-pt="all">全部</button>
+          <button data-pt="create">创建与回收</button>
+          <button data-pt="id">线程 ID</button>
+          <button data-pt="term">终止</button>
+          <button data-pt="sync">同步共享变量</button>
+        </div>
+      </div>
+      <div id="ptOut"></div>
+    </div>
+
+    <div class="box warn"><div class="t">第 44 页的两处细节，很容易读错</div>
+      第一处：终止那一组里 <code>exit()</code> 后面跟着 <b><code>[terminates all threads]</code></b>，而 <code>return</code> 后面跟的是 <b><code>[terminates current thread]</code></b> —— 这两个的差别是「自杀」还是「同归于尽」。第二处：同步那一组只列了 <code>pthread_mutex_init</code> 与 <code>pthread_mutex_[un]lock</code> 两个名字，课件把它们归在「<b>同步对共享变量的访问</b>」（Synchronizing access to shared variables）这一条下 —— <b>本讲只点名，不展开</b>，展开在第 25 讲。
+    </div>
+
+    <h3>6.2 hello, world<span class="srcref">原第 45、46 页</span></h3>
+    <p>第 45 页用一份 20 行的 <code>hello.c</code> 把 <code>Pthread_create</code> 的四个参数逐个标注出来（页面右侧的批注）：</p>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>参数位置</th><th>实参</th><th>原页批注</th><th>含义</th></tr>
+      <tr><td class="mono">1</td><td class="mono">&amp;tid</td><td>Thread ID</td><td>写出新建线程的 TID</td></tr>
+      <tr><td class="mono">2</td><td class="mono">NULL</td><td>Thread attributes (usually NULL)</td><td>线程属性，通常传 NULL</td></tr>
+      <tr><td class="mono">3</td><td class="mono">thread</td><td>Thread routine</td><td>线程要执行的函数</td></tr>
+      <tr><td class="mono">4</td><td class="mono">NULL</td><td>Thread arguments (void *p)</td><td>传给线程例程的参数</td></tr>
+    </table></div>
+    <p>与之配对的是 <code>Pthread_join(tid, NULL)</code>（第二个参数是<b>返回值</b> <code>(void **)p</code>），以及线程例程的固定形状 <code>void *thread(void *vargp)</code>。第 46 页把这份程序的执行画成两条泳道的时间线：</p>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：hello, world 的执行时序（主线程 / 对等线程）—— 单步或自动</span>
+        <button class="p" id="hwStep">下一步</button>
+        <button class="p" id="hwAuto">自动播放</button>
+        <button class="sm" id="hwReset">重来</button>
+      </div>
+      <div id="hwOut"></div>
+    </div>
+
+    <h3>6.3 线程版并发回显服务器<span class="srcref">原第 47、48 页</span></h3>
+    <p>第 47 页的主循环与进程版只差一行 —— <code>Pthread_create</code> 换掉了 <code>Fork</code>，而且传的是 <b>堆上的一个 int 指针</b>：</p>
+    <div class="formula" style="text-align:left">
+      <div>while (1) {</div>
+      <div>&nbsp;&nbsp;clientlen = sizeof(struct sockaddr_storage);</div>
+      <div>&nbsp;&nbsp;connfdp = Malloc(sizeof(int));&nbsp;&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)">/* 每次都在堆上新开一格 */</span></div>
+      <div>&nbsp;&nbsp;*connfdp = Accept(listenfd, (SA *) &amp;clientaddr, &amp;clientlen);</div>
+      <div>&nbsp;&nbsp;Pthread_create(&amp;tid, NULL, thread, connfdp);</div>
+      <div>}</div>
+    </div>
+    <p>第 47 页下面三条注释：<b>为每个客户端派一个新线程</b>、<b>传给它连接文件描述符的副本</b>、<b>注意这里是 <code>Malloc()</code>（但还没有 <code>Free()</code>）</b>。第 48 页补上线程例程，把「没有 Free」这件事接住：</p>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>代码行</th><th>第 48 页的注释</th><th>为什么</th></tr>
+      <tr><td class="mono">int connfd = *((int *)vargp);</td><td class="mono">—</td><td>先把值抄到自己的栈上，后面就不再依赖那个指针</td></tr>
+      <tr><td class="mono">Pthread_detach(pthread_self());</td><td><b>Run thread in “detached” mode</b></td><td>独立于其他线程运行；终止时<b>由内核自动回收</b></td></tr>
+      <tr><td class="mono">Free(vargp);</td><td><b>Free storage allocated to hold connfd</b></td><td>接住第 47 页的 <code>Malloc</code></td></tr>
+      <tr><td class="mono">Close(connfd);</td><td><b>Close connfd (important!)</b></td><td>线程自己关连接</td></tr>
+    </table></div>
+
+    <h3>6.4 执行模型与注意事项<span class="srcref">原第 49、50 页</span></h3>
+    <p>第 49 页把线程版的执行模型总结成三句：<b>每个客户端由独立的对等线程处理</b>；<b>线程共享除 TID 之外的<b>全部</b>进程状态</b>；<b>每个线程有自己独立的栈给局部变量用</b>。第 50 页给出三条注意事项：</p>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>注意事项</th><th>第 50 页的展开</th></tr>
+      <tr><td><b>必须以 detached 方式运行，否则内存泄漏</b></td><td>任一时点线程要么是 <span class="mono">joinable</span> 要么是 <span class="mono">detached</span>。<b>joinable</b> 线程可被别的线程回收/杀死，<b>必须用 <code>pthread_join</code> 回收</b>才会释放内存资源；<b>detached</b> 线程不能被别的线程回收或杀死，<b>终止时资源自动回收</b>。默认状态是 <b>joinable</b>；用 <code>pthread_detach(pthread_self())</code> 改成 detached。</td></tr>
+      <tr><td><b>必须小心避免意外共享</b></td><td>例如「把指向主线程栈的指针传进去」：<code>Pthread_create(&amp;tid, NULL, thread, (void *)&amp;connfd);</code></td></tr>
+      <tr><td><b>线程调用的所有函数必须是线程安全的</b></td><td>课件标注「（next lecture）」—— 下一讲展开。</td></tr>
+    </table></div>
+    <div class="box bad"><div class="t">「意外共享」那一条是本讲的下一颗炸弹</div>
+      第 50 页只是提醒，第 51 页把 <code>&amp;connfd</code> 的坑画成图，第 57–58 页把它做成实验。三步在 <a href="#s8">第 8 节</a>展开。
+    </div>
+  </section>
+
+  <!-- ================= 7 ================= -->
+  <section id="s7">
+    <h2>7. 线程内存模型<span class="srcref">原第 36–41、52–56 页</span></h2>
+    <p class="lede">课件先用两页把「进程」拆成「线程 + 代码/数据/内核上下文」（第 36、37 页），再用一页说清多线程下「什么是私有的、什么是共享的」（第 38 页），第 52–56 页用五页动画把「<b>但其实所有内存都是共享的</b>」这句话演示出来。</p>
+
+    <h3>7.1 从「进程孤立」到「线程+上下文」<span class="srcref">原第 36、37 页</span></h3>
+    <div class="grid g2">
+      <div class="card"><h5>第 36 页：传统视图</h5>
+        <p style="margin:0;font-size:14.5px"><b>进程 = 进程上下文 + 代码/数据/栈</b>。左侧「进程上下文」里是程序上下文（数据寄存器、条件码、栈指针 SP、程序计数器 PC）与内核上下文（VM 结构、描述符表、brk 指针）。</p>
+      </div>
+      <div class="card"><h5>第 37 页：另一种视图</h5>
+        <p style="margin:0;font-size:14.5px"><b>进程 = 线程 + 代码/数据/内核上下文</b>。也就是说：把「代码、数据、内核上下文」划归<b>进程</b>，而把<b>程序上下文</b>单独拎出来叫做<b>线程</b>。左下角那个「主线程（main thread）」框里就装着栈、SP 和线程上下文。</p>
+      </div>
+    </div>
+    <p>这两页的差别不是画法之争 —— 第 37 页那个画法一旦成立，「一个进程里放多个线程」就变成自然的事：<b>共享的东西不动，只复制线程那一部分</b>。</p>
+
+    <h3>7.2 多线程下什么是私有的<span class="srcref">原第 38、52 页</span></h3>
+    <p>第 38 页（第 52 页与之内容相同）用五条把规则说完：</p>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>#</th><th>第 38 页原文</th><th>归属</th></tr>
+      <tr><td class="mono">1</td><td>一个进程可以关联多个线程</td><td>—</td></tr>
+      <tr><td class="mono">2</td><td>每个线程有自己的<b>逻辑控制流</b></td><td>私有</td></tr>
+      <tr><td class="mono">3</td><td>每个线程<b>共享同一份代码、数据与内核上下文</b></td><td>共享</td></tr>
+      <tr><td class="mono">4</td><td>每个线程有自己的<b>栈</b>放局部变量，<b>但是不受其他线程保护</b>（but not protected from other threads）</td><td>私有但无保护</td></tr>
+      <tr><td class="mono">5</td><td>每个线程有自己的<b>线程 ID（TID）</b></td><td>私有</td></tr>
+    </table></div>
+    <p>对应的图上，两个线程各自持有「数据寄存器 / 条件码 / SP / PC」四件套（第 38 页写作 <code>SP<sub>1</sub></code>、<code>SP<sub>2</sub></code>、<code>PC<sub>1</sub></code>、<code>PC<sub>2</sub></code>），而共享区是 <code>shared libraries</code>、<code>run-time heap</code>、<code>read/write data</code>、<code>read-only code/data</code>，再加上内核上下文（VM 结构、描述符表、brk 指针）。</p>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：进程 / 线程内存视图 —— 在三种视图之间切换</span>
+        <div class="seg" id="vmSeg">
+          <button class="on" data-vm="trad">传统进程视图（原 36 页）</button>
+          <button data-vm="alt">进程 = 线程 + 其余（原 37 页）</button>
+          <button data-vm="multi">多线程（原 38 页）</button>
+          <button data-vm="all">其实全部内存都共享（原 53 页）</button>
+        </div>
+      </div>
+      <div id="vmOut"></div>
+    </div>
+
+    <h3>7.3 「但其实所有内存都是共享的」<span class="srcref">原第 53–56 页</span></h3>
+    <p>第 53 页的标题就是这句话：<b>But ALL memory is shared</b>。它把第 38 页图里的「栈 1 / 栈 2」两侧标上线程 1、线程 2，说明<b>两个栈都在同一片地址空间里</b>，只是各线程「按约定」只用自己的那一块。第 54–56 页用第 51 页那段有 bug 的代码继续往下推：</p>
+    <div class="steps">
+      <div class="step on"><div class="h">第 54 页 · 两个线程</div><div class="m">connfd 在主线程栈上；&amp;connfd 被传给了线程 2</div><div class="e">图上 <code>connfd</code> 与 <code>&amp;connfd</code> 都画在<b>同一块</b>「read/write data / 栈」区域里。</div></div>
+      <div class="step on"><div class="h">第 55 页 · 第三个线程进来</div><div class="m">&amp;connfd 又出现一次</div><div class="e">循环下一轮，<b>新的线程 3</b> 拿到的是<b>同一个地址</b>。</div></div>
+      <div class="step on"><div class="h">第 56 页 · 线程例程盖在上面</div><div class="m">int connfd = *((int *)vargp);</div><div class="e">三个线程都从这个同一地址取值 → 第 51 页图里的 <b>Race!</b>。</div></div>
+    </div>
+    <div class="box warn"><div class="t">第 55 页有两处排版笔误，本页按语义修正</div>
+      第 55 页的表头写的是三个线程（<code>Thread 1/2/3 context</code>），但下面寄存器行里的下标只写了两组 —— <code>SP<sub>1</sub> SP<sub>2</sub> SP<sub>2</sub></code> 与 <code>PC<sub>1</sub> PC<sub>2</sub> PC<sub>2</sub></code>；随后第 56 页的表头同样写三个线程，下标也是 <code>SP<sub>1</sub> SP<sub>2</sub> SP<sub>2</sub></code>。按「每个线程有自己的栈指针和 PC」这条第 38 页的规则，正确的第三组下标应为 <b>3</b>（<code>SP<sub>3</sub> PC<sub>3</sub></code>）。本页按 <b>3</b> 呈现并在此标注。
+    </div>
+
+    <h3>7.4 并发还是顺序<span class="srcref">原第 40、41 页</span></h3>
+    <p>第 40 页给出定义：<b>如果两个线程的流在时间上<b>重叠</b>，它们就是并发的（concurrent），否则是顺序的（sequential）</b>。配图用 Thread A / B / C 三条横向的时间条，结论是 <b>Concurrent: A &amp; B, A &amp; C</b>、<b>Sequential: B &amp; C</b>。第 41 页再把「并发」拆成两种来源：</p>
+    <div class="grid g2">
+      <div class="card"><h5>单核处理器</h5><p style="margin:0;font-size:14.5px"><b>用时间分片模拟并行</b>（Simulate parallelism by time slicing）—— 处理器在多个线程之间来回切换，任一时刻只有一个线程在跑，但宏观上流是重叠的。</p></div>
+      <div class="card"><h5>多核处理器</h5><p style="margin:0;font-size:14.5px"><b>可以有真正的并行</b>（Can have true parallelism）—— 第 41 页图注为「用 2 个核跑 3 个线程」（Run 3 threads on 2 cores）。</p></div>
+    </div>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：单核时间分片 vs 多核真并行</span>
+        <div class="seg" id="scSeg">
+          <button class="on" data-sc="1">单核（时间分片）</button>
+          <button data-sc="2">双核（原第 41 页）</button>
+          <button data-sc="3">三核</button>
+        </div>
+      </div>
+      <div id="scOut"></div>
+    </div>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：并发还是顺序？—— 给三条线程的起止时刻，判三对关系</span>
+        <label class="fld">A 起 <input type="text" id="ccA0" value="0" size="5" spellcheck="false"></label>
+        <label class="fld">A 止 <input type="text" id="ccA1" value="8" size="5" spellcheck="false"></label>
+        <label class="fld">B 起 <input type="text" id="ccB0" value="1" size="5" spellcheck="false"></label>
+        <label class="fld">B 止 <input type="text" id="ccB1" value="4" size="5" spellcheck="false"></label>
+        <label class="fld">C 起 <input type="text" id="ccC0" value="6" size="5" spellcheck="false"></label>
+        <label class="fld">C 止 <input type="text" id="ccC1" value="9" size="5" spellcheck="false"></label>
+        <button class="p" id="ccGo">判定</button>
+        <button class="sm" data-cc="0,8;1,4;6,9">复现第 40 页的关系</button>
+        <button class="sm" data-cc="0,5;4,9">区间重叠</button>
+        <button class="sm" data-cc="0,2;2,4">首尾相接</button>
+        <button class="sm" data-cc="0,4;0,4;0,4">三条流完全重叠</button>
+      </div>
+      <div id="ccOut"></div>
+    </div>
+    <div class="box"><div class="t">关于默认值：第 40 页那张图没有印出具体时刻</div>
+      原第 40 页的三条流是一张示意图（横条），<b>没有印数字</b>。所以上面这组默认值（A=[0,8)、B=[1,4)、C=[6,9)）是本页<b>按图上关系构造</b>的：
+      图上给出的结论是 <b>A 与 B 并发、A 与 C 并发、B 与 C 顺序</b>，这组区间正好复现这个模式。想看别的组合就改数字或点快捷按钮（例如「三条流完全重叠」会得到三对全并发）。
+    </div>
+    <div class="box"><div class="t">边界规则（本页明确写出来，因为它决定对错）</div>
+      时刻按<b>半开区间</b> <code>[start, end)</code> 处理：交集为空就是顺序的。所以 <code>A=[0,2)</code>、<code>B=[2,4)</code> 判为<b>顺序</b>（首尾相接不算重叠），而 <code>A=[0,4)</code>、<code>B=[3,6)</code> 判为<b>并发</b>。判分基准已用独立实现按同一规则穷举比对。
+    </div>
+  </section>
+
+  <!-- ================= 8 ================= -->
+  <section id="s8">
+    <h2>8. 共享变量与竞争<span class="srcref">原第 51、57–59 页</span></h2>
+    <p class="lede">这是本讲的高潮：第 51 页把「传栈上变量的地址给线程」画成图，第 57 页把它变成一个可判定的实验（Race Test），第 58 页给出真实机器上的实测分布，第 59 页给出正确写法。</p>
+
+    <h3>8.1 第 51 页：<code>&amp;connfd</code> 的坑<span class="srcref">原第 51 页</span></h3>
+    <div class="formula" style="text-align:left">
+      <div>while (1) {</div>
+      <div>&nbsp;&nbsp;int connfd = Accept(listenfd, (SA *) &amp;clientaddr, &amp;clientlen);</div>
+      <div>&nbsp;&nbsp;Pthread_create(&amp;tid, NULL, thread, &amp;connfd);&nbsp;&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)">/* &amp;connfd 指向主线程栈 */</span></div>
+      <div>}</div>
+    </div>
+    <p>第 51 页的图把两边的栈摆在一起：左边是<b>主线程栈</b>（<code>connfd</code> 一个格子，值先写 <code>connfd<sub>1</sub></code>、下一轮再写 <code>connfd<sub>2</sub></code>），右边是 <b>peer<sub>1</sub> 栈</b>与 <b>peer<sub>2</sub> 栈</b>，两个对等线程的局部变量都写作 <code>connfd = *vargp</code>，而两个 <code>vargp</code> <b>指向同一个地址</b> —— 图上写着 <b>Race!</b>。页脚那句（第 51 页原文）问得正好：</p>
+    <div class="box warn"><div class="t">第 51 页的提问（原文）</div>
+      <b>Why would both copies of vargp point to same location?</b> 因为 <code>&amp;connfd</code> 取的是<b>主线程循环体里那一个局部变量</b>的地址 —— 每一轮 <code>accept</code> 都往<b>同一格</b>写新值，而已经跑起来的 peer 线程手里拿的还是那个<b>同一格</b>的地址。谁先读、读到的就是谁的值。
+    </div>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：&amp;connfd 竞态图解 —— 单步推进，看两个 peer 读到了什么</span>
+        <button class="p" id="shStep">下一步</button>
+        <button class="sm" id="shRun">走到底</button>
+        <button class="sm" id="shReset">重来</button>
+      </div>
+      <div id="shOut"></div>
+    </div>
+
+    <h3>8.2 第 57 页：把坑做成实验（Race Test）<span class="srcref">原第 57 页</span></h3>
+    <p>第 57 页把代码换成用 <code>i</code>（而不是 <code>connfd</code>），让现象更容易统计：</p>
+    <div class="grid g2">
+      <div class="card"><h5>Main Thread</h5>
+        <div class="mono" style="font-size:13.5px;white-space:pre-wrap">int i;
+for (i = 0; i &lt; 100; i++) {
+  Pthread_create(&amp;tid, NULL, thread, &amp;i);
+}</div>
+      </div>
+      <div class="card"><h5>Peer thread</h5>
+        <div class="mono" style="font-size:13.5px;white-space:pre-wrap">void *thread(void *vargp)
+{
+  int i = *((int *)vargp);
+  Pthread_detach(pthread_self());
+  save_value(i);
+  return NULL;
+}</div>
+      </div>
+    </div>
+    <p>第 57 页给出的判定标准（本讲唯一的「判分标准」，原文）：</p>
+    <div class="box ok"><div class="t">Race Test（第 57 页原文）</div>
+      <ul style="margin:0;padding-left:20px">
+        <li>如果没有竞争，那么<b>每个线程会拿到不同的 i 值</b>（each thread would get different value of i）；</li>
+        <li>被保存的值集合<b>应当恰好是 0 到 99 各一份</b>（one copy each of 0 through 99）。</li>
+      </ul>
+    </div>
+    <p>换句话说：<b>只要出现「某个值一份都没有」或者「某个值有两份以上」，就证明竞争真的发生了。</b>下面的调度器把这句话变成可复现的实验：</p>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：交错调度器 —— 固定种子生成一种可复现的调度，统计被保存的 i 值</span>
+        <label class="fld">线程数 N <input type="text" id="raceN" value="100" size="6" spellcheck="false"></label>
+        <label class="fld">种子 <input type="text" id="raceSeed" value="2025" size="8" spellcheck="false"></label>
+        <button class="p" id="raceGo">生成一种调度</button>
+        <button class="sm" data-race="0">种子 0</button>
+        <button class="sm" data-race="1">种子 1</button>
+        <button class="sm" data-race="2025">种子 2025</button>
+        <button class="sm" id="raceIdeal">理想调度（无线程延迟）</button>
+        <button class="sm" id="raceSweep">连跑 200 个种子统计</button>
+      </div>
+      <div id="raceOut"></div>
+    </div>
+
+    <div class="box"><div class="t">调度器的模型（明写出来，因为它决定结论）</div>
+      把第 57 页那段程序抽象成三种原子事件，<b>交错就是这三种事件的一个合法全序</b>：
+      <ul style="margin:6px 0 0;padding-left:20px">
+        <li><code>C<sub>k</sub></code>（主线程）：第 k 轮 <code>Pthread_create(..., &amp;i)</code>，此刻 <code>i == k</code>；</li>
+        <li><code>I<sub>k</sub></code>（主线程）：<code>i++</code>，把 <code>i</code> 由 <code>k</code> 变成 <code>k+1</code>；</li>
+        <li><code>R<sub>k</sub></code>（对等线程 k）：<code>int i = *((int *)vargp)</code>，即<b>读共享变量 i 的当前值</b>并保存。</li>
+      </ul>
+      合法顺序只有两条约束：主线程自己是顺序的（<code>C<sub>0</sub> &lt; I<sub>0</sub> &lt; C<sub>1</sub> &lt; I<sub>1</sub> &lt; …</code>），以及「先创建才能跑」（<code>C<sub>k</sub> &lt; R<sub>k</sub></code>）。<b>其余任意交错都合法</b> —— 这正是第 2 页那句「全部可能的事件序列经常根本无法穷举」的具体样子（N = 100 时有 3N = 300 个事件）。
+    </div>
+
+    <h3>8.3 第 58 页：实测分布<span class="srcref">原第 58 页</span></h3>
+    <p>第 58 页给出三台机器上的实测直方图（横轴是被保存的 i 值 0–99，纵轴是每个值被保存的次数）：</p>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>机器</th><th>观察到的形状</th><th>第 58 页原话</th></tr>
+      <tr><td><b>No Race（无竞争）</b></td><td>每个值各 1 次 —— 一条平直的柱状线</td><td>与第 57 页的判定标准一致</td></tr>
+      <tr><td><b>Single core laptop</b><br>（单核笔记本）</td><td>出现「某处是 0、后面某处是 2」的成对缺口</td><td><b>3 For each “0” there is some later “2” here</b></td></tr>
+      <tr><td><b>Multicore server</b><br>（多核服务器）</td><td>柱高在 0/2/4/6/8/10/12/14 之间乱跳</td><td><b>10 And here, values are all over the place.</b></td></tr>
+    </table></div>
+    <div class="box"><div class="t">第 58 页的结论与「为什么多核更糟」</div>
+      页脚一句是结论：<b>「有些 bin 一次都没被更新，有些 bin 被更新了 2 次（或更多！）」</b>（Some bins get no update, some get 2 (or more!)）。注意单核那张图有个<b>规律</b>：0 和 2 成对出现 —— 单核上线程切换的时机受限，一个值被跳过时，往往是另一个值被多记一次；而多核上两个线程<b>真的同时在跑</b>，读到的值可以相差很远，于是「值全乱」。
+    </div>
+
+    <h3>8.4 进度图：把「所有交错」画出来<span class="srcref">补充可视化（原课件未出现）</span></h3>
+    <div class="box warn"><div class="t">说明：这一小节是本页自制的可视化，不是原课件内容</div>
+      原课件用「直方图」和「时间线」讲这件事，<b>没有</b>出现进度图（progress graph）。下面这张图是本页为了把「两种顺序都合法」这件事变得看得见而补的：横轴 = 主线程已完成的事件数，纵轴 = 对等线程已完成的事件数，<b>每一条从 (0,0) 走到 (m,n) 的单调阶梯就是第 8.2 节模型里的一种合法交错</b>。把它放在这里是因为它能把「轨迹数」算成一个<b>精确的整数</b>，而不是一句「随机」。
+    </div>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：进度图 —— 单个窗口内「先读后写」与「先写后读」各有多少条轨迹</span>
+        <label class="fld">主线程事件数 m <input type="text" id="pgM" value="4" size="4" spellcheck="false"></label>
+        <label class="fld">对等线程事件数 n <input type="text" id="pgN" value="2" size="4" spellcheck="false"></label>
+        <label class="fld">关键写在第几拍 <input type="text" id="pgW" value="3" size="4" spellcheck="false"></label>
+        <label class="fld">关键读在第几拍 <input type="text" id="pgR" value="1" size="4" spellcheck="false"></label>
+        <button class="p" id="pgGo">算并画</button>
+        <button class="sm" data-pg="4,2,3,1">默认（m=4,n=2）</button>
+        <button class="sm" data-pg="6,3,4,2">更大一点（6×3）</button>
+      </div>
+      <div id="pgOut"></div>
+    </div>
+
+    <h3>8.5 第 59 页：正确写法与生产者-消费者模型<span class="srcref">原第 59 页</span></h3>
+    <p>第 59 页把第 47–48 页的写法单独拎出来作为「正确的线程参数传递」：</p>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>位置</th><th>代码</th><th>职责</th></tr>
+      <tr><td>主例程</td><td class="mono">int *connfdp;<br>connfdp = Malloc(sizeof(int));<br>*connfdp = Accept( . . . );<br>Pthread_create(&amp;tid, NULL, thread, connfdp);</td><td><b>在主线程里分配</b>（Allocate in main）—— 每一轮都是新的一格堆内存</td></tr>
+      <tr><td>线程例程</td><td class="mono">int connfd = *((int *)vargp);<br>. . .<br>Free(vargp);</td><td><b>在线程例程里释放</b>（Free in thread routine）</td></tr>
+    </table></div>
+    <div class="box ok"><div class="t">第 59 页给这个结构起的名字：生产者-消费者模型</div>
+      主线程是<b>生产者</b>（生产「一个待服务的连接」这件工作），对等线程是<b>消费者</b>（消费掉它并负责善后）。关键点是<b>每个工作项一块独立内存</b>：只要「分配」与「释放」不在同一个执行流里，就必须让所有权随数据一起移交 —— 这正是第 51 页那个坑的反面。
+    </div>
+  </section>
+
+  <!-- ================= 9 ================= -->
+  <section id="s9">
+    <h2>9. 性能对比<span class="srcref">原第 42、43、60 页</span></h2>
+    <p class="lede">课件在放下线程这条线之前，把「线程 vs 进程」和「线程 vs 信号」各做了一张对照表，并在第 60 页给出线程方案的最终评价。</p>
+
+    <h3>9.1 线程 vs 进程<span class="srcref">原第 42 页</span></h3>
+    <div class="grid g2">
+      <div class="card"><h5>相似之处（第 42 页原文）</h5>
+        <ul style="margin:0;font-size:14.5px">
+          <li>各自有自己的逻辑控制流</li>
+          <li>各自可以与其他流并发运行（可能在不同核上）</li>
+          <li>各自都会被上下文切换</li>
+        </ul>
+      </div>
+      <div class="card"><h5>不同之处（第 42 页原文）</h5>
+        <ul style="margin:0;font-size:14.5px">
+          <li>线程<b>共享全部代码与数据</b>（局部栈除外）；进程（通常）不共享</li>
+          <li>线程比进程<b>略便宜</b>一些</li>
+          <li>进程控制（创建与回收）的开销是线程的<b>两倍</b></li>
+        </ul>
+      </div>
+    </div>
+    <p>第 42 页给出的 Linux 实测数字：<b>创建并回收一个进程约 20K 个周期，创建并回收一个线程约 10K 个周期（或更少）</b>。下面这个组件把这两个数字做成可改参数的对比，让它随参数变化：</p>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：进程 vs 线程开销 —— 改参数看差距，默认是课件第 42 页的 Linux 数字</span>
+        <label class="fld">进程创建+回收（周期） <input type="text" id="ovP" value="20000" size="8" spellcheck="false"></label>
+        <label class="fld">线程创建+回收（周期） <input type="text" id="ovT" value="10000" size="8" spellcheck="false"></label>
+        <label class="fld">连接数 <input type="text" id="ovN" value="10000" size="8" spellcheck="false"></label>
+        <label class="fld">CPU 频率（GHz） <input type="text" id="ovF" value="3" size="6" spellcheck="false"></label>
+        <button class="p" id="ovGo">算</button>
+        <button class="sm" data-ov="20000;10000;10000;3">课件数字</button>
+        <button class="sm" data-ov="20000;10000;100;3">只服务 100 个连接</button>
+      </div>
+      <div id="ovOut"></div>
+    </div>
+
+    <h3>9.2 线程 vs 信号<span class="srcref">原第 43 页</span></h3>
+    <p>第 43 页把「信号处理器」和「线程」放在一起比 —— 因为两者都会打断正常执行，容易混：</p>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>维度</th><th>信号处理器</th><th>线程</th></tr>
+      <tr><td>与常规程序的状态关系</td><td><b>共享状态，包括栈</b>（Signal handler shares state with regular program，Including stack）</td><td>共享代码/数据，但<b>各有自己的栈</b></td></tr>
+      <tr><td>与被打断代码的关系</td><td>打断正常执行：<b>一次意料之外的函数调用</b>（Unexpected procedure call），结束后<b>回到原来的执行流</b>（Returns to regular execution stream）</td><td>是<b>对等体</b>（peer）—— 第 43 页原话：<b>Not a peer</b> 说的是信号处理器<b>不是</b>对等体</td></tr>
+      <tr><td>同步能力</td><td>只有<b>有限形式</b>的同步：主程序可以阻塞/解除阻塞信号（block / unblock signals），可以暂停等待信号（pause for signal）</td><td>有完整的同步原语（Pthreads 那约 60 个函数，本讲只点名）</td></tr>
+    </table></div>
+    <div class="box"><div class="t">第 43 页下半张图的记号</div>
+      页面右侧画了一条指令流 <code>I<sub>next</sub></code>、<code>I<sub>curr</sub></code>，被一个标着 <b>Receive</b> 的箭头从中间切开，右边接上 <b>Handler</b> —— 与第 5 页 <code>I^{lock}_{curr} → I^{signal}_{next}</code> 是同一套记号：<b>处理器插在两条指令之间</b>。这正好解释了 <a href="#s2">第 2 节</a>那个死锁窗口为什么存在：打断点是<b>指令粒度的</b>，而 <code>printf</code> 的「Acquire … Release」之间有很多条指令。
+    </div>
+
+    <h3>9.3 线程方案的最终评价<span class="srcref">原第 60 页</span></h3>
+    <div class="grid g2">
+      <div class="card"><h5>优点（第 60 页原文）</h5>
+        <ul style="margin:0;font-size:14.5px">
+          <li>+ 线程之间<b>共享数据结构很容易</b>（例如日志信息、文件缓存）</li>
+          <li>+ 线程比进程<b>更高效</b></li>
+        </ul>
+      </div>
+      <div class="card"><h5>缺点（第 60 页原文）</h5>
+        <ul style="margin:0;font-size:14.5px">
+          <li>– <b>无意的共享</b>会引入微妙且<b>难以复现</b>的错误（subtle and hard-to-reproduce errors）</li>
+          <li>– 「数据共享起来有多容易」既是线程<b>最大的优点</b>，也是它<b>最大的弱点</b></li>
+          <li>– 很难知道哪些数据是共享的、哪些是私有的</li>
+          <li>– <b>很难靠测试发现</b>：坏结果的概率很低，但<b>不是零</b>（Probability of bad race outcome very low / But nonzero!）</li>
+        </ul>
+      </div>
+    </div>
+    <div class="box bad"><div class="t">「概率很低但不是零」意味着什么</div>
+      第 60 页这条正是第 6 页那段「一千万次循环」测试的注解：<b>测试跑过 = 什么都没证明</b>。一个竞争 bug 可能在你机器上跑一万次都不出现，在客户的多核机器上一次就中 —— 而且出现的形态（哪个 bin 丢、哪个 bin 多）每次都不一样（第 58 页两张实测图就是证据）。
+    </div>
+  </section>
+
+  <!-- ================= 10 ================= -->
+  <section id="s10">
+    <h2>10. 总结与测验<span class="srcref">原第 61、11 页</span></h2>
+    <p class="lede">第 61 页用一张三栏表给全讲收官：三种方案各自的<strong>代价</strong>写在同一栏里，读的时候请两边一起读。</p>
+
+    <h3>10.1 三种方案的最终对照<span class="srcref">原第 61 页</span></h3>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>方案</th><th>第 61 页原文</th><th>翻译与展开</th></tr>
+      <tr><td rowspan="2"><b>基于进程</b></td><td>Hard to share resources: Easy to avoid unintended sharing</td><td>资源<b>难以共享</b>；但也因此<b>容易避免</b>无意的共享 —— 这两句是一件事的两面</td></tr>
+      <tr><td>High overhead in adding/removing clients</td><td>增删客户端的<b>开销高</b>（对照第 42 页：进程控制是线程的两倍）</td></tr>
+      <tr><td rowspan="5"><b>基于事件</b></td><td>Tedious and low level</td><td>写起来<b>繁琐且底层</b></td></tr>
+      <tr><td>Total control over scheduling</td><td><b>完全掌控调度</b>（这是它的卖点）</td></tr>
+      <tr><td>Very low overhead</td><td>开销<b>非常低</b></td></tr>
+      <tr><td>Cannot create as fine grained a level of concurrency</td><td>做不到那么<b>细粒度</b>的并发</td></tr>
+      <tr><td>Does not make use of multi-core</td><td><b>用不上多核</b></td></tr>
+      <tr><td rowspan="5"><b>基于线程</b></td><td>Easy to share resources: Perhaps too easy</td><td>资源共享<b>很容易</b>——<b>也许太容易了</b>（对应第 60 页的「最大优点也是最大弱点」）</td></tr>
+      <tr><td>Medium overhead</td><td>开销<b>中等</b></td></tr>
+      <tr><td>Not much control over scheduling policies</td><td>对调度策略<b>没什么控制</b></td></tr>
+      <tr><td>Difficult to debug</td><td><b>难调试</b></td></tr>
+      <tr><td>Event orderings not repeatable</td><td><b>事件顺序不可复现</b> —— 本页第 8.2 节那个固定种子的调度器，正是为了对付这一条而做的</td></tr>
+    </table></div>
+    <div class="box"><div class="t">读法提醒：三个 overhead 是并列比较，不是独立绝对值</div>
+      第 61 页原文的三种措辞是：进程 <b>High overhead</b>、事件 <b>Very low overhead</b>、线程 <b>Medium overhead</b>。它们是<b>三者互相比</b>得出的措辞（事件 &lt; 线程 &lt; 进程），不是各自独立的测量值；第 42 页给的 Linux 数字（约 20K vs 10K 周期）只覆盖「创建+回收」这一步，不含上下文切换与调度差异。本页按原文措辞照实呈现，避免把 <code>Medium</code> 误读成「线程开销可以忽略」。（此处不是勘误 —— 原课件这两页没有错。）
+    </div>
+
+    <h3>10.2 一句话回看全讲<span class="srcref">综合原第 1–61 页</span></h3>
+    <div class="grid g3">
+      <div class="card"><h5>问题</h5><p style="margin:0;font-size:14.5px">迭代服务器一次只走一个逻辑流，第 17 页那张「三方一起卡住」的图就是它的死因。</p></div>
+      <div class="card"><h5>三条路</h5><p style="margin:0;font-size:14.5px">进程（内核交错 + 私有地址空间）、事件（手动交错 + 共享地址空间）、线程（内核交错 + 共享地址空间）。</p></div>
+      <div class="card"><h5>代价</h5><p style="margin:0;font-size:14.5px">共享得越容易，竞争越难发现。第 58 页的直方图与第 60 页的「概率很低但不是零」是同一件事。</p></div>
+    </div>
+
+    <h3>10.3 测验<span class="srcref">12 题</span></h3>
+    <p>每道题选完立刻判分并给出解析。答错不要紧 —— 解析里写清了依据在本讲的哪一节、以及对应原课件的第几页。</p>
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：本讲测验</span>
+        <button class="sm" id="qzReset">重来</button>
+      </div>
+      <div id="qzOut"></div>
+    </div>
+  </section>
+</main>
+
+</div>
+
+<div class="footer">
+  本页由原课件 PDF 翻译整理而成 · 数值计算与可视化均为页面内实时计算 · 可对照原课件页码阅读。
+</div>
+<button class="totop" id="toTop">↑ 顶部</button>
+
+<script>
+"use strict";
+/* ============================================================
+   并发编程 · 交互式课件 —— 全部逻辑
+   约定：所有计算在页面内实时完成；无效输入必须给出提示而不是抛错。
+   随机一律用固定种子的 mulberry32，保证「同一种子 = 同一次调度」。
+   顶层以 function 声明的
+     printfRun / printfEnumerate / raceSchedule / raceSavedValues /
+     raceIdealValues / raceStats / intervalsOverlap / concurrentPairs /
+     selectStep / pgReadFirst / pgTotal / pgEnumerate
+   是判分基准，由 tools/verify_ics24.js 与独立参考实现穷举比对。
+   超过 2^53 的整数一律用 BigInt。
+   ============================================================ */
+
+const $  = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const badBox = msg => `<div class="box bad"><div class="t">输入无效</div>${esc(msg)}</div>`;
+const fmtInt = n => String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+const kvAttr = str => {
+  const out = {};
+  String(str).split(';').forEach(part => {
+    const i = part.indexOf('=');
+    if (i > 0) out[part.slice(0, i).trim()] = part.slice(i + 1).trim();
+  });
+  return out;
+};
+
+/* ---------- 可复现伪随机 ---------- */
+function mulberry32(seed) {
+  let a = seed >>> 0;
+  return function () {
+    a |= 0; a = (a + 0x6D2B79F5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+/** 解析非负整数；失败返回 null（不抛异常） */
+function parseUint(str, max) {
+  const t = String(str).trim().replace(/[_,\s]/g, '');
+  if (!/^[0-9]+$/.test(t)) return null;
+  let v;
+  try { v = Number(t); } catch (e) { return null; }
+  if (!Number.isFinite(v) || v < 0) return null;
+  if (max !== undefined && v > max) return null;
+  return v;
+}
+
+/* ---------- 精确组合数（BigInt） ---------- */
+function binom(n, k) {
+  if (k < 0 || k > n) return 0n;
+  k = Math.min(k, n - k);
+  let r = 1n;
+  for (let i = 1; i <= k; i++) r = r * BigInt(n - k + i) / BigInt(i);
+  return r;
+}
+
+/* ============================================================
+   基准 1：printf 在信号处理器里重入 → 死锁
+   ------------------------------------------------------------
+   模型（对应原课件第 5、7 页）：
+     主流程调用 printf，执行三段原子代码 [ACQ, WORK, REL]；
+     printf 内部那把缓冲区锁是<b>非可重入</b>的；
+     信号处理器一旦开始就<b>不被中途打断</b>地跑完 [SIG, H_ACQ, H_WORK, H_REL]，
+     处理器运行期间主流程挂起 —— 所以处理器整体像一块被插进主流程的原子块。
+   于是「信号何时到达」只有 4 个插入点：
+     slot 0 = ACQ 之前，1 = ACQ 与 WORK 之间，2 = WORK 与 REL 之间，3 = REL 之后
+   插入点 1、2 会让处理器的 H_ACQ 撞上「锁已被主流程持有」→ 死锁。
+   ============================================================ */
+const PFD_MAIN = ['ACQ', 'WORK', 'REL'];
+const PFD_SIG  = ['SIG', 'H_ACQ', 'H_WORK', 'H_REL'];
+const PFD_SLOT_LABEL = ['ACQ 之前（还没拿锁）', 'ACQ 之后（刚拿到锁）', 'WORK 之后（还在持锁）', 'REL 之后（已经放锁）'];
+
+/** 把信号处理器块插到主流程的第 slot 个位置，得到扁平事件序列 */
+function printfSchedule(slot) {
+  if (!(slot >= 0 && slot <= 3)) return null;
+  const out = [];
+  for (let i = 0; i < PFD_MAIN.length; i++) {
+    if (i === slot) out.push.apply(out, PFD_SIG);
+    out.push(PFD_MAIN[i]);
+  }
+  if (slot === PFD_MAIN.length) out.push.apply(out, PFD_SIG);
+  return out;
+}
+
+/** 按事件序列模拟：锁非可重入，撞上已持有的锁就永久阻塞 */
+function printfRun(slot) {
+  const events = printfSchedule(slot);
+  if (!events) return null;
+  const log = [];
+  let holder = null;          // 持有锁的事件名
+  let deadlock = false;
+  let deadlockAt = -1;
+  for (let i = 0; i < events.length; i++) {
+    const ev = events[i];
+    if (ev === 'ACQ' || ev === 'H_ACQ') {
+      if (holder === null) {
+        holder = ev;
+        log.push({ ev, holder, note: '拿到锁' });
+      } else {
+        deadlock = true; deadlockAt = i;
+        log.push({ ev, holder, note: `锁已被 ${holder} 持有 → 永久阻塞` });
+        break;
+      }
+    } else if (ev === 'REL' || ev === 'H_REL') {
+      holder = null;
+      log.push({ ev, holder, note: '释放锁' });
+    } else {
+      log.push({ ev, holder, note: ev === 'SIG' ? '信号到达，打断主流程' : '持锁干活' });
+    }
+  }
+  return { slot, events, log, deadlock, deadlockAt, eventsLeft: events.length - log.length };
+}
+
+/** 穷举全部 4 个插入点 → 每个插入点是否死锁 */
+function printfEnumerate() {
+  const rows = [];
+  for (let s = 0; s < 4; s++) {
+    const r = printfRun(s);
+    rows.push({ slot: s, label: PFD_SLOT_LABEL[s], deadlock: r.deadlock });
+  }
+  return { total: 4, deadlock: rows.filter(r => r.deadlock).length, rows };
+}
+
+/* ============================================================
+   基准 2：交错调度器（原课件第 57 页的 Race Test）
+   ------------------------------------------------------------
+   三种原子事件：
+     C_k 主线程第 k 轮 Pthread_create(..., &i)（此刻 i == k）
+     I_k 主线程 i++（i 由 k 变成 k+1）
+     R_k 对等线程 k 读 *((int *)vargp) 并保存
+   合法约束：主线程顺序 C_0 < I_0 < C_1 < I_1 < … ；且 C_k < R_k。
+   生成方式：拓扑排序的「随机取就绪事件」，随机源是 mulberry32(seed)。
+   ============================================================ */
+function raceIdealValues(N) {
+  const a = [];
+  for (let k = 0; k < N; k++) a.push(k);
+  return a;
+}
+
+/** 生成长度 3N 的事件序列（字符串 'C5' / 'I5' / 'R5'） */
+function raceSchedule(seed, N) {
+  if (!Number.isInteger(N) || N <= 0) return null;
+  const rnd = mulberry32(seed);
+  const ready = ['C0'];
+  const out = [];
+  while (out.length < 3 * N) {
+    if (!ready.length) return null;                 // 拓扑排序不该出现死胡同
+    const idx = Math.floor(rnd() * ready.length) % ready.length;
+    const ev = ready.splice(idx, 1)[0];
+    out.push(ev);
+    const tag = ev[0];
+    const j = Number(ev.slice(1));
+    if (tag === 'C') { ready.push('I' + j); ready.push('R' + j); }
+    else if (tag === 'I') { if (j + 1 < N) ready.push('C' + (j + 1)); }
+  }
+  return out;
+}
+
+/** 按调度跑一遍，返回「对等线程 k 实际读到的 i 值」数组（长度 N） */
+function raceSavedValues(seed, N) {
+  const sched = raceSchedule(seed, N);
+  if (!sched) return null;
+  const saved = new Array(N).fill(-1);
+  let i = 0;
+  for (const ev of sched) {
+    const tag = ev[0], k = Number(ev.slice(1));
+    if (tag === 'C') { i = k; }          // 创建时 i 恰好等于 k（由约束保证）
+    else if (tag === 'I') { i = k + 1; }
+    else { saved[k] = i; }               // R_k 读到当前值
+  }
+  return saved;
+}
+
+/** 统计：桶 0..N 各出现几次、多少个空桶、多少个重复桶 */
+function raceStats(values, N) {
+  const h = new Array(N + 1).fill(0);
+  for (const v of values) {
+    if (v >= 0 && v <= N) h[v]++;
+  }
+  let holes = 0, dups = 0;
+  for (let v = 0; v < N; v++) {         // 与第 57 页一致：只统计 0..N-1
+    if (h[v] === 0) holes++;
+    else if (h[v] >= 2) dups++;
+  }
+  return { hist: h, holes, dups, extra: h[N], correct: values.every((v, k) => v === k) };
+}
+
+/* ============================================================
+   基准 3：并发还是顺序（原课件第 40 页）
+   时刻按半开区间 [start, end) 处理：交集为空 → 顺序。
+   ============================================================ */
+function intervalsOverlap(a0, a1, b0, b1) {
+  return Math.max(a0, b0) < Math.min(a1, b1);
+}
+
+function concurrentPairs(iv) {
+  const [A, B, C] = iv;
+  return {
+    ab: intervalsOverlap(A[0], A[1], B[0], B[1]),
+    ac: intervalsOverlap(A[0], A[1], C[0], C[1]),
+    bc: intervalsOverlap(B[0], B[1], C[0], C[1]),
+  };
+}
+
+/* ============================================================
+   基准 4：select 事件循环（原课件第 32 页的三步）
+   state = { listenfd, active:[fd…] }
+   arrived = 本轮有输入的描述符集合
+   返回：{ accepted, serviced, nextState }
+     ­① 有输入的描述符 = arrived
+     ② 若 listenfd 有输入 → accept，新 connfd（最小空闲号 ≥ 4）进入活跃表
+     ③ 服务 (arrived ∩ 活跃表)，即所有本轮有输入的 connfd
+   ============================================================ */
+function selectStep(state, arrived) {
+  const active = state.active.slice();
+  const has = fd => arrived.indexOf(fd) >= 0;
+  let accepted = null;
+  if (has(state.listenfd)) {
+    let fd = 4;
+    while (active.indexOf(fd) >= 0) fd++;
+    active.push(fd);
+    accepted = fd;
+  }
+  const serviced = active.filter(fd => has(fd)).sort((x, y) => x - y);
+  return { accepted, serviced, nextState: { listenfd: state.listenfd, active } };
+}
+
+/* ============================================================
+   基准 5：进度图轨迹计数
+   ------------------------------------------------------------
+   横轴 = 主线程已完成的事件数 x：0..m
+   纵轴 = 对等线程已完成的事件数 y：0..n
+   一条轨迹 = 从 (0,0) 到 (m,n) 的单调阶梯；每步向右或向上。
+   主线程的「关键写」是它的第 w 件事（x: w-1 → w），
+   对等线程的「关键读」是它的第 r 件事（y: r-1 → r）。
+   读在写之前 → 读到旧值（程序「看起来对」）；写在读之前 → 读到新值（值被跳过）。
+   总数 = C(m+n, m)（对所有轨迹都一样）。
+   读先于写 = Σ_{a=0}^{w-1} C(a+r-1, a) · C(m-a+n-r, m-a)
+   —— 其中 a 是「读之前主线程已完成的事件数」，必须 ≤ w-1。
+   ============================================================ */
+function pgTotal(m, n) { return binom(m + n, m); }
+
+function pgReadFirst(m, n, w, r) {
+  if (!(m >= 1 && n >= 1 && w >= 1 && w <= m && r >= 1 && r <= n)) return null;
+  let sum = 0n;
+  for (let a = 0; a <= w - 1; a++) {
+    sum += binom(a + r - 1, a) * binom(m - a + n - r, m - a);
+  }
+  return sum;
+}
+
+/** 逐条枚举所有轨迹（只适合小 m、n），返回 {total, readFirst, writeFirst, steps} */
+function pgEnumerate(m, n, w, r) {
+  if (!(m >= 1 && n >= 1 && w >= 1 && w <= m && r >= 1 && r <= n)) return null;
+  let total = 0, readFirst = 0;
+  const path = [];
+  const walk = (x, y) => {
+    if (x === m && y === n) {
+      total++;
+      // 找出写步与读步发生的先后
+      let px = 0, py = 0, order = [];
+      for (const s of path) {
+        if (s === 'M') { px++; if (px === w) order.push('W'); }
+        else { py++; if (py === r) order.push('R'); }
+      }
+      if (order[0] === 'R') readFirst++;
+      return;
+    }
+    if (x < m) { path.push('M'); walk(x + 1, y); path.pop(); }
+    if (y < n) { path.push('P'); walk(x, y + 1); path.pop(); }
+  };
+  walk(0, 0);
+  return { total, readFirst, writeFirst: total - readFirst };
+}
+
+/* ============================================================
+   1.1 四类灾难卡片
+   ============================================================ */
+const TRAPS = {
+  race: {
+    name: '竞争（Races）', pages: '原第 3、11 页',
+    def: '结果取决于系统里别处任意的调度决策（outcome depends on arbitrary scheduling decisions elsewhere in the system）。',
+    art: '第 3 页：一页只有标题 <code>Data Race</code>，配四张车图 —— 一张两车相撞的事故照片，加三辆小汽车的俯视图剪贴画（红、黄、银）。「赛车」这个比喻就是竞争。',
+    case: '本讲第 8 节的 <code>&amp;connfd</code> / <code>&amp;i</code> 竞态，以及第 58 页的实测直方图。',
+  },
+  dead: {
+    name: '死锁（Deadlock）', pages: '原第 4、5、11 页',
+    def: '不恰当的资源分配阻止了前进（improper resource allocation prevents forward progress）。',
+    art: '第 4 页：一页只有标题 <code>Deadlock</code>，配一张十字路口车流拥堵的航拍照片；第 5 页把标题换成同一张拥堵照片作背景，讲信号处理器里的 <code>printf</code>。',
+    case: '本讲第 2 节：<code>SIGCHLD</code> 处理器重入 <code>printf</code>，撞上非可重入的缓冲区锁。',
+  },
+  live: {
+    name: '活锁（Livelock）', pages: '原第 8、9 页',
+    def: '原课件<b>没有给文字定义</b> —— 这两页只有标题和两张交通照片。（不代为补充定义。）',
+    art: '第 8 页：一张环岛车流照片（黄色箭头串起各个方向的车）。第 9 页：一张拥挤环岛的航拍照片，下方配字 <b>“THE ROUNDABOUT OF FAILURE / You have arrived”</b>。',
+    case: '本讲没有对应的代码案例；第 11 页的经典问题分类里也没有列它。',
+  },
+  star: {
+    name: '饥饿 / 公平（Starvation / Fairness）', pages: '原第 10、11 页',
+    def: '外部事件与/或系统调度决策可能阻止某个子任务前进（external events and/or system scheduling decisions can prevent sub-task progress）。',
+    art: '第 10 页：一辆黄色小汽车的俯视图，配三句话 —— 「黄车必须让绿车」（Yellow must yield to green）、「绿车连绵不断」（Continuous stream of green cars）、「整个系统在前进，但某些个体无限期等待」（Overall system makes progress, but some individuals wait indefinitely）。',
+    case: '本讲没有对应的代码案例；它是第 11 页三类经典问题里的第三类。',
+  },
+};
+let trSel = 'race';
+function renderTraps() {
+  $$('#trSeg button').forEach(b => b.classList.toggle('on', b.dataset.tr === trSel));
+  const t = TRAPS[trSel];
+  const order = ['race', 'dead', 'live', 'star'];
+  $('#trOut').innerHTML = `
+    <div class="grid g2" style="margin-top:4px">
+      <div class="card"><h5>${t.name}<span class="srcref">${t.pages}</span></h5>
+        <p style="margin:6px 0 0;font-size:14.5px"><b>定义：</b>${t.def}</p>
+      </div>
+      <div class="card"><h5>原页的图（文字说明）</h5>
+        <p style="margin:6px 0 0;font-size:14.5px">${t.art}</p>
+      </div>
+    </div>
+    <div class="box" style="margin-bottom:0"><div class="t">本讲里的对应案例</div>${t.case}</div>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>类别</th><th>原页码</th><th>课件是否给了文字定义</th></tr>
+      ${order.map(k => `<tr class="${k === trSel ? 'hl' : ''}"><td><b>${TRAPS[k].name}</b></td><td class="mono">${TRAPS[k].pages.replace('原第 ', '').replace(' 页', '')}</td>
+        <td>${k === 'live' ? '<span class="chip warn">没有（只有两张照片）</span>' : '<span class="chip ok">有</span>'}</td></tr>`).join('')}
+    </table></div>`;
+}
+
+/* ============================================================
+   2.1 printf 重入死锁模拟
+   ============================================================ */
+let pfdSlot = 1, pfdIdx = 1;
+const PFD_EV_ZH = {
+  ACQ: 'printf：Acquire lock', WORK: 'printf：Do something', REL: 'printf：Release lock',
+  SIG: '信号到达（打断主流程）', H_ACQ: '处理器 printf：Acquire lock',
+  H_WORK: '处理器：Do something', H_REL: '处理器：Release lock',
+};
+function renderPfd() {
+  const r = printfRun(pfdSlot);
+  const shown = Math.min(pfdIdx, r.log.length);
+  const rows = r.log.slice(0, shown).map((l, i) => {
+    const who = l.ev.startsWith('H_') || l.ev === 'SIG' ? '信号处理器' : '主流程';
+    const bad = l.note.indexOf('永久阻塞') >= 0;
+    return `<tr class="${bad ? 'hl' : ''}"><td class="mono">${i + 1}</td><td class="mono">${l.ev}</td><td>${who}</td>
+      <td>${PFD_EV_ZH[l.ev] || l.ev}</td><td class="mono">${l.holder === null ? '未持有' : l.holder}</td>
+      <td${bad ? ' style="color:var(--sign)"' : ''}>${esc(l.note)}</td></tr>`;
+  }).join('');
+  const rest = r.events.length - shown;
+  const verdict = !r.deadlock
+    ? `<div class="box ok" style="margin-bottom:0"><div class="t">没有死锁</div>信号落在「未持锁」的窗口里，处理器能拿到锁、能跑完，主流程随后继续。</div>`
+    : `<div class="box bad" style="margin-bottom:0"><div class="t">死锁（第 ${r.deadlockAt + 1} 个事件处）</div>
+        处理器的 <code>H_ACQ</code> 撞上「锁已被主流程持有」。这把锁<b>不是可重入的</b>，持有者又正是被打断、永远无法继续的主流程 ——
+        剩下 ${r.eventsLeft} 个事件（包含主流程的 <code>REL</code>）再也不会发生。这正是第 5 页 <code>I^{lock}_{curr} → I^{signal}_{next}</code> 想画的窗口。</div>`;
+  const en = printfEnumerate();
+  $('#pfdOut').innerHTML = `
+    <div class="ctrls" style="margin:2px 0 8px">
+      <span style="font-size:13.5px;color:var(--muted)">选择信号到达的位置（共 4 个插入点）：</span>
+      ${PFD_SLOT_LABEL.map((lb, s) => `<button class="sm" data-pfdsel="${s}"${s === pfdSlot ? ' style="border-color:var(--accent);background:var(--accent-soft)"' : ''}>${lb}</button>`).join('')}
+    </div>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>#</th><th class="mono">事件</th><th>属于</th><th>做什么</th><th>锁持有者</th><th>说明</th></tr>
+      ${rows}
+    </table></div>
+    <p style="font-size:13.5px;color:var(--muted);margin:6px 0 0">已执行 ${shown} / ${r.events.length} 个事件${rest > 0 ? `（还有 ${rest} 个没发生）` : ''}${pfdIdx >= r.log.length && !r.deadlock ? ' · 这一趟跑完了' : ''}</p>
+    <div style="margin-top:12px">${verdict}</div>
+    <div class="tbl-wrap"><table class="tbl" style="margin-bottom:0">
+      <tr><th>插入点</th><th>信号到达时机</th><th>结果</th></tr>
+      ${en.rows.map(x => `<tr class="${x.slot === pfdSlot ? 'hl' : ''}"><td class="mono">${x.slot}</td><td>${x.label}</td>
+        <td>${x.deadlock ? '<span class="chip bad">死锁</span>' : '<span class="chip ok">正常</span>'}</td></tr>`).join('')}
+    </table></div>
+    <p style="font-size:13.5px;color:var(--muted);margin:8px 0 0">
+      全部 ${en.total} 个插入点里有 <b>${en.deadlock}</b> 个会死锁 —— 也就是「信号恰好落在持锁期间」的那两个。
+      这就是第 6 页要「一千万次循环」去撞的窗口：<b>窗口只有 2 个插入点，但每一次都可能撞上</b>。</p>`;
+}
+
+/* ============================================================
+   3.1 迭代服务器交错时间线（原第 14、15、17 页）
+   ============================================================ */
+const TL_STEPS = [
+  { lane: 'c1', text: 'connect', note: '客户端 1 调用 connect' },
+  { lane: 'sv', text: 'accept → ret accept', note: '服务器 accept 返回，双方建立连接' },
+  { lane: 'c1', text: 'call fgets', note: '客户端 1 在等用户打字 —— 用户出去吃午饭了' },
+  { lane: 'sv', text: 'call read', note: '服务器阻塞在 read 上，等客户端 1 的数据' },
+  { lane: 'c2', text: 'connect', note: '客户端 2 调用 connect：服务器端 TCP 管理器把请求排队，connect 立刻返回' },
+  { lane: 'c2', text: 'write', note: '客户端 2 发出回显请求（被 TCP 管理器缓冲）' },
+  { lane: 'c2', text: 'call read', note: '客户端 2 等服务器回显 —— 服务器还没写过任何东西给它读' },
+];
+const TL_LANES = { c1: '客户端 1', sv: '服务器（迭代版）', c2: '客户端 2' };
+let tlIdx = 1;
+function tlState(idx) {
+  const st = { c1: '空闲', sv: '阻塞在 accept', c2: '尚未连接' };
+  for (let i = 0; i < idx; i++) {
+    const s = TL_STEPS[i];
+    if (s.lane === 'c1') st.c1 = i === 2 ? '阻塞在 fgets（等用户输入）' : '运行中';
+    if (s.lane === 'sv') st.sv = i === 3 ? '阻塞在 read（等客户端 1）' : '运行中';
+    if (s.lane === 'c2') st.c2 = i === 6 ? '阻塞在 read（等服务器）' : '运行中';
+  }
+  return st;
+}
+function renderTimeline() {
+  const st = tlState(tlIdx);
+  const laneOf = { c1: 0, sv: 1, c2: 2 };
+  const svgW = 660, rowH = 34, laneX = [20, 240, 460];
+  let svg = `<svg viewBox="0 0 ${svgW} ${rowH * (TL_STEPS.length + 1) + 30}" style="width:100%;height:auto" font-family="var(--font-sans)">`;
+  ['c1', 'sv', 'c2'].forEach((k, i) => {
+    svg += `<text x="${laneX[i]}" y="14" font-size="12" font-weight="650" fill="var(--muted)">${TL_LANES[k]}</text>`;
+    svg += `<line x1="${laneX[i] + 45}" y1="20" x2="${laneX[i] + 45}" y2="${rowH * (TL_STEPS.length + 1)}" stroke="var(--line)" stroke-width="1.2"/>`;
+  });
+  TL_STEPS.forEach((s, i) => {
+    const y = 30 + i * rowH;
+    const done = i < tlIdx;
+    const x = laneX[laneOf[s.lane]];
+    svg += `<rect x="${x}" y="${y}" width="190" height="24" rx="6" fill="${done ? 'var(--accent-soft)' : 'var(--paper-soft)'}"
+      stroke="${done ? 'var(--accent)' : 'var(--line)'}" stroke-width="${done ? 1.6 : 1}"/>`;
+    svg += `<text x="${x + 8}" y="${y + 16}" font-size="11.5" fill="${done ? 'var(--accent)' : 'var(--muted)'}" font-family="var(--font-mono)">${esc(s.text)}</text>`;
+    svg += `<text x="${laneX[0] - 12}" y="${y + 16}" font-size="10.5" fill="var(--muted)" text-anchor="end">${i + 1}</text>`;
+  });
+  svg += `</svg>`;
+  const blocked = tlIdx >= TL_STEPS.length;
+  $('#tlOut').innerHTML = `
+    <div class="tbl-wrap">${svg}</div>
+    <div class="grid g3">
+      ${['c1', 'sv', 'c2'].map(k => `<div class="card"><h5>${TL_LANES[k]}</h5>
+        <p style="margin:0;font-size:14px" class="mono">${esc(st[k])}</p></div>`).join('')}
+    </div>
+    <p style="font-size:13.5px;color:var(--muted);margin:10px 0 0">
+      第 ${tlIdx} 步：${esc(TL_STEPS[tlIdx - 1].note)}${tlIdx < TL_STEPS.length ? '（点「下一步」继续）' : ''}</p>
+    ${blocked ? `<div class="box bad" style="margin-bottom:0"><div class="t">三边一起卡住（原第 17 页）</div>
+      客户端 1 在等用户输入、服务器在等客户端 1 的数据、客户端 2 在等服务器 —— 而服务器只有一个执行流，它正卡在 <code>read</code> 上。
+      <b>整台服务器被「一个出去吃午饭的人」卡死了。</b>第 17 页由此给出结论：<b>Solution: use concurrent servers instead</b>。</div>` : ''}
+    ${tlIdx === 3 ? `<div class="box" style="margin-bottom:0"><div class="t">注意这一步</div>用户「出去吃午饭」不是 bug，是常态 —— 服务器必须能在等一个客户时去服务别人。</div>` : ''}`;
+}
+
+/* ============================================================
+   3.2 第二个客户端在哪里阻塞（原第 16 页）
+   ============================================================ */
+const BLK_ITEMS = [
+  { call: 'connect', block: false, why: '服务器端 TCP 管理器会<b>排队</b>（queues request）—— 这叫 <b>listen backlog</b>；即使连接还没被 accept，<code>connect</code> 也照样返回。' },
+  { call: 'rio_writen', block: false, why: '服务器端 TCP 管理器会<b>缓冲输入数据</b>（buffers input data），所以发送方不会因此卡住。' },
+  { call: 'rio_readlineb', block: true, why: '服务器<b>还没写过任何东西</b>给它读（Server hasn’t written anything for it to read yet），所以这里真的会阻塞。' },
+];
+let blkAns = BLK_ITEMS.map(() => null);
+function renderBlk() {
+  const done = blkAns.filter(x => x !== null).length;
+  const right = BLK_ITEMS.filter((it, i) => blkAns[i] !== null && (blkAns[i] === 1) === it.block).length;
+  const list = BLK_ITEMS.map((it, i) => {
+    const sel = blkAns[i];
+    const cls = sel === null ? '' : (sel === 1) === it.block ? ' correct done' : ' wrong done';
+    return `<div class="puzzle${cls}" style="flex-direction:column;align-items:stretch">
+      <div class="q" style="white-space:normal"><b>${i + 1}.</b> 第二个客户端卡在调用 <code>${it.call}</code> 上吗？
+        <small>答案的依据在原课件第 16 页。</small></div>
+      <div class="btns" style="margin-top:8px">
+        <button class="sm" data-blk="${i}:1">会阻塞</button>
+        <button class="sm" data-blk="${i}:0">不会阻塞</button>
+      </div>
+      <div class="exp"><span class="verdict">${sel === null ? '' : (sel === 1) === it.block ? '✓ 正确' : '✗ 错误'}</span>
+        &nbsp;正确答案：<b>${it.block ? '会阻塞' : '不会阻塞'}</b><br>${it.why}</div>
+    </div>`;
+  }).join('');
+  $('#blkOut').innerHTML = list + (done === 0 ? '' :
+    `<div class="box ${right === BLK_ITEMS.length ? 'ok' : right >= 2 ? 'warn' : 'bad'}" style="margin-bottom:0">
+      <div class="t">已答 ${done} / ${BLK_ITEMS.length} 题，答对 ${right} 题</div>
+      ${done === BLK_ITEMS.length ? (right === BLK_ITEMS.length ? '全对 —— 排除了两个假嫌疑犯，只剩 rio_readlineb。' : '错题上方已给出第 16 页的理由，回对应小节再看一遍。') : '继续答题，每题都会立即给出依据。'}
+    </div>`);
+}
+
+/* ============================================================
+   3.4 三种并发方案对照（原第 18 页）
+   ============================================================ */
+const MM = {
+  proc: {
+    name: '方案① 基于进程', page: '原第 18、29 页',
+    who: '内核自动交错（Kernel automatically interleaves）',
+    space: '每条流<b>自己的私有地址空间</b>',
+    note: '父进程 fork 出子进程，各自持有 listenfd / connfd 的副本，无共享可写状态。',
+    boxes: 'proc',
+  },
+  evt: {
+    name: '方案② 基于事件', page: '原第 18、32 页',
+    who: '<b>程序员手动</b>交错（Programmer manually interleaves）',
+    space: '全部流<b>共享同一地址空间</b>',
+    note: '一个控制流 + 一张活跃描述符表，用 select 反复问「谁有输入」。',
+    boxes: 'evt',
+  },
+  thr: {
+    name: '方案③ 基于线程', page: '原第 18、49 页',
+    who: '内核自动交错',
+    space: '每条流<b>共享同一地址空间</b>',
+    note: '混合了前两者的特点：交错权给内核，地址空间仍然共享。',
+    boxes: 'thr',
+  },
+};
+let mmSel = 'proc';
+function mmSvg(kind) {
+  const bx = (x, y, w, h, label, fill, fg) =>
+    `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="6" fill="${fill}" stroke="var(--line)" stroke-width="1.2"/>
+     <text x="${x + w / 2}" y="${y + h / 2 + 4}" text-anchor="middle" font-size="10.5" font-weight="600" fill="${fg}">${label}</text>`;
+  const S = 'var(--accent-soft)', SF = 'var(--accent)', G = 'var(--gray-bg)', GF = 'var(--gray-fg)';
+  let g = '';
+  if (kind === 'proc') {
+    g += bx(12, 14, 300, 190, '', G, GF);
+    g += `<text x="20" y="30" font-size="10.5" fill="var(--muted)">监听服务器进程（父）</text>`;
+    g += bx(24, 38, 130, 60, '私有地址空间', S, SF);
+    g += bx(30, 50, 52, 18, 'listenfd', 'var(--card)', SF);
+    g += bx(90, 50, 56, 18, 'connfd 副本', 'var(--card)', SF);
+    g += bx(170, 38, 130, 60, '子进程 1（私有）', S, SF);
+    g += bx(170, 108, 130, 60, '子进程 2（私有）', S, SF);
+    g += bx(330, 14, 180, 190, '', G, GF);
+    g += `<text x="338" y="30" font-size="10.5" fill="var(--muted)">客户端 1 / 客户端 2</text>`;
+    g += bx(342, 38, 156, 60, '各自独立', 'var(--card)', GF);
+    g += bx(342, 108, 156, 60, '互无共享可写状态', 'var(--card)', GF);
+    g += `<text x="330" y="222" font-size="10.5" fill="var(--muted)">← 内核在进程之间切换（自动交错）</text>`;
+  } else if (kind === 'evt') {
+    g += bx(12, 14, 300, 190, '', G, GF);
+    g += `<text x="20" y="30" font-size="10.5" fill="var(--muted)">单个服务器进程 / 单个控制流</text>`;
+    g += bx(24, 38, 276, 150, '共享地址空间', S, SF);
+    g += bx(34, 48, 120, 24, '活跃描述符表', 'var(--card)', SF);
+    g += bx(164, 48, 126, 24, 'select 事件循环', 'var(--card)', SF);
+    for (let i = 0; i < 4; i++) g += bx(34 + i * 32, 82, 28, 20, 'fd', 'var(--card)', GF);
+    g += bx(34, 112, 256, 66, '同一个栈 / 同一份全局数据（无隔离）', 'var(--card)', GF);
+    g += bx(330, 14, 180, 190, '', G, GF);
+    g += `<text x="338" y="30" font-size="10.5" fill="var(--muted)">客户端</text>`;
+    for (let i = 0; i < 3; i++) g += bx(342, 44 + i * 50, 156, 40, '客户端 ' + (i + 1), 'var(--card)', GF);
+    g += `<text x="330" y="222" font-size="10.5" fill="var(--muted)">← 交错由程序员在事件循环里决定（手动）</text>`;
+  } else {
+    g += bx(12, 14, 300, 190, '', G, GF);
+    g += `<text x="20" y="30" font-size="10.5" fill="var(--muted)">单个服务器进程</text>`;
+    g += bx(24, 38, 276, 150, '共享地址空间（全部内存都共享）', S, SF);
+    for (let i = 0; i < 3; i++) {
+      g += bx(34, 50 + i * 44, 118, 34, '线程 ' + (i + 1) + '（私有栈/SP/PC）', 'var(--card)', SF);
+      g += bx(162, 50 + i * 44, 128, 34, 'TID ' + (i + 1) + ' · 共享堆与全局', 'var(--card)', GF);
+    }
+    g += bx(330, 14, 180, 190, '', G, GF);
+    g += `<text x="338" y="30" font-size="10.5" fill="var(--muted)">客户端</text>`;
+    for (let i = 0; i < 3; i++) g += bx(342, 44 + i * 50, 156, 40, '客户端 ' + (i + 1), 'var(--card)', GF);
+    g += `<text x="330" y="222" font-size="10.5" fill="var(--muted)">← 内核在线程之间切换（自动交错）</text>`;
+  }
+  return `<svg viewBox="0 0 522 232" style="width:100%;max-width:640px;height:auto" font-family="var(--font-sans)">${g}</svg>`;
+}
+function renderModels() {
+  $$('#mmSeg button').forEach(b => b.classList.toggle('on', b.dataset.mm === mmSel));
+  const m = MM[mmSel];
+  $('#mmOut').innerHTML = `
+    <div class="grid g2" style="align-items:start">
+      <div>${mmSvg(m.boxes)}</div>
+      <div class="card"><h5>${m.name}<span class="srcref">${m.page}</span></h5>
+        <p style="margin:6px 0 0;font-size:14.5px"><b>谁交错：</b>${m.who}<br><b>地址空间：</b>${m.space}</p>
+        <p style="margin:8px 0 0;font-size:14.5px">${m.note}</p>
+      </div>
+    </div>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>方案</th><th>谁交错逻辑流</th><th>地址空间</th><th>原页码</th></tr>
+      ${['proc', 'evt', 'thr'].map(k => `<tr class="${k === mmSel ? 'hl' : ''}"><td><b>${MM[k].name}</b></td><td>${MM[k].who}</td><td>${MM[k].space}</td><td class="mono">${MM[k].page.replace('原第 ', '').replace(' 页', '')}</td></tr>`).join('')}
+    </table></div>`;
+}
+
+/* ============================================================
+   4.2 accept + fork 三步图解（原第 28 页）
+   ============================================================ */
+let fkIdx = 1;
+function renderFork() {
+  const S = 'var(--accent-soft)', SF = 'var(--accent)';
+  const bx = (x, y, w, h, label, fill, fg, fs) =>
+    `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="6" fill="${fill}" stroke="var(--line)" stroke-width="1.3"/>
+     <text x="${x + w / 2}" y="${y + h / 2 + 4}" text-anchor="middle" font-size="${fs || 11}" font-weight="600" fill="${fg}">${label}</text>`;
+  let g = '';
+  g += bx(14, 20, 120, 46, 'Client', 'var(--gray-bg)', 'var(--gray-fg)', 12);
+  g += bx(300, 20, 130, 46, 'Server', 'var(--gray-bg)', 'var(--gray-fg)', 12);
+  if (fkIdx >= 1) g += bx(300, 84, 130, 40, 'listenfd(3)', S, SF, 11);
+  if (fkIdx >= 1) g += `<text x="366" y="146" text-anchor="middle" font-size="10.5" fill="var(--muted)">1. 服务器阻塞在 accept 上</text>`;
+  if (fkIdx >= 2) {
+    g += bx(14, 84, 120, 40, 'clientfd', S, SF, 11);
+    g += `<line x1="134" y1="104" x2="300" y2="104" stroke="var(--muted)" stroke-width="1.4" stroke-dasharray="4 3"/>`;
+    g += `<text x="217" y="98" text-anchor="middle" font-size="10.5" fill="var(--muted)">2. connect 发起连接请求</text>`;
+  }
+  if (fkIdx >= 3) {
+    g += bx(300, 170, 130, 40, 'connfd(4)', S, SF, 11);
+    g += bx(160, 170, 110, 40, 'Child（fork）', S, SF, 11);
+    g += `<line x1="134" y1="190" x2="160" y2="190" stroke="var(--accent)" stroke-width="2"/>`;
+    g += `<text x="366" y="228" text-anchor="middle" font-size="10.5" fill="var(--muted)">3. accept 返回 connfd，fork 出子进程处理这个客户</text>`;
+  }
+  const steps = [
+    { h: '第 1 格', m: 'listenfd(3)', e: '服务器阻塞在 <code>accept</code> 上，等待监听描述符 <code>listenfd</code> 上的连接请求。' },
+    { h: '第 2 格', m: 'clientfd → connect', e: '客户端调用 <code>connect</code> 发起请求：它得到自己的 <code>clientfd</code>，服务器端 TCP 管理器把请求排进 backlog。' },
+    { h: '第 3 格', m: 'connfd(4) + Child', e: '服务器从 <code>accept</code> 拿到 <code>connfd</code>，<b>fork 出子进程处理这个客户</b>。现在 <code>clientfd</code> 与 <code>connfd</code> 之间建立起了连接。' },
+  ];
+  $('#fkOut').innerHTML = `
+    <div class="tbl-wrap">${`<svg viewBox="0 0 452 244" style="width:100%;max-width:560px;height:auto" font-family="var(--font-sans)">${g}</svg>`}</div>
+    <div class="steps">${steps.map((s, i) => `<div class="step${i < fkIdx ? ' on' : ''}"><div class="h">${s.h}</div>
+      <div class="m">${s.m}</div><div class="e">${s.e}</div></div>`).join('')}</div>`;
+}
+
+/* ============================================================
+   4.3 connfd 引用计数与僵尸回收（原第 30 页）
+   ============================================================ */
+let rcIdx = 0, rcParentCloses = true;
+function rcTrace(parentCloses) {
+  const t = [];
+  t.push({ ref: 1, who: '父进程', act: 'accept 返回，父进程持有 connfd', note: '此时只有父进程一份引用' });
+  t.push({ ref: 2, who: '父 + 子', act: 'fork 返回：父子的 connfd 指向同一个打开文件', note: 'refcnt(connfd) = 2 —— 第 30 页原话' });
+  t.push({ ref: 2, who: '父 + 子', act: '子进程 close(listenfd)', note: '只影响 listenfd 的引用计数，connfd 仍是 2' });
+  if (parentCloses) {
+    t.push({ ref: 1, who: '子进程', act: '父进程 close(connfd)', note: '父进程必须先关掉自己那份（第 23 页那句注释）' });
+    t.push({ ref: 0, who: '无人', act: '子进程 close(connfd)', note: 'refcnt = 0 → 连接<b>真正关闭</b>（才会发出 FIN）' });
+  } else {
+    t.push({ ref: 1, who: '子进程', act: '父进程忘了 close(connfd)（假设）', note: '父进程那份永远留着 → refcnt 卡在 1' });
+    t.push({ ref: 1, who: '已终止的子进程', act: '子进程 close(connfd) 并退出', note: 'refcnt 仍为 1 → <b>连接永远不会关闭</b>，描述符耗尽后服务器就再也接不了新客户' });
+  }
+  return t;
+}
+function renderRefcnt() {
+  const t = rcTrace(rcParentCloses);
+  const shown = t.slice(0, rcIdx + 1);
+  const last = shown[shown.length - 1];
+  $('#rcOut').innerHTML = `
+    <div class="ctrls" style="margin:2px 0 8px">
+      <span style="font-size:13.5px;color:var(--muted)">父进程是否记得 close 自己那份 connfd：</span>
+      <div class="seg" id="rcpSeg">
+        <button class="${rcParentCloses ? 'on' : ''}" data-rcp="1">记得（正确写法）</button>
+        <button class="${!rcParentCloses ? 'on' : ''}" data-rcp="0">忘了（第 23 页注释警告的那种 bug）</button>
+      </div>
+    </div>
+    <div class="readout" style="margin-top:0">
+      <dt>refcnt(connfd)</dt><dd>${last.ref}</dd>
+      <dt>当前持有者</dt><dd>${last.who}</dd>
+      <dt>连接状态</dt><dd>${last.ref > 0 ? '仍打开（服务器还占着一个描述符）' : '已关闭（FIN 发出）'}</dd>
+    </div>
+    <div class="steps">${t.map((s, i) => `<div class="step${i <= rcIdx ? ' on' : ''}"><div class="h">第 ${i + 1} 步 · refcnt = ${s.ref}</div>
+      <div class="e">${s.act} —— ${s.note}</div></div>`).join('')}</div>
+    <div class="box ${last.ref === 0 ? 'ok' : 'warn'}" style="margin-bottom:0"><div class="t">为什么要等引用计数归零</div>
+      内核给每个 socket / 打开文件维护一个引用计数，<b>连接要等 refcnt(connfd) = 0 才真正关闭</b>（第 30 页原话）。所以父子两份都必须各自 <code>close</code>：漏一个，连接就一直挂着。
+      另外子进程退出时必须被回收（第 27 页的 <code>while (waitpid(-1, 0, WNOHANG) &gt; 0) ;</code>），否则会成为<b>僵尸</b>、造成致命的内存泄漏（第 30 页第一条）。</div>`;
+}
+
+/* ============================================================
+   5.1 select 事件循环（原第 32、33 页）
+   ============================================================ */
+let svState = { listenfd: 3, active: [] };
+let svPending = [];
+let svLast = null;
+let svLog = [];
+function svTick(fd) {
+  const i = svPending.indexOf(fd);
+  if (i >= 0) svPending.splice(i, 1); else svPending.push(fd);
+  renderSelect();
+}
+function renderSelect() {
+  const all = [svState.listenfd].concat(svState.active.slice().sort((a, b) => a - b));
+  const cells = all.map(fd => {
+    const on = svPending.indexOf(fd) >= 0;
+    const isL = fd === svState.listenfd;
+    return `<div class="card" data-svtick="${fd}" style="cursor:pointer;padding:9px 12px;text-align:center;${on ? 'border-color:var(--accent);background:var(--accent-soft)' : ''}">
+      <div class="mono" style="font-weight:650">${isL ? 'listenfd' : 'connfd'}</div>
+      <div class="mono" style="font-size:18px;color:${on ? 'var(--accent)' : 'var(--muted)'}">${fd}</div>
+      <div style="font-size:12px;color:var(--muted)">${on ? '有输入' : '无输入'}</div></div>`;
+  }).join('');
+  const res = svLast;
+  const stepHtml = !res ? `<p style="font-size:14px;color:var(--muted);margin:6px 0 0">还没有轮询过。先点上面的格子标出「谁有输入」，再点「轮询一次」。</p>`
+    : `<div class="steps">
+        <div class="step on"><div class="h">① 有输入的描述符</div><div class="m">${res.arrived.length ? res.arrived.join(' , ') : '（空集）'}</div>
+          <div class="e">select 返回「哪些描述符有 pending inputs」。</div></div>
+        <div class="step on"><div class="h">② listenfd 有输入？</div><div class="m">${res.accepted === null ? '否 → 不 accept' : '是 → accept，新 connfd = ' + res.accepted}</div>
+          <div class="e">${res.accepted === null ? '这一轮没有新连接。' : '新连接加入活跃描述符表（第 32 页：add new connfd to array）。'}</div></div>
+        <div class="step on"><div class="h">③ 服务所有有输入的 connfd</div><div class="m">${res.serviced.length ? res.serviced.map(f => 'connfd ' + f).join(' , ') : '（无）'}</div>
+          <div class="e">只服务<b>活跃描述符表里</b>且本轮有输入的那些 fd。刚 <code>accept</code> 出来的 fd 本轮<b>不在</b>「有输入」集合里（它这一轮才诞生），要等下一轮它真的到了数据才会被服务。</div></div>
+      </div>`;
+  const logHtml = svLog.length ? `<div class="tbl-wrap"><table class="tbl" style="margin-bottom:0">
+      <tr><th>轮次</th><th>有输入</th><th>accept 出的新 fd</th><th>服务的 connfd</th></tr>
+      ${svLog.map((r, i) => `<tr><td class="mono">${i + 1}</td><td class="mono">${r.arrived.length ? r.arrived.join(',') : '—'}</td>
+        <td class="mono">${r.accepted === null ? '—' : r.accepted}</td><td class="mono">${r.serviced.length ? r.serviced.join(',') : '—'}</td></tr>`).join('')}
+    </table></div>` : '';
+  $('#svOut').innerHTML = `
+    <div class="tbl-wrap"><table class="tbl" style="margin-top:0">
+      <tr><th>活跃描述符（点格子切换「本轮有无输入」）</th></tr>
+      <tr><td><div class="grid g3" style="gap:8px">${cells}</div></td></tr>
+    </table></div>
+    ${stepHtml}
+    ${logHtml}
+    <p style="font-size:13.5px;color:var(--muted);margin:10px 0 0">
+      当前活跃表：<code>listenfd = ${svState.listenfd}</code>${svState.active.length ? ' · connfd = [' + svState.active.slice().sort((a, b) => a - b).join(', ') + ']' : ' · 还没有 connfd'}（新 fd 按「最小未占用且 ≥ 4」分配，与原第 33 页那张表里出现的 4/5/7/10/12 同一套风格）。</p>`;
+}
+
+/* ============================================================
+   7.2 进程 / 线程内存视图（原第 36、37、38、53 页）
+   ============================================================ */
+const VM_VIEWS = {
+  trad: {
+    title: '传统视图：进程 = 进程上下文 + 代码/数据/栈', page: '原第 36 页',
+    groups: [
+      { cap: '进程上下文', items: [
+        { n: '程序上下文：数据寄存器', own: 'p' }, { n: '条件码', own: 'p' },
+        { n: '栈指针 SP', own: 'p' }, { n: '程序计数器 PC', own: 'p' },
+        { n: '内核上下文：VM 结构', own: 'p' }, { n: '描述符表', own: 'p' }, { n: 'brk 指针', own: 'p' }] },
+      { cap: '代码、数据与栈', items: [
+        { n: '栈 Stack（SP 指到这里）', own: 's' }, { n: '共享库 Shared libraries', own: 's' },
+        { n: '运行期堆 Run-time heap（brk 指到这里）', own: 's' },
+        { n: '读/写数据 Read/write data', own: 's' }, { n: '只读代码/数据 Read-only code/data', own: 's' }] },
+    ],
+    note: '这一页里「程序上下文」与「内核上下文」都算在<b>进程上下文</b>里 —— 还看不出线程的位置。',
+  },
+  alt: {
+    title: '另一种视图：进程 = 线程 + 代码/数据/内核上下文', page: '原第 37 页',
+    groups: [
+      { cap: '线程（主线程）', items: [
+        { n: '栈 Stack', own: 't' }, { n: '数据寄存器', own: 't' }, { n: '条件码', own: 't' },
+        { n: '栈指针 SP', own: 't' }, { n: '程序计数器 PC', own: 't' }] },
+      { cap: '代码、数据与内核上下文', items: [
+        { n: '共享库', own: 's' }, { n: '运行期堆', own: 's' }, { n: '读/写数据', own: 's' },
+        { n: '只读代码/数据', own: 's' }, { n: '内核上下文：VM 结构', own: 's' },
+        { n: '描述符表', own: 's' }, { n: 'brk 指针', own: 's' }] },
+    ],
+    note: '把「程序上下文」单独拎出来叫<b>线程</b>之后，「一个进程里放多个线程」就变成自然的事：共享的东西不动，只复制线程那一部分。',
+  },
+  multi: {
+    title: '多线程：每个线程一套程序上下文', page: '原第 38、52 页',
+    groups: [
+      { cap: '线程 1（主线程）', items: [
+        { n: '栈 1', own: 't1' }, { n: '数据寄存器', own: 't1' }, { n: '条件码', own: 't1' },
+        { n: 'SP\u2081', own: 't1' }, { n: 'PC\u2081', own: 't1' }] },
+      { cap: '线程 2（对等线程）', items: [
+        { n: '栈 2', own: 't2' }, { n: '数据寄存器', own: 't2' }, { n: '条件码', own: 't2' },
+        { n: 'SP\u2082', own: 't2' }, { n: 'PC\u2082', own: 't2' }] },
+      { cap: '进程共享（含内核上下文）', items: [
+        { n: '共享库', own: 's' }, { n: '运行期堆', own: 's' }, { n: '读/写数据', own: 's' },
+        { n: '只读代码/数据', own: 's' }, { n: 'VM 结构', own: 's' }, { n: '描述符表', own: 's' },
+        { n: 'brk 指针', own: 's' }, { n: 'TID（各线程不同）', own: 's' }] },
+    ],
+    note: '私有：逻辑控制流、栈（放局部变量，<b>但不受其他线程保护</b>）、TID。共享：代码、数据、内核上下文。',
+  },
+  all: {
+    title: '但其实所有内存都是共享的', page: '原第 53 页',
+    groups: [
+      { cap: '同一片地址空间（两个栈都在里面）', items: [
+        { n: '栈 1（线程 1 按约定只用这块）', own: 't1' },
+        { n: '栈 2（线程 2 按约定只用这块）', own: 't2' },
+        { n: '共享库', own: 's' }, { n: '运行期堆', own: 's' }, { n: '读/写数据', own: 's' },
+        { n: '只读代码/数据', own: 's' }, { n: '内核上下文：VM 结构', own: 's' },
+        { n: '描述符表', own: 's' }, { n: 'brk 指针', own: 's' }] },
+    ],
+    note: '第 53 页的标题就是这句话。<b>「私有栈」只是约定，不是保护</b> —— 只要有人拿到地址，就可以读写别人的栈。第 51 页把 <code>&amp;connfd</code> 递给线程，正是踩了这一点。',
+  },
+};
+let vmSel = 'trad';
+const VM_FILL = {
+  p: ['var(--gray-bg)', 'var(--gray-fg)'], s: ['var(--frac-bg)', 'var(--frac-fg)'],
+  t: ['var(--exp-bg)', 'var(--exp-fg)'], t1: ['var(--exp-bg)', 'var(--exp-fg)'],
+  t2: ['var(--sign-bg)', 'var(--sign-fg)'],
+};
+function renderMemView() {
+  $$('#vmSeg button').forEach(b => b.classList.toggle('on', b.dataset.vm === vmSel));
+  const v = VM_VIEWS[vmSel];
+  $('#vmOut').innerHTML = `
+    <div class="card" style="margin-bottom:12px"><h5>${v.title}<span class="srcref">${v.page}</span></h5>
+      <p style="margin:6px 0 0;font-size:14.5px">${v.note}</p></div>
+    <div class="grid g3" style="align-items:start">
+      ${v.groups.map(g => `<div class="card"><h5>${g.cap}</h5>
+        <div style="display:grid;gap:6px">
+          ${g.items.map(it => {
+            const f = VM_FILL[it.own];
+            return `<div class="mono" style="font-size:13px;padding:5px 9px;border-radius:6px;background:${f[0]};color:${f[1]}">${esc(it.n)}</div>`;
+          }).join('')}
+        </div></div>`).join('')}
+    </div>
+    <div class="box" style="margin-bottom:0"><div class="t">四种视图的差别只在「谁来划线」</div>
+      ${vmSel === 'all'
+        ? '前三种视图都在强调<b>哪些是私有的</b>；第 53 页用同一张图说明：那些「私有」区域物理上就在同一片地址空间里，谁也拦不住别人访问。'
+        : '第 36 页把程序上下文放进「进程上下文」；第 37 页把它单独拎成「线程」；第 38 页给每个线程各发一套。第 53 页则在提醒：这三张图的<b>框线是概念上的</b>，不是硬件保护。'}</div>`;
+}
+
+/* ============================================================
+   6.1 Pthreads 函数速查（原第 44 页）
+   ============================================================ */
+const PT_FNS = [
+  { g: 'create', name: 'pthread_create()', zh: '创建线程', note: '第 45 页给了四个参数的逐项标注' },
+  { g: 'create', name: 'pthread_join()', zh: '等待并回收一个 joinable 线程', note: '第 50 页：joinable 线程<b>必须</b>被 join 才会释放内存资源' },
+  { g: 'id', name: 'pthread_self()', zh: '取出自己的 TID', note: '第 48 页用它配合 detach' },
+  { g: 'term', name: 'pthread_cancel()', zh: '取消一个线程', note: '' },
+  { g: 'term', name: 'pthread_exit()', zh: '结束当前线程', note: '' },
+  { g: 'term', name: 'exit()', zh: '结束进程', note: '第 44 页原文：<b>[terminates all threads]</b> —— 干掉所有线程' },
+  { g: 'term', name: 'return', zh: '从线程例程返回', note: '第 44 页原文：<b>[terminates current thread]</b> —— 只结束当前线程' },
+  { g: 'sync', name: 'pthread_mutex_init', zh: '初始化互斥量', note: '本讲只点名，展开在第 25 讲' },
+  { g: 'sync', name: 'pthread_mutex_[un]lock', zh: '加锁 / 解锁', note: '本讲只点名，展开在第 25 讲' },
+];
+const PT_GROUPS = ['create', 'id', 'term', 'sync'];
+let ptSel = 'all';
+function renderPthreads() {
+  $$('#ptSeg button').forEach(b => b.classList.toggle('on', b.dataset.pt === ptSel));
+  const rows = PT_FNS.filter(f => ptSel === 'all' || f.g === ptSel);
+  const gname = { create: '创建与回收', id: '确定线程 ID', term: '终止线程', sync: '同步对共享变量的访问' };
+  $('#ptOut').innerHTML = `
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>分组</th><th class="mono">函数 / 语句</th><th>做什么</th><th>课件给的说明</th></tr>
+      ${rows.map(f => `<tr><td>${PT_GROUPS.indexOf(f.g) >= 0 ? gname[f.g] : f.g}</td>
+        <td class="mono">${esc(f.name)}</td><td>${esc(f.zh)}</td><td>${f.note || '<span style="color:var(--muted)">—</span>'}</td></tr>`).join('')}
+    </table></div>
+    <p style="font-size:13.5px;color:var(--muted);margin:8px 0 0">
+      第 44 页的原话是「Pthreads：<b>操纵 C 程序里线程的标准接口，约 60 个函数</b>」，上面是课件点名的那些。
+      本讲只用到创建 / 回收 / detach 这一小组；同步那一组只列了名字（第 50 页的「(next lecture)」和这里的「同步共享变量」都指向第 25 讲）。</p>`;
+}
+
+/* ============================================================
+   6.2 hello, world 执行时序（原第 46 页）
+   ============================================================ */
+const HW_STEPS = [
+  { lane: 'main', t: 'call Pthread_create()', note: '主线程调用创建函数' },
+  { lane: 'peer', t: 'Pthread_create() 返回', note: '对等线程启动，Pthread_create 在主线程里返回' },
+  { lane: 'main', t: 'call Pthread_join()', note: '主线程开始等对等线程终止' },
+  { lane: 'peer', t: 'printf()', note: '对等线程打印 Hello, world!' },
+  { lane: 'peer', t: 'return NULL;', note: '对等线程终止' },
+  { lane: 'main', t: 'Pthread_join() 返回', note: '主线程等到它了' },
+  { lane: 'main', t: 'exit()', note: '终止主线程与所有对等线程' },
+];
+let hwIdx = 1;
+function renderHello() {
+  const done = i => i < hwIdx;
+  const laneRow = (lane, label, cls) => {
+    const idxs = HW_STEPS.map((s, i) => s.lane === lane ? i : -1).filter(i => i >= 0);
+    return `<div class="card"><h5>${label}</h5>
+      <div style="display:grid;gap:6px">
+        ${idxs.map(i => {
+          const s = HW_STEPS[i];
+          const on = done(i);
+          return `<div class="mono" style="font-size:12.5px;padding:5px 9px;border-radius:6px;opacity:${on ? 1 : 0.42};background:${on ? cls[0] : 'var(--paper-soft)'};color:${on ? cls[1] : 'var(--muted)'}">${i + 1}. ${esc(s.t)}</div>`;
+        }).join('')}
+      </div></div>`;
+  };
+  $('#hwOut').innerHTML = `
+    <div class="grid g2" style="align-items:start">
+      ${laneRow('main', 'Main thread（主线程）', ['var(--accent-soft)', 'var(--accent)'])}
+      ${laneRow('peer', 'Peer thread（对等线程）', ['var(--frac-bg)', 'var(--frac-fg)'])}
+    </div>
+    <p style="font-size:13.5px;color:var(--muted);margin:10px 0 0">
+      第 ${hwIdx} 步：${esc(HW_STEPS[hwIdx - 1].note)}${hwIdx < HW_STEPS.length ? '（点「下一步」继续）' : ''}</p>
+    <div class="box ${hwIdx >= HW_STEPS.length ? 'warn' : ''}" style="margin-bottom:0"><div class="t">两处容易忽略的地方</div>
+      <ul style="margin:6px 0 0;padding-left:20px">
+        <li>第 46 页的图上，主线程与对等线程的书面<b>在时间上重叠</b> —— 这就是第 40 页定义的「并发」；</li>
+        <li>最后一步是 <code>exit()</code>：它会<b>终止所有线程</b>（第 44 页 <code>[terminates all threads]</code>）。如果主线程不等（不 <code>join</code>）就直接 <code>exit</code>，对等线程会被一起带走 —— 这就是 <code>Pthread_join</code> 存在的理由。</li>
+      </ul></div>`;
+}
+
+/* ============================================================
+   7.4 单核时间分片 vs 多核真并行（原第 41 页）
+   ============================================================ */
+let scCores = 1;
+function renderCores() {
+  const thr = [{ n: 'Thread A', c: 'var(--accent)' }, { n: 'Thread B', c: 'var(--frac-fg)' }, { n: 'Thread C', c: 'var(--exp-fg)' }];
+  const W = 620, rowH = 30;
+  let g = '';
+  let y = 10;
+  thr.forEach((t, i) => {
+    g += `<text x="6" y="${y + 17}" font-size="11" font-weight="650" fill="var(--muted)">${t.n}</text>`;
+    y += rowH;
+  });
+  const laneY = i => 10 + i * rowH;
+  if (scCores === 1) {
+    const slots = ['A', 'B', 'C', 'A', 'B', 'C', 'A', 'B', 'C', 'A', 'B', 'C'];
+    slots.forEach((k, i) => {
+      const idx = ['A', 'B', 'C'].indexOf(k);
+      const x = 90 + i * 42;
+      g += `<rect x="${x}" y="${laneY(idx)}" width="40" height="24" rx="4" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="1.2"/>`;
+      g += `<text x="${x + 20}" y="${laneY(idx) + 16}" text-anchor="middle" font-size="10.5" fill="var(--accent)">${k}</text>`;
+    });
+    for (let i = 1; i < slots.length; i++) {
+      const x = 90 + i * 42;
+      g += `<line x1="${x}" y1="${laneY(0)}" x2="${x}" y2="${laneY(2) + 24}" stroke="var(--line)" stroke-width="1" stroke-dasharray="3 3"/>`;
+    }
+    g += `<text x="90" y="${laneY(2) + 52}" font-size="10.5" fill="var(--muted)">时间 →　每个时刻只有一个线程在跑（同一个核），靠切换把三条流「摊开」</text>`;
+  } else {
+    const rows = [];
+    for (let c = 0; c < scCores; c++) rows.push(c);
+    thr.forEach((t, i) => {
+      const core = i % scCores;
+      const x = 90 + (core * 130);
+      g += `<rect x="${x}" y="${laneY(i)}" width="120" height="24" rx="4" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="1.2"/>`;
+      g += `<text x="${x + 60}" y="${laneY(i) + 16}" text-anchor="middle" font-size="10.5" fill="var(--accent)">核 ${core} 上一直在跑</text>`;
+    });
+    g += `<text x="90" y="${laneY(2) + 52}" font-size="10.5" fill="var(--muted)">时间 →　${scCores} 个核同时执行：这是真正的并行（时间条完全重叠且并行推进）</text>`;
+  }
+  const cp = concurrentPairs([[0, 3], [0, 3], [0, 3]]);   /* 用来给下面那句话做现场判定 */
+  $('#scOut').innerHTML = `
+    <div class="tbl-wrap"><svg viewBox="0 0 ${W} 180" style="width:100%;max-width:700px;height:auto" font-family="var(--font-sans)">${g}</svg></div>
+    <div class="box ${scCores === 1 ? '' : 'ok'}" style="margin-bottom:0"><div class="t">${scCores === 1 ? '单核' : '多核'}下「并发」的含义</div>
+      ${scCores === 1
+        ? '第 41 页原话：<b>用时间分片模拟并行</b>（Simulate parallelism by time slicing）。三条流在时间上重叠，所以按第 40 页的定义它们<b>是并发的</b>（A&amp;B、A&amp;C、B&amp;C 全部并发）；但任一时刻只有一个线程真正在执行 —— 速度不会变快，只会「看起来同时在动」。'
+        : `第 41 页图注：<b>用 2 个核跑 3 个线程</b>（Run 3 threads on 2 cores）。有 ${scCores} 个核就能让 ${Math.min(scCores, 3)} 条流<b>同时</b>执行 —— 这才是真正的加速来源。注意：并发（concurrent）只要求时间重叠，<b>并不要求多个核</b>；第 40 页的 A/B/C 三条流即使在单核上也是并发的。`}
+      下面这个判定器就用同一套规则，只是把区间换成你输入的：
+      A、B、C 两两关系 = ${cp.ab && cp.ac && cp.bc ? '全部并发' : '部分并发'}（这里三条都用 [0,3)，所以全部重叠）。</div>`;
+}
+
+/* ============================================================
+   7.4 并发还是顺序判定（原第 40 页）
+   ============================================================ */
+let ccIv = [[0, 8], [1, 4], [6, 9]];   /* 与 sections 里的默认值一致 */
+function ccParse() {
+  const names = ['A', 'B', 'C'];
+  const out = [];
+  for (let i = 0; i < 3; i++) {
+    const s = parseUint($('#cc' + names[i] + '0').value, 100000);
+    const e = parseUint($('#cc' + names[i] + '1').value, 100000);
+    if (s === null || e === null) return { err: `${names[i]} 的起止时刻必须是 0–100000 的整数` };
+    if (e <= s) return { err: `${names[i]} 的结束时刻必须大于起始时刻（区间是半开的 [start, end)）` };
+    out.push([s, e]);
+  }
+  return { iv: out };
+}
+function renderConcurrent(iv, err) {
+  if (err) { $('#ccOut').innerHTML = badBox(err); return; }
+  const p = concurrentPairs(iv);
+  const verdict = (a, b, t) => `<div class="card" style="padding:10px 14px">
+    <h5 style="margin:0 0 4px">${a} &amp; ${b}</h5>
+    <span class="chip ${t ? 'ok' : 'gray'}">${t ? '并发（concurrent）' : '顺序（sequential）'}</span></div>`;
+  const maxT = Math.max(iv[0][1], iv[1][1], iv[2][1]);
+  const scale = 420 / Math.max(1, maxT);
+  const cols = ['var(--accent)', 'var(--frac-fg)', 'var(--exp-fg)'];
+  let svg = `<svg viewBox="0 0 470 110" style="width:100%;max-width:560px;height:auto" font-family="var(--font-sans)">`;
+  ['A', 'B', 'C'].forEach((n, i) => {
+    const y = 8 + i * 32;
+    svg += `<text x="4" y="${y + 14}" font-size="11" font-weight="650" fill="var(--muted)">${n}</text>`;
+    svg += `<line x1="26" y1="${y + 10}" x2="${26 + 420}" y2="${y + 10}" stroke="var(--line)" stroke-width="1"/>`;
+    const x = 26 + iv[i][0] * scale, w = Math.max(2, (iv[i][1] - iv[i][0]) * scale);
+    svg += `<rect x="${x}" y="${y}" width="${w}" height="20" rx="4" fill="var(--accent-soft)" stroke="${cols[i]}" stroke-width="1.6"/>`;
+    svg += `<text x="${x + 4}" y="${y + 14}" font-size="10.5" fill="${cols[i]}" font-family="var(--font-mono)">[${iv[i][0]},${iv[i][1]})</text>`;
+  });
+  svg += `<text x="26" y="106" font-size="10.5" fill="var(--muted)">时刻 0 → ${maxT}（横条 = 该线程的活跃区间，按半开区间 [start, end) 画）</text></svg>`;
+  const pairs = [['A', 'B', p.ab], ['A', 'C', p.ac], ['B', 'C', p.bc]];
+  $('#ccOut').innerHTML = `
+    <div class="tbl-wrap">${svg}</div>
+    <div class="grid g3">${pairs.map(x => verdict(x[0], x[1], x[2])).join('')}</div>
+    <p style="font-size:13.5px;color:var(--muted);margin:10px 0 0">
+      「并发」只看一件事：两条流的时间区间<b>有没有重叠</b>（第 40 页原话：two threads are <b>concurrent if their flows overlap in time</b>）。
+      重叠与否和「有几个核」「谁跑得更快」都无关。</p>`;
+}
+
+/* ============================================================
+   8.1 &connfd 竞态图解（原第 51 页）
+   ============================================================ */
+let shIdx = 1, shFix = false;
+function shSteps(fix) {
+  const t = [];
+  t.push({ stack: [4], vargp: [], peer: [], note: '主线程第 1 轮：<code>connfd = Accept(...)</code> 把 4 写进主线程栈的那一格。' });
+  t.push({ stack: [4], vargp: ['&connfd'], peer: [], note: '`Pthread_create(&tid, NULL, thread, &connfd)`：peer₁ 的 vargp 记下<b>这一格的地址</b>。' });
+  t.push({ stack: [5], vargp: ['&connfd'], peer: [], note: '主线程第 2 轮：`connfd = Accept(...)` 把 5 写进<b>同一格</b> —— 4 被覆盖了！' });
+  t.push({ stack: [5], vargp: ['&connfd', '&connfd'], peer: [], note: '第二次 `Pthread_create(..., &connfd)`：peer₂ 的 vargp 也指向同一个地址。' });
+  t.push({ stack: [5], vargp: ['&connfd', '&connfd'], peer: ['peer₁ 读到 5（错！应为 4）'], note: 'peer₁ 执行 `int connfd = *((int *)vargp)` —— 读到的是 5。' });
+  t.push({ stack: [5], vargp: ['&connfd', '&connfd'], peer: ['peer₁ 读到 5（错！应为 4）', 'peer₂ 读到 5'], note: 'peer₂ 也读同一个地址，同样得到 5。' });
+  t.push({ stack: [5], vargp: ['&connfd', '&connfd'], peer: ['peer₁ 读到 5（错！应为 4）', 'peer₂ 读到 5'], note: '结果：peer₁ 去服务了「5 号连接」，而它本该服务 4 号。第 51 页在图上写了两个字 —— <b>Race!</b>' });
+  if (!fix) return t;
+  return [
+    { stack: [4], vargp: ['堆格①'], peer: [], note: '正确写法：`connfdp = Malloc(sizeof(int)); *connfdp = Accept(...)` —— 每轮在<b>堆上开新格</b>。' },
+    { stack: [4], vargp: ['堆格①'], peer: [], note: '`Pthread_create(..., connfdp)`：peer₁ 拿到堆格①的地址。' },
+    { stack: [5], vargp: ['堆格①', '堆格②'], peer: [], note: '第 2 轮：新的堆格②装 5，堆格①<b>不受影响</b>。' },
+    { stack: [5], vargp: ['堆格①', '堆格②'], peer: [], note: 'peer₂ 拿到堆格②的地址。' },
+    { stack: [5], vargp: ['堆格①', '堆格②'], peer: ['peer₁ 读到 4（对）'], note: 'peer₁ 读堆格① → 4。' },
+    { stack: [5], vargp: ['堆格①', '堆格②'], peer: ['peer₁ 读到 4（对）', 'peer₂ 读到 5（对）'], note: 'peer₂ 读堆格② → 5。' },
+    { stack: [5], vargp: ['堆格①', '堆格②'], peer: ['peer₁ 读到 4（对）', 'peer₂ 读到 5（对）'], note: '两个线程各拿各的 —— 这就是原第 59 页的<b>生产者-消费者模型</b>：主线程分配，线程例程释放（`Free(vargp)`）。' },
+  ];
+}
+function renderSharing() {
+  const t = shSteps(shFix);
+  const s = t[Math.min(shIdx, t.length) - 1];
+  const cell = (label, val, tone) => `<div class="mono" style="font-size:13px;padding:6px 10px;border-radius:6px;background:${tone[0]};color:${tone[1]}">${label}${val === undefined ? '' : ' = ' + val}</div>`;
+  $('#shOut').innerHTML = `
+    <div class="ctrls" style="margin:2px 0 8px">
+      <span style="font-size:13.5px;color:var(--muted)">对照写法：</span>
+      <div class="seg" id="shfSeg">
+        <button class="${shFix ? '' : 'on'}" data-shf="0">原第 51 页：传 &amp;connfd（有竞争）</button>
+        <button class="${shFix ? 'on' : ''}" data-shf="1">原第 59 页：Malloc 一格（正确）</button>
+      </div>
+    </div>
+    <div class="grid g3" style="align-items:start">
+      <div class="card"><h5>主线程栈 / 堆上那一格</h5>
+        <div style="display:grid;gap:6px">
+          ${s.stack.map((v, i) => cell('connfd' + (s.stack.length > 1 ? '（第 ' + (i + 1) + ' 轮）' : ''), v, ['var(--sign-bg)', 'var(--sign-fg)'])).join('')}
+        </div></div>
+      <div class="card"><h5>各 peer 手里的 vargp</h5>
+        <div style="display:grid;gap:6px">
+          ${s.vargp.map((v, i) => cell('peer' + '₁₂'[i] + '.vargp', v, ['var(--exp-bg)', 'var(--exp-fg)'])).join('')}
+        </div></div>
+      <div class="card"><h5>各 peer 读到的值</h5>
+        <div style="display:grid;gap:6px">
+          ${s.peer.length
+            ? s.peer.map((v, i) => `<div class="mono" style="font-size:12.5px;padding:6px 10px;border-radius:6px;background:${v.indexOf('错') >= 0 ? 'var(--bad-bg)' : 'var(--ok-bg)'};color:${v.indexOf('错') >= 0 ? 'var(--sign-fg)' : 'var(--frac-fg)'}">peer${'\u2081\u2082'[i]}：${esc(v)}</div>`).join('')
+            : '<div style="font-size:13.5px;color:var(--muted)">还没读到</div>'}
+        </div></div>
+    </div>
+    <p style="font-size:13.5px;color:var(--muted);margin:10px 0 0">第 ${shIdx} 步：${s.note}${shIdx < t.length ? '（点「下一步」继续）' : ''}</p>
+    <div class="box ${shFix ? 'ok' : 'bad'}" style="margin-bottom:0"><div class="t">${shFix ? '正确答案：一块工作项一块内存' : '第 51 页的提问'}</div>
+      ${shFix
+        ? '主线程<b>分配</b>、线程例程<b>释放</b>（Allocate in main / Free in thread routine）—— 第 59 页把这个结构叫<b>生产者-消费者模型</b>。每个工作项一块独立内存，谁都不去踩别人的那一格。'
+        : '<b>Why would both copies of vargp point to same location?</b> 因为 <code>&amp;connfd</code> 取的是<b>主线程循环体里同一个局部变量</b>的地址：每一轮 <code>accept</code> 都往同一格写新值，而已启动的线程手里还是那个同一格的地址。'}</div>`;
+}
+
+/* ============================================================
+   8.2 交错调度器（原第 57、58 页）
+   ============================================================ */
+let raceN = 100, raceSeed = 2025, raceSweepRes = null;
+function raceHistSvg(vals, N) {
+  const stats = raceStats(vals, N);
+  const bars = N + 1;
+  const W = 640, H = 170, pad = 30;
+  const bw = Math.max(1.4, (W - pad - 10) / bars);
+  const maxH = Math.max(2, Math.max.apply(null, stats.hist.slice(0, N + 1)));
+  const plot = H - 34;
+  let g = `<line x1="${pad - 4}" y1="${H - 30}" x2="${W - 8}" y2="${H - 30}" stroke="var(--line)" stroke-width="1.2"/>`;
+  for (let v = 0; v < bars; v++) {
+    const h = stats.hist[v] === 0 ? 0 : Math.max(2, stats.hist[v] / maxH * plot);
+    const x = pad + v * bw;
+    const fill = stats.hist[v] === 0 ? 'var(--sign)' : stats.hist[v] >= 2 ? 'var(--warn)' : 'var(--frac)';
+    if (stats.hist[v] === 0) {
+      g += `<line x1="${x + bw / 2}" y1="${H - 30}" x2="${x + bw / 2}" y2="${H - 34}" stroke="${fill}" stroke-width="1.6"/>`;
+    } else {
+      g += `<rect x="${x + 0.3}" y="${H - 30 - h}" width="${Math.max(1, bw - 0.8)}" height="${h}" fill="${fill}" opacity="0.85"/>`;
+    }
+  }
+  for (let v = 0; v <= N; v += Math.max(1, Math.round(N / 10))) {
+    g += `<text x="${pad + v * bw + bw / 2}" y="${H - 16}" font-size="9.5" fill="var(--muted)" text-anchor="middle" font-family="var(--font-mono)">${v}</text>`;
+  }
+  g += `<text x="${pad - 6}" y="${H - 16}" font-size="9.5" fill="var(--muted)" text-anchor="end">值</text>`;
+  g += `<text x="${pad - 6}" y="14" font-size="9.5" fill="var(--muted)" text-anchor="end">次数</text>`;
+  g += `<text x="${pad}" y="14" font-size="10" fill="var(--muted)">最高 ${maxH} 次 · 绿 = 恰好 1 次 · 黄 = 2 次以上 · 红色刻度 = 一次都没有</text>`;
+  return { svg: `<svg viewBox="0 0 ${W} ${H}" style="width:100%;max-width:700px;height:auto" font-family="var(--font-sans)">${g}</svg>`, stats };
+}
+function renderRace(vals, N, seed, err) {
+  if (err) { $('#raceOut').innerHTML = badBox(err); return; }
+  const h = raceHistSvg(vals, N);
+  const stats = h.stats;
+  const head = vals.slice(0, Math.min(N, 12)).map((v, k) => `peer${k} → ${v}`).join(' · ');
+  const ideal = raceStats(raceIdealValues(N), N);
+  const sweep = raceSweepRes;
+  $('#raceOut').innerHTML = `
+    <div class="readout" style="margin-top:0">
+      <dt>线程数 N</dt><dd>${N}</dd>
+      <dt>种子</dt><dd>${seed}</dd>
+      <dt>空桶（0 次）</dt><dd${stats.holes > 0 ? ' style="color:var(--sign);font-weight:650"' : ''}>${stats.holes}</dd>
+      <dt>重复桶（≥2 次）</dt><dd${stats.dups > 0 ? ' style="color:var(--warn);font-weight:650"' : ''}>${stats.dups}</dd>
+      <dt>读到 ${N} 的次数</dt><dd>${stats.extra} <span style="color:var(--muted);font-size:12.5px">（${N} 是循环结束后 i 的值，超出原页 0–99 的横轴）</span></dd>
+    </div>
+    <div class="tbl-wrap">${h.svg}</div>
+    <p style="font-size:13px;color:var(--muted);margin:4px 0 0" class="mono">前几个：${esc(head)}${N > 12 ? ' …' : ''}</p>
+    <div class="box ${stats.correct ? 'ok' : 'bad'}" style="margin-bottom:0"><div class="t">
+      ${stats.correct ? '这一趟没有竞争（每个 peer 都读到了自己的那个 i）' : 'Race Test 判定：发生竞争'}</div>
+      ${stats.correct
+        ? `被保存的集合恰好是 0…${N - 1} 各一份 —— 符合第 57 页的判定标准。`
+        : `按第 57 页的判定标准：<b>有 ${stats.holes} 个值一次都没被保存，有 ${stats.dups} 个值被保存了 2 次以上</b>。${
+          stats.holes > 0 && stats.dups > 0 ? '这正是第 58 页页脚那句「Some bins get no update, some get 2 (or more!)」。' : ''}`}
+      对照：理想调度（每个 peer 恰好在 <code>i++</code> 之前读）会得到 ${ideal.holes} 个空桶、${ideal.dups} 个重复桶。</div>
+    ${sweep ? `<div class="tbl-wrap"><table class="tbl" style="margin-bottom:0">
+      <tr><th>连续 ${sweep.trials} 个种子</th><th>结果</th></tr>
+      <tr><td>出现空桶的种子数</td><td class="mono">${sweep.holes} / ${sweep.trials}</td></tr>
+      <tr><td>出现重复桶的种子数</td><td class="mono">${sweep.dups} / ${sweep.trials}</td></tr>
+      <tr><td>结果「完全正确」的种子数</td><td class="mono">${sweep.correct} / ${sweep.trials}${sweep.correct > 0 ? '（这些调度恰好每次都让 peer 抢在 i++ 之前读）' : ''}</td></tr>
+      <tr><td>空桶数的最小 / 最大</td><td class="mono">${sweep.minHoles} / ${sweep.maxHoles}</td></tr>
+    </table></div>` : ''}
+    <p style="font-size:13.5px;color:var(--muted);margin:10px 0 0">
+      同一个种子永远给出同一种调度 —— 这样「上次还对、这次就不对」就能被复现和排查。第 61 页说线程方案的最后一条缺点是
+      <b>事件顺序不可复现</b>；这个调度器做的事正相反：<b>把不可复现的东西钉在种子上</b>。</p>`;
+}
+
+/* ============================================================
+   8.4 进度图（页面补充可视化）
+   ============================================================ */
+function pgBig(b) { return b.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ','); }
+function pgSvg(m, n, w, r, showAll) {
+  const cell = Math.max(14, Math.min(30, Math.floor(520 / Math.max(m, n))));
+  const pad = 34;
+  const W = pad + (m + 1) * cell + 20, H = pad + (n + 1) * cell + 34;
+  const X = x => pad + x * cell;
+  const Y = y => H - 30 - y * cell;
+  let g = '';
+  for (let x = 0; x <= m; x++) g += `<line x1="${X(x)}" y1="${Y(0)}" x2="${X(x)}" y2="${Y(n)}" stroke="var(--line)" stroke-width="1"/>`;
+  for (let y = 0; y <= n; y++) g += `<line x1="${X(0)}" y1="${Y(y)}" x2="${X(m)}" y2="${Y(y)}" stroke="var(--line)" stroke-width="1"/>`;
+  // 主线程的关键写：x 由 w-1 → w 的竖直边
+  g += `<line x1="${X(w - 1)}" y1="${Y(n)}" x2="${X(w - 1)}" y2="${Y(0)}" stroke="var(--sign)" stroke-width="2.4"/>`;
+  g += `<text x="${X(w - 1) + 3}" y="${Y(n) - 5}" font-size="10" fill="var(--sign)">主线程第 ${w} 拍 = 写 i（i++）</text>`;
+  // 对等线程的关键读：y 由 r-1 → r 的水平边
+  g += `<line x1="${X(0)}" y1="${Y(r - 1)}" x2="${X(m)}" y2="${Y(r - 1)}" stroke="var(--frac-fg)" stroke-width="2.4"/>`;
+  g += `<text x="${X(0) + 3}" y="${Y(r - 1) + 13}" font-size="10" fill="var(--frac-fg)">对等线程第 ${r} 拍 = 读 i</text>`;
+  g += `<text x="${X(m)}" y="${Y(0) + 20}" font-size="10.5" fill="var(--muted)" text-anchor="end">主线程已完成事件数 x →</text>`;
+  g += `<text x="${X(0) - 4}" y="${Y(n) - 6}" font-size="10.5" fill="var(--muted)" text-anchor="end">↑ y</text>`;
+  const traj = (steps, color, label) => {
+    let x = 0, y = 0, d = `M ${X(0)} ${Y(0)}`;
+    steps.forEach(s => { if (s === 'M') x++; else y++; d += ` L ${X(x)} ${Y(y)}`; });
+    return `<path d="${d}" fill="none" stroke="${color}" stroke-width="2.6" stroke-linejoin="round" opacity="0.9"/>`;
+  };
+  const allM = []; for (let i = 0; i < m; i++) allM.push('M'); for (let i = 0; i < n; i++) allM.push('P');
+  const allP = []; for (let i = 0; i < n; i++) allP.push('P'); for (let i = 0; i < m; i++) allP.push('M');
+  g += traj(allM, 'var(--sign)', '');
+  if (showAll) g += traj(allP, 'var(--frac-fg)', '');
+  g += `<text x="${X(m) + 4}" y="${Y(0) + 4}" font-size="10" fill="var(--sign)">先写完再读（写→读）</text>`;
+  if (showAll) g += `<text x="${X(2)}" y="${Y(1) - 6}" font-size="10" fill="var(--frac-fg)">先读后写（读→写）</text>`;
+  return `<svg viewBox="0 0 ${W} ${H}" style="width:100%;max-width:660px;height:auto" font-family="var(--font-sans)">${g}</svg>`;
+}
+function renderProgress(m, n, w, r, err) {
+  if (err) { $('#pgOut').innerHTML = badBox(err); return; }
+  const total = pgTotal(m, n);
+  const readFirst = pgReadFirst(m, n, w, r);
+  const writeFirst = total - readFirst;
+  const small = total <= 300000n;
+  const brute = small ? pgEnumerate(m, n, w, r) : null;
+  const rows = [
+    ['轨迹总数 C(m+n, m)', total, '每条轨迹 = 一种合法交错，总数与 w、r 无关'],
+    ['先读后写（读到旧值）', readFirst, 'peer 在 i++ 之前读 → 保存的是自己的 i（结果「碰巧正确」）'],
+    ['先写后读（读到新值）', writeFirst, 'peer 在 i++ 之后读 → 保存的是别人的 i（值被跳过、被重复）'],
+  ];
+  $('#pgOut').innerHTML = `
+    <div class="tbl-wrap">${pgSvg(m, n, w, r, true)}</div>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>类别</th><th>轨迹条数</th><th>含义</th></tr>
+      ${rows.map(x => `<tr><td>${x[0]}</td><td class="mono">${pgBig(x[1])}</td><td style="font-size:13.5px">${x[2]}</td></tr>`).join('')}
+    </table></div>
+    <div class="box ${writeFirst > 0n && readFirst > 0n ? 'warn' : 'ok'}" style="margin-bottom:0"><div class="t">
+      ${writeFirst > 0n && readFirst > 0n ? '两种结果都可达 —— 这就是「竞争」的定义' : '这一类参数下只有一种顺序'}</div>
+      ${writeFirst > 0n && readFirst > 0n
+        ? `在 ${pgBig(total)} 条合法轨迹里，<b>${pgBig(readFirst)} 条</b>先读后写、<b>${pgBig(writeFirst)} 条</b>先写后读。
+           程序员完全无法指定走哪一条 —— 于是「程序对不对」变成一个概率问题。
+           ${brute ? `（下面这组小参数已<b>逐条枚举</b>验证过：枚举得到 ${brute.total} 条、先读后写 ${brute.readFirst} 条，与上面的公式一致。）` : ''}`
+        : '当前参数下关键读与关键写的先后被约束死了，不存在两种合法顺序。常见原因是 w=1 且 r=1 以下…请调整参数。'}
+      ${brute ? `<div style="margin-top:6px;font-size:13.5px">逐条枚举校验：总 ${brute.total} · 先读后写 ${brute.readFirst} · 先写后读 ${brute.writeFirst}（m+n = ${m + n}，共枚举 C(${m + n},${m}) = ${pgBig(total)} 条）</div>` : ''}</div>
+    <p style="font-size:13.5px;color:var(--muted);margin:10px 0 0">
+      读法：横轴 = 主线程已完成的事件数，纵轴 = 对等线程已完成的事件数。一条阶梯 = 一种交错；往右一步 = 主线程执行一件事，往上一步 = 对等线程执行一件事。
+      红色竖线是主线程的<b>写</b>发生在哪一拍，绿色横线是对等线程的<b>读</b>发生在哪一拍；哪条线先被跨过，就决定了读到旧值还是新值。</p>`;
+}
+
+/* ============================================================
+   9.1 进程 vs 线程开销（原第 42 页）
+   ============================================================ */
+function renderOverhead(P, T, N, F, err) {
+  if (err) { $('#ovOut').innerHTML = badBox(err); return; }
+  const cycP = P * N, cycT = T * N, ratio = T === 0 ? Infinity : P / T;
+  const secP = F > 0 ? cycP / (F * 1e9) : 0, secT = F > 0 ? cycT / (F * 1e9) : 0;
+  const maxC = Math.max(cycP, cycT, 1);
+  const bar = (label, cyc, sec, color) => `
+    <div style="margin:10px 0">
+      <div style="font-size:13.5px;font-weight:650">${label}：${fmtInt(cyc)} 个周期 = ${sec.toFixed(4)} 秒</div>
+      <div style="height:16px;border-radius:5px;background:var(--line);overflow:hidden;margin-top:4px">
+        <i style="display:block;height:100%;width:${Math.round(cyc / maxC * 100)}%;background:${color}"></i></div>
+    </div>`;
+  $('#ovOut').innerHTML = `
+    ${bar('进程（每个连接 fork 一次）', cycP, secP, 'var(--sign)')}
+    ${bar('线程（每个连接创建一个线程）', cycT, secT, 'var(--frac)')}
+    <div class="readout">
+      <dt>倍率</dt><dd>进程 / 线程 = ${Number.isFinite(ratio) ? ratio.toFixed(2) : '—'} 倍</dd>
+      <dt>差额</dt><dd>${fmtInt(Math.abs(cycP - cycT))} 个周期 ≈ ${Math.abs(secP - secT).toFixed(4)} 秒</dd>
+      <dt>每连接的差额</dt><dd>${fmtInt(Math.abs(P - T))} 个周期</dd>
+    </div>
+    <div class="box" style="margin-bottom:0"><div class="t">读这个数字要注意口径</div>
+      第 42 页的 <b>~20K / ~10K 周期</b>指的是<b>创建与回收</b>这一步（Process control：creating and reaping）。
+      它<b>不含</b>上下文切换、调度策略、缓存行为这些项 —— 所以第 61 页对进程方案写的 <b>High overhead in adding/removing clients</b>、
+      对线程写的 <b>Medium overhead</b> 是<b>三者横向比</b>的措辞，不是各自的绝对值。
+      上面把「周期 → 秒」换算是按你给的 CPU 频率线性折的，只用来给量级一个感觉：<b>这点开销只在连接数很大时才值得优化</b>。</div>`;
+}
+
+/* ============================================================
+   10.3 测验（12 题，答案与依据全部来自原课件）
+   ============================================================ */
+const QUIZ = [
+  { q: '迭代服务器上，第二个客户端最终卡在哪个调用上？', o: ['connect', 'rio_writen', 'rio_readlineb', 'accept'], a: 2,
+    w: '原第 16 页逐条排除了前两个：<code>connect</code> 因为 TCP 管理器排队（listen backlog）而返回；<code>rio_writen</code> 因为数据被缓冲而返回；只有 <code>rio_readlineb</code> 会阻塞 —— 服务器还没写过任何东西给它读。' },
+  { q: '第 18 页把三种并发方案的区别归纳成哪两条轴？', o: ['谁交错逻辑流 / 是否共享地址空间', '有几个核 / 用不用锁', '同步还是异步 / 是否用非阻塞 I/O', '进程数 / 线程数'], a: 0,
+    w: '原第 18 页：进程方案「Kernel automatically interleaves」+「每条流自己的地址空间」；事件方案「Programmer manually interleaves」+「全部流共享地址空间」；线程方案是两者的混合。' },
+  { q: '<code>fork</code> 之后，<code>refcnt(connfd)</code> 是多少？（原第 30 页）', o: ['0', '1', '2', '取决于客户端数量'], a: 2,
+    w: '原第 30 页原文：<b>After fork, refcnt(connfd) = 2</b>。父子各持一份，连接要等 <code>refcnt(connfd) = 0</code> 才真正关闭。' },
+  { q: '父进程为什么必须 <code>close</code> 自己那份 <code>connfd</code>？', o: ['为了省内存', '否则引用计数永远不归零，连接永不关闭', '不然子进程读不到数据', '为了让 accept 返回'], a: 1,
+    w: '原第 23 页把这一行标了「important!」，第 30 页给出机制：内核用引用计数决定何时真正关闭连接，漏掉一次 <code>close</code> 就少一次递减。' },
+  { q: '在信号处理器里调用 <code>printf</code> 会死锁，根本原因是？', o: ['printf 太慢', 'printf 内部要访问带缓冲的共享状态，需要一把非可重入的锁', '信号处理器不能调用任何库函数', 'printf 会 fork 子进程'], a: 1,
+    w: '原第 7 页：<code>printf</code> 实现的是带缓冲 I/O，访问共享缓冲区需要锁。处理器打断主流程后再去拿同一把锁 → 锁不可重入 → 永久阻塞（第 5 页）。' },
+  { q: '第 44 页里 <code>exit()</code> 与 <code>return</code> 在线程里的区别是？', o: ['没有区别', 'exit() 终止所有线程，return 只终止当前线程', 'exit() 只终止当前线程，return 终止所有线程', 'return 不能在线程例程里用'], a: 1,
+    w: '原第 44 页原文：<code>exit()</code> 后面标注 <b>[terminates all threads]</b>，<code>return</code> 后面标注 <b>[terminates current thread]</b>。' },
+  { q: 'joinable 与 detached 线程的关键差别是什么？（原第 50 页）', o: ['joinable 更快', 'joinable 必须被 join 才释放内存资源；detached 终止时自动回收', 'detached 不能被创建', 'joinable 没有自己的栈'], a: 1,
+    w: '原第 50 页：joinable 可被其他线程回收/杀死，必须用 <code>pthread_join</code> 回收；detached 不能被回收或杀死，终止时资源自动回收。默认状态是 joinable。' },
+  { q: '第 42 页给的 Linux 数字里，创建+回收一个进程与一个线程分别约多少周期？', o: ['~10K / ~20K', '~20K / ~10K', '~100K / ~50K', '两者一样'], a: 1,
+    w: '原第 42 页 Linux numbers：<b>~20K cycles 创建并回收一个进程</b>，<b>~10K cycles（或更少）创建并回收一个线程</b>；课件同时说「进程控制是线程的两倍」。' },
+  { q: '事件驱动方案为什么用不上多核？（原第 34 页）', o: ['因为 select 太慢', '因为它只有单个控制流线程', '因为它必须用锁', '因为它的地址空间不共享'], a: 1,
+    w: '原第 34 页最后一条缺点：<b>Cannot take advantage of multi-core</b>，理由写在下面 —— <b>Single thread of control</b>。' },
+  { q: '第 60 页说「线程最大的优点也是最大的弱点」，指的是什么？', o: ['栈很小', '数据共享太容易，意外的共享会引入难复现的错误', '线程 ID 会重复', '线程不能跨核调度'], a: 1,
+    w: '原第 60 页：<b>The ease with which data can be shared is both the greatest strength and the greatest weakness of threads</b>；并指出很难知道哪些数据共享、很难靠测试发现（概率很低，但非零）。' },
+  { q: '第 51 页 <code>&amp;connfd</code> 那个 bug 的根源是？', o: ['connfd 太小', '主线程循环体复用同一个栈变量，多轮创建出的线程拿到同一个地址', 'accept 返回了重复的 fd', 'Pthread_create 参数顺序写错'], a: 1,
+    w: '原第 51 页的图把主线程栈与两个 peer 栈画在一起，两个 <code>vargp</code> 指向同一地址，页脚提问「Why would both copies of vargp point to same location?」。' },
+  { q: '第 57 页的 Race Test 判定标准是什么？', o: ['每个线程读到不同的 i，且保存的集合恰好是 0–99 各一份', '程序不崩溃就算通过', '所有线程读到相同的 i', '运行时间不超过 1 秒'], a: 0,
+    w: '原第 57 页：如果没有竞争，每个线程会拿到不同的 i 值，被保存的值集合<b>应当是 0 到 99 各一份</b>。出现空桶或重复桶就说明竞争发生了。' },
+];
+let qzState = QUIZ.map(() => null);
+function renderQuiz() {
+  const answered = qzState.filter(v => v !== null).length;
+  const right = QUIZ.filter((q, i) => qzState[i] === q.a).length;
+  const list = QUIZ.map((q, i) => {
+    const sel = qzState[i];
+    const cls = sel === null ? '' : sel === q.a ? ' correct done' : ' wrong done';
+    return `<div class="puzzle${cls}" style="flex-direction:column;align-items:stretch">
+      <div class="q" style="white-space:normal"><b>${i + 1}.</b> ${q.q}</div>
+      <div style="display:flex;flex-wrap:wrap;gap:7px;margin-top:8px">
+        ${q.o.map((o, j) => `<button class="sm" data-qzo="${i}:${j}"
+          style="${sel === null ? '' : j === q.a ? 'border-color:var(--ok-bd);background:var(--ok-bg)'
+            : j === sel ? 'border-color:var(--bad-bd);background:var(--bad-bg)' : 'opacity:.6'}">
+          ${'ABCD'[j]}. ${o}</button>`).join('')}
+      </div>
+      <div class="exp"><span class="verdict">${sel === null ? '' : sel === q.a ? '✓ 正确' : '✗ 错误'}</span>
+        &nbsp;正确答案：<b>${'ABCD'[q.a]}. ${q.o[q.a]}</b><br>${q.w}</div>
+    </div>`;
+  }).join('');
+  const score = answered === 0 ? '' : `<div class="box ${right === QUIZ.length ? 'ok' : right >= QUIZ.length * 0.6 ? 'warn' : 'bad'}" style="margin-bottom:0">
+    <div class="t">已答 ${answered} / ${QUIZ.length} 题，答对 ${right} 题</div>
+    ${answered === QUIZ.length
+      ? (right === QUIZ.length ? '全对 —— 从灾难分类到三种方案都拿下了。' : '错题上方已标出正确答案与依据页码，回对应小节再看一遍即可。')
+      : '继续答题，每题都会立即给出解析与依据的原页码。'}
+  </div>`;
+  $('#qzOut').innerHTML = list + score;
+}
+
+/* ============================================================
+   初始化
+   ============================================================ */
+function initAll() {
+  /* --- 1.1 四类陷阱 --- */
+  $$('#trSeg button').forEach(b => b.addEventListener('click', () => { trSel = b.dataset.tr; renderTraps(); }));
+  renderTraps();
+
+  /* --- 2.1 printf 死锁 --- */
+  function pfdSetSlot(s) { pfdSlot = s; pfdIdx = 1; renderPfd(); }
+  $('#pfdStep').addEventListener('click', () => { const r = printfRun(pfdSlot); if (pfdIdx < r.log.length) pfdIdx++; renderPfd(); });
+  $('#pfdRun').addEventListener('click', () => { pfdIdx = printfRun(pfdSlot).log.length; renderPfd(); });
+  $('#pfdReset').addEventListener('click', () => pfdSetSlot(pfdSlot));
+  $$('[data-pfd]').forEach(b => b.addEventListener('click', () => pfdSetSlot(b.dataset.pfd === 'signal-early' ? 0 : 2)));
+  renderPfd();                       /* 必须初次渲染一次，否则输出容器为空 */
+  document.addEventListener('click', e => {
+    const t = e.target.closest('[data-pfdsel]');
+    if (t) { pfdSetSlot(Number(t.dataset.pfdsel)); return; }
+    const blk = e.target.closest('[data-blk]');
+    if (blk) {
+      const [i, v] = blk.dataset.blk.split(':').map(Number);
+      if (blkAns[i] !== null) return;
+      blkAns[i] = v; renderBlk(); return;
+    }
+    const qzo = e.target.closest('[data-qzo]');
+    if (qzo) {
+      const [i, j] = qzo.dataset.qzo.split(':').map(Number);
+      if (qzState[i] !== null) return;
+      qzState[i] = j; renderQuiz(); return;
+    }
+    const ra = e.target.closest('[data-race]');
+    if (ra) { $('#raceSeed').value = ra.dataset.race; doRace(); return; }
+    const cc = e.target.closest('[data-cc]');
+    if (cc) {
+      const parts = cc.dataset.cc.split(';').map(s => s.split(',').map(Number));
+      while (parts.length < 3) parts.push(parts[0].slice());
+      ['A', 'B', 'C'].forEach((n, i) => { $('#cc' + n + '0').value = parts[i][0]; $('#cc' + n + '1').value = parts[i][1]; });
+      doCc(); return;
+    }
+    const shf = e.target.closest('[data-shf]');
+    if (shf) { shFix = shf.dataset.shf === '1'; shIdx = 1; renderSharing(); return; }
+    const pg = e.target.closest('[data-pg]');
+    if (pg) {
+      const a = pg.dataset.pg.split(',').map(Number);
+      $('#pgM').value = a[0]; $('#pgN').value = a[1]; $('#pgW').value = a[2]; $('#pgR').value = a[3];
+      doPg(); return;
+    }
+    const ov = e.target.closest('[data-ov]');
+    if (ov) {
+      const a = ov.dataset.ov.split(';');
+      $('#ovP').value = a[0]; $('#ovT').value = a[1]; $('#ovN').value = a[2]; $('#ovF').value = a[3];
+      doOv(); return;
+    }
+    const sv = e.target.closest('[data-svtick]');
+    if (sv) { svTick(Number(sv.dataset.svtick)); return; }
+    const rcp = e.target.closest('[data-rcp]');
+    if (rcp) { rcParentCloses = rcp.dataset.rcp === '1'; rcIdx = 4; renderRefcnt(); return; }
+    const ptb = e.target.closest('[data-pt2]');
+    if (ptb) { ptSel = ptb.dataset.pt2; renderPthreads(); }
+  });
+
+  /* --- 3.1 时间线 --- */
+  $('#tlStep').addEventListener('click', () => { if (tlIdx < TL_STEPS.length) tlIdx++; renderTimeline(); });
+  $('#tlReset').addEventListener('click', () => { tlIdx = 1; renderTimeline(); });
+  $('#tlJump').addEventListener('click', () => { tlIdx = TL_STEPS.length; renderTimeline(); });
+  let tlTimer = null;
+  $('#tlAuto').addEventListener('click', () => {
+    clearInterval(tlTimer);
+    tlTimer = setInterval(() => {
+      if (tlIdx >= TL_STEPS.length) { clearInterval(tlTimer); return; }
+      tlIdx++; renderTimeline();
+    }, 900);
+  });
+  renderTimeline();
+
+  /* --- 3.2 判断题 --- */
+  $('#blkReset').addEventListener('click', () => { blkAns = BLK_ITEMS.map(() => null); renderBlk(); });
+  renderBlk();
+
+  /* --- 3.4 三模型 --- */
+  $$('#mmSeg button').forEach(b => b.addEventListener('click', () => { mmSel = b.dataset.mm; renderModels(); }));
+  renderModels();
+
+  /* --- 4.2 fork 图解 --- */
+  $('#fkStep').addEventListener('click', () => { if (fkIdx < 3) fkIdx++; renderFork(); });
+  $('#fkReset').addEventListener('click', () => { fkIdx = 1; renderFork(); });
+  renderFork();
+
+  /* --- 4.3 引用计数 --- */
+  $('#rcStep').addEventListener('click', () => { if (rcIdx < 4) rcIdx++; renderRefcnt(); });
+  $('#rcReset').addEventListener('click', () => { rcIdx = 0; renderRefcnt(); });
+  renderRefcnt();
+
+  /* --- 5.1 select --- */
+  $('#svPoll').addEventListener('click', () => {
+    const r = selectStep(svState, svPending.slice());
+    svLast = { arrived: svPending.slice().sort((a, b) => a - b), accepted: r.accepted, serviced: r.serviced };
+    svLog.push(svLast);
+    if (svLog.length > 8) svLog.shift();
+    svState = r.nextState;
+    svPending = [];
+    renderSelect();
+  });
+  $('#svInjectListen').addEventListener('click', () => {
+    if (svPending.indexOf(svState.listenfd) < 0) svPending.push(svState.listenfd);
+    renderSelect();
+  });
+  $('#svInjectData').addEventListener('click', () => {
+    if (!svState.active.length) { svPending = [svState.listenfd]; renderSelect(); return; }
+    const cand = svState.active.slice().sort((a, b) => a - b).find(f => svPending.indexOf(f) < 0);
+    if (cand !== undefined) svPending.push(cand);
+    renderSelect();
+  });
+  $('#svReset').addEventListener('click', () => {
+    svState = { listenfd: 3, active: [] }; svPending = []; svLast = null; svLog = [];
+    renderSelect();
+  });
+  renderSelect();
+
+  /* --- 6.1 Pthreads --- */
+  $$('#ptSeg button').forEach(b => b.addEventListener('click', () => { ptSel = b.dataset.pt; renderPthreads(); }));
+  renderPthreads();
+
+  /* --- 6.2 hello world --- */
+  $('#hwStep').addEventListener('click', () => { if (hwIdx < HW_STEPS.length) hwIdx++; renderHello(); });
+  $('#hwReset').addEventListener('click', () => { hwIdx = 1; renderHello(); });
+  let hwTimer = null;
+  $('#hwAuto').addEventListener('click', () => {
+    clearInterval(hwTimer);
+    hwTimer = setInterval(() => {
+      if (hwIdx >= HW_STEPS.length) { clearInterval(hwTimer); return; }
+      hwIdx++; renderHello();
+    }, 900);
+  });
+  renderHello();
+
+  /* --- 7.2 内存视图 --- */
+  $$('#vmSeg button').forEach(b => b.addEventListener('click', () => { vmSel = b.dataset.vm; renderMemView(); }));
+  renderMemView();
+
+  /* --- 7.4 核数 --- */
+  $$('#scSeg button').forEach(b => b.addEventListener('click', () => {
+    $$('#scSeg button').forEach(x => x.classList.remove('on'));
+    b.classList.add('on');
+    scCores = Number(b.dataset.sc);
+    renderCores();
+  }));
+  renderCores();
+
+  /* --- 7.4 并发判定 --- */
+  function doCc() {
+    const r = ccParse();
+    renderConcurrent(r.iv, r.err);
+  }
+  $('#ccGo').addEventListener('click', doCc);
+  ['#ccA0', '#ccA1', '#ccB0', '#ccB1', '#ccC0', '#ccC1'].forEach(id =>
+    $(id).addEventListener('keydown', e => { if (e.key === 'Enter') doCc(); }));
+  doCc();
+
+  /* --- 8.1 意外共享 --- */
+  $('#shStep').addEventListener('click', () => { const t = shSteps(shFix); if (shIdx < t.length) shIdx++; renderSharing(); });
+  $('#shRun').addEventListener('click', () => { shIdx = shSteps(shFix).length; renderSharing(); });
+  $('#shReset').addEventListener('click', () => { shIdx = 1; renderSharing(); });
+  renderSharing();
+
+  /* --- 8.2 交错调度器 --- */
+  function doRace() {
+    const N = parseUint($('#raceN').value, 2000);
+    const seed = parseUint($('#raceSeed').value, 4294967295);
+    if (N === null || N < 1) { renderRace(null, 0, 0, '线程数必须是 1–2000 的整数'); return; }
+    if (seed === null) { renderRace(null, 0, 0, '种子必须是 0–4294967295 的整数'); return; }
+    raceN = N; raceSeed = seed; raceSweepRes = null;
+    renderRace(raceSavedValues(seed, N), N, seed, null);
+  }
+  $('#raceGo').addEventListener('click', doRace);
+  ['#raceN', '#raceSeed'].forEach(id => $(id).addEventListener('keydown', e => { if (e.key === 'Enter') doRace(); }));
+  $('#raceIdeal').addEventListener('click', () => {
+    const N = parseUint($('#raceN').value, 2000) || 100;
+    raceN = N; raceSweepRes = null;
+    renderRace(raceIdealValues(N), N, 0, null);
+  });
+  $('#raceSweep').addEventListener('click', () => {
+    const N = parseUint($('#raceN').value, 2000);
+    if (N === null || N < 1) { renderRace(null, 0, 0, '线程数必须是 1–2000 的整数'); return; }
+    const trials = 200;
+    let holes = 0, dups = 0, correct = 0, minH = Infinity, maxH = 0;
+    for (let s = 0; s < trials; s++) {
+      const st = raceStats(raceSavedValues(s, N), N);
+      if (st.holes > 0) holes++;
+      if (st.dups > 0) dups++;
+      if (st.correct) correct++;
+      minH = Math.min(minH, st.holes);
+      maxH = Math.max(maxH, st.holes);
+    }
+    raceSweepRes = { trials, holes, dups, correct, minHoles: minH, maxHoles: maxH };
+    raceN = N;
+    renderRace(raceSavedValues(0, N), N, 0, null);
+  });
+  doRace();
+
+  /* --- 8.4 进度图 --- */
+  function doPg() {
+    const m = parseUint($('#pgM').value, 12), n = parseUint($('#pgN').value, 12);
+    const w = parseUint($('#pgW').value, 12), r = parseUint($('#pgR').value, 12);
+    if (m === null || m < 1) { renderProgress(0, 0, 0, 0, '主线程事件数必须是 1–12 的整数'); return; }
+    if (n === null || n < 1) { renderProgress(0, 0, 0, 0, '对等线程事件数必须是 1–12 的整数'); return; }
+    if (w === null || w < 1 || w > m) { renderProgress(0, 0, 0, 0, `关键写出现在第几拍必须在 1–${m} 之间`); return; }
+    if (r === null || r < 1 || r > n) { renderProgress(0, 0, 0, 0, `关键读出现在第几拍必须在 1–${n} 之间`); return; }
+    renderProgress(m, n, w, r, null);
+  }
+  $('#pgGo').addEventListener('click', doPg);
+  ['#pgM', '#pgN', '#pgW', '#pgR'].forEach(id => $(id).addEventListener('keydown', e => { if (e.key === 'Enter') doPg(); }));
+  doPg();
+
+  /* --- 9.1 开销 --- */
+  function doOv() {
+    const P = parseUint($('#ovP').value, 1e9), T = parseUint($('#ovT').value, 1e9);
+    const N = parseUint($('#ovN').value, 1e9);
+    const Fs = String($('#ovF').value).trim();
+    const F = /^[0-9]*\.?[0-9]+$/.test(Fs) ? Number(Fs) : null;
+    if (P === null) { renderOverhead(0, 0, 0, 0, '进程的周期数必须是 0–1000000000 的整数'); return; }
+    if (T === null) { renderOverhead(0, 0, 0, 0, '线程的周期数必须是 0–1000000000 的整数'); return; }
+    if (N === null) { renderOverhead(0, 0, 0, 0, '连接数必须是 0–1000000000 的整数'); return; }
+    if (F === null || F <= 0) { renderOverhead(0, 0, 0, 0, 'CPU 频率必须是大于 0 的数（单位 GHz）'); return; }
+    renderOverhead(P, T, N, F, null);
+  }
+  $('#ovGo').addEventListener('click', doOv);
+  ['#ovP', '#ovT', '#ovN', '#ovF'].forEach(id => $(id).addEventListener('keydown', e => { if (e.key === 'Enter') doOv(); }));
+  doOv();
+
+  /* --- 10.3 测验 --- */
+  renderQuiz();
+  $('#qzReset').addEventListener('click', () => { qzState = QUIZ.map(() => null); renderQuiz(); });
+}
+
+document.addEventListener('DOMContentLoaded', initAll);
+</script>
+</body>
+</html>

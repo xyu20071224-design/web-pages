@@ -1,0 +1,2496 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-style="glass" data-deck="ics07">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>机器级编程 IV：数据 · 交互式课件（中文）（柔和玻璃版）</title>
+<style>
+/* ==========================================================================
+   base.css —— 结构基础样式（所有风格共用）
+   只使用 CSS 变量，不含任何具体配色；由各主题覆盖变量与少量结构规则。
+   ========================================================================== */
+
+:root{
+  /* 颜色（每个主题必须覆盖） */
+  --bg:#f6f7f9; --card:#fff; --ink:#15181d; --muted:#697586; --line:#e4e7ec;
+  --accent:#2563eb; --accent-ink:#fff; --accent-soft:#eaf1ff;
+  --sign:#e5484d; --exp:#0b7fd4; --frac:#18915a; --warn:#b45309;
+  --sign-bg:#fdecec; --sign-fg:#a3262b; --sign-bd:#f6cdcf;
+  --exp-bg:#e8f2fd;  --exp-fg:#0a5f9e;  --exp-bd:#c7ddf5;
+  --frac-bg:#e9f7ef; --frac-fg:#116b43; --frac-bd:#c8e8d5;
+  --ok-bg:#f2fbf6; --ok-bd:#9ed3b4; --bad-bg:#fff5f5; --bad-bd:#f1b5b8;
+  --warn-bg:#fffbeb; --gray-bg:#eef1f5; --gray-fg:#5b6472;
+  --paper-soft:#fcfdfe; --code-bg:#f1f3f7; --code-bd:#e6e9ef;
+  --tbl-head:#f7f9fc; --tbl-hover:#fafbfd;
+  --sel-bg:#eef1f5;
+
+  /* 字体 */
+  --font-sans:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",system-ui,sans-serif;
+  --font-mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+  --font-display:var(--font-sans);
+  --tracking-title:normal;
+
+  /* 形状 */
+  --radius:12px; --radius-sm:8px; --radius-pill:99px;
+  --border-w:1px; --shadow:0 1px 2px rgba(16,24,40,.06),0 1px 3px rgba(16,24,40,.1);
+  --shadow-card:none;
+  --card-border:var(--border-w) solid var(--line);
+
+  /* 布局 */
+  --page-max:1180px; --nav-w:236px; --gap:26px; --sec-pad:26px 28px;
+  --nav-sticky-top:64px; --anchor-offset:70px;
+  --font-size:16px; --line-height:1.75;
+}
+
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font-sans);
+  font-size:var(--font-size);line-height:var(--line-height);-webkit-font-smoothing:antialiased}
+img{max-width:100%}
+
+/* ---------- 顶栏 ---------- */
+.topbar{position:sticky;top:0;z-index:50;background:var(--card);border-bottom:1px solid var(--line)}
+.topbar-in{max-width:var(--page-max);margin:0 auto;padding:10px 22px;display:flex;align-items:center;gap:14px}
+.brand{font-weight:700;letter-spacing:var(--tracking-title);font-family:var(--font-display)}
+.brand small{font-weight:500;color:var(--muted);margin-left:8px;font-size:12.5px}
+.progress{margin-left:auto;display:flex;align-items:center;gap:10px;font-size:12.5px;color:var(--muted)}
+.progress .bar{width:150px;height:6px;border-radius:var(--radius-pill);background:var(--line);overflow:hidden}
+.progress .bar>i{display:block;height:100%;width:0;background:var(--accent);transition:width .25s}
+
+/* ---------- 主体布局 ---------- */
+.layout{max-width:var(--page-max);margin:0 auto;padding:22px;display:grid;
+  grid-template-columns:var(--nav-w) minmax(0,1fr);gap:var(--gap)}
+main{min-width:0}
+/* 长 URL / 长标识符没有断行点，会把容器整个撑破（窄屏尤其明显）。
+   只作用于文本容器；表格故意不加，让它走 .tbl-wrap 的横向滚动。 */
+main p,main li,main dd,main dt,main h2,main h3,main h4,main h5,
+main .box,main .card,main .readout,main .puzzle,main .step{overflow-wrap:anywhere}
+
+/* ---------- 目录 ---------- */
+nav.toc{position:sticky;top:var(--nav-sticky-top);align-self:start;max-height:calc(100vh - 84px);overflow:auto;padding-right:4px}
+nav.toc h4{margin:0 0 8px;font-size:12px;letter-spacing:.12em;color:var(--muted);text-transform:uppercase;font-weight:600}
+nav.toc a{display:block;padding:7px 11px;border-radius:var(--radius-sm);color:var(--ink);opacity:.78;
+  text-decoration:none;font-size:14.5px;border-left:2.5px solid transparent}
+nav.toc a:hover{background:var(--sel-bg);opacity:1}
+nav.toc a.active{background:var(--accent-soft);color:var(--accent);border-left-color:var(--accent);font-weight:600;opacity:1}
+nav.toc a .n{display:inline-block;min-width:20px;color:var(--muted);font-size:12.5px;font-variant-numeric:tabular-nums}
+nav.toc a.active .n{color:var(--accent)}
+nav.toc .sub{padding-left:26px;font-size:13.5px;opacity:.7}
+
+/* ---------- 章节 ---------- */
+section{background:var(--card);border:var(--card-border);border-radius:var(--radius);
+  padding:var(--sec-pad);margin-bottom:22px;box-shadow:var(--shadow);scroll-margin-top:var(--anchor-offset)}
+section>h2{margin:0 0 6px;font-size:25px;letter-spacing:-.01em;font-family:var(--font-display)}
+section>.lede{color:var(--muted);margin:0 0 20px;font-size:14.5px}
+h3{font-size:18.5px;margin:26px 0 10px;padding-left:11px;border-left:3.5px solid var(--accent);font-family:var(--font-display)}
+h4{font-size:16px;margin:18px 0 8px;font-family:var(--font-display)}
+h5{font-size:15px;font-family:var(--font-display)}
+p{margin:10px 0}
+ul,ol{margin:10px 0;padding-left:22px}
+li{margin:5px 0}
+code{font-family:var(--font-mono);font-size:.89em;background:var(--code-bg);border:1px solid var(--code-bd);border-radius:5px;padding:1px 5px}
+.mono{font-family:var(--font-mono)}
+a{color:var(--accent)}
+hr{border:0;border-top:1px dashed var(--line);margin:24px 0}
+.srcref{font-size:11.5px;color:var(--muted);font-weight:500;font-family:var(--font-sans);margin-left:8px;vertical-align:middle;white-space:nowrap;opacity:.75}
+.en{color:var(--muted);font-size:.92em}
+
+/* ---------- 栅格与卡片 ---------- */
+.grid{display:grid;gap:14px}
+.g2{grid-template-columns:repeat(2,minmax(0,1fr))}
+.g3{grid-template-columns:repeat(3,minmax(0,1fr))}
+/* 窄屏单列：必须用 minmax(0,1fr)。写成 1fr 时轨道最小宽度是 auto，
+   单元格里只要有长代码行（<pre>）就撑破容器，整页横向溢出。 */
+@media(max-width:820px){.g2,.g3{grid-template-columns:minmax(0,1fr)}}
+.card{border:var(--card-border);border-radius:var(--radius-sm);padding:15px 17px;background:var(--paper-soft);box-shadow:var(--shadow-card)}
+.card h5{margin:0 0 7px}
+.card.pad0{padding:0;overflow:hidden}
+
+/* ---------- 提示框 ---------- */
+.box{border:1px solid var(--line);border-left:4px solid var(--accent);background:var(--accent-soft);
+  border-radius:var(--radius-sm);padding:12px 16px;margin:14px 0}
+.box.warn{border-left-color:var(--warn);background:var(--warn-bg)}
+.box.bad{border-left-color:var(--sign);background:var(--bad-bg)}
+.box.ok{border-left-color:var(--frac);background:var(--ok-bg)}
+.box .t{font-weight:650;font-size:14.5px;margin-bottom:2px}
+
+/* ---------- 公式 ---------- */
+.formula{font-family:var(--font-mono);background:var(--paper-soft);border:1px solid var(--line);
+  border-radius:var(--radius-sm);padding:14px 17px;margin:14px 0;font-size:16.5px;text-align:center;overflow-x:auto}
+.formula.big{font-size:20px}
+
+/* ---------- 表格 ---------- */
+table.tbl{width:100%;border-collapse:collapse;font-size:14.5px;margin:14px 0}
+table.tbl th,table.tbl td{border:1px solid var(--line);padding:8px 11px;text-align:left;vertical-align:top}
+table.tbl th{background:var(--tbl-head);font-weight:650;font-size:13.5px;white-space:nowrap}
+table.tbl td.mono,table.tbl th.mono{font-family:var(--font-mono);font-size:13.5px}
+table.tbl tr:hover td{background:var(--tbl-hover)}
+/* 当前行高亮：interactive 表格用它标出「正在看的那一行」。
+   注意 --tbl-hover 是悬停色，深色皮肤下故意比底色亮，所以 hl 用同一套变量。 */
+table.tbl tr.hl td{background:var(--sel-bg)}
+.tbl-wrap{overflow-x:auto}
+
+/* ---------- 位串控件 ---------- */
+.fw{display:flex;flex-wrap:wrap;gap:8px 18px;align-items:flex-start;margin:4px 0 2px;min-width:0}
+.fgrp{min-width:0}
+.fcap{font-size:12px;color:var(--muted);margin-bottom:4px;font-weight:600}
+.fcap b{font-family:var(--font-mono);font-size:12.5px}
+.bits{display:flex;flex-wrap:wrap;gap:2px;font-family:var(--font-mono);margin:4px 0}
+.bits .b{width:25px;height:33px;display:flex;align-items:center;justify-content:center;
+  border-radius:6px;font-size:15px;cursor:pointer;user-select:none;border:1px solid transparent;
+  transition:transform .06s,background .12s;font-weight:600}
+.bits .b:hover{transform:translateY(-2px)}
+.bits .b.s{background:var(--sign-bg);color:var(--sign-fg);border-color:var(--sign-bd)}
+.bits .b.e{background:var(--exp-bg);color:var(--exp-fg);border-color:var(--exp-bd)}
+.bits .b.f{background:var(--frac-bg);color:var(--frac-fg);border-color:var(--frac-bd)}
+.bits .b.sel{outline:2px solid var(--ink);outline-offset:1px}
+.bits.sm .b{width:19px;height:26px;font-size:12px;border-radius:4px}
+.fgrp .bits{flex-wrap:wrap;max-width:100%;gap:2px}
+.fgrp.ge .bits{max-width:300px}
+
+/* ---------- 读数表 ---------- */
+.readout{display:grid;grid-template-columns:auto 1fr;gap:4px 16px;font-size:14.5px;margin:12px 0}
+.readout dt{color:var(--muted);font-weight:600;font-family:var(--font-mono);font-size:13.5px;padding-top:2px}
+.readout dd{margin:0;font-family:var(--font-mono)}
+
+/* ---------- 小标签 ---------- */
+.chip{display:inline-block;font-size:12.5px;padding:2px 9px;border-radius:var(--radius-pill);
+  background:var(--accent-soft);color:var(--accent);font-weight:600}
+.chip.ok{background:var(--frac-bg);color:var(--frac-fg)}
+.chip.bad{background:var(--sign-bg);color:var(--sign-fg)}
+.chip.warn{background:var(--warn-bg);color:var(--warn)}
+.chip.gray{background:var(--gray-bg);color:var(--gray-fg)}
+.kbd{font-family:var(--font-mono);font-size:13px;background:var(--code-bg);border:1px solid var(--code-bd);
+  border-bottom-width:2px;border-radius:6px;padding:1px 7px}
+
+/* ---------- 控件 ---------- */
+.ctrls{display:flex;flex-wrap:wrap;gap:9px;align-items:center;margin:12px 0}
+label.fld{display:inline-flex;align-items:center;gap:7px;font-size:14px;color:var(--ink);max-width:100%;flex-wrap:wrap;min-width:0}
+label.fld select,label.fld input{min-width:0;max-width:100%}
+input[type=text],input[type=number],select{font-family:var(--font-mono);font-size:14px;padding:6px 10px;
+  border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--card);color:var(--ink)}
+input[type=text]:focus,input[type=number]:focus,select:focus{outline:2px solid var(--accent-soft);border-color:var(--accent)}
+button{font-family:var(--font-sans);font-size:14px;font-weight:600;padding:7px 15px;border-radius:var(--radius-sm);
+  border:1px solid var(--line);background:var(--card);color:var(--ink);cursor:pointer}
+button:hover{background:var(--sel-bg)}
+button.p{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+button.sm{padding:4px 10px;font-size:13px}
+button.pill{border-radius:var(--radius-pill)}
+/* 按钮组默认不换行：项一多就会把 .ctrls 撑破。允许它缩到容器宽度并横向滚动。 */
+.seg{display:inline-flex;max-width:100%;border:1px solid var(--line);
+  border-radius:var(--radius-sm);overflow-x:auto;overflow-y:hidden}
+.seg button{border:0;border-radius:0;border-right:1px solid var(--line);padding:6px 13px}
+.seg button:last-child{border-right:0}
+.seg button.on{background:var(--accent);color:var(--accent-ink)}
+
+/* ---------- 分步演示 ---------- */
+/* .steps 是 .step 的包裹层（skill 词汇表里列了但一直没定义）——
+   仅给一点上下留白，步骤块自己的边距由 .step 负责。 */
+.steps{margin:12px 0}
+.step{border:1px solid var(--line);border-radius:var(--radius-sm);padding:11px 15px;margin:9px 0;
+  background:var(--paper-soft);opacity:.42;transition:opacity .2s}
+.step.on{opacity:1;background:var(--card)}
+.step .h{font-size:13px;font-weight:700;color:var(--accent);letter-spacing:.02em;margin-bottom:3px}
+.step .m{font-family:var(--font-mono);font-size:14.5px;overflow-x:auto}
+.step .e{font-size:13.5px;color:var(--muted);margin-top:3px}
+
+/* ---------- 折叠与答案 ---------- */
+.reveal{border:1px solid var(--line);border-radius:var(--radius-sm);padding:11px 15px;margin:8px 0;background:var(--paper-soft)}
+.reveal summary{cursor:pointer;font-weight:600;font-size:14.5px}
+.reveal[open]{background:var(--card)}
+.ans{margin-top:8px;padding-top:8px;border-top:1px dashed var(--line);font-size:14.5px}
+
+/* ---------- 判断题 ---------- */
+.puzzle{border:1px solid var(--line);border-radius:var(--radius-sm);padding:12px 15px;margin:9px 0;
+  display:flex;gap:13px;align-items:flex-start;background:var(--paper-soft)}
+.puzzle .q{font-family:var(--font-mono);font-size:15px;flex:1;min-width:0;overflow-x:auto;white-space:nowrap}
+.puzzle .q small{font-family:var(--font-sans);color:var(--muted);display:block;white-space:normal}
+.puzzle .btns{display:flex;gap:6px;flex-shrink:0}
+.puzzle.correct{border-color:var(--ok-bd);background:var(--ok-bg)}
+.puzzle.wrong{border-color:var(--bad-bd);background:var(--bad-bg)}
+.puzzle .exp{margin-top:9px;padding-top:9px;border-top:1px dashed var(--line);font-size:14.5px;
+  display:none;white-space:normal;font-family:var(--font-sans)}
+.puzzle.done .exp{display:block}
+.puzzle .exp .verdict{font-weight:700}
+
+/* ---------- 分布图 ---------- */
+.tick{stroke:#94a3b8;stroke-width:1.4}
+.tick.dn{stroke:var(--exp)}
+.tick.nm{stroke:var(--frac)}
+.ticklabel{font-size:9.5px;fill:var(--muted);font-family:var(--font-mono)}
+.axisline{stroke:var(--line);stroke-width:1.2}
+.axislabel{font-size:11px;fill:var(--muted)}
+
+/* ---------- 页脚 / 回到顶部 ---------- */
+.footer{max-width:var(--page-max);margin:0 auto;padding:8px 22px 40px;color:var(--muted);font-size:13px}
+.totop{position:fixed;right:22px;bottom:22px;z-index:40;box-shadow:var(--shadow);display:none}
+
+/* ---------- 响应式 ---------- */
+@media(max-width:960px){
+  .layout{grid-template-columns:1fr;padding:16px}
+  nav.toc{position:static;max-height:none;display:flex;flex-wrap:wrap;gap:6px;
+    background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:10px}
+  nav.toc h4{width:100%;margin-bottom:2px}
+  nav.toc a{border-left:0;padding:5px 10px;font-size:13px}
+  nav.toc .sub{display:none}
+  section{padding:20px 17px}
+}
+@media print{
+  nav.toc,.topbar,.totop{display:none}
+  .layout{display:block}
+  section{break-inside:avoid;box-shadow:none}
+}
+
+/* ==========================================================================
+   风格 D · 柔和玻璃（Soft glass / 渐变毛玻璃）
+   渐变背景 · 毛玻璃卡片 · 大圆角 · 悬浮药丸导航 · 柔和彩色阴影
+   ========================================================================== */
+
+:root{
+  --bg:#eef1fb; --card:rgba(255,255,255,.72); --ink:#1f2437; --muted:#646c86; --line:rgba(31,36,55,.10);
+  --accent:#6d4aff; --accent-ink:#fff; --accent-soft:rgba(109,74,255,.10);
+  --sign:#e0475f; --exp:#1f7ae0; --frac:#12a06a; --warn:#c2710c;
+  --sign-bg:rgba(224,71,95,.12); --sign-fg:#c02c45; --sign-bd:rgba(224,71,95,.24);
+  --exp-bg:rgba(31,122,224,.12);  --exp-fg:#1560b8;  --exp-bd:rgba(31,122,224,.24);
+  --frac-bg:rgba(18,160,106,.12); --frac-fg:#0c7f54; --frac-bd:rgba(18,160,106,.24);
+  --ok-bg:rgba(18,160,106,.10); --ok-bd:rgba(18,160,106,.30);
+  --bad-bg:rgba(224,71,95,.09); --bad-bd:rgba(224,71,95,.28);
+  --warn-bg:rgba(194,113,12,.10); --gray-bg:rgba(31,36,55,.07); --gray-fg:#5c6480;
+  --paper-soft:rgba(255,255,255,.55); --code-bg:rgba(255,255,255,.62); --code-bd:rgba(31,36,55,.10);
+  --tbl-head:rgba(109,74,255,.07); --tbl-hover:rgba(109,74,255,.045);
+  --sel-bg:rgba(109,74,255,.09);
+
+  --font-sans:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",system-ui,sans-serif;
+  --font-mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+  --font-display:var(--font-sans);
+  --tracking-title:-.02em;
+
+  --radius:20px; --radius-sm:14px; --radius-pill:999px;
+  --border-w:1px;
+  --shadow:0 10px 30px -12px rgba(31,36,55,.18),0 2px 8px -4px rgba(31,36,55,.10);
+  --shadow-card:0 6px 18px -10px rgba(31,36,55,.16);
+  --card-border:1px solid rgba(255,255,255,.62);
+
+  --page-max:1080px; --nav-w:auto; --gap:0px;
+  --sec-pad:28px 30px; --nav-sticky-top:62px; --anchor-offset:120px;
+  --font-size:16px; --line-height:1.78;
+}
+
+body{
+  background:
+    radial-gradient(900px 520px at 8% -6%, #d9e4ff 0%, transparent 58%),
+    radial-gradient(880px 520px at 98% 2%, #ffe0f2 0%, transparent 56%),
+    radial-gradient(760px 620px at 52% 108%, #dff6ee 0%, transparent 58%),
+    linear-gradient(160deg,#f4f6ff 0%,#eef1fb 42%,#f7f2ff 100%);
+  background-attachment:fixed;
+}
+
+/* ---------- 顶栏：磨砂条 ---------- */
+.topbar{background:rgba(255,255,255,.60);backdrop-filter:blur(16px) saturate(180%);
+  -webkit-backdrop-filter:blur(16px) saturate(180%);border-bottom:1px solid rgba(255,255,255,.7)}
+.topbar-in{max-width:var(--page-max);padding:13px 24px}
+.brand{font-weight:800;font-size:16.5px;letter-spacing:var(--tracking-title)}
+.brand small{font-weight:600;color:var(--muted);font-size:12px}
+.progress{font-weight:600;font-size:12px;color:var(--muted)}
+.progress .bar{width:140px;height:8px;border-radius:var(--radius-pill);background:rgba(31,36,55,.08)}
+.progress .bar>i{background:linear-gradient(90deg,#8b6cff,#6d4aff 55%,#ef7ac0);
+  box-shadow:0 0 12px rgba(109,74,255,.5)}
+
+/* ---------- 布局：单列居中 + 悬浮药丸导航 ---------- */
+.layout{display:block;max-width:var(--page-max);margin:0 auto;padding:0 24px 30px}
+nav.toc{position:sticky;top:var(--nav-sticky-top);z-index:45;display:flex;flex-wrap:wrap;gap:8px;
+  align-items:center;justify-content:center;max-height:none;overflow:visible;
+  margin:0 0 22px;padding:12px 14px;border-radius:var(--radius-pill);
+  background:rgba(255,255,255,.62);backdrop-filter:blur(14px) saturate(180%);
+  -webkit-backdrop-filter:blur(14px) saturate(180%);
+  border:1px solid rgba(255,255,255,.75);box-shadow:var(--shadow)}
+nav.toc h4{display:none}
+nav.toc a{border:0;border-radius:var(--radius-pill);padding:4px 11px;font-size:12.5px;font-weight:600;
+  color:var(--muted);background:transparent}
+nav.toc a:hover{background:rgba(109,74,255,.10);color:var(--accent)}
+nav.toc a.active{background:linear-gradient(135deg,#7c5cff,#6d4aff);color:#fff;
+  box-shadow:0 6px 16px -6px rgba(109,74,255,.6)}
+nav.toc a .n{font-size:11.5px;opacity:.7;margin-right:4px;min-width:auto}
+nav.toc a.active .n{color:#fff;opacity:.85}
+
+/* ---------- 章节：毛玻璃大圆角 ---------- */
+section{background:var(--card);backdrop-filter:blur(18px) saturate(170%);
+  -webkit-backdrop-filter:blur(18px) saturate(170%);
+  border:var(--card-border);border-radius:var(--radius);padding:var(--sec-pad);
+  box-shadow:var(--shadow);margin-bottom:24px}
+section>h2{font-size:25px;font-weight:800}
+section>h2::after{content:"";display:block;width:56px;height:4px;border-radius:99px;margin-top:10px;
+  background:linear-gradient(90deg,#7c5cff,#ef7ac0)}
+section>.lede{font-size:15px;margin-bottom:22px}
+h3{border-left:0;padding-left:0;font-weight:750;position:relative;padding-bottom:6px}
+h3::after{content:"";position:absolute;left:0;bottom:0;width:34px;height:3px;border-radius:99px;
+  background:linear-gradient(90deg,var(--accent),#ef7ac0)}
+h3{margin-left:0}
+h3+*{margin-top:14px}
+h4,h5{font-weight:700}
+code{background:var(--code-bg);border:1px solid var(--code-bd);border-radius:8px;backdrop-filter:blur(6px)}
+
+/* ---------- 卡片 / 盒 ---------- */
+.card{border-radius:var(--radius-sm);background:var(--paper-soft);border:1px solid rgba(255,255,255,.7);
+  box-shadow:var(--shadow-card)}
+.box{border:1px solid rgba(255,255,255,.7);border-left:4px solid var(--accent);
+  border-radius:var(--radius-sm);background:var(--accent-soft);box-shadow:var(--shadow-card)}
+.box .t{font-weight:750;font-size:14.5px}
+
+.formula{background:var(--code-bg);border:1px solid rgba(255,255,255,.7);border-radius:var(--radius-sm);
+  box-shadow:var(--shadow-card);font-weight:600}
+.formula.big{font-size:20px}
+
+/* ---------- 表格：无竖线、圆角容器 ---------- */
+table.tbl{border-collapse:separate;border-spacing:0;overflow:hidden;border-radius:var(--radius-sm)}
+table.tbl th,table.tbl td{border:0;border-bottom:1px solid var(--line);padding:9px 13px}
+table.tbl th{background:var(--tbl-head);font-weight:750;font-size:13px;color:var(--ink)}
+table.tbl tr:last-child td{border-bottom:0}
+table.tbl tr:hover td{background:var(--tbl-hover)}
+
+/* ---------- 位视图：彩色软糖 ---------- */
+.fw{gap:10px 20px;padding:14px 16px;border-radius:var(--radius-sm);background:var(--paper-soft);
+  border:1px solid rgba(255,255,255,.7)}
+.fcap{font-weight:700;font-size:11.5px;letter-spacing:.05em;text-transform:uppercase}
+.bits{gap:3px}
+.bits .b{width:27px;height:34px;border-radius:9px;border:1px solid transparent;font-weight:700;
+  transition:transform .08s,box-shadow .12s}
+.bits .b.s{background:var(--sign-bg);color:var(--sign-fg);border-color:var(--sign-bd)}
+.bits .b.e{background:var(--exp-bg);color:var(--exp-fg);border-color:var(--exp-bd)}
+.bits .b.f{background:var(--frac-bg);color:var(--frac-fg);border-color:var(--frac-bd)}
+.bits .b:hover{transform:translateY(-3px);box-shadow:0 8px 16px -8px currentColor}
+.bits .b.sel{outline:2px solid var(--accent);outline-offset:2px}
+.bits.sm .b{width:21px;height:28px;border-radius:7px;font-size:12px}
+
+/* ---------- 控件：柔和圆润 ---------- */
+input[type=text],input[type=number],select{border:1px solid var(--line);border-radius:var(--radius-pill);
+  background:rgba(255,255,255,.8);font-size:13.5px;padding:7px 14px}
+input[type=number]{border-radius:var(--radius-sm)}
+input:focus,select:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(109,74,255,.16)}
+button{border:1px solid var(--line);border-radius:var(--radius-pill);background:rgba(255,255,255,.8);
+  font-weight:650;font-size:13.5px;box-shadow:0 1px 2px rgba(31,36,55,.06)}
+button:hover{background:#fff;border-color:rgba(109,74,255,.35);color:var(--accent);
+  box-shadow:0 6px 16px -8px rgba(109,74,255,.5)}
+button.p{background:linear-gradient(135deg,#7c5cff,#6d4aff);border-color:transparent;color:#fff}
+button.p:hover{background:linear-gradient(135deg,#8b6cff,#7855ff);color:#fff;
+  box-shadow:0 10px 22px -8px rgba(109,74,255,.75)}
+.chip{border:1px solid transparent;border-radius:var(--radius-pill);background:var(--accent-soft);
+  color:var(--accent);font-weight:700;font-size:12px}
+.seg{border:1px solid var(--line);border-radius:var(--radius-pill);background:rgba(255,255,255,.6);overflow:hidden}
+.seg button{border:0;border-radius:0;border-right:1px solid var(--line);box-shadow:none;background:transparent}
+.seg button.on{background:linear-gradient(135deg,#7c5cff,#6d4aff);color:#fff}
+
+/* ---------- 分步演示 ---------- */
+.step{border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--paper-soft)}
+.step.on{background:rgba(255,255,255,.82);border-color:rgba(109,74,255,.28);
+  box-shadow:0 8px 20px -14px rgba(109,74,255,.5)}
+.step .h{color:var(--accent);font-weight:750;font-size:12.5px;letter-spacing:.03em}
+
+/* ---------- 判断题 / 折叠 ---------- */
+.puzzle{border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--paper-soft)}
+.puzzle.correct{background:var(--ok-bg);border-color:var(--ok-bd)}
+.puzzle.wrong{background:var(--bad-bg);border-color:var(--bad-bd)}
+.reveal{border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--paper-soft)}
+.reveal[open]{background:rgba(255,255,255,.8)}
+
+.totop{border-radius:var(--radius-pill);background:linear-gradient(135deg,#7c5cff,#6d4aff);color:#fff;
+  border:0;font-weight:700;box-shadow:0 10px 24px -10px rgba(109,74,255,.8)}
+.tick{stroke:rgba(100,108,134,.55)}
+.axisline{stroke:rgba(31,36,55,.18)}
+.axislabel,.ticklabel{fill:var(--muted)}
+
+/* ---------- 响应式 ---------- */
+@media(max-width:960px){
+  .layout{padding:0 16px 24px}
+  nav.toc{justify-content:flex-start;border-radius:var(--radius-sm);padding:10px 12px;
+    top:8px;--nav-sticky-top:8px}
+  nav.toc a{padding:5px 11px;font-size:12.5px}
+  section{padding:20px 17px}
+  .topbar-in{padding:11px 16px}
+}
+
+
+/* ---------- 风格切换条（构建时注入，各主题通用） ---------- */
+.stylebar{max-width:var(--page-max);margin:0 auto;padding:14px 22px 0;display:flex;gap:8px;
+  flex-wrap:wrap;align-items:center;font-size:12.5px;color:var(--muted)}
+.stylebar>span{font-weight:600}
+.stylebar a{text-decoration:none;padding:4px 11px;border:1px solid var(--line);border-radius:var(--radius-pill);
+  color:var(--muted);background:var(--card);font-weight:600}
+.stylebar a:hover{border-color:var(--accent);color:var(--accent)}
+.stylebar a.cur{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.stylebar>span{flex:0 0 auto}
+@media(max-width:960px){.stylebar{padding:12px 16px 0}}
+/* 25 讲之后药丸很多：窄屏折行会吃掉大半屏，改成单行横滑 */
+@media(max-width:820px){.stylebar{flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;
+  scrollbar-width:thin}.stylebar a{flex:0 0 auto;font-size:12px;padding:4px 10px}}
+
+</style>
+</head>
+<body>
+
+<header class="topbar"><div class="topbar-in">
+  <div class="brand">机器级编程 IV：数据 Machine-Level Programming IV: Data<small>《计算机系统导论》第 7 讲 · 柔和玻璃版</small></div>
+  <div class="progress"><span id="pgText">学习进度 0%</span><span class="bar"><i id="pgBar"></i></span></div>
+</div></header>
+
+<div class="stylebar">
+  <span>风格：</span>
+  <a href="../ics07-zh.html">清爽蓝（原版）</a>
+  <a href="01-academic.html">学术讲义</a>
+  <a href="02-terminal.html">深色终端</a>
+  <a href="03-brutalist.html">新粗野</a>
+  <a href="index.html">◧ 全部预览</a>
+  <span style="opacity:.5">|</span>
+  <a href="../variants-ics01/index.html">↗ 第 1 讲 · 课程概述</a>
+  <a href="../variants-bits/index.html">↗ 第 2 讲 · 位、字节与整数</a>
+  <a href="../variants/index.html">↗ 第 3 讲 · 浮点数</a>
+  <a href="../variants-ics04/index.html">↗ 第 4 讲 · 机器级编程 I：基础</a>
+  <a href="../variants-ics05/index.html">↗ 第 5 讲 · 机器级编程 II：控制</a>
+  <a href="../variants-ics06/index.html">↗ 第 6 讲 · 机器级编程 III：过程</a>
+  <a href="../variants-ics08/index.html">↗ 第 8 讲 · 机器级编程 V：高级</a>
+  <a href="../variants-ics09/index.html">↗ 第 9 讲 · 处理器体系结构：ISA 与逻辑</a>
+  <a href="../variants-ics10/index.html">↗ 第 10 讲 · 处理器体系结构：顺序实现</a>
+  <a href="../variants-ics11/index.html">↗ 第 11 讲 · 处理器体系结构：流水线</a>
+  <a href="../variants-ics12/index.html">↗ 第 12 讲 · 存储层次结构</a>
+  <a href="../variants-ics13/index.html">↗ 第 13 讲 · 缓存存储器</a>
+  <a href="../variants-ics14/index.html">↗ 第 14 讲 · 代码优化</a>
+  <a href="../variants-ics15/index.html">↗ 第 15 讲 · 链接</a>
+  <a href="../variants-ics16/index.html">↗ 第 16 讲 · 异常控制流 I</a>
+  <a href="../variants-ics17/index.html">↗ 第 17 讲 · 异常控制流 II</a>
+  <a href="../variants-ics18/index.html">↗ 第 18 讲 · 系统级 I/O</a>
+  <a href="../variants-ics19/index.html">↗ 第 19 讲 · 虚拟内存 I</a>
+  <a href="../variants-ics20/index.html">↗ 第 20 讲 · 虚拟内存 II</a>
+  <a href="../variants-ics21/index.html">↗ 第 21 讲 · 动态内存分配</a>
+  <a href="../variants-ics22/index.html">↗ 第 22 讲 · 网络基础</a>
+  <a href="../variants-ics23/index.html">↗ 第 23 讲 · 网络编程</a>
+  <a href="../variants-ics24/index.html">↗ 第 24 讲 · 并发编程</a>
+  <a href="../variants-ics25/index.html">↗ 第 25 讲 · 同步</a>
+  <a href="../variants-lab/index.html">↗ Data Lab 实验</a>
+</div>
+
+<div class="layout">
+
+<nav class="toc">
+  <h4>目录</h4>
+  <a href="#s0"><span class="n">0</span>课程导览</a>
+  <a href="#s1"><span class="n">1</span>一维数组</a>
+  <a href="#s2"><span class="n">2</span>数组遇上汇编</a>
+  <a href="#s3"><span class="n">3</span>嵌套数组</a>
+  <a href="#s4"><span class="n">4</span>多级数组</a>
+  <a href="#s5"><span class="n">5</span>矩阵寻址</a>
+  <a href="#s6"><span class="n">6</span>例题：下标混算</a>
+  <a href="#s7"><span class="n">7</span>结构体</a>
+  <a href="#s8"><span class="n">8</span>对齐</a>
+  <a href="#s9"><span class="n">9</span>浮点与 XMM</a>
+  <a href="#s10"><span class="n">10</span>声明大表</a>
+  <a href="#s11"><span class="n">11</span>总结与测验</a>
+</nav>
+
+<main>
+<!-- ================= 0 ================= -->
+  <section id="s0">
+    <h2>课程导览<span class="srcref">原第 1–2 页</span></h2>
+    <p class="lede">北京大学《计算机系统导论》第 7 讲：机器级编程 IV —— 数据。前三讲解决了「控制流」：指令怎么排、条件与循环怎么编。这一讲回答「数据怎么摆」：<b>数组、结构体在内存里长什么样，编译器怎么算地址，以及浮点数搬进 XMM 寄存器之后怎么运算</b>。</p>
+
+    <div class="grid g3">
+      <div class="card"><h5>本讲提纲</h5>
+        <ol style="margin:0;padding-left:20px;font-size:14.5px">
+          <li>数组：一维、多维（嵌套）、多级</li>
+          <li>结构体：分配、访问、对齐</li>
+          <li>浮点：XMM 寄存器与 SSE 指令</li>
+          <li>补充：理解指针与数组的声明</li>
+        </ol>
+      </div>
+      <div class="card"><h5>一句话核心</h5>
+        <p style="margin:0;font-size:14.5px">复合数据没有魔法：<b>数组就是连续字节 + 下标算术</b>，<b>结构体就是固定偏移 + 对齐填充</b>。C 代码里写的 <code>A[i][j]</code>、<code>r-&gt;next</code>，到了机器级全部变成 <code>leaq</code> / <code>movl</code> 里一条「基址 + 缩放 + 偏移」的地址算术。</p>
+      </div>
+      <div class="card"><h5>和前后讲的衔接</h5>
+        <p style="margin:0;font-size:14.5px">第 5–6 讲讲了指令与控制；本讲补齐数据；第 8 讲会用本讲的 <b>union 与内存布局</b>开头，一路讲缓冲区溢出。本讲第 8 节的对齐规则，在第 8 讲的结构体布局里还要再见面。</p>
+      </div>
+    </div>
+
+    <h3>0.1 三大主题与原页码</h3>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>主题</th><th>原课件页码</th><th>要回答的问题</th></tr>
+      <tr><td><b>数组 Arrays</b></td><td class="mono">3–9</td><td><code>T A[L]</code> 占多少字节？<code>A[i]</code> 怎么变成一条 <code>mov</code>？</td></tr>
+      <tr><td><b>· 嵌套与多级</b></td><td class="mono">10–18</td><td><code>A[i][j]</code> 的地址公式是什么？「数组的数组」和「指针的数组」差在哪？</td></tr>
+      <tr><td><b>· 矩阵与例题</b></td><td class="mono">19–23</td><td>固定尺寸和变长尺寸的矩阵寻址，汇编有什么不同？</td></tr>
+      <tr><td><b>结构体 Structures</b></td><td class="mono">25–27</td><td>字段的偏移谁决定？链表为什么能一路走下去？</td></tr>
+      <tr><td><b>· 对齐 Alignment</b></td><td class="mono">28–35</td><td>为什么 <code>struct S1</code> 要从 16 字节膨胀到 24 字节？怎么排字段最省？</td></tr>
+      <tr><td><b>浮点 Floating Point</b></td><td class="mono">37–42</td><td>浮点参数走哪些寄存器？<code>addss</code> 与 <code>addps</code> 差在哪？比较怎么做？</td></tr>
+      <tr><td><b>补充：声明大表</b></td><td class="mono">44–51</td><td><code>int *A2[3]</code> 和 <code>int (*A3)[3]</code> 到底谁是谁？</td></tr>
+    </table></div>
+
+    <div class="box warn"><div class="t">勘误：标题页的年份少了一位</div>
+      课件第 1 页写的是 <code>Sep. 29, 202</code> —— 年份缺了最后一位。按课程日历与文件名（<code>ICS07-machine-data-20250929.pdf</code>）应为 <b>2025</b> 年 9 月 29 日。
+    </div>
+
+    <div class="box"><div class="t">本页使用说明</div>
+      标有 <span class="chip gray">可交互</span> 的地方都能点击或输入，所有地址、偏移、<code>sizeof</code>、条件码都在浏览器里实时计算。<a href="#s3">第 3 节的二维地址计算器</a>、<a href="#s8">第 8 节的结构体布局计算器</a>和<a href="#s10">第 10 节的声明大表</a>最值得反复玩。页面里所有「判对错」的基准（结构体布局、浮点比较条件码、声明表 sizeof）都已用 C 参考实现交叉验证 —— 结构体布局直接和<b>真实编译器</b>的 <code>offsetof</code>/<code>sizeof</code> 逐项比对，条件码直接和 <b>x86-64 硬件</b>执行的 <code>ucomisd</code> 逐项比对。
+    </div>
+  </section>
+
+  <!-- ================= 1 ================= -->
+  <section id="s1">
+    <h2>1. 一维数组：分配与访问<span class="srcref">原第 3–6 页</span></h2>
+    <p class="lede">数组的基本原则只有一条：<code>T A[L]</code> 是「类型为 T、长度为 L 的数组」，在内存里占一段<b>连续的 <code>L × sizeof(T)</code> 字节</b>。没有长度信息跟着数组走、也没有任何边界检查 —— 这两点后面都会反复回来。</p>
+
+    <h3>1.1 四种数组的字节地图<span class="srcref">原第 3 页</span></h3>
+    <p>课件给了四个声明，起始地址都记作 <code>x</code>。注意最后一种：<code>char *p[3]</code> 是「3 个<b>指针</b>组成的数组」，每个指针在 x86-64 上占 <b>8 字节</b>：</p>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：选一个声明，看它的字节地图（地址现算）</span>
+        <label class="fld">类型
+          <select id="aaT">
+            <option value="char:12" selected>char string[12]</option>
+            <option value="int:5">int val[5]</option>
+            <option value="double:3">double a[3]</option>
+            <option value="char*:3">char *p[3]</option>
+          </select>
+        </label>
+        <label class="fld">起始地址 x <input type="text" id="aaX" value="0x1000" size="9" spellcheck="false"></label>
+      </div>
+      <div id="aaOut"></div>
+    </div>
+
+    <div class="box ok"><div class="t">从这张图里读出三件事</div>
+      ① 数组占的总字节数 = 元素个数 × 单个元素的字节数，一格不多一格不少；② 第 i 个元素的地址 = <code>x + i × sizeof(T)</code> —— 「乘以元素大小」这一步，在机器级就是寻址操作数里的<b>缩放因子</b>（后面的 <code>(%rdi,%rsi,4)</code>）；③ <code>char *p[3]</code> 与 <code>double a[3]</code> 占地一样大 —— 因为<b>指针和 double 都是 8 字节</b>。
+    </div>
+
+    <h3>1.2 数组名、下标、指针：一张引用表<span class="srcref">原第 4–6 页</span></h3>
+    <p>课件用 <code>int val[5] = {1, 5, 2, 1, 3}</code>（起始地址 <code>x</code>）把七种写法列成一张表，并逐格填上了类型与值。关键规则：<b>数组名 <code>val</code> 可以当作指向第 0 个元素的指针使用（类型 <code>int *</code>）</b>：</p>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>引用</th><th>类型</th><th>值（课件第 6 页填完）</th><th>为什么</th></tr>
+      <tr><td class="mono">val[4]</td><td class="mono">int</td><td class="mono">3</td><td>第 4 格里存的数</td></tr>
+      <tr><td class="mono">val</td><td class="mono">int *</td><td class="mono">x</td><td>数组名 → 指向首元素的指针</td></tr>
+      <tr><td class="mono">val+1</td><td class="mono">int *</td><td class="mono">x + 4</td><td>指针加 1 = 跳过<b>一个元素</b>（4 字节），不是 1 字节</td></tr>
+      <tr><td class="mono">&amp;val[2]</td><td class="mono">int *</td><td class="mono">x + 8</td><td>第 2 个元素的地址</td></tr>
+      <tr><td class="mono">val[5]</td><td class="mono">int</td><td class="mono"><b>??</b></td><td><b>越界！</b>数组只有下标 0–4。课件如实写 <code>??</code> —— 那一格住着谁，取决于内存里 val 后面是什么</td></tr>
+      <tr><td class="mono">*(val+1)</td><td class="mono">int</td><td class="mono">5</td><td>等价于 <code>val[1]</code> —— <code>A[i]</code> 本来就是 <code>*(A+i)</code> 的糖</td></tr>
+      <tr><td class="mono">val + i</td><td class="mono">int *</td><td class="mono">x + 4 * i</td><td>等价于 <code>&amp;val[i]</code></td></tr>
+    </table></div>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：表达式求值器 —— 换个 i、换个写法，类型 / 值 / 地址全部现算</span>
+        <label class="fld">表达式
+          <select id="aeE">
+            <option value="val[i]" selected>val[i]</option>
+            <option value="val+i">val+i</option>
+            <option value="&amp;val[i]">&amp;val[i]</option>
+            <option value="*(val+i)">*(val+i)</option>
+            <option value="val">val</option>
+            <option value="*(val+i)+1">*(val+i)+1</option>
+          </select>
+        </label>
+        <label class="fld">i <input type="text" id="aeI" value="4" size="5" spellcheck="false"></label>
+        <button class="p" id="aeGo">求值</button>
+        <button class="sm" data-ae="e=val[i];i=4">课件例 val[4]</button>
+        <button class="sm" data-ae="e=val[i];i=5">越界 val[5]</button>
+        <button class="sm" data-ae="e=*(val+i);i=1">*(val+1)</button>
+      </div>
+      <div id="aeOut"></div>
+    </div>
+
+    <div class="box bad"><div class="t">「??」不是玄学，是警告</div>
+      <code>val[5]</code> 读的是 <code>x + 20</code> 起的 4 个字节 —— 已越出数组的 20 字节。C 编译器<b>不会</b>报错（数组无边界检查），读到的值完全由「那块地上住着谁」决定。第 8 讲的缓冲区溢出，就是把「读越界」升级成「写越界」之后的灾难。
+    </div>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：两道判断题</span>
+        <button class="sm" id="apReset">重来</button>
+      </div>
+      <div id="apOut"></div>
+    </div>
+  </section>
+
+  <!-- ================= 2 ================= -->
+  <section id="s2">
+    <h2>2. 数组遇上汇编：zip_dig 三兄弟<span class="srcref">原第 7–9 页</span></h2>
+    <p class="lede">课件用「邮编」造了三个长度为 5 的 int 数组，并把它们<b>紧挨着</b>放在内存里。有了具体地址，<code>z[digit]</code> 这条 C 语句就能一路看到汇编的内存操作数。</p>
+
+    <h3>2.1 例子的内存图<span class="srcref">原第 7 页</span></h3>
+    <div class="formula" style="text-align:left">
+      <div>#define ZLEN 5</div>
+      <div>typedef int zip_dig[ZLEN];&nbsp;&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)">/* 「zip_dig cmu」等价于「int cmu[5]」*/</span></div>
+      <div>zip_dig cmu = { 1, 5, 2, 1, 3 };</div>
+      <div>zip_dig mit = { 0, 2, 1, 3, 9 };</div>
+      <div>zip_dig ucb = { 9, 4, 7, 2, 0 };</div>
+    </div>
+    <p>课件原图：cmu 从地址 16 开始、mit 从 36、ucb 从 56 —— 三个数组各占 20 字节，首尾相接（课件原话：本例是特意排成连续块的，<b>一般不保证</b>这样排）。</p>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：get_digit 模拟器 —— 选数组、填下标，看一次内存读取</span>
+        <label class="fld">z
+          <select id="gdZ">
+            <option value="cmu" selected>cmu（@16）</option>
+            <option value="mit">mit（@36）</option>
+            <option value="ucb">ucb（@56）</option>
+          </select>
+        </label>
+        <label class="fld">digit <input type="text" id="gdD" value="4" size="5" spellcheck="false"></label>
+        <button class="p" id="gdGo">执行</button>
+        <button class="sm" data-gd="z=cmu;d=4">课件例 cmu[4]</button>
+        <button class="sm" data-gd="z=cmu;d=5">越界 cmu[5]</button>
+        <button class="sm" data-gd="z=ucb;d=0">ucb[0]</button>
+      </div>
+      <div id="gdOut"></div>
+    </div>
+
+    <div class="box ok"><div class="t">「越界读」到底读到了什么 —— 在这张图里是可以回答的</div>
+      1.2 节的 <code>val[5]</code> 只能写 <code>??</code>，因为那张图没画 val 后面是什么。这里的内存图是<b>完整</b>的：cmu、mit、ucb 首尾相接，所以 <code>cmu[5]</code> 读到的其实是 <code>mit[0]</code> = 0。同一个「越界」，图画全了就有确定值，画不全就是未知数 —— 这正是「未定义行为」的本质：<b>答案取决于内存布局</b>。
+    </div>
+
+    <h3>2.2 get_digit：一条指令完成下标算术<span class="srcref">原第 8 页</span></h3>
+    <div class="formula" style="text-align:left">
+      <div>int get_digit(zip_dig z, int digit)</div>
+      <div>{</div>
+      <div>&nbsp;&nbsp;return z[digit];</div>
+      <div>}</div>
+      <div></div>
+      <div><span style="font-family:var(--font-sans);color:var(--muted)"># %rdi = z（数组起始地址）&nbsp;&nbsp;%rsi = digit</span></div>
+      <div>&nbsp;&nbsp;movl (%rdi,%rsi,4), %eax&nbsp;&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)"># z[digit]</span></div>
+    </div>
+    <p>上面的模拟器算的就是这条指令：<b>内存操作数 <code>(%rdi,%rsi,4)</code></b> = 基址 <code>%rdi</code> + 下标 <code>%rsi</code> × 缩放 4。数组大小编译期已知 → 缩放因子直接写进指令，<b>连一次乘法都不用</b>。（课件在这页汇编旁标了 <span class="chip gray">IA32</span> —— 32 位形式的写法，寻址方式与 x86-64 完全一致。）</p>
+
+    <h3>2.3 zincr：循环给每个元素加一<span class="srcref">原第 9 页</span></h3>
+    <div class="formula" style="text-align:left">
+      <div>void zincr(zip_dig z) {</div>
+      <div>&nbsp;&nbsp;size_t i;</div>
+      <div>&nbsp;&nbsp;for (i = 0; i &lt; ZLEN; i++)</div>
+      <div>&nbsp;&nbsp;&nbsp;&nbsp;z[i]++;</div>
+      <div>}</div>
+      <div></div>
+      <div><span style="font-family:var(--font-sans);color:var(--muted)"># %rdi = z</span></div>
+      <div>&nbsp;&nbsp;movl $0, %eax&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)">#&nbsp;&nbsp;i = 0</span></div>
+      <div>&nbsp;&nbsp;jmp .L3&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)">#&nbsp;&nbsp;goto middle</span></div>
+      <div>.L4:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)">#&nbsp;&nbsp;loop:</span></div>
+      <div>&nbsp;&nbsp;addl $1, (%rdi,%rax,4)&nbsp;&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)">#&nbsp;&nbsp;z[i]++</span></div>
+      <div>&nbsp;&nbsp;addq $1, %rax&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)">#&nbsp;&nbsp;i++</span></div>
+      <div>.L3:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)">#&nbsp;&nbsp;middle:</span></div>
+      <div>&nbsp;&nbsp;cmpq $4, %rax&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)">#&nbsp;&nbsp;i : 4</span></div>
+      <div>&nbsp;&nbsp;jbe .L4&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)">#&nbsp;&nbsp;if &lt;=, goto loop</span></div>
+      <div>&nbsp;&nbsp;rep; ret</div>
+    </div>
+    <div class="steps">
+      <div class="step on"><div class="h">初始化</div><div class="m">movl $0, %eax → i = 0；jmp 直接跳到中间的判断</div><div class="e">do-while 形态：先跳过循环体，先判断再进循环（第 6 讲的「guarded」模式）。</div></div>
+      <div class="step on"><div class="h">循环体：z[i]++</div><div class="m">addl $1, (%rdi,%rax,4)</div><div class="e">对<b>内存里</b>的那个 int 直接 +1 —— 读改写一条指令完成，缩放因子 4 还是元素大小。</div></div>
+      <div class="step on"><div class="h">更新与判断</div><div class="m">addq $1, %rax；cmpq $4, %rax；jbe .L4</div><div class="e">i 是 size_t（无符号），所以判断用 jbe（无符号 ≤）。i:4 是 AT&amp;T 风格「比较 i 与 4」。</div></div>
+      <div class="step on"><div class="h">收尾</div><div class="m">rep; ret</div><div class="e">rep 前缀放在 ret 前只为避免 AMD 分支预测器的 penalty —— 它不改变 ret 的语义。</div></div>
+    </div>
+  </section>
+
+  <!-- ================= 3 ================= -->
+  <section id="s3">
+    <h2>3. 嵌套（多维）数组<span class="srcref">原第 10–15 页</span></h2>
+    <p class="lede"><code>T A[R][C]</code> 是「R 个元素、每个元素又是 C 个 T 的数组」。整个二维数组仍然是<b>一整块连续内存</b>，按<b>行主序（row-major）</b>铺开：先铺第 0 行，再铺第 1 行……</p>
+
+    <h3>3.1 尺寸与地址公式<span class="srcref">原第 10、14 页</span></h3>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>量</th><th>公式</th><th>int 数组（K = 4）</th></tr>
+      <tr><td>总大小</td><td class="mono">R × C × K</td><td class="mono">4·R·C 字节（课件原话）</td></tr>
+      <tr><td>第 i 行的起始地址</td><td class="mono">A + i × (C × K)</td><td class="mono">A + 4·C·i</td></tr>
+      <tr><td>元素 A[i][j] 的地址</td><td class="mono">A + i × (C × K) + j × K = A + (i × C + j) × K</td><td class="mono">A + (i·C + j)·4</td></tr>
+    </table></div>
+    <div class="box"><div class="t">一维公式是二维公式的特例</div>
+      把「一行 C 个元素」看成一个「大元素」，二维数组就是「R 个大元素的一维数组」—— 行地址公式和 1.1 节的 <code>x + i·sizeof(T)</code> 一模一样，只是这里的 <code>sizeof(T)</code> 换成了 <code>C × K</code>。列下标 j 再在行内做一次一维寻址。
+    </div>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：二维数组地址计算器 —— 改维度、改下标，网格与地址全部现算</span>
+        <label class="fld">R <input type="text" id="naR" value="4" size="4" spellcheck="false"></label>
+        <label class="fld">C <input type="text" id="naC" value="5" size="4" spellcheck="false"></label>
+        <label class="fld">元素类型
+          <select id="naK">
+            <option value="1">char（1 B）</option>
+            <option value="2">short（2 B）</option>
+            <option value="4" selected>int / float（4 B）</option>
+            <option value="8">double / 指针（8 B）</option>
+          </select>
+        </label>
+        <label class="fld">i <input type="text" id="naI" value="1" size="4" spellcheck="false"></label>
+        <label class="fld">j <input type="text" id="naJ" value="1" size="4" spellcheck="false"></label>
+        <button class="sm" data-na="r=4;c=5;k=4;i=1;j=1">课件例 pgh 4×5</button>
+        <button class="sm" data-na="r=16;c=16;k=4;i=6;j=3">fix_matrix 16×16</button>
+        <button class="sm" data-na="r=3;c=4;k=8;i=2;j=3">double 3×4</button>
+      </div>
+      <div id="naOut"></div>
+    </div>
+
+    <h3>3.2 行访问：pgh[index] 是个「小数组」<span class="srcref">原第 12–13 页</span></h3>
+    <div class="formula" style="text-align:left">
+      <div>#define PCOUNT 4</div>
+      <div>zip_dig pgh[PCOUNT] =</div>
+      <div>&nbsp;&nbsp;{{1, 5, 2, 0, 6},</div>
+      <div>&nbsp;&nbsp;&nbsp;{1, 5, 2, 1, 3},</div>
+      <div>&nbsp;&nbsp;&nbsp;{1, 5, 2, 1, 7},</div>
+      <div>&nbsp;&nbsp;&nbsp;{1, 5, 2, 2, 1}};&nbsp;&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)">/*「zip_dig pgh[4]」等价于「int pgh[4][5]」*/</span></div>
+    </div>
+    <p>课件原图给了五个边界地址：76、96、116、136 是<b>四行的起始地址</b>（每行 20 字节），156 是<b>整个数组的末尾</b>（恰好在最后一格之后）。行访问代码把「行地址 = pgh + 20·index」拆成了两条 <code>leaq</code>：</p>
+    <div class="formula" style="text-align:left">
+      <div>int *get_pgh_zip(int index)</div>
+      <div>{</div>
+      <div>&nbsp;&nbsp;return pgh[index];</div>
+      <div>}</div>
+      <div></div>
+      <div><span style="font-family:var(--font-sans);color:var(--muted)"># %rdi = index</span></div>
+      <div>&nbsp;&nbsp;leaq (%rdi,%rdi,4),%rax&nbsp;&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)">#&nbsp; 5 * index</span></div>
+      <div>&nbsp;&nbsp;leaq pgh(,%rax,4),%rax&nbsp;&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)">#&nbsp; pgh + (20 * index)</span></div>
+    </div>
+    <div class="steps">
+      <div class="step on"><div class="h">第 1 步：5 × index</div><div class="m">leaq (%rdi,%rdi,4),%rax → %rax = index + 4·index = 5·index</div><div class="e">leaq 的第二操作数是「基址 + 缩放」的地址算术 —— 这里拿来当乘法器用：C=5 拆成 1+4。</div></div>
+      <div class="step on"><div class="h">第 2 步：×4 再加基址</div><div class="m">leaq pgh(,%rax,4),%rax → %rax = pgh + 4·(5·index) = pgh + 20·index</div><div class="e">缩放因子 4 = sizeof(int)。两次 leaq 合起来就是行地址公式 A + i·(C·K)。</div></div>
+      <div class="step on"><div class="h">返回</div><div class="m">%rax 里装的是<b>地址</b>（int *）</div><div class="e">返回「第 index 行」这个长度为 5 的 int 数组的首地址 —— 数组名退化为指针。</div></div>
+    </div>
+
+    <h3>3.3 元素访问：一条乘法都不用<span class="srcref">原第 15 页</span></h3>
+    <div class="formula" style="text-align:left">
+      <div>int get_pgh_digit(int index, int dig)</div>
+      <div>{</div>
+      <div>&nbsp;&nbsp;return pgh[index][dig];</div>
+      <div>}</div>
+      <div></div>
+      <div>&nbsp;&nbsp;leaq (%rdi,%rdi,4), %rax&nbsp;&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)">#&nbsp; 5*index</span></div>
+      <div>&nbsp;&nbsp;addl %rax, %rsi&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)">#&nbsp; 5*index + dig</span></div>
+      <div>&nbsp;&nbsp;movl pgh(,%rsi,4), %eax&nbsp;&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)">#&nbsp; M[pgh + 4*(5*index + dig)]</span></div>
+    </div>
+    <p>把 <code>(i·C + j)·K</code> 改写成 <code>(5i + j)·4</code>：先算 <code>5i</code>（leaq），加上 <code>j</code>（addl），最后一次性 <code>×4 + 基址</code>（movl 的缩放寻址）。<b>C·K 能拆成「缩放因子 + 小整数乘法」时，编译器全程不用 imul。</b></p>
+
+    <div class="box warn"><div class="t">边界提醒：课件第 11 页的「pgh[4];」标签</div>
+      课件内存图旁写着 <code>zip_dig pgh[4];</code> —— 它是整张图的<b>声明标注</b>（等价于 <code>int pgh[4][5]</code>），不是「还有一个 pgh[4] 元素」：图里的 5 个地址是 4 行的起点（76/96/116/136）加数组末尾（156）。数组的合法行下标只有 0–3。
+    </div>
+  </section>
+
+  <!-- ================= 4 ================= -->
+  <section id="s4">
+    <h2>4. 多级数组：指针的数组<span class="srcref">原第 16–18 页</span></h2>
+    <p class="lede">把「数组的数组」换成「<b>指针的数组</b>」，同样的 <code>univ[index][digit]</code> 写法，机器级的地址计算完全变样 —— 这次要<b>读两次内存</b>。</p>
+
+    <h3>4.1 例子的内存图<span class="srcref">原第 16 页</span></h3>
+    <div class="formula" style="text-align:left">
+      <div>zip_dig cmu = { 1, 5, 2, 1, 3 };&nbsp;&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)">/* @16 */</span></div>
+      <div>zip_dig mit = { 0, 2, 1, 3, 9 };&nbsp;&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)">/* @36 */</span></div>
+      <div>zip_dig ucb = { 9, 4, 7, 2, 0 };&nbsp;&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)">/* @56 */</span></div>
+      <div>#define UCOUNT 3</div>
+      <div>int *univ[UCOUNT] = {mit, cmu, ucb};&nbsp;&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)">/* @160 */</span></div>
+    </div>
+    <p><code>univ</code> 只有 3 个元素，每个是一个 <b>8 字节指针</b>（占 160、168、176 三格），分别指向 mit（@36）、cmu（@16）、ucb（@56）—— 注意初始化顺序是 <code>{mit, cmu, ucb}</code>，所以 <code>univ[0] → mit</code>、<code>univ[1] → cmu</code>、<code>univ[2] → ucb</code>。三个 zip 数组本体和第 2 节完全相同：</p>
+    <div id="mlDiagram"></div>
+
+    <h3>4.2 两次访存的地址计算<span class="srcref">原第 17 页</span></h3>
+    <div class="formula" style="text-align:left">
+      <div>int get_univ_digit(size_t index, size_t digit)</div>
+      <div>{</div>
+      <div>&nbsp;&nbsp;return univ[index][digit];</div>
+      <div>}</div>
+      <div></div>
+      <div>&nbsp;&nbsp;salq $2, %rsi&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)">#&nbsp; 4*digit</span></div>
+      <div>&nbsp;&nbsp;addq univ(,%rdi,8), %rsi&nbsp;&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)">#&nbsp; p = univ[index] + 4*digit</span></div>
+      <div>&nbsp;&nbsp;movl (%rsi), %eax&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)">#&nbsp; return *p</span></div>
+      <div>&nbsp;&nbsp;ret</div>
+    </div>
+    <p>计算的是 <code>Mem[Mem[univ + 8·index] + 4·digit]</code>：<b>第一次访存</b>从 <code>univ</code> 数组里取出第 index 个<b>指针</b>（所以缩放是 8），<b>第二次访存</b>才从这个指针指向的数组里取元素（缩放 4）。行与行之间<b>不保证连续</b> —— 每行的位置都存在指针里。</p>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：嵌套 vs 多级 —— 同一个 [index][digit]，两条访存路径</span>
+        <label class="fld">index <input type="text" id="msI" value="1" size="5" spellcheck="false"></label>
+        <label class="fld">digit <input type="text" id="msD" value="2" size="5" spellcheck="false"></label>
+        <button class="p" id="msGo">两条路都走一遍</button>
+        <button class="sm" data-ms="i=1;d=2">课件例 [1][2]</button>
+        <button class="sm" data-ms="i=0;d=0">[0][0]</button>
+        <button class="sm" data-ms="i=2;d=4">[2][4]</button>
+      </div>
+      <div id="msOut"></div>
+    </div>
+
+    <h3>4.3 课件第 18 页的对照表<span class="srcref">原第 18 页</span></h3>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th></th><th>嵌套数组 pgh</th><th>多级数组 univ</th></tr>
+      <tr><td><b>C 代码</b></td><td class="mono">return pgh[index][digit];</td><td class="mono">return univ[index][digit];</td></tr>
+      <tr><td><b>地址计算</b></td><td class="mono">Mem[pgh + 20·index + 4·digit]</td><td class="mono">Mem[Mem[univ + 8·index] + 4·digit]</td></tr>
+      <tr><td><b>访存次数</b></td><td><b>1 次</b>（取数）</td><td><b>2 次</b>（先取指针，再取数）</td></tr>
+      <tr><td><b>行的位置</b></td><td>编译期算术，行行紧挨</td><td>存在指针里，行可以散在任意位置</td></tr>
+    </table></div>
+    <div class="box bad"><div class="t">C 代码长得一样，机器级天差地别</div>
+      课件原话：<b>Accesses looks similar in C, but address computations very different</b>。「看起来像二维数组」不等于「是二维数组」—— 差别全部藏在寻址方式里，也正是 5.2 节优化时要小心的事情。
+    </div>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：两道判断题</span>
+        <button class="sm" id="mpReset">重来</button>
+      </div>
+      <div id="mpOut"></div>
+    </div>
+  </section>
+
+  <!-- ================= 5 ================= -->
+  <section id="s5">
+    <h2>5. N × N 矩阵：固定尺寸 vs 变长尺寸<span class="srcref">原第 19–21 页</span></h2>
+    <p class="lede">矩阵就是二维数组。但当行数 <b>n 要到运行时才知道</b>时，地址公式里的 <code>n·i</code> 就不能再拆成 leaq 的常数戏法 —— 得老老实实做一次整数乘法。</p>
+
+    <h3>5.1 三种写法<span class="srcref">原第 19 页</span></h3>
+    <div class="formula" style="text-align:left">
+      <div>#define N 16</div>
+      <div>typedef int fix_matrix[N][N];</div>
+      <div></div>
+      <div><span style="font-family:var(--font-sans);color:var(--muted)">/* 固定维度：编译期就知道 N */</span></div>
+      <div>int fix_ele(fix_matrix a, size_t i, size_t j)</div>
+      <div>{&nbsp;&nbsp;return a[i][j];&nbsp;&nbsp;}</div>
+      <div></div>
+      <div>#define IDX(n, i, j) ((i)*(n)+(j))</div>
+      <div><span style="font-family:var(--font-sans);color:var(--muted)">/* 变长维度 · 显式下标：传统做法，手动摊平成一维 */</span></div>
+      <div>int vec_ele(size_t n, int *a, size_t i, size_t j)</div>
+      <div>{&nbsp;&nbsp;return a[IDX(n,i,j)];&nbsp;&nbsp;}</div>
+      <div></div>
+      <div><span style="font-family:var(--font-sans);color:var(--muted)">/* 变长维度 · 隐式下标：C99 的变长数组，gcc 支持 */</span></div>
+      <div>int var_ele(size_t n, int a[n][n], size_t i, size_t j)</div>
+      <div>{&nbsp;&nbsp;return a[i][j];&nbsp;&nbsp;}</div>
+    </div>
+
+    <h3>5.2 固定尺寸：C·K = 64 全程常数<span class="srcref">原第 20 页</span></h3>
+    <div class="formula" style="text-align:left">
+      <div><span style="font-family:var(--font-sans);color:var(--muted)"># a in %rdi, i in %rsi, j in %rdx</span></div>
+      <div>&nbsp;&nbsp;salq $6, %rsi&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)">#&nbsp; 64*i</span></div>
+      <div>&nbsp;&nbsp;addq %rsi, %rdi&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)">#&nbsp; a + 64*i</span></div>
+      <div>&nbsp;&nbsp;movl (%rdi,%rdx,4), %eax&nbsp;&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)">#&nbsp; M[a + 64*i + 4*j]</span></div>
+    </div>
+    <p>C = 16、K = 4，行宽 64 字节是常数 → <code>64·i</code> 就是左移 6 位（<code>salq $6</code>），列下标交给 <code>movl</code> 的缩放寻址。<b>没有任何乘法指令。</b></p>
+
+    <h3>5.3 变长尺寸：一次 imul 逃不掉<span class="srcref">原第 21 页</span></h3>
+    <div class="formula" style="text-align:left">
+      <div><span style="font-family:var(--font-sans);color:var(--muted)"># n in %rdi, a in %rsi, i in %rdx, j in %rcx</span></div>
+      <div>&nbsp;&nbsp;imulq %rdx, %rdi&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)">#&nbsp; n*i</span></div>
+      <div>&nbsp;&nbsp;leaq (%rsi,%rdi,4), %rax&nbsp;&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)">#&nbsp; a + 4*n*i</span></div>
+      <div>&nbsp;&nbsp;movl (%rax,%rcx,4), %eax&nbsp;&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)">#&nbsp; a + 4*n*i + 4*j</span></div>
+    </div>
+    <p>行宽 <code>4n</code> 不再是常数，只能 <code>imulq</code> 算出 <code>n·i</code>，再用 leaq 的缩放 4 乘掉 sizeof(int)。注意参数顺序变了：<b>变长数组把 n 排在第一个参数</b>（%rdi），a 退到 %rsi。</p>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：fix_ele vs var_ele —— 填 n、i、j，看每条指令后的寄存器</span>
+        <label class="fld">模式
+          <select id="maMode">
+            <option value="fix" selected>fix（N=16，%rsi=i）</option>
+            <option value="var">var（n 变长，%rdi=n）</option>
+          </select>
+        </label>
+        <label class="fld">n <input type="text" id="maN" value="16" size="5" spellcheck="false"></label>
+        <label class="fld">i <input type="text" id="maI" value="3" size="5" spellcheck="false"></label>
+        <label class="fld">j <input type="text" id="maJ" value="5" size="5" spellcheck="false"></label>
+        <button class="p" id="maGo">执行</button>
+        <button class="sm" data-ma="m=fix;i=3;j=5">fix 例</button>
+        <button class="sm" data-ma="m=var;i=5;j=2">var 例</button>
+      </div>
+      <div id="maOut"></div>
+    </div>
+
+    <div class="box ok"><div class="t">两种模式的成本差在哪</div>
+      fix：移位 + 加 + 读（3 条）；var：乘 + leaq + 读（3 条）。差别不在条数，而在 <code>imul</code> 本身 —— 它比移位慢。所以 <code>vec_ele</code> 的 IDX 宏写法（把 n 显式传进来）和 <code>var_ele</code> 的 C99 变长数组，<b>生成的地址算术本质相同</b>；只有固定 N 时编译器才能把乘法整个消掉。
+    </div>
+  </section>
+
+  <!-- ================= 6 ================= -->
+  <section id="s6">
+    <h2>6. 例题：四种下标写法混在一行<span class="srcref">原第 22–23 页</span></h2>
+    <p class="lede">课件在第 22–23 页给了一道把本节全部寻址方式揉进一个 <code>printf</code> 的例题 —— 先别看答案，自己算一遍，再用下面的求和器核对。</p>
+
+    <h3>6.1 题目<span class="srcref">原第 22 页</span></h3>
+    <div class="formula" style="text-align:left">
+      <div>zip_dig pgh[PCOUNT] =</div>
+      <div>&nbsp;&nbsp;{{1, 5, 2, 0, 6},</div>
+      <div>&nbsp;&nbsp;&nbsp;{1, 5, 2, 1, 3},</div>
+      <div>&nbsp;&nbsp;&nbsp;{1, 5, 2, 1, 7},</div>
+      <div>&nbsp;&nbsp;&nbsp;{1, 5, 2, 2, 1}};</div>
+      <div>int *linear_zip = (int *) pgh;&nbsp;&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)">/* 摊平成一维 */</span></div>
+      <div>int *zip2 = (int *) pgh[2];&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)">/* 指向第 2 行 */</span></div>
+      <div>int result =</div>
+      <div>&nbsp;&nbsp;&nbsp;&nbsp;pgh[0][0] +</div>
+      <div>&nbsp;&nbsp;&nbsp;&nbsp;linear_zip[7] +</div>
+      <div>&nbsp;&nbsp;&nbsp;&nbsp;*(linear_zip + 8) +</div>
+      <div>&nbsp;&nbsp;&nbsp;&nbsp;zip2[1];</div>
+      <div>printf("result: %d\n", result);</div>
+    </div>
+    <p>课件贴出的运行结果：<code>linux&gt; ./array</code> → <b><code>result: 9</code></b>。</p>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：四项求和器 —— 每一项等于哪个元素，现算给你看</span>
+        <label class="fld">linear_zip[k] 的 k <input type="text" id="axK1" value="7" size="4" spellcheck="false"></label>
+        <label class="fld">*(linear_zip + m) 的 m <input type="text" id="axK2" value="8" size="4" spellcheck="false"></label>
+        <label class="fld">zip2[t] 的 t <input type="text" id="axK3" value="1" size="4" spellcheck="false"></label>
+        <button class="p" id="axGo">重算</button>
+        <button class="sm" data-ax="a=7;b=8;c=1">课件原例</button>
+      </div>
+      <div id="axOut"></div>
+    </div>
+
+    <div class="box ok"><div class="t">四个下标、同一个内存块</div>
+      <code>pgh[0][0]</code> 是标准二维写法；<code>linear_zip[7]</code> 把整个二维数组<b>摊平</b>后取第 7 个 int（= <code>pgh[1][2]</code>，因为 7 = 1·5 + 2）；<code>*(linear_zip + 8)</code> 是同一个摊平操作的指针写法（= <code>pgh[1][3]</code>）；<code>zip2[1]</code> 先用 <code>pgh[2]</code> 拿到第 2 行的行地址、再在行内取下标 1。课件打印的 <b>result: 9</b> 与页面现算一致 —— 你可以改 k/m/t 再算，摊平映射永远是 <code>linear_zip[k] = pgh[k/5][k%5]</code>（合法范围 k = 0…19，与 3.1 节的地址公式 <code>A + (i·C + j)·K</code> 互相印证）。
+    </div>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：两道判断题</span>
+        <button class="sm" id="axpReset">重来</button>
+      </div>
+      <div id="axpOut"></div>
+    </div>
+  </section>
+
+  <!-- ================= 7 ================= -->
+  <section id="s7">
+    <h2>7. 结构体：布局与访问<span class="srcref">原第 25–27 页</span></h2>
+    <p class="lede">结构体 = <b>一块足够装下所有字段、字段按声明顺序排列的内存</b>。哪怕换个顺序能省空间，编译器也<b>不重排</b> —— 字段偏移完全由编译期决定，机器级程序对「结构体」三个字一无所知，只认识偏移。</p>
+
+    <h3>7.1 struct rec：一张 32 字节的地图<span class="srcref">原第 25 页</span></h3>
+    <div class="formula" style="text-align:left">
+      <div>struct rec {</div>
+      <div>&nbsp;&nbsp;int a[4];&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)">/* 偏移 0–15，16 字节 */</span></div>
+      <div>&nbsp;&nbsp;size_t i;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)">/* 偏移 16–23，8 字节 */</span></div>
+      <div>&nbsp;&nbsp;struct rec *next;&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)">/* 偏移 24–31，8 字节 */</span></div>
+      <div>};&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)">/* 共 32 字节 */</span></div>
+    </div>
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：struct rec 字节地图 —— 点字段名看覆盖范围；填 idx 算 &amp;r-&gt;a[idx]</span>
+        <label class="fld">idx <input type="text" id="rcIdx" value="2" size="5" spellcheck="false"></label>
+      </div>
+      <div id="rcOut"></div>
+    </div>
+
+    <h3>7.2 取成员指针：偏移在编译期就定了<span class="srcref">原第 26 页</span></h3>
+    <div class="formula" style="text-align:left">
+      <div>int *get_ap(struct rec *r, size_t idx)</div>
+      <div>{</div>
+      <div>&nbsp;&nbsp;return &amp;r-&gt;a[idx];</div>
+      <div>}</div>
+      <div></div>
+      <div><span style="font-family:var(--font-sans);color:var(--muted)"># r in %rdi, idx in %rsi</span></div>
+      <div>&nbsp;&nbsp;leaq (%rdi,%rsi,4), %rax&nbsp;&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)">#&nbsp; r + 4*idx</span></div>
+      <div>&nbsp;&nbsp;ret</div>
+    </div>
+    <p><code>&amp;r-&gt;a[idx]</code> = <code>r + 4·idx</code>：数组的基址偏移（0）不用加，缩放 4 来自 <code>int</code>。假如取的是 <code>&amp;r-&gt;next</code>，那就是 <code>r + 24</code> —— 偏移 24 是<b>编译期常量</b>，直接写进指令。</p>
+
+    <h3>7.3 链表遍历：下标本身存在内存里<span class="srcref">原第 27 页</span></h3>
+    <div class="formula" style="text-align:left">
+      <div>void set_val(struct rec *r, int val)</div>
+      <div>{</div>
+      <div>&nbsp;&nbsp;while (r) {</div>
+      <div>&nbsp;&nbsp;&nbsp;&nbsp;int i = r-&gt;i;&nbsp;&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)">/* Element i */</span></div>
+      <div>&nbsp;&nbsp;&nbsp;&nbsp;r-&gt;a[i] = val;</div>
+      <div>&nbsp;&nbsp;&nbsp;&nbsp;r = r-&gt;next;</div>
+      <div>&nbsp;&nbsp;}</div>
+      <div>}</div>
+      <div></div>
+      <div>.L11:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)">#&nbsp; loop:</span></div>
+      <div>&nbsp;&nbsp;movslq 16(%rdi), %rax&nbsp;&nbsp;&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)">#&nbsp;&nbsp; i = M[r+16]</span></div>
+      <div>&nbsp;&nbsp;movl %esi, (%rdi,%rax,4)<span style="font-family:var(--font-sans);color:var(--muted)">#&nbsp;&nbsp; M[r+4*i] = val</span></div>
+      <div>&nbsp;&nbsp;movq 24(%rdi), %rdi&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)">#&nbsp;&nbsp; r = M[r+24]</span></div>
+      <div>&nbsp;&nbsp;testq %rdi, %rdi&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)">#&nbsp;&nbsp; Test r</span></div>
+      <div>&nbsp;&nbsp;jne .L11&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)">#&nbsp;&nbsp; if !=0 goto loop</span></div>
+    </div>
+    <p>注意第三个字段的偏移：<b><code>next</code> 在 24</b>。这一页的声明把 <code>i</code> 写成 <code>int</code>（第 25 页是 <code>size_t</code>）—— 两种写法的字段偏移相同（int 之后垫 4 字节、size_t 之后就不用垫，<code>next</code> 都落在 24），但「<b>要写内存的字段，它的下标 i 也是从内存里读出来的</b>」（<code>movslq 16(%rdi)</code>）这件事不变：寻址模式 <code>(%rdi,%rax,4)</code> 的「下标寄存器」内容来自上一次访存。</p>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：set_val 步进器 —— 看寄存器与内存怎么跟着 while 循环走</span>
+        <label class="fld">val <input type="text" id="svVal" value="99" size="6" spellcheck="false"></label>
+        <button class="p" id="svNext">下一步</button>
+        <button class="sm" id="svRun">自动播放</button>
+        <button class="sm" id="svReset">重来</button>
+      </div>
+      <div id="svOut"></div>
+    </div>
+
+    <div class="box"><div class="t">movslq 是干嘛的</div>
+      <code>movslq 16(%rdi), %rax</code> = 「load 32 位有符号数、符号扩展到 64 位」。<code>r-&gt;i</code> 声明为 <code>int</code>（4 字节），而寻址要用 64 位的 <code>%rax</code> —— 所以取出来的 32 位值要扩展。若按第 25 页把 <code>i</code> 声明成 <code>size_t</code>（8 字节），这条就变成普通的 <code>movq</code>。页面下方的步进器按课件汇编原文（int 版）演示。
+    </div>
+  </section>
+
+  <!-- ================= 8 ================= -->
+  <section id="s8">
+    <h2>8. 对齐：为什么结构体会「虚胖」<span class="srcref">原第 28–35 页</span></h2>
+    <p class="lede">对齐规则两句话：<b>基本类型占 K 字节，它的地址必须是 K 的倍数</b>；结构体整体的对齐要求 K 取「所有字段里最大的 K」，<b>起始地址与总长度都必须是 K 的倍数</b>。中间垫的叫内部填充，末尾垫的叫外部填充。</p>
+
+    <h3>8.1 x86-64 的对齐要求<span class="srcref">原第 30 页</span></h3>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>K</th><th>类型</th><th>地址要求（课件原文）</th></tr>
+      <tr><td class="mono">1</td><td><code>char</code> …</td><td>地址无限制</td></tr>
+      <tr><td class="mono">2</td><td><code>short</code> …</td><td>地址最低 1 位必须是 0<sub>2</sub>（2 的倍数）</td></tr>
+      <tr><td class="mono">4</td><td><code>int</code>、<code>float</code> …</td><td>地址最低 2 位必须是 00<sub>2</sub>（4 的倍数）</td></tr>
+      <tr><td class="mono">8</td><td><code>double</code>、<code>long</code>、<code>char *</code> …</td><td>地址最低 3 位必须是 000<sub>2</sub>（8 的倍数）</td></tr>
+      <tr><td class="mono">16</td><td><code>long double</code>（Linux 上的 GCC）</td><td>地址最低 4 位必须是 0000<sub>2</sub>（16 的倍数）</td></tr>
+    </table></div>
+    <div class="box"><div class="t">为什么要对齐</div>
+      课件第 29 页给了三条动机：内存按 4/8 字节的<b>对齐块</b>访问（具体依赖系统）；跨「四字边界」的数据读写效率低；数据若横跨两个<b>虚拟内存页</b>，访存会更麻烦。编译器的对策：往结构体里<b>插空隙</b>（gaps），保证每个字段都对齐。
+    </div>
+
+    <h3>8.2 课件的三个结构体<span class="srcref">原第 28、31–34 页</span></h3>
+    <div class="formula" style="text-align:left">
+      <div>struct S1 {&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;struct S2 {&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;struct S3 {</div>
+      <div>&nbsp;&nbsp;char c;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;double v;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;short i;</div>
+      <div>&nbsp;&nbsp;int i[2];&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;int i[2];&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;float v;</div>
+      <div>&nbsp;&nbsp;double v;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;char c;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;short j;</div>
+      <div>} *p;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;} *p;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;} a[10];</div>
+    </div>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>结构体</th><th>偏移（课件标注）</th><th>填充</th><th>大小</th><th>K</th></tr>
+      <tr><td><b>S1</b></td><td class="mono">c=0, i[0]=4, i[1]=8, v=16</td><td>内部：1–3（3 字节）+ 12–15（4 字节）；外部：0</td><td class="mono">24</td><td class="mono">8</td></tr>
+      <tr><td><b>S2</b></td><td class="mono">v=0, i[0]=8, i[1]=12, c=16</td><td>内部：0；外部：17–23（<b>7 字节</b>）</td><td class="mono">24</td><td class="mono">8</td></tr>
+      <tr><td><b>S3</b></td><td class="mono">i=0, v=4, j=8</td><td>内部：2–3 与 10–11；每个元素外部：0</td><td class="mono">12</td><td class="mono">4</td></tr>
+    </table></div>
+    <div class="box ok"><div class="t">同一批字段，两种命运</div>
+      S1 与 S2 字段完全相同：<b>S2 把最大的字段放开头，内部填充归零</b>；但两者的总大小都得是 K=8 的倍数，于是 S1 靠内部填充、S2 靠末尾 7 字节外部填充，殊途同归都是 24 字节。S3 则演示了「结构体数组」：<code>a[10]</code> 的每个元素都是 12 字节（K=4 的倍数），<code>a[idx].j</code> 的地址 = <code>a + 12·idx + 8</code> —— 汇编里写成 <code>movzwl a+8(,%rax,4)</code>，其中 %rax = 3·idx（课件第 34 页）。
+    </div>
+
+    <h3>8.3 省空间：把大的放前面<span class="srcref">原第 35 页</span></h3>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>声明</th><th>布局</th><th>大小</th></tr>
+      <tr><td class="mono">struct S4 { char c; int i; char d; };</td><td class="mono">c=0, 垫3, i=4–7, d=8, 垫3</td><td class="mono"><b>12 字节</b></td></tr>
+      <tr><td class="mono">struct S5 { int i; char c; char d; };</td><td class="mono">i=0–3, c=4, d=5, 垫2</td><td class="mono"><b>8 字节</b></td></tr>
+    </table></div>
+    <p>字段一样，只把 4 字节的 <code>int</code> 挪到最前，体积就从 12 缩到 8 —— 两个 char 能够「抱团」共享同一格对齐单位。这就是课件给的省空间口诀：<b>Put large data types first（大数据类型放前面）</b>。</p>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：结构体布局计算器 —— 自己拼字段，看偏移、填充与总大小（与真实编译器一致）</span>
+        <label class="fld">字段
+          <select id="scT">
+            <option value="char">char</option>
+            <option value="short">short</option>
+            <option value="int" selected>int</option>
+            <option value="long">long</option>
+            <option value="float">float</option>
+            <option value="double">double</option>
+            <option value="long double">long double</option>
+            <option value="ptr">指针 (8B)</option>
+          </select>
+        </label>
+        <label class="fld">数组长度 <input type="text" id="scN" value="1" size="4" spellcheck="false"></label>
+        <button class="sm" id="scAdd">＋添加字段</button>
+        <button class="sm" id="scDel">－删最后一个</button>
+        <button class="sm" id="scClear">清空</button>
+        <div class="seg" id="scSeg">
+          <button data-sc="S1">S1</button>
+          <button data-sc="S2">S2</button>
+          <button data-sc="S3">S3</button>
+          <button data-sc="S4">S4</button>
+          <button data-sc="S5">S5</button>
+          <button data-sc="rec">rec</button>
+        </div>
+      </div>
+      <div id="scOut"></div>
+    </div>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：考考你 —— 先猜总大小与字段偏移，再判分（基准 = 真实编译器布局）</span>
+        <label class="fld">总大小 <input type="text" id="scGSize" value="" size="5" placeholder="??" spellcheck="false"></label>
+        <label class="fld">猜哪个字段
+          <select id="scGField"></select>
+        </label>
+        <label class="fld">它的偏移 <input type="text" id="scGOff" value="" size="5" placeholder="??" spellcheck="false"></label>
+        <button class="p" id="scJudge">判分</button>
+      </div>
+      <div id="scJudgeOut"></div>
+    </div>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：三道判断题</span>
+        <button class="sm" id="alReset">重来</button>
+      </div>
+      <div id="alOut"></div>
+    </div>
+  </section>
+
+  <!-- ================= 9 ================= -->
+  <section id="s9">
+    <h2>9. 浮点：数据搬进 XMM 寄存器<span class="srcref">原第 37–42 页</span></h2>
+    <p class="lede">浮点数不走通用寄存器：<b>参数放在 <code>%xmm0</code>、<code>%xmm1</code>…，返回值放 <code>%xmm0</code></b>，而且全部 XMM 寄存器都是 <b>caller-saved</b>（调用者保存）。这套规则属于 SSE/AVX 家族 —— 课件第 37 页的历史线：x87（祖传、非常丑）→ SSE（服务器机支持，向量指令的特殊用法）→ AVX（最新，与 SSE 相似，书里讲的就是它）。</p>
+
+    <h3>9.1 一个 XMM 寄存器的七种读法<span class="srcref">原第 38 页</span></h3>
+    <p>XMM 寄存器共 <b>16 个</b>，每个 <b>16 字节</b>。同一份 16 字节可以按不同「宽度 × 个数」来解释：</p>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>解释方式</th><th>份数</th><th>每份宽度</th></tr>
+      <tr><td>8 位整数</td><td class="mono">16</td><td class="mono">1 B</td></tr>
+      <tr><td>16 位整数</td><td class="mono">8</td><td class="mono">2 B</td></tr>
+      <tr><td>32 位整数</td><td class="mono">4</td><td class="mono">4 B</td></tr>
+      <tr><td>单精度浮点 float</td><td class="mono">4</td><td class="mono">4 B</td></tr>
+      <tr><td>双精度浮点 double</td><td class="mono">2</td><td class="mono">8 B</td></tr>
+      <tr><td>标量单精度（只用低 4 字节）</td><td class="mono">1</td><td class="mono">4 B</td></tr>
+      <tr><td>标量双精度（只用低 8 字节）</td><td class="mono">1</td><td class="mono">8 B</td></tr>
+    </table></div>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：XMM 装箱可视化 —— 改 16 个字节，看七种读法各读出什么</span>
+        <label class="fld">16 字节（hex） <input type="text" id="xmIn" value="0000803f0000004000004040000040e1" size="36" spellcheck="false"></label>
+        <button class="p" id="xmGo">解释</button>
+        <button class="sm" data-xm="0000803f0000004000004040000040e1">1,2,3,7 递增</button>
+        <button class="sm" data-xm="00000000000000000000000000000000">全零</button>
+        <button class="sm" data-xm="000000000000f03f0000000000002240">double 1 与 9</button>
+      </div>
+      <div id="xmOut"></div>
+    </div>
+
+    <h3>9.2 标量 vs SIMD：一条指令算几个<span class="srcref">原第 39 页</span></h3>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>指令</th><th>含义</th><th>计算几个</th></tr>
+      <tr><td class="mono">addss %xmm0,%xmm1</td><td>标量单精度（scalar <b>s</b>ingle）</td><td>只算<b>最低 1 个</b> float</td></tr>
+      <tr><td class="mono">addps %xmm0,%xmm1</td><td>打包单精度（packed，后缀没了 s）</td><td>同时算 <b>4 个</b> float</td></tr>
+      <tr><td class="mono">addsd %xmm0,%xmm1</td><td>标量双精度（scalar <b>d</b>ouble）</td><td>只算<b>最低 1 个</b> double</td></tr>
+      <tr><td class="mono">addpd %xmm0,%xmm1</td><td>打包双精度</td><td>同时算 <b>2 个</b> double</td></tr>
+    </table></div>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：addss vs addps —— 两个 4×float 向量，看哪些格子被更新</span>
+        <label class="fld">%xmm0（4×float） <input type="text" id="siA" value="1,2,3,4" size="14" spellcheck="false"></label>
+        <label class="fld">%xmm1（4×float） <input type="text" id="siB" value="10,20,30,40" size="15" spellcheck="false"></label>
+        <div class="seg" id="siSeg">
+          <button class="on" data-m="ss">addss</button>
+          <button data-m="ps">addps</button>
+        </div>
+        <button class="sm" id="siGo">执行</button>
+      </div>
+      <div id="siOut"></div>
+    </div>
+
+    <h3>9.3 传参、访存与函数<span class="srcref">原第 40–41 页</span></h3>
+    <div class="formula" style="text-align:left">
+      <div>float fadd(float x, float y)&nbsp;&nbsp;&nbsp;&nbsp;double dadd(double x, double y)</div>
+      <div>{&nbsp;&nbsp;return x + y;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{&nbsp;&nbsp;return x + y;</div>
+      <div>}&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}</div>
+      <div><span style="font-family:var(--font-sans);color:var(--muted)"># x in %xmm0, y in %xmm1</span></div>
+      <div>&nbsp;&nbsp;addss %xmm1, %xmm0&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;addsd %xmm1, %xmm0</div>
+      <div>&nbsp;&nbsp;ret&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ret</div>
+    </div>
+    <p>整数（和指针）参数照旧走通用寄存器；<b>浮点参数走 XMM</b>。于是一个函数可以同时收两种参数（课件第 41 页 <code>dincr</code>：指针 p 在 <code>%rdi</code>、浮点 v 在 <code>%xmm0</code>）：</p>
+    <div class="formula" style="text-align:left">
+      <div>double dincr(double *p, double v)</div>
+      <div>{</div>
+      <div>&nbsp;&nbsp;double x = *p;</div>
+      <div>&nbsp;&nbsp;*p = x + v;</div>
+      <div>&nbsp;&nbsp;return x;</div>
+      <div>}</div>
+      <div></div>
+      <div><span style="font-family:var(--font-sans);color:var(--muted)"># p in %rdi, v in %xmm0</span></div>
+      <div>&nbsp;&nbsp;movapd %xmm0, %xmm1&nbsp;&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)">#&nbsp; Copy v</span></div>
+      <div>&nbsp;&nbsp;movsd (%rdi), %xmm0&nbsp;&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)">#&nbsp; x = *p</span></div>
+      <div>&nbsp;&nbsp;addsd %xmm0, %xmm1&nbsp;&nbsp;&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)">#&nbsp; t = x + v</span></div>
+      <div>&nbsp;&nbsp;movsd %xmm1, (%rdi)&nbsp;&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)">#&nbsp; *p = t</span></div>
+      <div>&nbsp;&nbsp;ret</div>
+    </div>
+    <div class="box"><div class="t">XMM 与内存之间也分「标量 / 打包」</div>
+      <code>movsd</code> 一次搬 <b>8 字节</b>（一个 double）；<code>movapd</code> 在 XMM 寄存器<b>之间</b>整份搬 16 字节（aligned packed double）。后缀的 s/p 规则和运算指令一致 —— 一堆指令长得像，是课件第 42 页抱怨「Lots of instructions」的原因。
+    </div>
+
+    <h3>9.4 浮点比较：ucomiss / ucomisd<span class="srcref">原第 42 页</span></h3>
+    <p>浮点比较用 <code>ucomiss</code>（单精度）/ <code>ucomisd</code>（双精度），设置条件码 <b>ZF、PF、CF</b>（并把 OF、SF 清零）。四个结果对应的位组合 —— <b>无序（UNORDERED）占了一整行</b>，因为 NaN 和任何数（包括它自己）比较都是「无序」：</p>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>关系</th><th>ZF PF CF</th></tr>
+      <tr><td><b>UNORDERED</b>（有 NaN）</td><td class="mono"><b>1 1 1</b></td></tr>
+      <tr><td><b>GREATER_THAN</b></td><td class="mono">0 0 0</td></tr>
+      <tr><td><b>LESS_THAN</b></td><td class="mono">0 0 1</td></tr>
+      <tr><td><b>EQUAL</b></td><td class="mono">1 0 0</td></tr>
+    </table></div>
+    <p>顺带一提：课件同页给了一条把 XMM 清零的惯用法 —— <code>xorpd %xmm0, %xmm0</code>（自己异或自己）；其他常数则从内存加载。</p>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：ucomisd 条件码预测器 —— 给两个 double，先猜三连，再看硬件答案</span>
+        <label class="fld">a（%xmm0） <input type="text" id="ucA" value="1" size="8" spellcheck="false"></label>
+        <label class="fld">b（%xmm1） <input type="text" id="ucB" value="2" size="8" spellcheck="false"></label>
+        <div class="seg" id="ucSeg">
+          <button data-f="000">000</button>
+          <button data-f="001">001</button>
+          <button data-f="100">100</button>
+          <button data-f="111">111</button>
+        </div>
+        <button class="sm" id="ucReset">换一组数</button>
+      </div>
+      <div id="ucOut"></div>
+    </div>
+
+    <div class="box ok"><div class="t">这个预测器的基准是硬件本身</div>
+      页面给出的 ZF/PF/CF 三连由页面内实现计算，该实现已与 <b>x86-64 硬件执行的 <code>ucomisd</code> 指令</b>（经 Rosetta 在本机真实跑指令、pushf 取标志）在 10 万组随机输入上比对过，0 项不一致 —— 所以这里「判对错」的基准就是你的 CPU 会给出的答案。
+    </div>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：两道判断题</span>
+        <button class="sm" id="fpReset">重来</button>
+      </div>
+      <div id="fpOut"></div>
+    </div>
+  </section>
+
+  <!-- ================= 10 ================= -->
+  <section id="s10">
+    <h2>10. 补充 slides：理解指针与数组<span class="srcref">原第 44–51 页</span></h2>
+    <p class="lede">课件的 Additional Slides 用三张大表回答同一个问题：拿到一个声明 <code>D</code>，<code>D</code>、<code>*D</code>、<code>**D</code>（第三张表还有 <code>***D</code>）分别<b>能不能编译（Cmp）、是不是可能的坏指针引用（Bad）、sizeof 返回多少（Size）</b>。这张表是本讲前九节的总验收。</p>
+
+    <h3>10.1 五个声明，一个 deref 规则<span class="srcref">原第 47、49 页</span></h3>
+    <p>剥一个 <code>*</code> 的规则：对<b>指针</b>剥掉一层指向；对<b>数组</b>剥掉最外层维度（数组名此时退化为指针）。剥不动（剩下的不是指针也不是数组）就编译不过：</p>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>声明</th><th>读法</th><th>本体是什么</th></tr>
+      <tr><td class="mono">int A1[3]</td><td>3 个 int 的数组</td><td>已分配的数组（12 B）</td></tr>
+      <tr><td class="mono">int *A2[3]</td><td>3 个 int* 的数组</td><td>已分配的<b>指针</b>数组（24 B），指针本身未初始化</td></tr>
+      <tr><td class="mono">int (*A3)[3]</td><td>指向「3 个 int 的数组」的指针</td><td>一个未分配的指针（8 B）</td></tr>
+      <tr><td class="mono">int (*A4[3])</td><td>同 A2 —— 括号不改变它</td><td>已分配的指针数组（24 B）</td></tr>
+      <tr><td class="mono">int (*A5[3])[5]</td><td>3 个指针，各指向「5 个 int 的数组」</td><td>已分配的指针数组（24 B）</td></tr>
+    </table></div>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：声明大表自测 —— Size 列自己填，判分基准 = 真实编译器的 sizeof</span>
+        <div class="seg" id="dtSeg">
+          <button class="on" data-m="quiz">自测模式</button>
+          <button data-m="show">显示答案</button>
+        </div>
+        <button class="p" id="dtJudge">判分</button>
+        <button class="sm" id="dtReset">清空作答</button>
+      </div>
+      <div id="dtOut"></div>
+    </div>
+
+    <div class="box ok"><div class="t">这张表的三个基准各有各的来源</div>
+      <b>Size</b> 列由页面按 deref 规则现算，已与 clang 在 x86-64 下对全部 5 个声明 × 4 层 deref 的 <code>sizeof</code> 输出逐项比对（0 项不一致）；<b>Cmp</b> 列也与 clang 的真实编译结果核对过；<b>Bad</b> 列沿用课件第 46/48/51 页自己的答案 —— 判断标准是「这个表达式是否<b>可能</b>解引用了未分配的对象」。
+    </div>
+
+    <div class="box warn"><div class="t">Bad 列的口径</div>
+      「已分配 / 未分配」是课件图的用词：A1 的格子是<b>分配了的 int</b>；A2/A4/A5 数组本体已分配，但里面的<b>指针值未初始化</b>，解引用它们就是坏引用；A3 本身就是一根没分配的指针。所以 <code>**A2</code>（只读到指针值为止）Bad = N，而 <code>***A2</code>（解引用那根野指针）Bad = Y。这些表达式若真执行，行为未定义 —— 表里的 Y/N 是「<b>可能</b>的坏引用」。
+    </div>
+  </section>
+
+  <!-- ================= 11 ================= -->
+  <section id="s11">
+    <h2>11. 总结与测验<span class="srcref">原第 43 页</span></h2>
+    <p class="lede">用课件第 43 页的总结表收束全讲，然后做一遍测验 —— 题目全部来自本讲的表格、例题与汇编。</p>
+
+    <h3>11.1 课件总结表<span class="srcref">原第 43 页</span></h3>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>主题</th><th>要点（课件原文）</th></tr>
+      <tr><td><b>数组</b></td><td>元素打包进<b>连续内存</b>；用下标算术定位单个元素</td></tr>
+      <tr><td><b>结构体</b></td><td>元素打包进同一块内存；用<b>编译器决定的偏移</b>访问；可能需要内部 / 外部填充来对齐</td></tr>
+      <tr><td><b>组合</b></td><td>结构体与数组可以<b>任意嵌套</b></td></tr>
+      <tr><td><b>浮点</b></td><td>数据保存在 <b>XMM 寄存器</b>里并在其中运算</td></tr>
+    </table></div>
+
+    <h3>11.2 测验<span class="srcref">9 题</span></h3>
+    <p>每道题选完立刻判分并给出解析。答错不要紧 —— 解析里写清了依据在本讲的哪一节。</p>
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：本讲测验</span>
+        <button class="sm" id="qzReset">重来</button>
+      </div>
+      <div id="qzOut"></div>
+    </div>
+  </section>
+</main>
+
+</div>
+
+<div class="footer">
+  本页由原课件 PDF 翻译整理而成 · 数值计算与可视化均为页面内实时计算 · 可对照原课件页码阅读。
+</div>
+<button class="totop" id="toTop">↑ 顶部</button>
+
+<script>
+"use strict";
+/* ============================================================
+   机器级编程 IV：数据 · 交互式课件 —— 全部逻辑
+   约定：所有计算在页面内实时完成；无效输入必须给出提示而不是抛错。
+   顶层以 function 声明的 structLayout / ucomisFlags / declSizes
+   是判分基准，由 tools/verify_ics07.js 拉出来与 C 参考实现
+   （真实编译器的 offsetof/sizeof + Rosetta x86-64 硬件 ucomisd）
+   逐项比对。
+   ============================================================ */
+
+const $  = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const badBox = msg => `<div class="box bad"><div class="t">输入无效</div>${esc(msg)}</div>`;
+const kvAttr = str => {
+  const out = {};
+  String(str).split(';').forEach(part => {
+    const i = part.indexOf('=');
+    if (i > 0) out[part.slice(0, i).trim()] = part.slice(i + 1).trim();
+  });
+  return out;
+};
+const fmtI = n => Number(n).toLocaleString('en-US');
+const hexA = n => '0x' + (n >>> 0).toString(16).toUpperCase();
+
+/** 严格整数解析（允许负号、允许 0x 十六进制）；非法返回 null */
+function parseIntStrict(str) {
+  const t = String(str).trim().replace(/[_,\s]/g, '');
+  if (/^-?0[xX][0-9a-fA-F]+$/.test(t)) {
+    const v = Number(t);
+    return Number.isFinite(v) && Number.isSafeInteger(v) ? v : null;
+  }
+  if (/^-?[0-9]+$/.test(t)) {
+    const v = Number(t);
+    return Number.isSafeInteger(v) ? v : null;
+  }
+  return null;
+}
+
+/** 解析浮点：接受数字、nan、±inf；非法返回 null */
+function parseFloatField(str) {
+  const t = String(str).trim().replace(/[_,\s]/g, '').toLowerCase();
+  if (t === 'nan') return NaN;
+  if (t === 'inf' || t === '+inf' || t === 'infinity') return Infinity;
+  if (t === '-inf' || t === '-infinity') return -Infinity;
+  if (!/^[-+]?(\d+\.?\d*|\.\d+)([eE][-+]?\d+)?$/.test(t)) return null;
+  const v = Number(t);
+  return Number.isFinite(v) ? v : null;
+}
+
+/* ============================================================
+   课件数据（原样引自课件，地址是课件图上的标注值）
+   ============================================================ */
+const VAL5 = [1, 5, 2, 1, 3];                       // int val[5]，起始地址 x（原第 4–6 页）
+const ZIPS = {                                       // 原第 7、16 页
+  cmu: { base: 16, v: [1, 5, 2, 1, 3] },
+  mit: { base: 36, v: [0, 2, 1, 3, 9] },
+  ucb: { base: 56, v: [9, 4, 7, 2, 0] },
+};
+const FLAT_ZIPS = [...ZIPS.cmu.v, ...ZIPS.mit.v, ...ZIPS.ucb.v];   // 地址 16…75 的摊平内存
+const PGH = [[1, 5, 2, 0, 6], [1, 5, 2, 1, 3], [1, 5, 2, 1, 7], [1, 5, 2, 2, 1]];
+const PGH_FLAT = [].concat(...PGH);                  // 20 个 int，@76…155（原第 11 页）
+const PGH_BASE = 76, PGH_END = 156;
+const UNIV = [                                       // int *univ[3] = {mit, cmu, ucb}（原第 16 页）
+  { name: 'mit', slot: 160, ptr: 36 },
+  { name: 'cmu', slot: 168, ptr: 16 },
+  { name: 'ucb', slot: 176, ptr: 56 },
+];
+const UNIV_BASE = 160;
+
+/* ---------- 摊平内存模型（判分基准的一部分，verify_ics07.js 调用） ---------- */
+/** 地址 ea 落在 cmu/mit/ucb 三连块（16…75）内 → 那个 int 的值；否则 null */
+function flatZipsAt(ea) {
+  const idx = (ea - 16) / 4;
+  return (ea >= 16 && ea < 76 && Number.isInteger(idx)) ? FLAT_ZIPS[idx] : null;
+}
+/** 地址 ea 落在 pgh 的 80 字节（76…155）内 → 那个 int 的值；否则 null */
+function pghFlatAt(ea) {
+  const idx = (ea - PGH_BASE) / 4;
+  return (ea >= PGH_BASE && ea < PGH_END && Number.isInteger(idx)) ? PGH_FLAT[idx] : null;
+}
+/** 嵌套数组元素 pgh[i][d] 的地址（绝对，课件标定）与值 */
+function pghElem(i, d) {
+  const ea = PGH_BASE + 20 * i + 4 * d;
+  return { ea, v: pghFlatAt(ea) };
+}
+/** univ 第 i 个槽（越界返回 null） */
+function univRow(i) { return (i >= 0 && i <= 2) ? UNIV[i] : null; }
+/** univ[i][d] 的值（d 限 0…4，行外无布局保证）；不可得返回 null */
+function univElem(i, d) {
+  const u = univRow(i);
+  return (u && d >= 0 && d <= 4) ? ZIPS[u.name].v[d] : null;
+}
+/** ./array 例题的四项与总和（越界项为 null，总和随之 null） */
+function axTerms(k1, k2, k3) {
+  const t1 = PGH_FLAT[0];
+  const t2 = (k1 >= 0 && k1 <= 19) ? PGH_FLAT[k1] : null;
+  const t3 = (k2 >= 0 && k2 <= 19) ? PGH_FLAT[k2] : null;
+  const t4 = (k3 >= 0 && 10 + k3 <= 19) ? PGH_FLAT[10 + k3] : null;
+  const sum = (t2 !== null && t3 !== null && t4 !== null) ? t1 + t2 + t3 + t4 : null;
+  return { t1, t2, t3, t4, sum };
+}
+
+/* ============================================================
+   判分基准 1：x86-64 结构体布局（与真实编译器 offsetof/sizeof 比对）
+   fields = [['char',1],['int',2],...]；类型词表见 TYPE_INFO
+   ============================================================ */
+const TYPE_INFO = {
+  'char': [1, 1], 'short': [2, 2], 'int': [4, 4], 'long': [8, 8],
+  'float': [4, 4], 'double': [8, 8], 'long double': [16, 16], 'ptr': [8, 8],
+};
+function structLayout(fields) {
+  let cur = 0, align = 1;
+  const off = [], pad = [], itemsz = [];
+  for (const f of fields) {
+    const [sz, al] = TYPE_INFO[f[0]];
+    const isz = sz * f[1];
+    if (al > align) align = al;
+    const o = Math.ceil(cur / al) * al;
+    off.push(o); pad.push(o - cur); itemsz.push(isz);
+    cur = o + isz;
+  }
+  const size = Math.ceil(cur / align) * align;
+  return { off, pad, itemsz, size, align, raw: cur };
+}
+
+/* ============================================================
+   判分基准 2：ucomisd 的 ZF/PF/CF（与 x86-64 硬件执行结果比对）
+   返回 {zf, pf, cf, rel}，rel ∈ unordered/greater/less/equal
+   ============================================================ */
+function ucomisFlags(a, b) {
+  const un = Number.isNaN(a) || Number.isNaN(b);
+  let rel;
+  if (un) rel = 'unordered';
+  else if (a === b) rel = 'equal';
+  else if (a < b) rel = 'less';
+  else rel = 'greater';
+  return {
+    zf: (un || rel === 'equal') ? 1 : 0,
+    pf: un ? 1 : 0,
+    cf: (un || rel === 'less') ? 1 : 0,
+    rel,
+  };
+}
+
+/* ============================================================
+   判分基准 3：指针 / 数组声明的 sizeof 链（与真实编译器 sizeof 比对）
+   类型代数：{cat:'int'|...} | {cat:'ptr', of} | {cat:'arr', of, dims:[n,...]}
+   deref：ptr → of；arr → 剥掉最外层维度；都不是 → null（编译不过）
+   ============================================================ */
+const BASE_SIZE = { char: 1, short: 2, int: 4, long: 8, float: 4, double: 8 };
+function typeSize(t) {
+  if (!t) return null;
+  if (t.cat === 'ptr') return 8;
+  if (t.cat === 'arr') return t.dims[0] * typeSize(t.of);
+  return BASE_SIZE[t.cat];
+}
+function typeDeref(t) {
+  if (!t) return null;
+  return (t.cat === 'ptr' || t.cat === 'arr') ? t.of : null;
+}
+function declSizes(t0) {
+  const out = [];
+  let t = t0;
+  for (let s = 0; s < 4; s++) { out.push(typeSize(t)); t = typeDeref(t); }
+  return out;                       // null = 该层 deref 编译不过（Cmp = N）
+}
+const T_INT = { cat: 'int' };
+const tPtr = of => ({ cat: 'ptr', of });
+const tArr = (of, n) => ({ cat: 'arr', of, dims: [n] });
+
+/* ============================================================
+   1.1 数组分配可视化器
+   ============================================================ */
+const AA_KINDS = { 'char': 'char', 'int': 'int', 'double': 'double', 'char*': 'char *' };
+const AA_SIZE = { 'char': 1, 'int': 4, 'double': 8, 'char*': 8 };
+
+function addrCells(list) {
+  return '<div class="bits sm">' + list.map(c =>
+    `<span class="b${c.cls ? ' ' + c.cls : ''}${c.sel ? ' sel' : ''}" style="width:46px">${esc(c.t)}</span>`).join('') + '</div>';
+}
+function addrRuler(list) {
+  return '<div class="bits sm">' + list.map(c =>
+    `<span class="b" style="width:46px;background:transparent;color:var(--muted);font-size:10.5px">${esc(c.t)}</span>`).join('') + '</div>';
+}
+
+function renderArrAlloc() {
+  const parts = $('#aaT').value.split(':');
+  const tname = AA_KINDS[parts[0]], esz = AA_SIZE[parts[0]];
+  const L = parseIntStrict(parts[1]);
+  const x = parseIntStrict($('#aaX').value);
+  if (!tname || x === null || x < 0 || x > 2 ** 47) {
+    $('#aaOut').innerHTML = badBox('起始地址 x 要是 0 … 2^47 之间的整数（可写 0x… 十六进制）。');
+    return;
+  }
+  const cells = [], ends = [];
+  for (let i = 0; i < L; i++) {
+    cells.push({ t: hexA(x + i * esz), cls: esz === 1 ? 'e' : esz === 4 ? 'f' : 's' });
+    ends.push({ t: `A[${i}]` });
+  }
+  const total = L * esz;
+  $('#aaOut').innerHTML = `
+    <div class="fw"><div class="fgrp">
+      <div class="fcap"><b>${esc(tname)}[${L}]</b> —— ${L} × ${esz} 字节 = <b>${total} 字节</b>，从 x 连续铺到 x + ${total}（每格 = 一个元素，格内是它的地址）</div>
+      ${addrCells(cells)}${addrRuler(ends)}
+    </div></div>
+    <div class="readout">
+      <dt>元素 i 的地址</dt><dd>x + ${esz}·i（第 0 个就是 x 本身）</dd>
+      <dt>末尾（one-past-end）</dt><dd>x + ${total} = ${hexA(x + total)} —— 恰好是「最后一格之后」的地址</dd>
+      <dt>sizeof 名场面</dt><dd>sizeof(${esc(tname)}[${L}]) = <b>${total}</b>；若把它传进函数，形参退化成指针，sizeof 只剩 8</dd>
+    </div>
+    <div class="box ok" style="margin-bottom:0"><div class="t">与课件第 3 页逐项对应</div>
+      char string[12] 占 12 字节（x → x+12）；int val[5] 占 20 字节（每格 4）；double a[3] 与 char *p[3] 都占 24 字节 —— 指针和 double 一样宽（8 字节）。改上面的 x，所有地址随之重算。
+    </div>`;
+}
+
+/* ============================================================
+   1.2 表达式求值器
+   ============================================================ */
+function renderArrExpr() {
+  const e = $('#aeE').value;
+  const i = parseIntStrict($('#aeI').value);
+  if (i === null) { $('#aeOut').innerHTML = badBox('i 要是整数（试试 5、−1 这类边界）。'); return; }
+  const inb = i >= 0 && i <= 4;
+  const off = 4 * i;
+  const addrTxt = off === 0 ? 'x' : `x + ${off}`;
+  const deref = e.startsWith('*');
+  const isPtrExpr = e === 'val' || e === 'val+i' || e === '&val[i]';
+  const val = inb ? VAL5[i] : null;
+  const valTxt = val === null ? '<span class="chip warn">??</span>（越界 —— 值取决于 val 后面的内存里住着谁）' : `<b>${val}</b>`;
+  let body;
+  if (isPtrExpr) {
+    const note = e === 'val' ? '数组名 → 指向首元素的指针（课件原话：identifier A can be used as a pointer to array element 0）'
+      : `等价于 &amp;val[${i}] —— 指针 +1 跳的是一个元素（4 字节），不是 1 字节`;
+    body = `
+    <div class="readout">
+      <dt>类型</dt><dd><b>int *</b></dd>
+      <dt>值</dt><dd><b>${addrTxt}</b>${e === 'val' ? '（首元素地址）' : `（= &amp;val[${i}]）`}</dd>
+      <dt>说明</dt><dd style="font-family:var(--font-sans)">${note}</dd>
+    </div>`;
+  } else {
+    body = `
+    <div class="readout">
+      <dt>类型</dt><dd><b>int</b></dd>
+      <dt>地址</dt><dd>${addrTxt}${e === 'val[i]' ? '（= &amp;val[' + i + ']）' : ''}</dd>
+      <dt>值</dt><dd>${valTxt}${inb ? `&nbsp;&nbsp;<span style="color:var(--muted)">（val[${i}] 是数组的第 ${i} 格）</span>` : ''}</dd>
+    </div>
+    ${inb ? '' : `<div class="box bad" style="margin-bottom:0"><div class="t">val[${i}] 越界：下标合法范围是 0…4</div>
+      数组占 x … x + 19 共 20 字节；val[${i}] 要读 x + ${off}。编译器<b>不报错</b>（C 无边界检查），课件在这格如实填 <code>??</code>。想看「?? 也有确定值」的情形，去 <a href="#s2">第 2 节的 get_digit 模拟器</a> —— 那里的内存图是画全的。</div>`}`;
+  }
+  $('#aeOut').innerHTML = `<div class="fgrp"><div class="fcap">表达式 <b>${esc(e)}</b>，i = ${i}（数组 int val[5] = {1, 5, 2, 1, 3}，起始地址 x）</div></div>${body}`;
+}
+
+/* ============================================================
+   2.1 get_digit 模拟器（完整内存图：cmu@16 mit@36 ucb@56）
+   ============================================================ */
+function renderGetDigit() {
+  const z = $('#gdZ').value;
+  const d = parseIntStrict($('#gdD').value);
+  if (d === null) { $('#gdOut').innerHTML = badBox('digit 要是整数（可以填 5、6、10 看越界读到了谁）。'); return; }
+  const base = ZIPS[z].base;
+  const ea = base + 4 * d;
+  const val = flatZipsAt(ea);
+  const inSelf = d >= 0 && d <= 4;
+  const inPic = val !== null;
+  const owner = ea < 36 ? 'cmu' : ea < 56 ? 'mit' : 'ucb';
+  const ownerIdx = inPic ? Math.floor((ea - ZIPS[owner].base) / 4) : -1;
+  const valTxt = val === null ? '<span class="chip warn">??</span>' : `<b>${val}</b>`;
+  let verdict, vcls;
+  if (inSelf) { vcls = 'ok'; verdict = `digit ${d} 在 ${z} 自己的 5 个元素（0–4）里 —— 一次内存读取，合法访问`; }
+  else if (inPic) {
+    vcls = 'warn';
+    verdict = `越界！但这块图是画全的：地址 ${ea} 落在 <b>${owner}[${ownerIdx}]</b> 身上 —— 读到 <b>${val}</b>。「旁边的内存住着谁」决定了越界读的值`;
+  } else {
+    vcls = 'bad';
+    verdict = `地址 ${ea} 已经落到课件内存图之外（图只画到 75）—— 这就是真正的 <b>??</b>：未定义行为，什么都可能发生`;
+  }
+  $('#gdOut').innerHTML = `
+    <div class="readout">
+      <dt>%rdi（z）</dt><dd>${hexA(base)}&nbsp;&nbsp;<span style="color:var(--muted)">（${z} 的起始地址）</span></dd>
+      <dt>%rsi（digit）</dt><dd>${d}</dd>
+      <dt>有效地址</dt><dd>%rdi + 4·%rsi = ${hexA(base)} + ${4 * d} = <b>${hexA(ea)}</b>（十进制 ${ea}）</dd>
+      <dt>movl (%rdi,%rsi,4),%eax</dt><dd>%eax ← M[${hexA(ea)}] = ${valTxt}</dd>
+    </div>
+    <div class="box ${vcls}" style="margin-bottom:0"><div class="t">${verdict}</div>
+      一条 <code>movl</code> 完成全部下标算术：基址、缩放 4（= sizeof(int)）都写在寻址操作数里。</div>`;
+}
+
+/* ============================================================
+   3.1 二维数组地址计算器
+   ============================================================ */
+function renderNested() {
+  const R = parseIntStrict($('#naR').value), C = parseIntStrict($('#naC').value);
+  const K = parseIntStrict($('#naK').value), i = parseIntStrict($('#naI').value), j = parseIntStrict($('#naJ').value);
+  if (R === null || C === null || K === null || i === null || j === null ||
+      R < 1 || C < 1 || R > 16 || C > 16 || R * C > 256 || [1, 2, 4, 8].indexOf(K) < 0) {
+    $('#naOut').innerHTML = badBox('R、C 要在 1…16（R×C ≤ 256），K 取 1 / 2 / 4 / 8，i、j 要是整数。');
+    return;
+  }
+  if (i < 0 || i >= R || j < 0 || j >= C) {
+    $('#naOut').innerHTML = badBox(`下标越界：这个数组的合法范围是 i = 0…${R - 1}、j = 0…${C - 1}（你填了 i=${i}, j=${j}）。`);
+    return;
+  }
+  const rowW = C * K;
+  let grid = '';
+  for (let r = R - 1; r >= 0; r--) {          // 第 0 行画在最上面
+    let row = '';
+    for (let c = 0; c < C; c++) {
+      const sel = r === i && c === j;
+      row += `<span class="b${r === i ? ' e' : ''}${sel ? ' sel' : ''}" style="width:26px" title="A[${r}][${c}] —— A + ${(r * C + c) * K}">${r * C + c}</span>`;
+    }
+    grid += `<div class="bits sm">${row}</div>`;
+  }
+  const hdr = '<div class="bits sm">' + Array.from({ length: C }, (_, c) =>
+    `<span class="b" style="width:26px;background:transparent;color:var(--muted);font-size:10px">j=${c}</span>`).join('') + '</div>';
+  const rowStarts = R <= 8
+    ? `<div class="fw"><div class="fgrp"><div class="fcap">各行起始地址（A + i·C·K，行宽 = ${C}×${K} = ${rowW} 字节）</div>
+       <div class="mono" style="font-size:13.5px;line-height:1.9">${Array.from({ length: R }, (_, r) => `A[${r}] = A + ${r * rowW}`).join('&nbsp;&nbsp;·&nbsp;&nbsp;')}；末尾 = A + ${R * rowW}</div></div></div>`
+    : '';
+  $('#naOut').innerHTML = `
+    <div class="fw"><div class="fgrp"><div class="fcap">行主序内存图（${R}×${C}，每格一个 ${K} 字节元素，格内 = 摊平下标 i·C+j；绿 = 第 ${i} 行，蓝框 = A[${i}][${j}]）</div>
+      ${hdr}${grid}</div></div>
+    <div class="readout">
+      <dt>总大小</dt><dd>R × C × K = ${R} × ${C} × ${K} = <b>${R * C * K} 字节</b>${K === 4 ? '（= 4·R·C，课件原话）' : ''}</dd>
+      <dt>第 ${i} 行起始</dt><dd>A + i·(C·K) = A + ${i}×${rowW} = <b>A + ${i * rowW}</b></dd>
+      <dt>A[${i}][${j}] 地址</dt><dd>A + (i·C + j)·K = A + (${i}×${C} + ${j})×${K} = A + ${i * C + j}×${K} = <b>A + ${(i * C + j) * K}</b></dd>
+      <dt>摊平下标</dt><dd>i·C + j = ${i}×${C} + ${j} = <b>${i * C + j}</b> —— 二维寻址最后就是一维算术</dd>
+    </div>
+    ${rowStarts}
+    <div class="box ok" style="margin-bottom:0"><div class="t">课件例对上没有</div>
+      按「课件例 pgh 4×5」按钮（R=4, C=5, K=4）：行起始是 A+0 / A+20 / A+40 / A+60，末尾 A+80 —— 课件第 11 页把它们标成 76 / 96 / 116 / 136 / 156，因为那个例子里 A = 76。改 R、C、K、i、j，全部重算。
+    </div>`;
+}
+
+/* ============================================================
+   4. 多级数组：univ 指针图 + 双路径模拟
+   ============================================================ */
+function renderMlDiagram() {
+  const rows = [
+    { name: 'cmu', base: 16, v: ZIPS.cmu.v },
+    { name: 'mit', base: 36, v: ZIPS.mit.v },
+    { name: 'ucb', base: 56, v: ZIPS.ucb.v },
+  ];
+  const CW = 34, X0 = 190, Y0 = 34, RH = 52;
+  const cellsOf = (x, y, vals, base) => vals.map((v, k) =>
+    `<rect x="${x + k * CW}" y="${y}" width="${CW - 2}" height="26" rx="4" style="fill:var(--exp-bg);stroke:var(--exp-bd)"/>
+     <text x="${x + k * CW + (CW - 2) / 2}" y="${y + 17.5}" text-anchor="middle" class="ticklabel" style="font-size:12px;fill:var(--exp-fg)">${v}</text>
+     <text x="${x + k * CW + (CW - 2) / 2}" y="${y + 40}" text-anchor="middle" class="ticklabel">${base + 4 * k}</text>`).join('');
+  const univCells = UNIV.map((u, k) =>
+    `<rect x="26" y="${Y0 + k * 40}" width="46" height="28" rx="4" style="fill:var(--sign-bg);stroke:var(--sign-bd)"/>
+     <text x="49" y="${Y0 + k * 40 + 19}" text-anchor="middle" style="font-size:13px;font-weight:700;fill:var(--sign-fg)">${u.ptr}</text>
+     <text x="20" y="${Y0 + k * 40 + 19}" text-anchor="end" class="ticklabel">${u.slot}</text>`).join('');
+  const arrows = UNIV.map((u, k) => {
+    const r = rows.findIndex(r => r.name === u.name);
+    const y1 = Y0 + k * 40 + 14, y2 = Y0 + r * RH + 13;
+    return `<path d="M 74 ${y1} C 120 ${y1}, 130 ${y2}, ${X0 - 6} ${y2}" style="fill:none;stroke:var(--accent);stroke-width:1.6" marker-end="url(#mlArrow)"/>`;
+  }).join('');
+  $('#mlDiagram').innerHTML = `
+    <div class="formula" style="text-align:left;overflow-x:auto">
+      <svg viewBox="0 0 640 210" width="100%" style="max-width:640px;min-width:520px" xmlns="http://www.w3.org/2000/svg">
+        <defs><marker id="mlArrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+          <path d="M0,0 L8,4 L0,8 z" style="fill:var(--accent)"/></marker></defs>
+        <text x="26" y="${Y0 - 12}" class="ticklabel" style="font-size:12px;fill:var(--ink);font-weight:700">univ（int *[3]，@160）</text>
+        ${univCells}
+        <text x="14" y="${Y0 - 12}" class="ticklabel"></text>
+        ${rows.map((r, k) => `<text x="${X0}" y="${Y0 + k * RH - 6}" class="ticklabel" style="font-size:12px;fill:var(--ink);font-weight:700">${r.name}（@${r.base}）</text>${cellsOf(X0, Y0 + k * RH, r.v, r.base)}<text x="${X0 + 5 * CW + 8}" y="${Y0 + k * RH + 18}" class="ticklabel">${r.base} … ${r.base + 20}</text>`).join('')}
+        ${arrows}
+        <text x="26" y="200" class="ticklabel">格子上的数 = 指针值（指向哪个数组）；红格 = univ 的 3 个指针槽（各 8 字节）</text>
+      </svg>
+    </div>`;
+}
+
+function renderMl() {
+  const i = parseIntStrict($('#msI').value), d = parseIntStrict($('#msD').value);
+  if (i === null || d === null) { $('#msOut').innerHTML = badBox('index 与 digit 都要是整数（index 合法范围 0…2）。'); return; }
+  /* 嵌套路径 */
+  const pe = pghElem(i, d);
+  const eaN = pe.ea, inN = pe.v !== null, valN = pe.v;
+  /* 多级路径 */
+  const ea1 = UNIV_BASE + 8 * i;
+  const u = univRow(i);
+  const ptrTxt = u ? `${u.ptr}（${u.name} 的起始地址）` : '<span class="chip warn">??</span>（univ 只有 3 个槽，@160–183）';
+  const ea2 = u ? u.ptr + 4 * d : null;
+  const inD = u && d >= 0 && d <= 4;
+  const valM = inD ? ZIPS[u.name].v[d] : null;
+  const rowN = (h, a, b) => `<tr><td>${h}</td><td>${a}</td><td>${b}</td></tr>`;
+  $('#msOut').innerHTML = `
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>步骤</th><th>嵌套 pgh[index][digit]</th><th>多级 univ[index][digit]</th></tr>
+      ${rowN('地址算术（不访存）',
+        `<span class="mono">pgh + 20·${i} + 4·${d} = ${hexA(eaN)}</span>`,
+        `<span class="mono">univ + 8·${i} = ${hexA(ea1)}</span>`)}
+      ${rowN('第 1 次访存', '—（地址算术直接给出元素地址，无需先取指针）',
+        u ? `<span class="mono">M[${hexA(ea1)}] = ${ptrTxt}</span>` : `<span class="mono">M[${hexA(ea1)}] = ${ptrTxt}</span>`)}
+      ${rowN('第 2 次访存', `<span class="mono">M[${hexA(eaN)}]</span>${inN ? ` = <b>${valN}</b>` : ''}`,
+        u ? `<span class="mono">M[${hexA(ea2)}]</span>${inD ? ` = <b>${valM}</b>` : ''}` : '—')}
+      ${rowN('访存次数', '<b>1 次</b>', '<b>2 次</b>')}
+    </table></div>
+    <div class="box ${inN && inD ? 'ok' : 'warn'}" style="margin-bottom:0"><div class="t">${
+      inN && inD ? '两条路径各自读到数据' : '有下标越界了 —— 看上面的 ?? 在哪一格'}</div>
+      嵌套数组：digit 超过 4 会读进<b>下一行</b>（行行紧挨，只要还在 pgh 的 80 字节内就有确定值）；多级数组：digit 超过 4 读的是<b>指针指向的数组之外</b> —— 那里没有任何布局保证，页面直接给 ??。这就是 1.2 节「??」在两种数组里的不同含义。
+    </div>`;
+}
+
+/* ============================================================
+   5. fix_ele vs var_ele 机器级步骤
+   ============================================================ */
+function renderMat() {
+  const mode = $('#maMode').value;
+  const n = parseIntStrict($('#maN').value), i = parseIntStrict($('#maI').value), j = parseIntStrict($('#maJ').value);
+  if (n === null || i === null || j === null || n < 1 || n > 4096 || i < 0 || j < 0 || i > 4096 || j > 4096) {
+    $('#maOut').innerHTML = badBox('n、i、j 都要是非负整数（n ≥ 1，上限 4096）。');
+    return;
+  }
+  const lim = mode === 'fix' ? 15 : n - 1;
+  const oob = i > lim || j > lim;
+  let steps;
+  if (mode === 'fix') {
+    const rsi = 64 * i, rdi = `a + ${64 * i}`, ea = 64 * i + 4 * j;
+    steps = [
+      { h: 'salq $6, %rsi', m: `%rsi ← ${i} &lt;&lt; 6 = ${rsi}`, e: 'C·K = 16×4 = 64 是常数 → 乘 64 就是左移 6 位' },
+      { h: 'addq %rsi, %rdi', m: `%rdi ← a + ${rsi} = ${esc(rdi)}`, e: '行地址：a + 64·i' },
+      { h: 'movl (%rdi,%rdx,4), %eax', m: `%eax ← M[a + ${rsi} + ${4 * j}] = M[a + ${ea}]`, e: '列下标 j 走缩放寻址（×4）；%eax 是 4 字节元素' },
+    ];
+  } else {
+    const ni = n * i, rax = `a + ${4 * ni}`, ea = 4 * ni + 4 * j;
+    steps = [
+      { h: 'imulq %rdx, %rdi', m: `%rdi ← ${n} × ${i} = ${ni}`, e: 'n 是运行时的值 → 64·i 的移位戏法失效，必须真乘' },
+      { h: 'leaq (%rsi,%rdi,4), %rax', m: `%rax ← a + 4·${ni} = ${esc(rax)}`, e: '缩放 4 = sizeof(int)，一次 leaq 完成 ×4 + 加基址' },
+      { h: 'movl (%rax,%rcx,4), %eax', m: `%eax ← M[a + ${4 * ni} + ${4 * j}] = M[a + ${ea}]`, e: '列下标 j 在 %rcx 里（变长版参数顺序不同：n 在 %rdi、a 在 %rsi）' },
+    ];
+  }
+  $('#maOut').innerHTML = `
+    ${oob ? `<div class="box warn"><div class="t">下标越界提醒</div>这个${mode === 'fix' ? '16×16 固定矩阵' : `${n}×${n} 矩阵`}的合法下标是 0…${lim}，你填了 i=${i}, j=${j} —— 地址照样算，但读到的是行外/数组外的内存。</div>` : ''}
+    <div class="steps">${steps.map(s => `<div class="step on"><div class="h">${s.h}</div><div class="m">${s.m}</div><div class="e">${s.e}</div></div>`).join('')}</div>
+    <div class="box ok" style="margin-bottom:0"><div class="t">三种写法，一套公式</div>
+      无论 <code>fix_ele</code>（固定 N）、<code>vec_ele</code>（IDX 宏摊平）还是 <code>var_ele</code>（C99 变长数组），地址都是 <code>A + i·(C·K) + j·K</code>。区别只在 C·K 是不是编译期常数：是 → 移位；不是 → imul。
+    </div>`;
+}
+
+/* ============================================================
+   6. ./array 四项求和
+   ============================================================ */
+function renderAx() {
+  const k1 = parseIntStrict($('#axK1').value), k2 = parseIntStrict($('#axK2').value), k3 = parseIntStrict($('#axK3').value);
+  if (k1 === null || k2 === null || k3 === null || k1 < 0 || k2 < 0 || k3 < 0 || k1 > 19 || k2 > 19 || k3 > 9) {
+    $('#axOut').innerHTML = badBox('三个下标都要是 0 以上的整数：k、m ∈ 0…19（摊平后一共 20 个 int），t ∈ 0…9。');
+    return;
+  }
+  const map = k => `pgh[${Math.floor(k / 5)}][${k % 5}]`;
+  const cell = (expr, k, v, ok) => `<td>${expr}<br><span class="mono">${v === null ? '<span class="chip warn">??</span>' : '= <b>' + v + '</b>'}</span><br><span style="font-size:12px;color:var(--muted)">${ok ? '= ' + map(k === null ? 0 : k) + '，地址 A + ' + (4 * k) : '越界'}</span></td>`;
+  const { t1, t2, t3, t4, sum } = axTerms(k1, k2, k3);
+  const in1 = k1 <= 19, in2 = k2 <= 19, in3 = 10 + k3 <= 19;
+  const all = t2 !== null && t3 !== null && t4 !== null;
+  const isCourse = (k1 === 7 && k2 === 8 && k3 === 1);
+  $('#axOut').innerHTML = `
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>pgh[0][0]</th><th>linear_zip[${k1}]</th><th>*(linear_zip + ${k2})</th><th>zip2[${k3}]</th><th>result</th></tr>
+      <tr>${cell('第 0 行第 0 格', 0, t1, true)}${cell('摊平第 ' + k1 + ' 个 int', k1, t2, in1)}${cell('摊平第 ' + k2 + ' 个 int', k2, t3, in2)}${cell('pgh[2] 行内第 ' + k3 + ' 格', 10 + k3, t4, in3)}
+        <td>${sum === null ? '<span class="chip warn">??</span>' : '<b style="font-size:19px">' + sum + '</b>'}</td></tr>
+    </table></div>
+    <div class="box ${all ? (isCourse ? 'ok' : '') : 'warn'}" style="margin-bottom:0"><div class="t">${
+      all ? (isCourse ? '与课件打印的 result: 9 一致' : '四个分项都能取到 —— 这是页面现算的和') : '有下标越界（摊平范围 0…19、行内 0…4），课件例之外的组合不保证有意义'}</div>
+      摊平映射：<code>linear_zip[k] = pgh[k/5][k%5]</code>，地址 = <code>A + 4k</code>（K=4、C=5）。zip2 先取第 2 行的行地址（<code>pgh + 40</code>），再行内取下标。
+    </div>`;
+}
+
+/* ============================================================
+   7.1 struct rec 字节地图 + &r->a[idx]
+   ============================================================ */
+const REC_TOTAL = 32;
+function recZone(off) {
+  if (off < 16) return { cls: 'e', name: `a[${off >> 2}]` };
+  if (off < 24) return { cls: 'f', name: 'i（size_t）' };
+  return { cls: 's', name: 'next（指针）' };
+}
+function renderRec() {
+  const idx = parseIntStrict($('#rcIdx').value);
+  if (idx === null) { $('#rcOut').innerHTML = badBox('idx 要是整数（试试 4 —— 刚好越界一格）。'); return; }
+  const cells = [];
+  for (let o = 0; o < REC_TOTAL; o++) cells.push({ t: '', cls: recZone(o).cls });
+  const ruler = '<div class="bits sm">' + Array.from({ length: REC_TOTAL }, (_, o) =>
+    `<span class="b" style="width:22px;background:transparent;color:var(--muted);font-size:9.5px">${o}</span>`).join('') + '</div>';
+  const off = 4 * idx;
+  let hit;
+  if (off < 16) hit = `<span class="chip ok">合法</span> <code>&amp;r-&gt;a[${idx}]</code> = r + ${off} —— 数组 a[${idx & ~3}] 内部`;
+  else if (off < 24) hit = `<span class="chip warn">越界</span> r + ${off} 落进 <b>i 字段</b>（偏移 16–23）—— 写它等于改掉循环的下标`;
+  else if (off < 32) hit = `<span class="chip bad">越界</span> r + ${off} 落进 <b>next 指针</b>（偏移 24–31）—— 写它等于把链表指到别处`;
+  else hit = `<span class="chip bad">越界</span> r + ${off} 已在 32 字节的结构体之外`;
+  const selCells = (off >= 0 && off < REC_TOTAL)
+    ? '<div class="bits sm">' + Array.from({ length: 4 }, (_, k) => {
+        const o = off + k;
+        const z = o < REC_TOTAL ? recZone(o) : null;
+        return `<span class="b${z ? ' ' + z.cls : ''} sel" style="width:22px">${o < REC_TOTAL ? '' : '?'}</span>`;
+      }).join('') + '</div>'
+    : '';
+  $('#rcOut').innerHTML = `
+    <div class="fw"><div class="fgrp"><div class="fcap">struct rec 的 32 字节（蓝 = a[0..3] 各 4 字节 · 绿 = i（8 字节）· 红 = next（8 字节）；格下数字 = 偏移）</div>
+      ${'<div class="bits sm">' + cells.map((c, o) =>
+        `<span class="b ${c.cls}" style="width:22px" title="偏移 ${o}：${esc(recZone(o).name)}">·</span>`).join('') + '</div>'}${ruler}</div></div>
+    <div class="fw"><div class="fgrp"><div class="fcap">idx = ${idx}：<code>&amp;r-&gt;a[${idx}]</code> = r + 4·${idx} = r + ${off}，覆盖这 4 个字节：</div>${selCells || '<span style="color:var(--muted);font-size:13px">完全在结构体之外</span>'}</div></div>
+    <div class="readout">
+      <dt>get_ap 的指令</dt><dd>leaq (%rdi,%rsi,4),%rax —— r + 4·idx，偏移 0（a 在最前）连加都不用加</dd>
+      <dt>越界落点</dt><dd style="font-family:var(--font-sans)">${hit}</dd>
+    </div>
+    <div class="box ok" style="margin-bottom:0"><div class="t">字段偏移是编译期常量</div>
+      <code>&amp;r-&gt;i</code> 永远是 r+16、<code>&amp;r-&gt;next</code> 永远是 r+24 —— 无论 idx 是多少。汇编里看不到「结构体」，只看得到这些写死的偏移。
+    </div>`;
+}
+
+/* ============================================================
+   7.3 set_val 步进器（链表数据是本页示例，课件只给了寻址方式）
+   ============================================================ */
+const SV_NODES = [
+  { addr: 0x1000, a: [0, 0, 0, 0], i: 2, next: 0x1020 },
+  { addr: 0x1020, a: [0, 0, 0, 0], i: 0, next: 0x1040 },
+  { addr: 0x1040, a: [0, 0, 0, 0], i: 1, next: 0 },
+];
+let svState = null;
+function svInit(val) {
+  return { val, rdi: SV_NODES[0].addr, rax: null, step: 0, log: [], nodes: SV_NODES.map(n => ({ a: n.a.slice() })), done: false };
+}
+function renderSetVal() {
+  const s = svState;
+  const nodeIdx = SV_NODES.findIndex(n => n.addr === s.rdi);
+  const node = nodeIdx >= 0 ? SV_NODES[nodeIdx] : null;
+  const regRow = `<div class="readout">
+    <dt>%rdi（r）</dt><dd>${s.rdi === 0 ? 'NULL —— testq 结果为零 → 循环结束' : hexA(s.rdi) + (node ? `（第 ${nodeIdx + 1} 个节点）` : '')}</dd>
+    <dt>%rsi（val）</dt><dd>${s.val}</dd>
+    <dt>%rax（i）</dt><dd>${s.rax === null ? '—' : s.rax}</dd>
+  </div>`;
+  const memRows = SV_NODES.map((n, k) => {
+    const cur = s.rdi === n.addr;
+    const cells = s.nodes[k].a.map((v, jj) =>
+      `<span class="b${v !== 0 ? ' f' : ' e'}${cur && s.rax === jj ? ' sel' : ''}" style="width:34px" title="a[${jj}] @${hexA(n.addr + 4 * jj)}">${v}</span>`).join('');
+    return `<div class="fgrp"${cur ? '' : ' style="opacity:.62"'}><div class="fcap"><b>节点 ${k + 1}</b> @${hexA(n.addr)} · i = ${n.i} · next = ${n.next ? hexA(n.next) : 'NULL'}${cur ? ' ← %rdi 在这里' : ''}</div>
+      ${'<div class="bits sm">' + cells + '</div>'}</div>`;
+  }).join('');
+  const log = s.log.length
+    ? `<div class="steps">${s.log.map(l => `<div class="step on"><div class="h">${l.h}</div><div class="m">${l.m}</div><div class="e">${l.e}</div></div>`).join('')}</div>`
+    : '<p style="font-size:14px;color:var(--muted);margin:6px 0">按「下一步」开始执行循环体。</p>';
+  $('#svOut').innerHTML = `
+    ${regRow}
+    <div class="fw" style="margin-top:8px">${memRows}</div>
+    <div style="margin-top:8px">${log}</div>
+    <div class="box ${s.done ? 'ok' : ''}" style="margin-bottom:0"><div class="t">${s.done ? 'r = NULL，testq → jne 不跳 → ret。一共写了 3 个元素' : '循环还没走完 —— 每按一次执行一轮：取 i → 写 a[i] = val → r = next'}</div>
+      每轮的三条访存：<code>movslq 16(%rdi)</code> 读下标、<code>movl %esi,(%rdi,%rax,4)</code> 写元素、<code>movq 24(%rdi),%rdi</code> 走链 —— 下标本身来自内存，这就是「数据驱动的寻址」。</div>`;
+}
+function svStepOnce() {
+  const s = svState;
+  if (s.done) return;
+  const nodeIdx = SV_NODES.findIndex(n => n.addr === s.rdi);
+  if (nodeIdx < 0) { s.done = true; return; }
+  const node = SV_NODES[nodeIdx];
+  s.rax = node.i;                                    // movslq 16(%rdi),%rax
+  s.log.push({ h: `第 ${s.step + 1} 轮 · movslq 16(%rdi), %rax`, m: `i = M[${hexA(node.addr)}+16] = ${node.i}`, e: '下标存在节点自己的 i 字段里（偏移 16）' });
+  s.nodes[nodeIdx].a[node.i] = s.val;                // movl %esi,(%rdi,%rax,4)
+  s.log.push({ h: `movl %esi, (%rdi,%rax,4)`, m: `M[${hexA(node.addr)} + 4×${node.i}] = ${s.val} —— 即 a[${node.i}] = ${s.val}`, e: '写内存：基址 r + 缩放下标' });
+  s.rdi = node.next;                                 // movq 24(%rdi),%rdi
+  s.log.push({ h: 'movq 24(%rdi), %rdi', m: `r = M[${hexA(node.addr)}+24] = ${node.next ? hexA(node.next) : 'NULL'}`, e: 'next 指针在偏移 24 —— 走向下一个节点' });
+  s.step++;
+  if (s.rdi === 0) { s.done = true; s.log.push({ h: 'testq %rdi,%rdi → jne 不跳', m: 'r = NULL', e: 'while (r) 结束，函数返回' }); }
+}
+
+/* ============================================================
+   8. 结构体布局计算器（判分基准 = structLayout，已对齐真实编译器）
+   ============================================================ */
+const SC_PRESETS = {
+  S1: [['char', 1], ['int', 2], ['double', 1]],
+  S2: [['double', 1], ['int', 2], ['char', 1]],
+  S3: [['short', 1], ['float', 1], ['short', 1]],
+  S4: [['char', 1], ['int', 1], ['char', 1]],
+  S5: [['int', 1], ['char', 1], ['char', 1]],
+  rec: [['int', 4], ['long', 1], ['ptr', 1]],
+};
+const SC_CYC = ['e', 'f', 's'];
+let scFields = SC_PRESETS.S1.map(f => f.slice());
+let scPreset = 'S1';
+
+function renderStructCalc() {
+  const okFields = scFields.length > 0 && scFields.length <= 16 &&
+    scFields.every(f => TYPE_INFO[f[0]] && f[1] >= 1 && f[1] <= 64);
+  if (!okFields) {
+    $('#scOut').innerHTML = badBox('字段列表要非空（≤16 个），数组长度 1…64。');
+    $('#scJudgeOut').innerHTML = '';
+    return;
+  }
+  const lay = structLayout(scFields);
+  if (lay.size > 160) {
+    $('#scOut').innerHTML = badBox('总大小超过 160 字节，字节地图画不下了 —— 换小一点的字段。');
+    $('#scJudgeOut').innerHTML = '';
+    return;
+  }
+  const cover = Array(lay.size).fill(null);
+  scFields.forEach((f, k) => {
+    for (let b = lay.off[k]; b < lay.off[k] + lay.itemsz[k]; b++) cover[b] = { k, cls: SC_CYC[k % 3] };
+  });
+  const cells = '<div class="bits sm">' + cover.map((c, b) =>
+    `<span class="b${c ? ' ' + c.cls : ''}" style="width:19px" title="偏移 ${b}${c ? '：' + esc(scFields[c.k][0]) + (scFields[c.k][1] > 1 ? '[' + scFields[c.k][1] + ']' : '') : '（填充）'}">${c ? '' : '·'}</span>`).join('') + '</div>';
+  const ruler = '<div class="bits sm">' + cover.map((_, b) =>
+    `<span class="b" style="width:19px;background:transparent;color:var(--muted);font-size:9px">${b % 4 === 0 ? b : ''}</span>`).join('') + '</div>';
+  const rows = scFields.map((f, k) => {
+    const lbl = f[0] + (f[1] > 1 ? `[${f[1]}]` : '');
+    return `<tr><td class="mono">${k + 1}</td><td class="mono">${esc(lbl)}</td><td class="mono"><b>${lay.off[k]}</b></td>
+      <td class="mono">${lay.itemsz[k]}</td><td class="mono">${lay.pad[k] || '—'}</td></tr>`;
+  }).join('');
+  const fldOpts = '<option value="-1">— 总大小 sizeof —</option>' +
+    scFields.map((f, k) => `<option value="${k}">${k + 1}. ${esc(f[0])}${f[1] > 1 ? '[' + f[1] + ']' : ''}</option>`).join('');
+  const curSel = $('#scGField').value;
+  $('#scOut').innerHTML = `
+    <div class="fw"><div class="fgrp"><div class="fcap">${scPreset ? '预设 <b>' + esc(scPreset) + '</b> · ' : ''}字节地图（灰点 · = 对齐填充，不存东西；格下数字 = 偏移，每 4 字节标一个）</div>
+      ${cells}${ruler}</div></div>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>#</th><th>类型</th><th>偏移</th><th>大小</th><th>前面垫了</th></tr>
+      ${rows}
+    </table></div>
+    <div class="readout">
+      <dt>对齐要求 K</dt><dd><b>${lay.align}</b>（所有字段里最大的对齐）</dd>
+      <dt>字段合计</dt><dd>${lay.raw} 字节 → 圆整到 K 的倍数</dd>
+      <dt>sizeof(struct)</dt><dd><b>${lay.size}</b> 字节（外部填充 ${lay.size - lay.raw} 字节）</dd>
+    </div>
+    <div class="box ok" style="margin-bottom:0"><div class="t">这里的每一个数都和真实编译器一致</div>
+      本计算器的布局算法（x86-64 规则）已与 clang 生成的 <code>offsetof</code>/<code>sizeof</code> 逐项比对：课件 6 个预设全部一致，另有数百个随机字段组合也一致（见本页脚注的验证说明）。预设按钮对应课件第 28–35 页的 S1…S5 与第 25 页的 rec。
+    </div>`;
+  $('#scGField').innerHTML = fldOpts;
+  if (curSel && [...$('#scGField').options].some(o => o.value === curSel)) $('#scGField').value = curSel;
+  $('#scJudgeOut').innerHTML = '<p style="font-size:14px;color:var(--muted);margin:6px 0">填两个猜数，按「判分」—— 先别偷看上面的表格。</p>';
+}
+
+function renderStructJudge() {
+  const lay = structLayout(scFields);
+  const gsize = parseIntStrict($('#scGSize').value);
+  const gk = parseIntStrict($('#scGField').value);
+  const goff = parseIntStrict($('#scGOff').value);
+  const parts = [];
+  let nRight = 0, nTot = 0;
+  if ($('#scGSize').value.trim() !== '') {
+    nTot++;
+    if (gsize === lay.size) { nRight++; parts.push('<span class="chip ok">✓ 总大小 = ' + lay.size + '</span>'); }
+    else parts.push(`<span class="chip bad">✗ 总大小应为 <b>${lay.size}</b></span>（字段合计 ${lay.raw} 圆整到 K=${lay.align} 的倍数）`);
+  }
+  if (gk !== null && $('#scGOff').value.trim() !== '') {
+    nTot++;
+    const want = gk === -1 ? null : lay.off[gk];
+    if (gk === -1) { parts.push('<span class="chip gray">字段选择是「总大小」时不用填偏移</span>'); }
+    else if (goff === want) { nRight++; parts.push(`<span class="chip ok">✓ 字段 ${gk + 1} 偏移 = ${want}</span>`); }
+    else parts.push(`<span class="chip bad">✗ 字段 ${gk + 1} 偏移应为 <b>${want}</b></span>（前面所有字段排完 + 对齐圆整）`);
+  }
+  if (nTot === 0) { $('#scJudgeOut').innerHTML = '<div class="box warn"><div class="t">先填至少一个猜数</div>总大小或字段偏移，至少填一个再判分。</div>'; return; }
+  $('#scJudgeOut').innerHTML = `<div class="box ${nRight === nTot ? 'ok' : 'warn'}" style="margin-bottom:0">
+    <div class="t">猜对 ${nRight} / ${nTot}</div>${parts.join('<br>')}<br>
+    <span style="font-size:13.5px;color:var(--muted)">判分基准：本页布局算法（已与 clang 的 offsetof/sizeof 交叉验证）。</span></div>`;
+}
+
+/* ============================================================
+   9.1 XMM 装箱可视化
+   ============================================================ */
+const _xmm = new DataView(new ArrayBuffer(16));
+function laneLbl(bytes) { return '<div class="bits sm">' + bytes.map(b =>
+  `<span class="b${b.cls ? ' ' + b.cls : ''}" style="width:19px" title="字节 ${b.i}">${(b.v >> 4).toString(16)}${(b.v & 15).toString(16)}</span>`).join('') + '</div>'; }
+function laneVals(vals) { return `<div class="mono" style="font-size:12.5px;line-height:1.8;overflow-x:auto">${vals}</div>`; }
+
+function renderXmm() {
+  const bytes = (() => {
+    const t = $('#xmIn').value.trim().replace(/^0x/i, '').replace(/[,\s]/g, '');
+    if (!/^[0-9a-fA-F]{32}$/.test(t)) return null;
+    return Array.from({ length: 16 }, (_, k) => parseInt(t.slice(k * 2, k * 2 + 2), 16));
+  })();
+  if (!bytes) { $('#xmOut').innerHTML = badBox('请给恰好 16 个字节（32 个 hex 数字），按内存顺序（低字节在前）。'); return; }
+  bytes.forEach((b, k) => _xmm.setUint8(k, b));
+  const i8 = Array.from({ length: 16 }, (_, k) => {
+    const v = _xmm.getInt8(k);
+    return `${v}`;
+  }).join(', ');
+  const i16 = Array.from({ length: 8 }, (_, k) => _xmm.getInt16(k * 2, true)).join(', ');
+  const i32 = Array.from({ length: 4 }, (_, k) => _xmm.getInt32(k * 4, true)).join(', ');
+  const f32 = Array.from({ length: 4 }, (_, k) => {
+    const v = _xmm.getFloat32(k * 4, true);
+    return Number.isInteger(v) && Math.abs(v) < 1e7 ? String(v) : v.toPrecision(8).replace(/0+$/, '').replace(/\.$/, '');
+  }).join(', ');
+  const f64 = Array.from({ length: 2 }, (_, k) => {
+    const v = _xmm.getFloat64(k * 8, true);
+    return String(parseFloat(v.toPrecision(12)));
+  }).join(', ');
+  const sf = _xmm.getFloat32(0, true), sd = _xmm.getFloat64(0, true);
+  const paint = (width) => {
+    const cells = [];
+    for (let k = 0; k < 16; k++) cells.push({ v: bytes[k], i: k, cls: width === 1 ? 'e' : SC_CYC[Math.floor(k / width) % 3] });
+    return laneLbl(cells);
+  };
+  $('#xmOut').innerHTML = `
+    <div class="fw"><div class="fgrp"><div class="fcap">16 个字节（低字节在左 —— x86 小端）</div>${paint(1)}</div></div>
+    <div class="fw"><div class="fgrp"><div class="fcap">按 8 位整数读：16 × int8</div>${paint(1)}${laneVals('[' + i8 + ']')}</div></div>
+    <div class="fw"><div class="fgrp"><div class="fcap">按 16 位整数读：8 × int16（每 2 字节 1 份，小端组合）</div>${paint(2)}${laneVals('[' + i16 + ']')}</div></div>
+    <div class="fw"><div class="fgrp"><div class="fcap">按 32 位整数读：4 × int32</div>${paint(4)}${laneVals('[' + i32 + ']')}</div></div>
+    <div class="fw"><div class="fgrp"><div class="fcap">按打包单精度读：4 × float</div>${paint(4)}${laneVals('[' + f32 + ']')}</div></div>
+    <div class="fw"><div class="fgrp"><div class="fcap">按打包双精度读：2 × double</div>${paint(8)}${laneVals('[' + f64 + ']')}</div></div>
+    <div class="fw"><div class="fgrp"><div class="fcap">标量读法：只用低 4 / 低 8 字节（其余字节「在场」但不参与）</div>
+      ${laneVals(`标量 float = <b>${String(sf)}</b>&nbsp;&nbsp;·&nbsp;&nbsp;标量 double = <b>${String(sd)}</b>`)}</div></div>
+    <div class="box ok" style="margin-bottom:0"><div class="t">一张寄存器，七副眼镜</div>
+      同样的 16 字节，宽度与份数全由<b>指令的后缀</b>决定 —— 这就是课件第 38 页那张表。字节不变，读法变。试试「double 1 与 9」按钮：低 8 字节是 1.0 的位模式，8–15 字节是 9.0 —— 按 4 × float 读就完全不是这两个数。
+    </div>`;
+}
+
+/* ============================================================
+   9.2 addss vs addps
+   ============================================================ */
+let siMode = 'ss';
+function renderSimd() {
+  const pa = $('#siA').value.split(',').map(parseFloatField);
+  const pb = $('#siB').value.split(',').map(parseFloatField);
+  if (pa.length !== 4 || pb.length !== 4 || pa.some(v => v === null) || pb.some(v => v === null)) {
+    $('#siOut').innerHTML = badBox('两个向量各要 4 个数，用英文逗号分隔（如 1,2,3,4）。');
+    return;
+  }
+  const a = pa.map(Math.fround), b = pb.map(Math.fround);
+  const res = b.slice();
+  const updated = [false, false, false, false];
+  if (siMode === 'ss') { res[0] = Math.fround(b[0] + a[0]); updated[0] = true; }
+  else { for (let k = 0; k < 4; k++) { res[k] = Math.fround(b[k] + a[k]); updated[k] = true; } }
+  const lanes = (v, hi) => '<div class="bits sm">' + v.map((x, k) =>
+    `<span class="b f${hi[k] ? ' sel' : ''}" style="width:64px;font-size:12.5px">${String(x)}</span>`).join('') + '</div>';
+  $('#siOut').innerHTML = `
+    <div class="fw">
+      <div class="fgrp"><div class="fcap">%xmm0（源）</div>${lanes(a, [false, false, false, false])}</div>
+      <div class="fgrp"><div class="fcap">%xmm1（目的）—— 执行前</div>${lanes(b, [false, false, false, false])}</div>
+      <div class="fgrp"><div class="fcap">%xmm1 —— 执行 <b>${siMode === 'ss' ? 'addss' : 'addps'} %xmm0,%xmm1</b> 后（蓝框 = 被更新的通道）</div>${lanes(res, updated)}</div>
+    </div>
+    <div class="box ${siMode === 'ss' ? 'warn' : 'ok'}" style="margin-bottom:0"><div class="t">${
+      siMode === 'ss' ? '标量：只有最低一个 float 参与运算，高 3 个原样保留' : '打包：4 个 float 同时相加 —— 一条指令干 4 份活'}</div>
+      后缀里的小写 s = scalar（标量），没有 s = packed（打包）。双精度同理：addsd 只算低 8 字节，addpd 同时算 2 个。
+    </div>`;
+}
+
+/* ============================================================
+   9.4 ucomisd 条件码预测器（判分基准 = ucomisFlags，已对齐硬件）
+   ============================================================ */
+const UC_CORNERS = [
+  [1, 2], [2, 1], [1, 1], [NaN, 1], [1, NaN], [0, -0],
+  [Infinity, -Infinity], [Infinity, Infinity], [1e308, -1e308],
+  [5e-324, 0], [0.1, 0.3 - 0.2], [-2.5, -2.5],
+];
+let ucIdx = 0, ucGuess = null;
+function ucFmt(v) {
+  if (Number.isNaN(v)) return 'NaN';
+  if (!isFinite(v)) return v > 0 ? '+inf' : '-inf';
+  return String(v);
+}
+function renderUcomis() {
+  const a = parseFloatField($('#ucA').value), b = parseFloatField($('#ucB').value);
+  if (a === null || b === null) { $('#ucOut').innerHTML = badBox('两个操作数都要是数（可写 1、-2.5、inf、nan）。'); return; }
+  const real = ucomisFlags(a, b);
+  const trip = `${real.zf}${real.pf}${real.cf}`;
+  const segBtns = ['000', '001', '100', '111'].map(f =>
+    `<button data-f="${f}" class="${ucGuess === f ? 'on' : ''}">${f}</button>`).join('');
+  let verdict = '';
+  if (ucGuess) {
+    const ok = ucGuess === trip;
+    verdict = `<div class="box ${ok ? 'ok' : 'bad'}" style="margin-bottom:0"><div class="t">${ok ? '✓ 猜对了' : `✗ 应为 <b>${trip}</b>`}</div>
+      关系判定：<b>${esc(real.rel)}</b>${real.rel === 'unordered' ? ' —— 有 NaN 参与，一切「大小」问题都无序' : ''}。</div>`;
+  }
+  const relName = { unordered: 'UNORDERED（无序）', greater: 'GREATER_THAN（大于）', less: 'LESS_THAN（小于）', equal: 'EQUAL（相等）' }[real.rel];
+  $('#ucOut').innerHTML = `
+    <div class="readout">
+      <dt>指令</dt><dd>ucomisd %xmm1, %xmm0&nbsp;&nbsp;<span style="color:var(--muted)">（比较 a=${esc(ucFmt(a))} 与 b=${esc(ucFmt(b))}）</span></dd>
+      <dt>你的预测</dt><dd>${ucGuess ? `<b>${ucGuess}</b>` : '<span style="color:var(--muted)">还没猜 —— 点上面的三连按钮</span>'}</dd>
+    </div>
+    ${verdict}
+    ${ucGuess ? `<div class="readout">
+      <dt>ZF PF CF</dt><dd><b>${trip}</b>（${esc(relName)}）</dd>
+      <dt>OF SF</dt><dd>0 0（ucomisd 把它们清零）</dd>
+      <dt>ja（CF=0 且 ZF=0）</dt><dd>${real.zf === 0 && real.cf === 0 ? '<b>跳</b> → a &gt; b' : '不跳'}</dd>
+      <dt>jb（CF=1）</dt><dd>${real.cf === 1 ? '<b>跳</b> → ' + (real.rel === 'unordered' ? '无序也走这条路（小心！）' : 'a &lt; b') : '不跳'}</dd>
+      <dt>je（ZF=1）</dt><dd>${real.zf === 1 ? '<b>跳</b> → ' + (real.rel === 'unordered' ? '无序会伪装成相等（所以要先 jp/jnp 排除 NaN）' : 'a == b') : '不跳'}</dd>
+      <dt>jp（PF=1）</dt><dd>${real.pf === 1 ? '<b>跳</b> → 无序（有 NaN）' : '不跳（有序）'}</dd>
+    </div>
+    <div class="box ok" style="margin-bottom:0"><div class="t">这组三连就是硬件会给出的</div>
+      页面的判定与 x86-64 硬件执行的 <code>ucomisd</code>（本机经 Rosetta 真跑指令、pushf 取标志）在 10 万+ 组输入上 0 项不一致。要点：NaN 让一切无序（111）；<code>je</code> 分不清「相等」和「无序」，<code>jb</code> 分不清「小于」和「无序」—— 先 <code>jp</code> 排除 NaN 再比大小，是浮点比较的标准姿势。</div>` : ''}`;
+  $('#ucSeg').innerHTML = segBtns;
+}
+
+/* ============================================================
+   10. 声明大表（Cmp/Bad 来自课件答案；Size 基准 = declSizes，已对齐编译器）
+   ============================================================ */
+const DT_TABLES = [
+  {
+    cap: '#1 · 原第 45–46 页', levels: 2,
+    rows: [
+      { d: 'int A1[3]', t: tArr(T_INT, 3), cmp: 'YN', bad: 'NN' },
+      { d: 'int *A2',   t: tPtr(T_INT),  cmp: 'YY', bad: 'NY' },
+    ],
+  },
+  {
+    cap: '#2 · 原第 47–48 页', levels: 3,
+    rows: [
+      { d: 'int A1[3]',      t: tArr(T_INT, 3),                cmp: 'YYN', bad: 'NN-' },
+      { d: 'int *A2[3]',     t: tArr(tPtr(T_INT), 3),          cmp: 'YYY', bad: 'NNY' },
+      { d: 'int (*A3)[3]',   t: tPtr(tArr(T_INT, 3)),          cmp: 'YYY', bad: 'NYY' },
+      { d: 'int (*A4[3])',   t: tArr(tPtr(T_INT), 3),          cmp: 'YYY', bad: 'NNY' },
+    ],
+  },
+  {
+    cap: '#3 · 原第 49–51 页', levels: 4,
+    rows: [
+      { d: 'int A1[3][5]',    t: tArr(tArr(T_INT, 5), 3),        cmp: 'YYYN', bad: 'NNN-' },
+      { d: 'int *A2[3][5]',   t: tArr(tArr(tPtr(T_INT), 5), 3),  cmp: 'YYYY', bad: 'NNNY' },
+      { d: 'int (*A3)[3][5]', t: tPtr(tArr(tArr(T_INT, 5), 3)),  cmp: 'YYYY', bad: 'NYYY' },
+      { d: 'int *(A4[3][5])', t: tArr(tArr(tPtr(T_INT), 5), 3),  cmp: 'YYYY', bad: 'NNNY' },
+      { d: 'int (*A5[3])[5]', t: tArr(tPtr(tArr(T_INT, 5)), 3),  cmp: 'YYYY', bad: 'NNYY' },
+    ],
+  },
+];
+let dtMode = 'quiz';
+function renderDecl() {
+  const tables = DT_TABLES.map(tb => {
+    const heads = Array.from({ length: tb.levels }, (_, s) =>
+      `<th>${s === 0 ? 'An' : '*'.repeat(s) + 'An'}<br><span style="font-weight:500;font-size:11px">Cmp / Bad / Size</span></th>`).join('');
+    const rows = tb.rows.map((r, ri) => {
+      const sizes = declSizes(r.t);
+      const cells = Array.from({ length: tb.levels }, (_, s) => {
+        const cmp = r.cmp[s], bad = r.bad[s];
+        const size = sizes[s];
+        const sizeCell = dtMode === 'quiz'
+          ? `<input type="text" data-ds="${tb.cap}|${ri}|${s}" value="${size === null ? '' : ''}" size="4" placeholder="${size === null ? '—' : '?'}" ${size === null ? 'disabled style="opacity:.45"' : 'spellcheck="false"'}>`
+          : (size === null ? '<span class="chip gray">—</span>' : `<b>${size}</b>`);
+        return `<td class="mono"><span class="chip ${cmp === 'Y' ? 'ok' : 'gray'}">Cmp ${cmp}</span>
+          <span class="chip ${bad === 'Y' ? 'bad' : 'ok'}">Bad ${bad}</span><br>${sizeCell}</td>`;
+      }).join('');
+      return `<tr><td class="mono"><b>${esc(r.d)}</b></td>${cells}</tr>`;
+    }).join('');
+    return `<h4>${esc(tb.cap)}</h4><div class="tbl-wrap"><table class="tbl">
+      <tr><th>声明</th>${heads}</tr>${rows}</table></div>`;
+  }).join('');
+  $('#dtOut').innerHTML = `
+    ${tables}
+    ${dtMode === 'quiz' ? '<div class="box warn" style="margin-bottom:0"><div class="t">自测中 —— 只填 Size 列</div>Cmp（能不能编译）与 Bad（是不是可能的坏引用）先看着课件答案理解；Size 填完按「判分」。灰掉的输入框是编译不过的组合。</div>'
+      : '<div class="box ok" style="margin-bottom:0"><div class="t">答案模式 —— Size 全部由页面现算</div>数值与 clang 在 x86-64 下的 sizeof 输出一致（0 项不一致）；Cmp 与 clang 的真实编译结果核对过。</div>'}`;
+}
+function judgeDecl() {
+  const prev = document.getElementById('dtScore');
+  if (prev) prev.remove();
+  let n = 0, right = 0; const samples = [];
+  $$('#dtOut [data-ds]').forEach(inp => {
+    if (inp.disabled) return;
+    const [cap, ri, s] = inp.dataset.ds.split('|');
+    const tb = DT_TABLES.find(t => t.cap === cap);
+    const want = declSizes(tb.rows[+ri].t)[+s];
+    const got = parseIntStrict(inp.value);
+    if (got === null) return;
+    n++;
+    if (got === want) right++;
+    else if (samples.length < 8) samples.push(`${tb.rows[+ri].d} 的 ${'*'.repeat(+s)}An：应为 ${want}，你填了 ${inp.value}`);
+  });
+  const box = n === 0
+    ? `<div class="box warn" id="dtScore" style="margin-bottom:0"><div class="t">还没有作答</div>在任意 Size 框里填个数（如 60），再按「判分」。</div>`
+    : `<div class="box ${right === n ? 'ok' : 'warn'}" id="dtScore" style="margin-bottom:0"><div class="t">已答 ${n} 格，答对 ${right} 格</div>
+       ${right === n ? '全对 —— deref 规则已经吃透了。' : '不对的格子：'}${samples.map(s => '<br>· ' + esc(s)).join('')}</div>`;
+  $('#dtOut').insertAdjacentHTML('beforeend', box);
+}
+
+/* ============================================================
+   判断题与测验（共用外壳，与 ics08 同款）
+   ============================================================ */
+function renderPuzzles(el, list, state) {
+  const done = state.filter(v => v !== null).length;
+  const right = list.filter((p, i) => state[i] === p.a).length;
+  const html = list.map((p, i) => {
+    const s = state[i];
+    const cls = s === null ? '' : (s === p.a ? ' correct done' : ' wrong done');
+    return `<div class="puzzle${cls}">
+      <div class="q" style="white-space:normal">${p.q}</div>
+      <div class="btns">
+        <button class="sm" data-pz="${el}:${i}:1" ${s !== null ? 'disabled style="opacity:.55"' : ''}>真</button>
+        <button class="sm" data-pz="${el}:${i}:0" ${s !== null ? 'disabled style="opacity:.55"' : ''}>假</button>
+      </div>
+      <div class="exp"><span class="verdict">${s === null ? '' : s === p.a ? '✓ 答对了' : '✗ 答错了'}</span>
+        &nbsp;正确答案：<b>${p.a ? '真' : '假'}</b><br>${p.exp}</div>
+    </div>`;
+  }).join('');
+  const score = done === 0 ? '' : `<div class="box ${right === list.length ? 'ok' : right >= list.length / 2 ? 'warn' : 'bad'}" style="margin-bottom:0">
+    <div class="t">已答 ${done} / ${list.length}，答对 ${right} 题</div>
+    ${done === list.length ? (right === list.length ? '全对 —— 这一组概念都吃透了。' : '错题的解析就在上面，回对应小节再看一眼即可。') : '继续，答完显示小结。'}</div>`;
+  document.getElementById(el).innerHTML = html + score;
+}
+const PUZ_ARR = [
+  { q: '「64 位机器上，char *p[3] 和 double a[3] 占的字节数一样多」', a: true,
+    exp: '都是 3 × 8 = 24 字节：指针和 double 在 x86-64 上都是 8 字节。用 1.1 节的可视化器把两者都点一遍即可看到。' },
+  { q: '「val[5] 会让编译器报错，因为下标越界了」', a: false,
+    exp: 'C 不做边界检查，编译照常通过（课件第 6 页那一格的值也只是如实填 ??）。运行时读到的是 x+20 起的 4 个字节 —— 谁住在那就读到谁。' },
+];
+const PUZ_ML = [
+  { q: '「univ[index][digit] 一次访存就能拿到数据」', a: false,
+    exp: '要两次：先从 univ 数组里取出指针（Mem[univ+8·index]），再从指针指向的数组取元素（+4·digit）。课件第 17–18 页的对照表。' },
+  { q: '「int *univ[3] 里的三个 zip 数组必须连续存放」', a: false,
+    exp: '多级数组的行位置全存在指针里，行可以散在内存任何地方；「行行紧挨」是嵌套数组（pgh）才有的性质。' },
+];
+const PUZ_AX = [
+  { q: '「linear_zip[7] 读到的元素和 pgh[1][2] 是同一个」', a: true,
+    exp: '摊平映射 linear_zip[k] = pgh[k/5][k%5]：7 = 1×5 + 2。地址也都是 A + 4k（3.1 节公式）。' },
+  { q: '「zip2[5] 只是普通指针算术，仍然落在数组里」', a: false,
+    exp: 'zip2 指向第 2 行，行只有 5 个元素（下标 0–4）；zip2[5] 越出了这一行。本例它恰好落进第 3 行（内存图上挨着），但这正是「碰巧有值」而非「合法」—— 与 val[5] = ?? 同一课。' },
+];
+const PUZ_AL = [
+  { q: '「结构体字段必须按声明顺序存放，哪怕重排能省空间」', a: true,
+    exp: '课件第 25 页原话：fields ordered according to declaration, even if another ordering could yield a more compact representation。省空间靠程序员自己把大字段放前面（S4 → S5）。' },
+  { q: '「struct S2 {double v; int i[2]; char c;} 占 17 字节」', a: false,
+    exp: '字段合计 17 字节，但 K = 8（double），总长必须是 8 的倍数 → 末尾垫 7 字节外部填充，sizeof = 24。课件第 32 页的图。' },
+  { q: '「把结构体的字段全换成 char，就不会有任何填充」', a: true,
+    exp: 'char 的 K = 1，地址无限制；总大小 = 字段个数，也自然是 1 的倍数。用布局计算器试一试即可验证。' },
+];
+const PUZ_FP = [
+  { q: '「浮点参数像整数一样放在 %rdi、%rsi 里传递」', a: false,
+    exp: '浮点参数走 XMM 寄存器（%xmm0、%xmm1…），返回值在 %xmm0；整数和指针才走通用寄存器。dincr 同时收两种参数（p 在 %rdi、v 在 %xmm0）。' },
+  { q: '「ucomisd 会把 OF 和 SF 一并设置成比较结果」', a: false,
+    exp: '恰恰相反 —— ucomisd 把 OF、SF 清零，只设置 ZF、PF、CF 三位（课件第 42 页的四种组合）。' },
+];
+const puzState = { apOut: PUZ_ARR.map(() => null), mpOut: PUZ_ML.map(() => null),
+                   axpOut: PUZ_AX.map(() => null), alOut: PUZ_AL.map(() => null), fpOut: PUZ_FP.map(() => null) };
+const PUZ_LISTS = { apOut: PUZ_ARR, mpOut: PUZ_ML, axpOut: PUZ_AX, alOut: PUZ_AL, fpOut: PUZ_FP };
+
+/* ---------- 测验 ---------- */
+const QUIZ = [
+  { q: '<code>int val[5]</code> 起始地址 x，<code>val[3]</code> 的地址是？',
+    o: ['x + 3', 'x + 12', 'x + 16', 'x + 24'], a: 1,
+    w: '地址 = x + 4·i = x + 12。指针加 1 跳一个元素（4 字节），所以 x+3 和 x+16（val[4]）都不对。见 1.1–1.2 节。' },
+  { q: '寻址操作数 <code>(%rdi,%rsi,4)</code> 计算的地址是？',
+    o: ['%rdi + %rsi + 4', '4·(%rdi + %rsi)', '%rdi + 4·%rsi', '%rsi + 4·%rdi'], a: 2,
+    w: '格式是（基址, 下标, 缩放）：%rdi + 4·%rsi。缩放 4 = sizeof(int)，get_digit 一条 movl 全靠它。见 2.2 节。' },
+  { q: '<code>zip_dig pgh[4]</code>（等价于 <code>int pgh[4][5]</code>）一共占多少字节？',
+    o: ['20', '80', '100', '400'], a: 1,
+    w: 'R × C × K = 4 × 5 × 4 = 80 字节。课件第 11 页：76 → 156 正好差 80。' },
+  { q: '<code>pgh[index][dig]</code> 的地址（相对 pgh）是？',
+    o: ['20·index + 4·dig', '4·index + 20·dig', '5·index + dig', '20·index + 5·dig'], a: 0,
+    w: 'A + (i·C + j)·K = pgh + (5·index + dig)·4 = pgh + 20·index + 4·dig。get_pgh_digit 的三条指令就是这个式子。见 3.2–3.3 节。' },
+  { q: '<code>univ[index][digit]</code>（int *univ[3]）的完整地址表达式是？',
+    o: ['Mem[univ + 8·index + 4·digit]', 'Mem[Mem[univ + 8·index] + 4·digit]', 'Mem[univ + 20·index + 4·digit]', 'Mem[Mem[univ + 4·index] + 8·digit]'], a: 1,
+    w: '先读指针（缩放 8 = 指针大小），再读元素（缩放 4 = int 大小）—— 两次访存。见 4.2 节。' },
+  { q: '<code>struct S1 {char c; int i[2]; double v;}</code> 的 sizeof 是？',
+    o: ['13', '16', '24', '32'], a: 2,
+    w: 'c@0、垫 3、i[0]@4、i[1]@8、垫 4、v@16 → 字段合计 24，恰好是 K=8 的倍数，sizeof = 24。用第 8 节计算器按 S1 预设核对。' },
+  { q: 'S4 {char c; int i; char d;} 与 S5 {int i; char c; char d;}，哪个更小？',
+    o: ['S4 更小', 'S5 更小：大类型放前面，两个 char 抱团，只需垫 2 字节', '一样大', '取决于编译器'], a: 1,
+    w: 'S4 = 12 字节（c 后垫 3、d 后垫 3），S5 = 8 字节（两个 char 共享一个对齐单位）。课件第 35 页的省空间口诀：Put large data types first。' },
+  { q: '一个 XMM 寄存器能同时装几个 double？',
+    o: ['1', '2', '4', '16'], a: 1,
+    w: 'XMM 宽 16 字节 → 2 个 double（或 4 个 float、4 个 int32、8 个 int16、16 个 int8）。标量指令只用其中最低 1 个。见 9.1 节。' },
+  { q: 'ucomisd 判定 UNORDERED（有 NaN）时，ZF PF CF = ？',
+    o: ['000', '001', '100', '111'], a: 3,
+    w: '无序：三位全 1 —— 这让 je（ZF=1）和 jb（CF=1）都会被 NaN「骗」到，所以浮点比较前通常先 jp 排除无序。见 9.4 节的预测器。' },
+];
+let qzState = QUIZ.map(() => null);
+function renderQuiz() {
+  const answered = qzState.filter(v => v !== null).length;
+  const right = QUIZ.filter((q, i) => qzState[i] === q.a).length;
+  const list = QUIZ.map((q, i) => {
+    const sel = qzState[i];
+    const cls = sel === null ? '' : sel === q.a ? ' correct done' : ' wrong done';
+    return `<div class="puzzle${cls}" style="flex-direction:column;align-items:stretch">
+      <div class="q" style="white-space:normal"><b>${i + 1}.</b> ${q.q}</div>
+      <div style="display:flex;flex-wrap:wrap;gap:7px;margin-top:8px">
+        ${q.o.map((o, j) => `<button class="sm" data-qzo="${i}:${j}"
+          style="${sel === null ? '' : j === q.a ? 'border-color:var(--ok-bd);background:var(--ok-bg)'
+            : j === sel ? 'border-color:var(--bad-bd);background:var(--bad-bg)' : 'opacity:.6'}">
+          ${'ABCD'[j]}. ${o}</button>`).join('')}
+      </div>
+      <div class="exp"><span class="verdict">${sel === null ? '' : sel === q.a ? '✓ 正确' : '✗ 错误'}</span>
+        &nbsp;正确答案：<b>${'ABCD'[q.a]}. ${q.o[q.a]}</b><br>${q.w}</div>
+    </div>`;
+  }).join('');
+  const score = answered === 0 ? '' : `<div class="box ${right === QUIZ.length ? 'ok' : right >= QUIZ.length / 2 ? 'warn' : 'bad'}" style="margin-bottom:0">
+    <div class="t">已答 ${answered} / ${QUIZ.length} 题，答对 ${right} 题</div>
+    ${answered === QUIZ.length
+      ? (right === QUIZ.length ? '全对 —— 数组、结构体、对齐、XMM 与比较全部拿下。'
+        : '错题上方已标出正确答案与依据，回到对应小节再看一遍即可。')
+      : '继续答题，每题都会立即给出解析。'}
+  </div>`;
+  $('#qzOut').innerHTML = list + score;
+}
+
+/* ============================================================
+   初始化
+   ============================================================ */
+function renderAllPuzzles() {
+  Object.keys(PUZ_LISTS).forEach(el => renderPuzzles(el, PUZ_LISTS[el], puzState[el]));
+}
+
+function initAll() {
+  /* --- 1.1 数组分配 --- */
+  function doAa() { renderArrAlloc(); }
+  $('#aaT').addEventListener('change', doAa);
+  $('#aaX').addEventListener('keydown', e => { if (e.key === 'Enter') doAa(); });
+  $('#aaX').addEventListener('change', doAa);
+  doAa();
+
+  /* --- 1.2 表达式求值 --- */
+  function doAe() { renderArrExpr(); }
+  $('#aeGo').addEventListener('click', doAe);
+  $('#aeE').addEventListener('change', doAe);
+  $('#aeI').addEventListener('keydown', e => { if (e.key === 'Enter') doAe(); });
+  $$('[data-ae]').forEach(b => b.addEventListener('click', () => {
+    const kv = kvAttr(b.dataset.ae);
+    $('#aeE').value = kv.e; $('#aeI').value = kv.i; doAe();
+  }));
+  doAe();
+
+  /* --- 2.1 get_digit --- */
+  function doGd() { renderGetDigit(); }
+  $('#gdGo').addEventListener('click', doGd);
+  $('#gdZ').addEventListener('change', doGd);
+  $('#gdD').addEventListener('keydown', e => { if (e.key === 'Enter') doGd(); });
+  $$('[data-gd]').forEach(b => b.addEventListener('click', () => {
+    const kv = kvAttr(b.dataset.gd);
+    $('#gdZ').value = kv.z; $('#gdD').value = kv.d; doGd();
+  }));
+  doGd();
+
+  /* --- 3.1 二维地址 --- */
+  function doNa() { renderNested(); }
+  ['naR', 'naC', 'naK', 'naI', 'naJ'].forEach(id => {
+    $('#' + id).addEventListener('change', doNa);
+    $('#' + id).addEventListener('keydown', e => { if (e.key === 'Enter') doNa(); });
+  });
+  $$('[data-na]').forEach(b => b.addEventListener('click', () => {
+    const kv = kvAttr(b.dataset.na);
+    $('#naR').value = kv.r; $('#naC').value = kv.c; $('#naK').value = kv.k;
+    $('#naI').value = kv.i; $('#naJ').value = kv.j; doNa();
+  }));
+  doNa();
+
+  /* --- 4. 多级数组 --- */
+  renderMlDiagram();
+  function doMs() { renderMl(); }
+  $('#msGo').addEventListener('click', doMs);
+  ['msI', 'msD'].forEach(id => {
+    $('#' + id).addEventListener('keydown', e => { if (e.key === 'Enter') doMs(); });
+  });
+  $$('[data-ms]').forEach(b => b.addEventListener('click', () => {
+    const kv = kvAttr(b.dataset.ms);
+    $('#msI').value = kv.i; $('#msD').value = kv.d; doMs();
+  }));
+  doMs();
+
+  /* --- 5. 矩阵 --- */
+  function doMa() { renderMat(); }
+  $('#maGo').addEventListener('click', doMa);
+  ['maMode', 'maN', 'maI', 'maJ'].forEach(id => $('#' + id).addEventListener('change', doMa));
+  ['maN', 'maI', 'maJ'].forEach(id => $('#' + id).addEventListener('keydown', e => { if (e.key === 'Enter') doMa(); }));
+  $$('[data-ma]').forEach(b => b.addEventListener('click', () => {
+    const kv = kvAttr(b.dataset.ma);
+    $('#maMode').value = kv.m; $('#maI').value = kv.i; $('#maJ').value = kv.j;
+    if (kv.m === 'var') $('#maN').value = 8; else $('#maN').value = 16;
+    doMa();
+  }));
+  doMa();
+
+  /* --- 6. 四项求和 --- */
+  function doAx() { renderAx(); }
+  $('#axGo').addEventListener('click', doAx);
+  ['axK1', 'axK2', 'axK3'].forEach(id => $('#' + id).addEventListener('keydown', e => { if (e.key === 'Enter') doAx(); }));
+  $$('[data-ax]').forEach(b => b.addEventListener('click', () => {
+    const kv = kvAttr(b.dataset.ax);
+    $('#axK1').value = kv.a; $('#axK2').value = kv.b; $('#axK3').value = kv.c; doAx();
+  }));
+  doAx();
+
+  /* --- 7.1 struct rec --- */
+  function doRc() { renderRec(); }
+  $('#rcIdx').addEventListener('change', doRc);
+  $('#rcIdx').addEventListener('keydown', e => { if (e.key === 'Enter') doRc(); });
+  doRc();
+
+  /* --- 7.3 set_val 步进器 --- */
+  function svReinit() {
+    const val = parseIntStrict($('#svVal').value);
+    if (val === null || val < -(2 ** 31) || val >= 2 ** 31) {
+      $('#svOut').innerHTML = badBox('val 要是 32 位整数范围内的整数（int）。');
+      return;
+    }
+    svState = svInit(val);
+    renderSetVal();
+  }
+  $('#svNext').addEventListener('click', () => { svStepOnce(); renderSetVal(); });
+  $('#svRun').addEventListener('click', () => {
+    let guard = 0;
+    while (!svState.done && guard++ < 8) svStepOnce();
+    renderSetVal();
+  });
+  $('#svReset').addEventListener('click', svReinit);
+  $('#svVal').addEventListener('keydown', e => { if (e.key === 'Enter') svReinit(); });
+  svReinit();
+
+  /* --- 8. 布局计算器 --- */
+  function doSc() { renderStructCalc(); }
+  $('#scAdd').addEventListener('click', () => {
+    scPreset = null;
+    const n = Math.min(64, Math.max(1, parseIntStrict($('#scN').value) || 1));
+    scFields.push([$('#scT').value, n]);
+    doSc();
+  });
+  $('#scDel').addEventListener('click', () => { scPreset = null; if (scFields.length) scFields.pop(); doSc(); });
+  $('#scClear').addEventListener('click', () => { scPreset = null; scFields = []; doSc(); });
+  $$('#scSeg button').forEach(b => b.addEventListener('click', () => {
+    scPreset = b.dataset.sc;
+    scFields = SC_PRESETS[scPreset].map(f => f.slice());
+    doSc();
+  }));
+  doSc();
+
+  function doScj() { renderStructJudge(); }
+  $('#scJudge').addEventListener('click', doScj);
+  ['scGSize', 'scGOff'].forEach(id => $('#' + id).addEventListener('keydown', e => { if (e.key === 'Enter') doScj(); }));
+
+  /* --- 判断题（事件委托）+ 测验 --- */
+  document.addEventListener('click', e => {
+    const pz = e.target.closest('[data-pz]');
+    if (pz) {
+      const [el, i, v] = pz.dataset.pz.split(':');
+      if (puzState[el][+i] !== null) return;
+      puzState[el][+i] = +v;
+      renderPuzzles(el, PUZ_LISTS[el], puzState[el]);
+      return;
+    }
+    const qzo = e.target.closest('[data-qzo]');
+    if (qzo) {
+      const [i, j] = qzo.dataset.qzo.split(':').map(Number);
+      if (qzState[i] !== null) return;
+      qzState[i] = j;
+      renderQuiz();
+      return;
+    }
+    const ucf = e.target.closest('#ucSeg [data-f]');
+    if (ucf) { ucGuess = ucf.dataset.f; renderUcomis(); }
+  });
+  [['apReset', 'apOut'], ['mpReset', 'mpOut'], ['axpReset', 'axpOut'], ['alReset', 'alOut'], ['fpReset', 'fpOut']]
+    .forEach(([btn, el]) => $('#' + btn).addEventListener('click', () => {
+      puzState[el] = PUZ_LISTS[el].map(() => null);
+      renderPuzzles(el, PUZ_LISTS[el], puzState[el]);
+    }));
+  $('#qzReset').addEventListener('click', () => { qzState = QUIZ.map(() => null); renderQuiz(); });
+  renderAllPuzzles();
+  renderQuiz();
+
+  /* --- 9.1 XMM --- */
+  function doXm() { renderXmm(); }
+  $('#xmGo').addEventListener('click', doXm);
+  $('#xmIn').addEventListener('keydown', e => { if (e.key === 'Enter') doXm(); });
+  $$('[data-xm]').forEach(b => b.addEventListener('click', () => { $('#xmIn').value = b.dataset.xm; doXm(); }));
+  doXm();
+
+  /* --- 9.2 SIMD --- */
+  function doSi() { renderSimd(); }
+  $('#siGo').addEventListener('click', doSi);
+  ['siA', 'siB'].forEach(id => $('#' + id).addEventListener('keydown', e => { if (e.key === 'Enter') doSi(); }));
+  $$('#siSeg [data-m]').forEach(b => b.addEventListener('click', () => {
+    $$('#siSeg button').forEach(x => x.classList.remove('on'));
+    b.classList.add('on');
+    siMode = b.dataset.m; doSi();
+  }));
+  doSi();
+
+  /* --- 9.4 ucomisd --- */
+  function ucNewPair() {
+    ucIdx = (ucIdx + 1) % UC_CORNERS.length;
+    ucGuess = null;
+    $('#ucA').value = ucFmt(UC_CORNERS[ucIdx][0]);
+    $('#ucB').value = ucFmt(UC_CORNERS[ucIdx][1]);
+    renderUcomis();
+  }
+  $('#ucReset').addEventListener('click', ucNewPair);
+  ['ucA', 'ucB'].forEach(id => $('#' + id).addEventListener('keydown', e => { if (e.key === 'Enter') renderUcomis(); }));
+  $('#ucA').value = ucFmt(UC_CORNERS[0][0]);
+  $('#ucB').value = ucFmt(UC_CORNERS[0][1]);
+  renderUcomis();
+
+  /* --- 10. 声明大表 --- */
+  function doDt() { renderDecl(); }
+  $$('#dtSeg [data-m]').forEach(b => b.addEventListener('click', () => {
+    $$('#dtSeg button').forEach(x => x.classList.remove('on'));
+    b.classList.add('on');
+    dtMode = b.dataset.m; doDt();
+  }));
+  $('#dtJudge').addEventListener('click', judgeDecl);
+  $('#dtReset').addEventListener('click', doDt);
+  doDt();
+}
+
+document.addEventListener('DOMContentLoaded', initAll);
+</script>
+</body>
+</html>

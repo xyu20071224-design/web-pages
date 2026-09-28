@@ -1,0 +1,3050 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-style="terminal" data-deck="ics22">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>计算机网络 · 交互式课件（中文）（深色终端版）</title>
+<style>
+/* ==========================================================================
+   base.css —— 结构基础样式（所有风格共用）
+   只使用 CSS 变量，不含任何具体配色；由各主题覆盖变量与少量结构规则。
+   ========================================================================== */
+
+:root{
+  /* 颜色（每个主题必须覆盖） */
+  --bg:#f6f7f9; --card:#fff; --ink:#15181d; --muted:#697586; --line:#e4e7ec;
+  --accent:#2563eb; --accent-ink:#fff; --accent-soft:#eaf1ff;
+  --sign:#e5484d; --exp:#0b7fd4; --frac:#18915a; --warn:#b45309;
+  --sign-bg:#fdecec; --sign-fg:#a3262b; --sign-bd:#f6cdcf;
+  --exp-bg:#e8f2fd;  --exp-fg:#0a5f9e;  --exp-bd:#c7ddf5;
+  --frac-bg:#e9f7ef; --frac-fg:#116b43; --frac-bd:#c8e8d5;
+  --ok-bg:#f2fbf6; --ok-bd:#9ed3b4; --bad-bg:#fff5f5; --bad-bd:#f1b5b8;
+  --warn-bg:#fffbeb; --gray-bg:#eef1f5; --gray-fg:#5b6472;
+  --paper-soft:#fcfdfe; --code-bg:#f1f3f7; --code-bd:#e6e9ef;
+  --tbl-head:#f7f9fc; --tbl-hover:#fafbfd;
+  --sel-bg:#eef1f5;
+
+  /* 字体 */
+  --font-sans:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",system-ui,sans-serif;
+  --font-mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+  --font-display:var(--font-sans);
+  --tracking-title:normal;
+
+  /* 形状 */
+  --radius:12px; --radius-sm:8px; --radius-pill:99px;
+  --border-w:1px; --shadow:0 1px 2px rgba(16,24,40,.06),0 1px 3px rgba(16,24,40,.1);
+  --shadow-card:none;
+  --card-border:var(--border-w) solid var(--line);
+
+  /* 布局 */
+  --page-max:1180px; --nav-w:236px; --gap:26px; --sec-pad:26px 28px;
+  --nav-sticky-top:64px; --anchor-offset:70px;
+  --font-size:16px; --line-height:1.75;
+}
+
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font-sans);
+  font-size:var(--font-size);line-height:var(--line-height);-webkit-font-smoothing:antialiased}
+img{max-width:100%}
+
+/* ---------- 顶栏 ---------- */
+.topbar{position:sticky;top:0;z-index:50;background:var(--card);border-bottom:1px solid var(--line)}
+.topbar-in{max-width:var(--page-max);margin:0 auto;padding:10px 22px;display:flex;align-items:center;gap:14px}
+.brand{font-weight:700;letter-spacing:var(--tracking-title);font-family:var(--font-display)}
+.brand small{font-weight:500;color:var(--muted);margin-left:8px;font-size:12.5px}
+.progress{margin-left:auto;display:flex;align-items:center;gap:10px;font-size:12.5px;color:var(--muted)}
+.progress .bar{width:150px;height:6px;border-radius:var(--radius-pill);background:var(--line);overflow:hidden}
+.progress .bar>i{display:block;height:100%;width:0;background:var(--accent);transition:width .25s}
+
+/* ---------- 主体布局 ---------- */
+.layout{max-width:var(--page-max);margin:0 auto;padding:22px;display:grid;
+  grid-template-columns:var(--nav-w) minmax(0,1fr);gap:var(--gap)}
+main{min-width:0}
+/* 长 URL / 长标识符没有断行点，会把容器整个撑破（窄屏尤其明显）。
+   只作用于文本容器；表格故意不加，让它走 .tbl-wrap 的横向滚动。 */
+main p,main li,main dd,main dt,main h2,main h3,main h4,main h5,
+main .box,main .card,main .readout,main .puzzle,main .step{overflow-wrap:anywhere}
+
+/* ---------- 目录 ---------- */
+nav.toc{position:sticky;top:var(--nav-sticky-top);align-self:start;max-height:calc(100vh - 84px);overflow:auto;padding-right:4px}
+nav.toc h4{margin:0 0 8px;font-size:12px;letter-spacing:.12em;color:var(--muted);text-transform:uppercase;font-weight:600}
+nav.toc a{display:block;padding:7px 11px;border-radius:var(--radius-sm);color:var(--ink);opacity:.78;
+  text-decoration:none;font-size:14.5px;border-left:2.5px solid transparent}
+nav.toc a:hover{background:var(--sel-bg);opacity:1}
+nav.toc a.active{background:var(--accent-soft);color:var(--accent);border-left-color:var(--accent);font-weight:600;opacity:1}
+nav.toc a .n{display:inline-block;min-width:20px;color:var(--muted);font-size:12.5px;font-variant-numeric:tabular-nums}
+nav.toc a.active .n{color:var(--accent)}
+nav.toc .sub{padding-left:26px;font-size:13.5px;opacity:.7}
+
+/* ---------- 章节 ---------- */
+section{background:var(--card);border:var(--card-border);border-radius:var(--radius);
+  padding:var(--sec-pad);margin-bottom:22px;box-shadow:var(--shadow);scroll-margin-top:var(--anchor-offset)}
+section>h2{margin:0 0 6px;font-size:25px;letter-spacing:-.01em;font-family:var(--font-display)}
+section>.lede{color:var(--muted);margin:0 0 20px;font-size:14.5px}
+h3{font-size:18.5px;margin:26px 0 10px;padding-left:11px;border-left:3.5px solid var(--accent);font-family:var(--font-display)}
+h4{font-size:16px;margin:18px 0 8px;font-family:var(--font-display)}
+h5{font-size:15px;font-family:var(--font-display)}
+p{margin:10px 0}
+ul,ol{margin:10px 0;padding-left:22px}
+li{margin:5px 0}
+code{font-family:var(--font-mono);font-size:.89em;background:var(--code-bg);border:1px solid var(--code-bd);border-radius:5px;padding:1px 5px}
+.mono{font-family:var(--font-mono)}
+a{color:var(--accent)}
+hr{border:0;border-top:1px dashed var(--line);margin:24px 0}
+.srcref{font-size:11.5px;color:var(--muted);font-weight:500;font-family:var(--font-sans);margin-left:8px;vertical-align:middle;white-space:nowrap;opacity:.75}
+.en{color:var(--muted);font-size:.92em}
+
+/* ---------- 栅格与卡片 ---------- */
+.grid{display:grid;gap:14px}
+.g2{grid-template-columns:repeat(2,minmax(0,1fr))}
+.g3{grid-template-columns:repeat(3,minmax(0,1fr))}
+/* 窄屏单列：必须用 minmax(0,1fr)。写成 1fr 时轨道最小宽度是 auto，
+   单元格里只要有长代码行（<pre>）就撑破容器，整页横向溢出。 */
+@media(max-width:820px){.g2,.g3{grid-template-columns:minmax(0,1fr)}}
+.card{border:var(--card-border);border-radius:var(--radius-sm);padding:15px 17px;background:var(--paper-soft);box-shadow:var(--shadow-card)}
+.card h5{margin:0 0 7px}
+.card.pad0{padding:0;overflow:hidden}
+
+/* ---------- 提示框 ---------- */
+.box{border:1px solid var(--line);border-left:4px solid var(--accent);background:var(--accent-soft);
+  border-radius:var(--radius-sm);padding:12px 16px;margin:14px 0}
+.box.warn{border-left-color:var(--warn);background:var(--warn-bg)}
+.box.bad{border-left-color:var(--sign);background:var(--bad-bg)}
+.box.ok{border-left-color:var(--frac);background:var(--ok-bg)}
+.box .t{font-weight:650;font-size:14.5px;margin-bottom:2px}
+
+/* ---------- 公式 ---------- */
+.formula{font-family:var(--font-mono);background:var(--paper-soft);border:1px solid var(--line);
+  border-radius:var(--radius-sm);padding:14px 17px;margin:14px 0;font-size:16.5px;text-align:center;overflow-x:auto}
+.formula.big{font-size:20px}
+
+/* ---------- 表格 ---------- */
+table.tbl{width:100%;border-collapse:collapse;font-size:14.5px;margin:14px 0}
+table.tbl th,table.tbl td{border:1px solid var(--line);padding:8px 11px;text-align:left;vertical-align:top}
+table.tbl th{background:var(--tbl-head);font-weight:650;font-size:13.5px;white-space:nowrap}
+table.tbl td.mono,table.tbl th.mono{font-family:var(--font-mono);font-size:13.5px}
+table.tbl tr:hover td{background:var(--tbl-hover)}
+/* 当前行高亮：interactive 表格用它标出「正在看的那一行」。
+   注意 --tbl-hover 是悬停色，深色皮肤下故意比底色亮，所以 hl 用同一套变量。 */
+table.tbl tr.hl td{background:var(--sel-bg)}
+.tbl-wrap{overflow-x:auto}
+
+/* ---------- 位串控件 ---------- */
+.fw{display:flex;flex-wrap:wrap;gap:8px 18px;align-items:flex-start;margin:4px 0 2px;min-width:0}
+.fgrp{min-width:0}
+.fcap{font-size:12px;color:var(--muted);margin-bottom:4px;font-weight:600}
+.fcap b{font-family:var(--font-mono);font-size:12.5px}
+.bits{display:flex;flex-wrap:wrap;gap:2px;font-family:var(--font-mono);margin:4px 0}
+.bits .b{width:25px;height:33px;display:flex;align-items:center;justify-content:center;
+  border-radius:6px;font-size:15px;cursor:pointer;user-select:none;border:1px solid transparent;
+  transition:transform .06s,background .12s;font-weight:600}
+.bits .b:hover{transform:translateY(-2px)}
+.bits .b.s{background:var(--sign-bg);color:var(--sign-fg);border-color:var(--sign-bd)}
+.bits .b.e{background:var(--exp-bg);color:var(--exp-fg);border-color:var(--exp-bd)}
+.bits .b.f{background:var(--frac-bg);color:var(--frac-fg);border-color:var(--frac-bd)}
+.bits .b.sel{outline:2px solid var(--ink);outline-offset:1px}
+.bits.sm .b{width:19px;height:26px;font-size:12px;border-radius:4px}
+.fgrp .bits{flex-wrap:wrap;max-width:100%;gap:2px}
+.fgrp.ge .bits{max-width:300px}
+
+/* ---------- 读数表 ---------- */
+.readout{display:grid;grid-template-columns:auto 1fr;gap:4px 16px;font-size:14.5px;margin:12px 0}
+.readout dt{color:var(--muted);font-weight:600;font-family:var(--font-mono);font-size:13.5px;padding-top:2px}
+.readout dd{margin:0;font-family:var(--font-mono)}
+
+/* ---------- 小标签 ---------- */
+.chip{display:inline-block;font-size:12.5px;padding:2px 9px;border-radius:var(--radius-pill);
+  background:var(--accent-soft);color:var(--accent);font-weight:600}
+.chip.ok{background:var(--frac-bg);color:var(--frac-fg)}
+.chip.bad{background:var(--sign-bg);color:var(--sign-fg)}
+.chip.warn{background:var(--warn-bg);color:var(--warn)}
+.chip.gray{background:var(--gray-bg);color:var(--gray-fg)}
+.kbd{font-family:var(--font-mono);font-size:13px;background:var(--code-bg);border:1px solid var(--code-bd);
+  border-bottom-width:2px;border-radius:6px;padding:1px 7px}
+
+/* ---------- 控件 ---------- */
+.ctrls{display:flex;flex-wrap:wrap;gap:9px;align-items:center;margin:12px 0}
+label.fld{display:inline-flex;align-items:center;gap:7px;font-size:14px;color:var(--ink);max-width:100%;flex-wrap:wrap;min-width:0}
+label.fld select,label.fld input{min-width:0;max-width:100%}
+input[type=text],input[type=number],select{font-family:var(--font-mono);font-size:14px;padding:6px 10px;
+  border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--card);color:var(--ink)}
+input[type=text]:focus,input[type=number]:focus,select:focus{outline:2px solid var(--accent-soft);border-color:var(--accent)}
+button{font-family:var(--font-sans);font-size:14px;font-weight:600;padding:7px 15px;border-radius:var(--radius-sm);
+  border:1px solid var(--line);background:var(--card);color:var(--ink);cursor:pointer}
+button:hover{background:var(--sel-bg)}
+button.p{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+button.sm{padding:4px 10px;font-size:13px}
+button.pill{border-radius:var(--radius-pill)}
+/* 按钮组默认不换行：项一多就会把 .ctrls 撑破。允许它缩到容器宽度并横向滚动。 */
+.seg{display:inline-flex;max-width:100%;border:1px solid var(--line);
+  border-radius:var(--radius-sm);overflow-x:auto;overflow-y:hidden}
+.seg button{border:0;border-radius:0;border-right:1px solid var(--line);padding:6px 13px}
+.seg button:last-child{border-right:0}
+.seg button.on{background:var(--accent);color:var(--accent-ink)}
+
+/* ---------- 分步演示 ---------- */
+/* .steps 是 .step 的包裹层（skill 词汇表里列了但一直没定义）——
+   仅给一点上下留白，步骤块自己的边距由 .step 负责。 */
+.steps{margin:12px 0}
+.step{border:1px solid var(--line);border-radius:var(--radius-sm);padding:11px 15px;margin:9px 0;
+  background:var(--paper-soft);opacity:.42;transition:opacity .2s}
+.step.on{opacity:1;background:var(--card)}
+.step .h{font-size:13px;font-weight:700;color:var(--accent);letter-spacing:.02em;margin-bottom:3px}
+.step .m{font-family:var(--font-mono);font-size:14.5px;overflow-x:auto}
+.step .e{font-size:13.5px;color:var(--muted);margin-top:3px}
+
+/* ---------- 折叠与答案 ---------- */
+.reveal{border:1px solid var(--line);border-radius:var(--radius-sm);padding:11px 15px;margin:8px 0;background:var(--paper-soft)}
+.reveal summary{cursor:pointer;font-weight:600;font-size:14.5px}
+.reveal[open]{background:var(--card)}
+.ans{margin-top:8px;padding-top:8px;border-top:1px dashed var(--line);font-size:14.5px}
+
+/* ---------- 判断题 ---------- */
+.puzzle{border:1px solid var(--line);border-radius:var(--radius-sm);padding:12px 15px;margin:9px 0;
+  display:flex;gap:13px;align-items:flex-start;background:var(--paper-soft)}
+.puzzle .q{font-family:var(--font-mono);font-size:15px;flex:1;min-width:0;overflow-x:auto;white-space:nowrap}
+.puzzle .q small{font-family:var(--font-sans);color:var(--muted);display:block;white-space:normal}
+.puzzle .btns{display:flex;gap:6px;flex-shrink:0}
+.puzzle.correct{border-color:var(--ok-bd);background:var(--ok-bg)}
+.puzzle.wrong{border-color:var(--bad-bd);background:var(--bad-bg)}
+.puzzle .exp{margin-top:9px;padding-top:9px;border-top:1px dashed var(--line);font-size:14.5px;
+  display:none;white-space:normal;font-family:var(--font-sans)}
+.puzzle.done .exp{display:block}
+.puzzle .exp .verdict{font-weight:700}
+
+/* ---------- 分布图 ---------- */
+.tick{stroke:#94a3b8;stroke-width:1.4}
+.tick.dn{stroke:var(--exp)}
+.tick.nm{stroke:var(--frac)}
+.ticklabel{font-size:9.5px;fill:var(--muted);font-family:var(--font-mono)}
+.axisline{stroke:var(--line);stroke-width:1.2}
+.axislabel{font-size:11px;fill:var(--muted)}
+
+/* ---------- 页脚 / 回到顶部 ---------- */
+.footer{max-width:var(--page-max);margin:0 auto;padding:8px 22px 40px;color:var(--muted);font-size:13px}
+.totop{position:fixed;right:22px;bottom:22px;z-index:40;box-shadow:var(--shadow);display:none}
+
+/* ---------- 响应式 ---------- */
+@media(max-width:960px){
+  .layout{grid-template-columns:1fr;padding:16px}
+  nav.toc{position:static;max-height:none;display:flex;flex-wrap:wrap;gap:6px;
+    background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:10px}
+  nav.toc h4{width:100%;margin-bottom:2px}
+  nav.toc a{border-left:0;padding:5px 10px;font-size:13px}
+  nav.toc .sub{display:none}
+  section{padding:20px 17px}
+}
+@media print{
+  nav.toc,.topbar,.totop{display:none}
+  .layout{display:block}
+  section{break-inside:avoid;box-shadow:none}
+}
+
+/* ==========================================================================
+   风格 B · 深色终端（Dark IDE / Terminal）
+   深灰底 · 霓虹强调色 · 等宽标题 · 左侧编号导轨 · 寄存器风格的位视图
+   ========================================================================== */
+
+:root{
+  --bg:#0b0f14; --card:#121821; --ink:#d8e2ee; --muted:#7c8b9e; --line:#202b38;
+  --accent:#22d3ee; --accent-ink:#04191e; --accent-soft:#0e2b34;
+  --sign:#ff5c57; --exp:#4cc2ff; --frac:#3ddc84; --warn:#ffb454;
+  --sign-bg:#2a1517; --sign-fg:#ff8a86; --sign-bd:#48211f;
+  --exp-bg:#0c2432;  --exp-fg:#7ad3ff;  --exp-bd:#123c52;
+  --frac-bg:#0d2a1c; --frac-fg:#6ee7a5; --frac-bd:#14452c;
+  --ok-bg:#0d2a1c; --ok-bd:#1d5c39; --bad-bg:#2a1517; --bad-bd:#5a2724;
+  --warn-bg:#2a2113; --gray-bg:#18202b; --gray-fg:#8fa0b4;
+  --paper-soft:#0e141c; --code-bg:#0a1017; --code-bd:#1d2836;
+  --tbl-head:#151d27; --tbl-hover:#141c26;
+  --sel-bg:#1a2431;
+
+  --font-sans:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",system-ui,sans-serif;
+  --font-mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+  --font-display:var(--font-mono);
+  --tracking-title:-.01em;
+
+  --radius:8px; --radius-sm:6px; --radius-pill:99px;
+  --border-w:1px;
+  --shadow:0 1px 0 rgba(0,0,0,.4),0 8px 24px -12px rgba(0,0,0,.6);
+  --shadow-card:none;
+  --card-border:1px solid var(--line);
+
+  --page-max:1240px; --nav-w:186px; --gap:22px;
+  --sec-pad:22px 24px; --nav-sticky-top:76px; --anchor-offset:80px;
+  --font-size:15.5px; --line-height:1.72;
+}
+
+body{background:
+  radial-gradient(1100px 520px at 12% -8%, rgba(34,211,238,.10), transparent 60%),
+  radial-gradient(900px 460px at 96% 4%, rgba(61,220,132,.07), transparent 62%),
+  var(--bg)}
+
+/* ---------- 顶栏：终端窗口标题条 ---------- */
+.topbar{background:rgba(13,18,25,.9);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+.topbar-in{padding:11px 22px;gap:12px}
+.brand{font-family:var(--font-mono);font-weight:600;font-size:15px}
+.brand::before{content:"● ● ●";color:#3b4a5a;letter-spacing:2px;margin-right:14px;font-size:11px;vertical-align:1px}
+.brand small{font-family:var(--font-mono);color:var(--muted);font-size:11.5px}
+.progress{font-family:var(--font-mono);font-size:11.5px;letter-spacing:.04em}
+.progress .bar{width:130px;height:5px;border-radius:var(--radius-pill);background:#18212c}
+.progress .bar>i{background:linear-gradient(90deg,#22d3ee,#3ddc84);box-shadow:0 0 10px rgba(34,211,238,.7)}
+
+/* ---------- 目录：编号导轨 ---------- */
+nav.toc a{font-family:var(--font-mono);font-size:13px;border-left:2px solid transparent;border-radius:0 6px 6px 0;
+  color:var(--muted)}
+nav.toc a:hover{color:var(--ink);background:var(--sel-bg)}
+nav.toc a.active{background:var(--accent-soft);color:var(--accent);border-left-color:var(--accent);
+  box-shadow:inset 0 0 24px -12px var(--accent)}
+nav.toc a .n{color:#4a5a6d;font-size:11.5px}
+nav.toc h4{font-family:var(--font-mono);font-size:10.5px;letter-spacing:.16em;color:#5b6b7e}
+
+/* ---------- 章节：面板 ---------- */
+section{box-shadow:var(--shadow);position:relative;overflow:hidden}
+section::before{content:"";position:absolute;inset:0 auto 0 0;width:2px;
+  background:linear-gradient(180deg,var(--accent),transparent 55%);opacity:.5}
+section>h2{font-family:var(--font-mono);font-size:22px;font-weight:600}
+section>h2::before{content:"❯ ";color:var(--accent)}
+section>.lede{font-family:var(--font-mono);font-size:13px;color:var(--muted)}
+h3{font-family:var(--font-mono);font-size:17px;border-left:3px solid var(--accent);letter-spacing:-.01em}
+h4,h5{font-family:var(--font-mono)}
+
+code{background:var(--code-bg);border-color:var(--code-bd);color:#8ee7f5}
+
+/* ---------- 卡片 / 盒 ---------- */
+.card{border-radius:var(--radius-sm);background:var(--paper-soft)}
+.box{border-radius:var(--radius-sm);border-left-width:3px;background:rgba(34,211,238,.05)}
+.box.warn{background:rgba(255,180,84,.06)}
+.box.bad{background:rgba(255,92,87,.06)}
+.box.ok{background:rgba(61,220,132,.06)}
+.box .t{font-family:var(--font-mono);font-size:13.5px}
+
+.formula{background:var(--code-bg);border-color:var(--code-bd);color:#a9ecf7;
+  box-shadow:inset 0 0 40px -20px rgba(34,211,238,.6)}
+
+/* ---------- 表格 ---------- */
+table.tbl th{background:var(--tbl-head);color:var(--muted);font-family:var(--font-mono);
+  font-size:12.5px;text-transform:uppercase;letter-spacing:.05em}
+table.tbl th,table.tbl td{border-color:var(--line)}
+table.tbl tbody tr:nth-child(even) td{background:rgba(255,255,255,.012)}
+
+/* ---------- 位视图：寄存器样式 ---------- */
+.fw{gap:10px 22px;padding:12px 14px;border:1px solid var(--line);border-radius:var(--radius-sm);
+  background:var(--code-bg)}
+.fcap{font-family:var(--font-mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase}
+.bits .b{width:26px;height:32px;border-radius:4px;font-family:var(--font-mono);font-weight:700;
+  border-width:1px;border-style:solid}
+.bits .b.s{background:var(--sign-bg);color:var(--sign-fg);border-color:var(--sign-bd);text-shadow:0 0 8px rgba(255,92,87,.5)}
+.bits .b.e{background:var(--exp-bg);color:var(--exp-fg);border-color:var(--exp-bd);text-shadow:0 0 8px rgba(76,194,255,.45)}
+.bits .b.f{background:var(--frac-bg);color:var(--frac-fg);border-color:var(--frac-bd);text-shadow:0 0 8px rgba(61,220,132,.4)}
+.bits .b:hover{transform:translateY(-2px);box-shadow:0 4px 14px -6px currentColor}
+.bits .b.sel{outline:2px solid var(--accent);outline-offset:1px}
+
+.readout dt{color:#6b7c91}
+.readout dd{color:var(--ink)}
+
+/* ---------- 控件：终端命令风 ---------- */
+input[type=text],input[type=number],select{background:var(--code-bg);border-color:var(--code-bd);color:var(--ink);
+  font-family:var(--font-mono)}
+input:focus,select:focus{border-color:var(--accent);outline:none;box-shadow:0 0 0 2px rgba(34,211,238,.18)}
+button{background:#161f2a;border-color:var(--line);color:var(--ink);font-family:var(--font-mono);font-size:13px}
+button:hover{border-color:var(--accent);color:var(--accent)}
+button.p{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);font-weight:700}
+button.p:hover{background:#5ee6f7;color:var(--accent-ink);box-shadow:0 0 18px -4px var(--accent)}
+.chip{font-family:var(--font-mono);font-size:11.5px;border-radius:4px}
+.seg{border-color:var(--line)}
+.seg button.on{background:var(--accent-soft);color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
+
+/* ---------- 分步演示：终端输出 ---------- */
+.step{border-radius:var(--radius-sm);background:var(--code-bg);border-color:var(--code-bd)}
+.step.on{border-color:#26374a;box-shadow:inset 0 0 30px -22px var(--accent)}
+.step .h{font-family:var(--font-mono);color:var(--accent);letter-spacing:.03em;font-size:12px}
+.step .h::before{content:"$ ";opacity:.7}
+
+/* ---------- 判断题 / 折叠 ---------- */
+.puzzle{background:var(--paper-soft);border-radius:var(--radius-sm)}
+.puzzle .q{color:#a9ecf7}
+.puzzle.correct{border-color:var(--ok-bd);background:rgba(61,220,132,.05)}
+.puzzle.wrong{border-color:var(--bad-bd);background:rgba(255,92,87,.05)}
+.reveal{background:var(--paper-soft)}
+
+.totop{background:#161f2a;border-color:var(--line);color:var(--accent);font-family:var(--font-mono)}
+.tick{stroke:#41556b}
+.axisline{stroke:#2a3949}
+
+@media(max-width:960px){
+  .brand::before{display:none}
+  .layout{padding:14px}
+  nav.toc{border-radius:var(--radius-sm)}
+}
+
+
+/* ---------- 风格切换条（构建时注入，各主题通用） ---------- */
+.stylebar{max-width:var(--page-max);margin:0 auto;padding:14px 22px 0;display:flex;gap:8px;
+  flex-wrap:wrap;align-items:center;font-size:12.5px;color:var(--muted)}
+.stylebar>span{font-weight:600}
+.stylebar a{text-decoration:none;padding:4px 11px;border:1px solid var(--line);border-radius:var(--radius-pill);
+  color:var(--muted);background:var(--card);font-weight:600}
+.stylebar a:hover{border-color:var(--accent);color:var(--accent)}
+.stylebar a.cur{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.stylebar>span{flex:0 0 auto}
+@media(max-width:960px){.stylebar{padding:12px 16px 0}}
+/* 25 讲之后药丸很多：窄屏折行会吃掉大半屏，改成单行横滑 */
+@media(max-width:820px){.stylebar{flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;
+  scrollbar-width:thin}.stylebar a{flex:0 0 auto;font-size:12px;padding:4px 10px}}
+
+</style>
+</head>
+<body>
+
+<header class="topbar"><div class="topbar-in">
+  <div class="brand">计算机网络 Computer Networking<small>《计算机系统导论》第 22 讲 · 深色终端版</small></div>
+  <div class="progress"><span id="pgText">学习进度 0%</span><span class="bar"><i id="pgBar"></i></span></div>
+</div></header>
+
+<div class="stylebar">
+  <span>风格：</span>
+  <a href="../ics22-zh.html">清爽蓝（原版）</a>
+  <a href="01-academic.html">学术讲义</a>
+  <a href="03-brutalist.html">新粗野</a>
+  <a href="04-glass.html">柔和玻璃</a>
+  <a href="index.html">◧ 全部预览</a>
+  <span style="opacity:.5">|</span>
+  <a href="../variants-ics01/index.html">↗ 第 1 讲 · 课程概述</a>
+  <a href="../variants-bits/index.html">↗ 第 2 讲 · 位、字节与整数</a>
+  <a href="../variants/index.html">↗ 第 3 讲 · 浮点数</a>
+  <a href="../variants-ics04/index.html">↗ 第 4 讲 · 机器级编程 I：基础</a>
+  <a href="../variants-ics05/index.html">↗ 第 5 讲 · 机器级编程 II：控制</a>
+  <a href="../variants-ics06/index.html">↗ 第 6 讲 · 机器级编程 III：过程</a>
+  <a href="../variants-ics07/index.html">↗ 第 7 讲 · 机器级编程 IV：数据</a>
+  <a href="../variants-ics08/index.html">↗ 第 8 讲 · 机器级编程 V：高级</a>
+  <a href="../variants-ics09/index.html">↗ 第 9 讲 · 处理器体系结构：ISA 与逻辑</a>
+  <a href="../variants-ics10/index.html">↗ 第 10 讲 · 处理器体系结构：顺序实现</a>
+  <a href="../variants-ics11/index.html">↗ 第 11 讲 · 处理器体系结构：流水线</a>
+  <a href="../variants-ics12/index.html">↗ 第 12 讲 · 存储层次结构</a>
+  <a href="../variants-ics13/index.html">↗ 第 13 讲 · 缓存存储器</a>
+  <a href="../variants-ics14/index.html">↗ 第 14 讲 · 代码优化</a>
+  <a href="../variants-ics15/index.html">↗ 第 15 讲 · 链接</a>
+  <a href="../variants-ics16/index.html">↗ 第 16 讲 · 异常控制流 I</a>
+  <a href="../variants-ics17/index.html">↗ 第 17 讲 · 异常控制流 II</a>
+  <a href="../variants-ics18/index.html">↗ 第 18 讲 · 系统级 I/O</a>
+  <a href="../variants-ics19/index.html">↗ 第 19 讲 · 虚拟内存 I</a>
+  <a href="../variants-ics20/index.html">↗ 第 20 讲 · 虚拟内存 II</a>
+  <a href="../variants-ics21/index.html">↗ 第 21 讲 · 动态内存分配</a>
+  <a href="../variants-ics23/index.html">↗ 第 23 讲 · 网络编程</a>
+  <a href="../variants-ics24/index.html">↗ 第 24 讲 · 并发编程</a>
+  <a href="../variants-ics25/index.html">↗ 第 25 讲 · 同步</a>
+  <a href="../variants-lab/index.html">↗ Data Lab 实验</a>
+</div>
+
+<div class="layout">
+
+<nav class="toc">
+  <h4>目录</h4>
+  <a href="#s0"><span class="n">0</span>课程导览</a>
+  <a href="#s1"><span class="n">1</span>互联网的两种视角</a>
+  <a href="#s2"><span class="n">2</span>什么是协议</a>
+  <a href="#s3"><span class="n">3</span>网络边缘与接入网</a>
+  <a href="#s4"><span class="n">4</span>主机如何发送分组</a>
+  <a href="#s5"><span class="n">5</span>物理媒介</a>
+  <a href="#s6"><span class="n">6</span>网络安全</a>
+  <a href="#s7"><span class="n">7</span>协议分层与协议栈</a>
+  <a href="#s8"><span class="n">8</span>封装与解封装</a>
+  <a href="#s9"><span class="n">9</span>无线与移动网络</a>
+  <a href="#s10"><span class="n">10</span>网络核心与性能</a>
+  <a href="#s11"><span class="n">11</span>互联网历史</a>
+  <a href="#s12"><span class="n">12</span>总结与测验</a>
+</nav>
+
+<main>
+<!-- ================= 0 ================= -->
+  <section id="s0">
+    <h2>课程导览<span class="srcref">原第 1–3 页</span></h2>
+    <p class="lede">北京大学《计算机系统导论》第 22 讲：<b>计算机网络（Computer Networking）</b>。这一讲不写一行代码，它的任务是给你一套<b>网络世界的词汇表与地图</b>：互联网由什么零件组成、协议到底是什么、分组怎么从一台主机走到另一台、为什么必须把功能分层、分层之后封装长什么样。</p>
+
+    <div class="grid g3">
+      <div class="card"><h5>本讲提纲（课件第 3 页原文）</h5>
+        <ol style="margin:0;padding-left:20px;font-size:14.5px">
+          <li>What is the Internet? What is a protocol?</li>
+          <li>Network edge: hosts, access network, physical media</li>
+          <li>Network Security</li>
+          <li>Protocol layers, service models</li>
+          <li>Wireless and Mobile Networks</li>
+        </ol>
+        <p style="margin:8px 0 0;font-size:13.5px;color:var(--muted)">课件第 62 页起还有一节 <b>Additional Slides</b>（补充页），第 63 页列出三块：网络核心（分组交换/线路交换、互联网结构）、性能（丢包、时延、吞吐量）、互联网历史。</p>
+      </div>
+      <div class="card"><h5>一句话核心</h5>
+        <p style="margin:0;font-size:14.5px">互联网只有三个可交换的东西：<b>零件</b>（主机、分组交换机、链路）、<b>服务</b>（跑在端系统上的应用）、<b>规矩</b>（协议与标准）。把这三样说清楚，「互联网」就不再有神秘感 —— 剩下的全是细节。</p>
+      </div>
+      <div class="card"><h5>这一讲的教材来源</h5>
+        <p style="margin:0;font-size:14.5px">原课件第 2 页写明参考书是 <i>Computer Networking: A Top-Down Approach</i>, 8th ed., Kurose &amp; Ross, Pearson, 2020，并标注 <b>「参考书，非考试范围」</b>。整份课件的主体正是该书第 1 章 Introduction 的幻灯片。</p>
+      </div>
+    </div>
+
+    <h3>0.1 三大主题与原页码</h3>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>主题</th><th>原课件页码</th><th>要回答的问题</th></tr>
+      <tr><td><b>什么是互联网、什么是协议</b></td><td class="mono">1–10</td><td>互联网的「零件视角」与「服务视角」各看到什么？协议由哪三件事定义？</td></tr>
+      <tr><td><b>网络边缘</b></td><td class="mono">11–26</td><td>主机怎么接进网络？电缆、电话线、光纤、无线电各自的脾气是什么？</td></tr>
+      <tr><td><b>网络安全</b></td><td class="mono">27–35</td><td>坏人能做什么（恶意软件、嗅探、伪造身份、拒绝服务）？防御分几道线？</td></tr>
+      <tr><td><b>分层、服务模型与封装</b></td><td class="mono">36–47</td><td>五层协议栈各管什么？头部是怎么一层层套上去的？交换机和路由器各拆到哪一层？</td></tr>
+      <tr><td><b>无线与移动网络</b></td><td class="mono">48–60</td><td>无线链路能跑多快、覆盖多远？基础设施模式与自组织模式差在哪？移动性对上层协议意味着什么？</td></tr>
+      <tr><td><b>补充：网络核心与性能</b></td><td class="mono">62–79</td><td>转发与路由有何不同？时延和丢包从哪来？吞吐量的瓶颈在哪里？</td></tr>
+      <tr><td><b>补充：互联网历史</b></td><td class="mono">80–84</td><td>从 1961 年的排队论到 2023 年的 150 亿台设备，中间发生了什么？</td></tr>
+    </table></div>
+
+    <h3>0.2 原课件 84 页 → 本页章节</h3>
+    <p>本页把 84 页全部覆盖到 13 个章节里，一页没丢。下面这个「页码地图」把每一页归到它所在的章节：点任意一格，看它属于哪一节。</p>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：页码地图 —— 点一页，看它落到本页哪一节</span>
+      </div>
+      <div id="ovOut"></div>
+    </div>
+
+    <div class="box"><div class="t">本页使用说明</div>
+      标有 <span class="chip gray">可交互</span> 的地方都能点击或输入，所有计算都在浏览器里实时完成。<a href="#s8">第 8 节的封装推演</a>、<a href="#s10">第 10 节的路由与队列模拟</a>最值得反复玩：前者把四层头部一层层套上去又拆下来，后者真的在页面里跑转发查表、最短路和路由器缓冲区队列。页面里所有「判对错」的基准（最短路、转发表、吞吐量、队列丢包）都已用独立参考实现逐项交叉验证。
+    </div>
+  </section>
+
+  <!-- ================= 1 ================= -->
+  <section id="s1">
+    <h2>1. 互联网的两种视角<span class="srcref">原第 4–8 页</span></h2>
+    <p class="lede">同一张互联网，课件用两套语言描述它：<b>「零件与螺栓」（nuts and bolts）</b> 视角数的是硬件与协议，<b>「服务」</b> 视角看的是它能给应用提供什么。第 4 页先给了一个类比：把互联网当成一个社会 —— 社会有人与服务，也有约束这两者的法律规则。</p>
+
+    <h3>1.1 社会类比<span class="srcref">原第 4 页</span></h3>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>社会（society）里的东西</th><th>互联网里对应的东西</th><th>读法</th></tr>
+      <tr><td>1. 人与实体（people, entities）</td><td>互联网的<b>组件</b>（internet components）</td><td>主机、路由器、链路……先得有「人」</td></tr>
+      <tr><td>2. 服务（services）</td><td>互联网的<b>服务</b>（internet services）</td><td>Web、邮件、视频……构成社会分工</td></tr>
+      <tr><td>3. 法律与规则（laws and rules，定义上面两者的行为）</td><td><b>协议与标准</b>（protocols, standards）</td><td>规矩不是装饰，它规定了「谁能做什么」</td></tr>
+    </table></div>
+
+    <h3>1.2 零件视角：互联网由什么组成<span class="srcref">原第 5、7 页</span></h3>
+    <p>课件第 5 页给出一串「是什么」，第 7 页补上「协议无处不在」与「标准由谁定」：</p>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>类别</th><th>课件原话的展开</th></tr>
+      <tr><td><b>主机 hosts</b></td><td>数十亿台联网的计算设备（<b>端系统 end systems</b>），运行网络应用，处在互联网的「<b>边缘 edge</b>」；既包括电脑手机，也包括冰箱、车载、摄像头、AR 设备……（第 6 页用了整整一屏照片举例）</td></tr>
+      <tr><td><b>分组交换机 packet switches</b></td><td>转发分组（数据块）的设备：<b>路由器 router</b> 与 <b>交换机 switch</b></td></tr>
+      <tr><td><b>通信链路 communication links</b></td><td>光纤、铜缆、无线电、卫星；其<b>传输速率 = 带宽</b>（transmission rate, bandwidth）</td></tr>
+      <tr><td><b>网络 networks</b></td><td>设备、路由器与链路的集合，由某个组织管理（家庭网络、企业网络、移动网络、ISP 网络……）</td></tr>
+      <tr><td><b>网络的网络</b></td><td>互联网是「<b>network of networks</b>」—— 互联的 ISP 互相连接而成</td></tr>
+      <tr><td><b>协议无处不在</b></td><td>协议控制着消息的收发：<code>HTTP</code>（Web）、流媒体、Skype、<code>TCP</code>、<code>IP</code>、<code>WiFi</code>、4G/5G、<code>Ethernet</code></td></tr>
+      <tr><td><b>标准 standards</b></td><td><code>RFC</code>（Request for Comments）文件；由 <code>IETF</code>（Internet Engineering Task Force，互联网工程任务组）制定</td></tr>
+    </table></div>
+
+    <h3>1.3 服务视角：互联网为应用提供什么<span class="srcref">原第 8 页</span></h3>
+    <ul>
+      <li><b>基础设施，为应用提供服务</b>：Web、流媒体、多媒体电话会议、电子邮件、游戏、电子商务、社交媒体、互联家电……</li>
+      <li><b>为分布式应用提供编程接口</b>（programming interface）：一组「<b>钩子</b>」（hooks），让收发消息的应用能「接上」并使用传输服务。</li>
+      <li><b>提供多种服务选项</b> —— 课件原话：类似邮政服务（平信与挂号信不是一回事）。</li>
+    </ul>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：同一张互联网，三种读法 —— 切换视角，点击要素看细节</span>
+        <div class="seg" id="vbSeg">
+          <button class="on" data-vb="bolt">零件视角</button>
+          <button data-vb="svc">服务视角</button>
+          <button data-vb="soc">社会类比</button>
+        </div>
+      </div>
+      <div id="vbOut"></div>
+    </div>
+  </section>
+
+  <!-- ================= 2 ================= -->
+  <section id="s2">
+    <h2>2. 什么是协议<span class="srcref">原第 9–10 页</span></h2>
+    <p class="lede">「协议」是本讲第一个必须咬死的词。课件的定义只有一句话，但这句话里藏着三个要素：<b>格式（format）、次序（order）、动作（actions）</b>。</p>
+
+    <h3>2.1 课件原话<span class="srcref">原第 9 页</span></h3>
+    <div class="box"><div class="t">协议定义了……</div>
+      <b>消息的格式</b>与<b>收发消息的次序</b>（网络实体之间），以及<b>消息（或其它事件）收发时要采取的动作</b>。<br>
+      <span class="en">Protocols define the format, order of messages sent and received among network entities, and actions taken on message transmission, receipt.</span>
+    </div>
+    <p>课件把人类交流和网络交流并排放在一起：</p>
+    <div class="grid g2">
+      <div class="card"><h5>人类协议（human protocols）</h5>
+        <ul style="margin:0;font-size:14.5px">
+          <li>「几点了？」</li>
+          <li>「我有个问题」</li>
+          <li>自我介绍</li>
+        </ul>
+      </div>
+      <div class="card"><h5>网络协议（network protocols）</h5>
+        <ul style="margin:0;font-size:14.5px">
+          <li>执行协议的是<b>计算机（设备）</b>，不是人</li>
+          <li>互联网中<b>所有的通信活动</b>都由协议支配</li>
+        </ul>
+      </div>
+    </div>
+
+    <h3>2.2 一个人类协议 vs 一个网络协议<span class="srcref">原第 10 页</span></h3>
+    <div class="formula" style="text-align:left">
+      <div><span style="font-family:var(--font-sans);color:var(--muted)">人类协议：</span></div>
+      <div>&nbsp;&nbsp;你：Hi&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)">/* 打招呼＝建立连接 */</span></div>
+      <div>&nbsp;&nbsp;对方：Hi&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)">/* 回应，次序不能反 */</span></div>
+      <div>&nbsp;&nbsp;你：Got the time?&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)">/* 请求 */</span></div>
+      <div>&nbsp;&nbsp;对方：2:00&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)">/* 响应 */</span></div>
+      <div>&nbsp;</div>
+      <div><span style="font-family:var(--font-sans);color:var(--muted)">计算机协议：</span></div>
+      <div>&nbsp;&nbsp;客户端：TCP connection request&nbsp;&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)">/* 我要连你 */</span></div>
+      <div>&nbsp;&nbsp;服务器：TCP connection response&nbsp;&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)">/* 好，连上了 */</span></div>
+      <div>&nbsp;&nbsp;客户端：GET http://gaia.cs.umass.edu/kurose_ross&nbsp;&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)">/* 我要这个页面 */</span></div>
+      <div>&nbsp;&nbsp;服务器：&lt;file&gt;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)">/* 给你 */</span></div>
+    </div>
+    <p>课件在这一页留了一个问题：<b>Q: other human protocols?</b>（还有哪些人类协议？）—— 想想过马路、打电话、点外卖各自遵守的「格式 / 次序 / 动作」。</p>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：协议拆解器 —— 选一个场景，看它的格式 / 次序 / 动作各是什么</span>
+        <label class="fld">场景
+          <select id="prSel">
+            <option value="time">人类：问时间（课件第 10 页例子）</option>
+            <option value="tcp">网络：TCP 连接建立（课件第 10 页例子）</option>
+            <option value="http">网络：HTTP 取网页（课件第 10 页例子）</option>
+            <option value="walk">人类：过马路（课件第 10 页设问）</option>
+            <option value="phone">人类：打电话（课件第 10 页设问）</option>
+          </select>
+        </label>
+      </div>
+      <div id="prOut"></div>
+    </div>
+
+    <div class="box warn"><div class="t">别把「协议」当成「格式」</div>
+      课件第 9 页的定义里有三个逗号分隔的成分，缺一个都不成协议。只规定报文字节布局（格式）而没有规定<b>谁先发、收到之后做什么</b>，那只是一份报文格式说明书 —— 两台机器即使都认识这些字节，也照样聊不起来。<a href="#s8">第 8 节</a>会看到：正是「次序 + 动作」这两件事，让分层的封装得以运转。
+    </div>
+  </section>
+
+  <!-- ================= 3 ================= -->
+  <section id="s3">
+    <h2>3. 网络边缘与接入网<span class="srcref">原第 11–22 页</span></h2>
+    <p class="lede">课件用第 12–14 页三页把同一张「互联网结构图」逐层补全：先画<b>网络边缘</b>，再加<b>接入网与物理媒介</b>，最后补上<b>网络核心</b>。这一节讲前两层 —— 也就是你家那根线是怎么接进互联网的。</p>
+
+    <h3>3.1 三层结构：边缘 / 接入 / 核心<span class="srcref">原第 12–14 页</span></h3>
+    <div class="grid g3">
+      <div class="card"><h5>Network edge 网络边缘（第 12 页）</h5>
+        <p style="margin:0;font-size:14.5px"><b>主机（hosts）= 客户端与服务器</b>；服务器通常放在<b>数据中心</b>里。</p>
+      </div>
+      <div class="card"><h5>Access networks, physical media 接入网与物理媒介（第 13 页）</h5>
+        <p style="margin:0;font-size:14.5px">有线与无线的<b>通信链路</b>，把边缘接进核心。</p>
+      </div>
+      <div class="card"><h5>Network core 网络核心（第 14 页）</h5>
+        <p style="margin:0;font-size:14.5px">相互连接的<b>路由器</b>组成的网 —— 「网络的网络」。这部分放在<a href="#s10">第 10 节</a>（课件把它们放在补充页）。</p>
+      </div>
+    </div>
+    <p>第 15 页把接入网问题写成一句话：<b>Q: How to connect end systems to edge router?</b>（端系统怎么接到边缘路由器上？）课件给了三类答案：住宅接入网（residential）、机构接入网（学校、公司）、移动接入网（WiFi、4G/5G）。</p>
+
+    <h3>3.2 有线接入：电缆与电话线<span class="srcref">原第 16–18 页</span></h3>
+    <p>第 16 页先解释电缆接入的复用方式：<b>频分复用 FDM（frequency division multiplexing）</b> —— 不同频道占用不同的<b>频段</b>，在同一条电缆上同时传输。课件图上那条电缆被切成 9 个频道：</p>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>频道编号</th><th class="mono">1–6</th><th class="mono">7–8</th><th class="mono">9</th></tr>
+      <tr><td>课件图上的标注</td><td class="mono">VIDEO</td><td class="mono">DATA</td><td class="mono">CONTROL</td></tr>
+      <tr><td>用途</td><td>电视视频频道</td><td>数据频道</td><td>控制频道</td></tr>
+    </table></div>
+    <div class="grid g2">
+      <div class="card"><h5>电缆接入（第 17 页）</h5>
+        <ul style="margin:0;font-size:14.5px">
+          <li><b>HFC：hybrid fiber coax</b>（混合光纤同轴）</li>
+          <li><b>不对称</b>：下行最高 <b>40 Mbps – 1.2 Gbps</b>，上行 <b>30–100 Mbps</b></li>
+          <li>电缆与光纤组成的网络把家庭连到 <b>cable headend</b>（电缆头端），再接到 ISP 路由器</li>
+          <li>家庭之间<b>共享</b>到 headend 的接入网络</li>
+          <li>设备：cable modem（电缆调制解调器）、cable splitter（分路器）、CMTS（cable modem termination system，头端的调制解调器终结系统）</li>
+        </ul>
+      </div>
+      <div class="card"><h5>DSL 接入（第 18 页）</h5>
+        <ul style="margin:0;font-size:14.5px">
+          <li><b>digital subscriber line</b>：复用<b>已有的电话线</b></li>
+          <li>数据走 DSL 电话线进 Internet，语音走 DSL 电话线进电话网 —— 靠不同频段分开</li>
+          <li><b>独占</b>（dedicated）到中心局的线路：下行 <b>24–52 Mbps</b>，上行 <b>3.5–16 Mbps</b></li>
+          <li>设备：DSL modem、DSL splitter（分离器）、<b>DSLAM</b>（DSL access multiplexer，中心局侧的接入复用器）</li>
+        </ul>
+      </div>
+    </div>
+    <div class="formula">
+      传输时延 = <span style="font-size:1.15em">L</span>（bits，分组长度）÷ <span style="font-size:1.15em">R</span>（bits/sec，链路传输速率）
+      &nbsp;&nbsp;<span style="font-family:var(--font-sans);font-size:13.5px;color:var(--muted)">← 课件第 23 页的公式，接入网算速度靠它</span>
+    </div>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：接入网算速度 —— 上传 / 下载一个文件要多久</span>
+        <label class="fld">预设
+          <select id="fdPre">
+            <option value="hfc-lo">HFC 电缆（下行 40 Mbps / 上行 30 Mbps）</option>
+            <option value="hfc-hi">HFC 电缆（下行 1.2 Gbps / 上行 100 Mbps）</option>
+            <option value="dsl-lo">DSL（下行 24 Mbps / 上行 3.5 Mbps）</option>
+            <option value="dsl-hi">DSL（下行 52 Mbps / 上行 16 Mbps）</option>
+            <option value="eth">家庭有线以太网（1 Gbps 对称）</option>
+            <option value="wifi">家庭 WiFi（450 Mbps 对称）</option>
+            <option value="dc">数据中心链路（100 Gbps 对称）</option>
+          </select>
+        </label>
+        <label class="fld">下行 <input type="text" id="fdDown" value="40" size="7" spellcheck="false"> Mbps</label>
+        <label class="fld">上行 <input type="text" id="fdUp" value="30" size="7" spellcheck="false"> Mbps</label>
+        <label class="fld">文件 <input type="text" id="fdSize" value="1" size="6" spellcheck="false"> GB</label>
+        <button class="p" id="fdGo">算</button>
+      </div>
+      <div id="fdOut"></div>
+    </div>
+
+    <h3>3.3 家庭网络、无线接入、企业与数据中心<span class="srcref">原第 19–22 页</span></h3>
+    <p>第 19 页画的是最熟悉的那套设备：无线设备、有线设备、<b>cable or DSL modem</b>、<b>router / firewall / NAT</b>（常常合并在一个盒子里）、<b>WiFi 无线接入点（54、450 Mbps）</b>、<b>有线以太网（1 Gbps）</b>，对外接向 headend 或中心局。</p>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>接入网类型</th><th>原页码</th><th>速率（课件原文）</th><th>共享 / 独占</th><th>典型设备</th></tr>
+      <tr><td><b>电缆 HFC</b></td><td class="mono">16–17</td><td>下行 40 Mbps–1.2 Gbps，上行 30–100 Mbps</td><td>家庭<b>共享</b>到 headend</td><td>cable modem、cable splitter、CMTS</td></tr>
+      <tr><td><b>DSL</b></td><td class="mono">18</td><td>下行 24–52 Mbps，上行 3.5–16 Mbps</td><td>到中心局<b>独占</b></td><td>DSL modem、DSL splitter、DSLAM</td></tr>
+      <tr><td><b>家庭网络</b></td><td class="mono">19</td><td>WiFi 54、450 Mbps；有线以太 1 Gbps</td><td>家庭内部共享</td><td>无线 AP、modem、router+firewall+NAT</td></tr>
+      <tr><td><b>无线局域网 WLAN</b></td><td class="mono">20</td><td><code>802.11b/g/n</code>（WiFi）：11、54、450 Mbps</td><td>共享无线接入网</td><td>基站 / 接入点（AP）</td></tr>
+      <tr><td><b>广域蜂窝</b></td><td class="mono">20</td><td>10 余 Mbps；4G/5G 蜂窝网</td><td>由运营商提供（10 余公里）</td><td>蜂窝基站</td></tr>
+      <tr><td><b>企业网</b></td><td class="mono">21</td><td>以太网 100 Mbps、1 Gbps、10 Gbps；WiFi 11、54、450 Mbps</td><td>机构内部混合组网</td><td>Ethernet switch、institutional router</td></tr>
+      <tr><td><b>数据中心网</b></td><td class="mono">22</td><td>高带宽链路 10s–100s Gbps</td><td>互联成百上千台服务器</td><td>高性能交换机</td></tr>
+    </table></div>
+    <p>无线接入网的定义（第 20 页）：<b>共享无线接入网把端系统连到路由器，中间经由基站（base station），也叫接入点（access point）</b>。局域网通常覆盖一栋楼内外（约 100 英尺），广域蜂窝网由移动运营商提供、覆盖 10 余公里。</p>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：家庭网络漫游 —— 点设备看它在干什么</span>
+      </div>
+      <div id="hmOut"></div>
+    </div>
+
+    <div class="box ok"><div class="t">为什么要在接入网上讲「共享 vs 独占」</div>
+      课件第 17 页特意点了一句「homes share access network to cable headend」（家庭共享到电缆头端的接入网），第 18 页则说 DSL 是「dedicated line」（独占线路）。这不是废话 —— 共享意味着<b>邻居的上传会占用你的上行带宽</b>，而独占线路不会。第 10 节讲吞吐量瓶颈时，这条区别会变成 min(R<sub>s</sub>, R<sub>c</sub>, R/10) 里的那个 1/10。
+    </div>
+  </section>
+
+  <!-- ================= 4 ================= -->
+  <section id="s4">
+    <h2>4. 主机如何发送分组<span class="srcref">原第 23 页</span></h2>
+    <p class="lede">这一页只有一段话和一个公式，但它是整个网络性能讨论的起点：<b>主机把应用消息切成一个个「分组」，再以链路速率 R 把它们推上接入网</b>。时间是算出来的，不是感觉出来的。</p>
+
+    <h3>4.1 主机的发送功能（host sending function）<span class="srcref">原第 23 页</span></h3>
+    <ul>
+      <li>拿到<b>应用消息</b>（application message）；</li>
+      <li>把它切成更小的块，称为<b>分组（packets）</b>，每块长度 <b>L 比特</b>；</li>
+      <li>以<b>传输速率 R</b> 把分组送进接入网。</li>
+    </ul>
+    <p>课件特别说明：链路传输速率又称<b>链路容量（link capacity）</b>、<b>链路带宽（link bandwidth）</b>。三个名字说的是同一件事。</p>
+    <div class="formula big">
+      传输时延 = 把一个 L 比特分组推进链路所需的时间 = L（bits）÷ R（bits/sec）
+    </div>
+    <p>课件第 23 页的配图画的就是这个场景：一台主机把消息切成<b>两个各 L 比特的分组</b>，依次以速率 R 推上链路，另一端是路由器。</p>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：发送时延计算器 —— 改 L、R、消息长度，看时延怎么变</span>
+        <label class="fld">消息 <input type="text" id="tdMsg" value="1" size="6" spellcheck="false">
+          <select id="tdMsgUnit"><option value="mb">MB</option><option value="kb">KB</option><option value="mbits">Mbit</option></select>
+        </label>
+        <label class="fld">分组长度 L <input type="text" id="tdL" value="12000" size="8" spellcheck="false"> bits</label>
+        <label class="fld">链路速率 R <input type="text" id="tdR" value="100" size="7" spellcheck="false"> Mbps</label>
+        <button class="p" id="tdGo">计算</button>
+        <button class="sm" data-td="msg=1;l=12000;r=100">1 MB / 100 Mbps</button>
+        <button class="sm" data-td="msg=1;l=12000;r=1000">1 MB / 1 Gbps</button>
+        <button class="sm" data-td="msg=1;l=12000;r=40">1 MB / 40 Mbps（HFC 下行最低档）</button>
+        <button class="sm" data-td="msg=5;l=12000;r=30">5 MB / 30 Mbps（HFC 上行最低档）</button>
+      </div>
+      <div id="tdOut"></div>
+    </div>
+
+    <div class="box warn"><div class="t">说明：本页的默认数值不是课件例题</div>
+      课件第 23 页只给了公式与符号（L、R），<b>没有给具体数字</b>。上面的默认值（1 MB 消息、12000 比特分组、100 Mbps 链路）是本页选的示例，方便你一眼看出量级；换成课件里的任何速率（见第 3 节表格）都能对上。
+    </div>
+
+    <div class="box ok"><div class="t">分组化改不了「总时间」，改的是别的东西</div>
+      把整条消息一次推上链路，时间是 (总比特数)/R；切成 k 个分组分别推，时间同样是 (k·L)/R —— 只要 k·L 不小于消息总比特数，两者<b>在数字上就是一回事</b>。所以「为什么还要分组」的答案不在这个公式里，而在<a href="#s10">第 10 节</a>：分组可以<b>各自独立地被转发、排队、丢弃和重传</b>，一条链路的空闲也能被别的连接用上。
+    </div>
+  </section>
+
+  <!-- ================= 5 ================= -->
+  <section id="s5">
+    <h2>5. 物理媒介<span class="srcref">原第 24–26 页</span></h2>
+    <p class="lede">链路是物理世界的东西。<b>比特在发送器 / 接收器对之间传播</b>，传播的介质决定了速率、距离和抗干扰能力。课件把介质分成两大类：比特被约束在固体里的<b>导引媒介</b>，和自由传播的<b>非导引媒介</b>。</p>
+
+    <h3>5.1 两类媒介<span class="srcref">原第 24 页</span></h3>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>类别</th><th>课件定义</th><th>例子</th></tr>
+      <tr><td><b>导引媒介 guided media</b></td><td>信号在<b>固体介质</b>中传播</td><td>铜缆（copper）、光纤（fiber）、同轴电缆（coax）</td></tr>
+      <tr><td><b>非导引媒介 unguided media</b></td><td>信号<b>自由</b>传播</td><td>无线电（radio）</td></tr>
+    </table></div>
+    <p><b>物理链路（physical link）</b>指的是「发送器与接收器之间」的那一段。第 24 页先把最常见的导引媒介摆出来：</p>
+    <div class="card"><h5>双绞线 Twisted pair (TP) — 原第 24 页</h5>
+      <ul style="margin:0;font-size:14.5px">
+        <li>两根<b>互相绝缘的铜线</b>绞在一起；</li>
+        <li><b>Category 5</b>：100 Mbps、1 Gbps 以太网；</li>
+        <li><b>Category 6</b>：10 Gbps 以太网。</li>
+      </ul>
+    </div>
+
+    <h3>5.2 同轴电缆与光纤<span class="srcref">原第 25 页</span></h3>
+    <div class="grid g2">
+      <div class="card"><h5>同轴电缆 Coaxial cable</h5>
+        <ul style="margin:0;font-size:14.5px">
+          <li>两根<b>同心</b>的铜导体；</li>
+          <li><b>双向</b>（bidirectional）；</li>
+          <li><b>宽带</b>：一条电缆上划分多个频道，每频道约 100 Mbps 量级。</li>
+        </ul>
+      </div>
+      <div class="card"><h5>光纤 Fiber optic cable</h5>
+        <ul style="margin:0;font-size:14.5px">
+          <li>玻璃纤维里跑<b>光脉冲</b>，<b>一个脉冲一个比特</b>；</li>
+          <li>高速运行：点对点传输可达 10–100 余 Gbps；</li>
+          <li>低误码率：中继器可以隔很远放一台，且<b>不受电磁噪声影响</b>。</li>
+        </ul>
+      </div>
+    </div>
+
+    <h3>5.3 无线电与各种无线链路<span class="srcref">原第 26 页</span></h3>
+    <p>无线电的四个特点：信号在电磁波谱的<b>不同「频段」（bands）</b> 中传输；<b>没有物理「导线」</b>；<b>广播</b>且<b>半双工</b>（同一时刻只能发送方到接收方）；传播环境会造成<b>反射</b>、<b>被物体阻挡</b>、<b>干扰 / 噪声</b>。</p>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>无线电链路类型</th><th>速率（课件原文）</th><th>距离 / 备注</th></tr>
+      <tr><td><b>无线局域网（WiFi）</b></td><td>10–100 余 Mbps</td><td>10 余米</td></tr>
+      <tr><td><b>广域（如 4G/5G 蜂窝）</b></td><td>10 余 Mbps（4G）</td><td>约 10 公里</td></tr>
+      <tr><td><b>蓝牙 Bluetooth</b></td><td>有限速率</td><td>短距离；定位是「替代线缆」</td></tr>
+      <tr><td><b>地面微波 terrestrial microwave</b></td><td>45 Mbps 频道</td><td>点对点</td></tr>
+      <tr><td><b>卫星 satellite</b></td><td>下行可达 &lt; 100 Mbps（Starlink）</td><td>270 毫秒端到端时延（同步轨道）</td></tr>
+    </table></div>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：物理媒介速查 —— 选一种媒介看它的脾气</span>
+        <label class="fld">媒介
+          <select id="pmSel">
+            <option value="tp5">双绞线 Category 5</option>
+            <option value="tp6">双绞线 Category 6</option>
+            <option value="coax">同轴电缆</option>
+            <option value="fiber">光纤</option>
+            <option value="radio">无线电（总述）</option>
+            <option value="wlan">无线局域网 WiFi</option>
+            <option value="cell">4G/5G 蜂窝</option>
+            <option value="bt">蓝牙</option>
+            <option value="mw">地面微波</option>
+            <option value="sat">卫星</option>
+          </select>
+        </label>
+      </div>
+      <div id="pmOut"></div>
+    </div>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：文件在这种链路上要传多久 —— 速率取课件上的数</span>
+        <label class="fld">链路
+          <select id="rlSel"></select>
+        </label>
+        <label class="fld">文件 <input type="text" id="rlSize" value="1" size="6" spellcheck="false"> GB</label>
+        <button class="p" id="rlGo">算</button>
+      </div>
+      <div id="rlOut"></div>
+    </div>
+
+    <div class="box"><div class="t">「光纤 45 Mbps」这种组合不存在</div>
+      课件的数字都带单位与出处：双绞线的 Cat 5 / Cat 6、同轴电缆的每频道约 100 Mbps、光纤的 10–100 余 Gbps、微波的 45 Mbps 频道、卫星的 270 毫秒 —— 它们量级差了几个数量级，说明<b>「链路」这个词下面藏着完全不同的物理世界</b>。后面讨论带宽、时延、吞吐量时，必须先问清楚是哪种链路。
+    </div>
+  </section>
+
+  <!-- ================= 6 ================= -->
+  <section id="s6">
+    <h2>6. 网络安全<span class="srcref">原第 27–35 页</span></h2>
+    <p class="lede">课件第 28 页给出了一段诚实的自白：<b>互联网在设计之初几乎没有考虑安全</b>，最初的设想是「一群相互信任的用户连在一张透明的网络上」。协议设计者们一直在「追赶」（playing catch-up），而安全考量必须出现在<b>每一层</b>。</p>
+
+    <h3>6.1 三种坏人与一种攻击<span class="srcref">原第 29–32 页</span></h3>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>攻击</th><th>原页码</th><th>课件原话的展开</th></tr>
+      <tr><td><b>恶意软件 malware</b></td><td class="mono">29</td><td>通过<b>病毒（virus）、蠕虫（worm）、木马（trojan horse）</b>进入主机；<b>间谍软件（spyware）</b>可以记录击键、访问过的网站，并把信息上传到收集站点；被感染的主机可能被编入<b>僵尸网络（botnet）</b>，用于发垃圾邮件和 DDoS 攻击；恶意软件常常<b>自我复制</b> —— 从一台被感染主机寻找进入其它主机的入口</td></tr>
+      <tr><td><b>分组嗅探 packet sniffing</b></td><td class="mono">30</td><td>在<b>广播媒介</b>（共享以太网、无线）上，把网络接口设为<b>混杂模式（promiscuous）</b>，就能读取 / 记录所有经过的分组 —— <b>包括口令</b>。课件提到本课程章节实验要用的 Wireshark 就是一个（免费的）分组嗅探器</td></tr>
+      <tr><td><b>伪造身份 IP spoofing</b></td><td class="mono">31</td><td>注入一个<b>源地址为假</b>的分组</td></tr>
+      <tr><td><b>拒绝服务 DoS</b></td><td class="mono">32</td><td>攻击者用<b>虚假流量</b>淹没资源（服务器、带宽），使合法流量无法使用。三步：<b>1. 选定目标 → 2. 攻破网络中其它主机（即组建 botnet）→ 3. 从这些被控制的主机向目标发包</b></td></tr>
+    </table></div>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：攻击 → 防御 —— 选一种攻击，看它怎么得手、哪条防线拦它</span>
+        <label class="fld">攻击
+          <select id="atSel">
+            <option value="mal">恶意软件（malware）</option>
+            <option value="sniff">分组嗅探（packet sniffing）</option>
+            <option value="spoof">伪造身份（IP spoofing）</option>
+            <option value="dos">拒绝服务（DoS / DDoS）</option>
+          </select>
+        </label>
+      </div>
+      <div id="atOut"></div>
+    </div>
+
+    <h3>6.2 四道防线<span class="srcref">原第 33 页</span></h3>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>防线</th><th>课件原文的展开</th></tr>
+      <tr><td><b>鉴别 authentication</b></td><td>证明你确实是自称的那个人。蜂窝网络用 <b>SIM 卡</b>提供硬件身份；<b>传统互联网没有这种硬件辅助</b></td></tr>
+      <tr><td><b>机密性 confidentiality</b></td><td>靠<b>加密</b>实现</td></tr>
+      <tr><td><b>完整性校验 integrity checks</b></td><td><b>数字签名</b>可以阻止 / 检测篡改</td></tr>
+      <tr><td><b>访问限制 access restrictions</b></td><td>例如需要口令的 <b>VPN</b></td></tr>
+      <tr><td><b>防火墙 firewalls</b></td><td>接在接入网与核心网里的专用「<b>middlebox</b>」：<b>默认关闭（off-by-default）</b> —— 过滤进入的分组，限制发送方、接收方与应用；并检测 / 应对 DoS 攻击</td></tr>
+    </table></div>
+
+    <h3>6.3 安全的目标与手段<span class="srcref">原第 34–35 页</span></h3>
+    <div class="grid g2">
+      <div class="card"><h5>「什么是网络安全」的四个目标（第 35 页）</h5>
+        <ul style="margin:0;font-size:14.5px">
+          <li><b>机密性 confidentiality</b>：只有发送方与<b>预期的</b>接收方能「看懂」消息内容 —— 发送方加密、接收方解密；</li>
+          <li><b>鉴别 authentication</b>：发送方与接收方想确认彼此的身份；</li>
+          <li><b>报文完整性 message integrity</b>：收发双方要确保消息在途中或事后<b>未被改动却无人察觉</b>；</li>
+          <li><b>访问与可用性 access and availability</b>：服务必须<b>能被访问、能用</b>。</li>
+        </ul>
+      </div>
+      <div class="card"><h5>基本技术（第 34 页）</h5>
+        <ul style="margin:0;font-size:14.5px">
+          <li>密码学（对称密钥与公钥）</li>
+          <li>报文完整性</li>
+          <li>端点鉴别</li>
+        </ul>
+        <p style="margin:8px 0 0;font-size:14.5px">用在许多场景里：安全电子邮件、安全传输（<b>TLS</b>）、<b>IP sec</b>、802.11、4G/5G；再加上<b>运行安全（operational security）：防火墙与 IDS</b>（入侵检测系统）。</p>
+      </div>
+    </div>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：四个安全目标核对表 —— 选一个手段，看它满足哪几个目标</span>
+        <label class="fld">手段 / 场景
+          <select id="scSel"></select>
+        </label>
+      </div>
+      <div id="scOut"></div>
+    </div>
+
+    <div class="box ok"><div class="t">「每一层都要考虑」不是口号</div>
+      第 28 页那句 <b>security considerations in all layers!</b> 是有下文的：窃听发生在<b>链路/物理层</b>（广播媒介），伪造地址发生在<b>网络层</b>（IP 头），会话劫持与口令泄露发生在<b>应用层</b>。这也解释了为什么第 34 页列出的手段分布在从 802.11 到 TLS 的整整一摞协议上 —— 单个层的加密救不了整条路径。
+    </div>
+  </section>
+
+  <!-- ================= 7 ================= -->
+  <section id="s7">
+    <h2>7. 协议分层与协议栈<span class="srcref">原第 36–41 页</span></h2>
+    <p class="lede">网络很复杂：主机、路由器、各种介质的链路、应用、协议、硬件与软件。课件第 37 页抛出一个问题：<b>「如此复杂的东西，有没有希望理出头绪？」</b> 答案是分层 —— 而分层的道理，先在一个跟网络毫无关系的地方讲清楚。</p>
+
+    <h3>7.1 航空旅行的例子<span class="srcref">原第 38–39 页</span></h3>
+    <p>课件用「人的位移 + 行李的位移」来类比一次端到端的数据传输，把它拆成一串<b>服务</b>：</p>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>去程的动作</th><th>回程的动作</th><th>对应的服务（第 39 页）</th></tr>
+      <tr><td>ticket (purchase) 买票</td><td>ticket (complain) 投诉</td><td class="mono">ticketing service</td></tr>
+      <tr><td>baggage (check) 托运行李</td><td>baggage (claim) 取行李</td><td class="mono">baggage service</td></tr>
+      <tr><td>gates (load) 登机</td><td>gates (unload) 下机</td><td class="mono">gate service</td></tr>
+      <tr><td>runway takeoff 起飞</td><td>runway landing 降落</td><td class="mono">runway service</td></tr>
+      <tr><td>airplane routing 航线（可有多次）</td><td>airplane routing 航线</td><td class="mono">routing service</td></tr>
+    </table></div>
+    <p>第 39 页的原话就是分层的定义：<b>每一层都实现一个服务，靠的是它自己内部的层内动作，并依赖下一层提供的服务</b>。第 40 页给出这样做的两个理由：</p>
+    <ul>
+      <li><b>显式的结构</b>让系统各部分的身份与关系变得可识别 —— 给讨论提供了一份「分层参考模型」；</li>
+      <li><b>模块化</b>让系统的维护与升级更容易：某一层的服务实现变了，对系统其余部分是<b>透明的</b>。课件举例：登机口的流程改了，不影响其它环节。</li>
+    </ul>
+
+    <h3>7.2 互联网的五层协议栈<span class="srcref">原第 41 页</span></h3>
+    <p>课件那一页的左侧是英文定义，右侧是中文批注 —— 两者一起读才完整：</p>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>层</th><th>职责（课件英文）</th><th>代表协议</th><th>课件中文批注</th></tr>
+      <tr><td><b>应用层 application</b></td><td>支撑网络应用</td><td class="mono">HTTP, IMAP, SMTP, DNS</td><td>传什么样数据？干什么事</td></tr>
+      <tr><td><b>传输层 transport</b></td><td>进程到进程的数据传输</td><td class="mono">TCP, UDP</td><td>从哪里到哪里？需要确认吗？可靠传输？</td></tr>
+      <tr><td><b>网络层 network</b></td><td>把数据报从源<b>路由</b>到目的地</td><td class="mono">IP, routing protocols</td><td>途径哪些地方？</td></tr>
+      <tr><td><b>链路层 link</b></td><td>相邻网络元素之间的数据传输</td><td class="mono">Ethernet, 802.11 (WiFi), PPP</td><td>有线 or 无线链路？下一站是哪？链路可访问吗？</td></tr>
+      <tr><td><b>物理层 physical</b></td><td>「线上」的比特</td><td class="mono">（具体介质与调制）</td><td>具体怎么传每个 bit 数据？什么调制格式？</td></tr>
+    </table></div>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：五层协议栈漫游 —— 点一层，看它的职责、协议与中文批注</span>
+      </div>
+      <div id="stOut"></div>
+    </div>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：航空类比 ↔ 协议分层 —— 选一个环节，看它对应哪一层</span>
+        <label class="fld">航空环节
+          <select id="arSel">
+            <option value="ticket">买票 / 投诉（ticketing service）</option>
+            <option value="baggage">托运行李 / 取行李（baggage service）</option>
+            <option value="gate">登机 / 下机（gate service）</option>
+            <option value="runway">起飞 / 降落（runway service）</option>
+            <option value="routing">航线（routing service）</option>
+          </select>
+        </label>
+      </div>
+      <div id="arOut"></div>
+    </div>
+
+    <div class="box warn"><div class="t">类比是帮助理解用的，不是一一对应</div>
+      课件第 38–40 页的航空例子只讲了「分层」这一件事：每层有服务、层内动作独立、依赖下层。它<b>没有</b>说「买票就是应用层」。上面的类比映射（买票↔应用层等）是本页为了帮你记忆而给的一组对应，读的时候请以「分层与依赖关系」这个结构为准。
+    </div>
+  </section>
+
+  <!-- ================= 8 ================= -->
+  <section id="s8">
+    <h2>8. 封装与解封装<span class="srcref">原第 42–47 页</span></h2>
+    <p class="lede">分层说的是「谁依赖谁」；封装说的是「数据长什么样」。课件用四页把同一件事层层叠加地画了四遍：<b>每经过一层，就在前面加一个头部</b>，而每个头部只服务于本层的目的。</p>
+
+    <h3>8.1 一层层套上去<span class="srcref">原第 42–44、46 页</span></h3>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>层</th><th>它做什么（课件原话）</th><th>产出</th></tr>
+      <tr><td><b>应用层</b></td><td>应用之间交换<b>消息</b>来实现某种应用服务，它用的是传输层的服务</td><td class="mono">message&nbsp;&nbsp;M</td></tr>
+      <tr><td><b>传输层</b></td><td>把消息 M 从<b>一个进程</b>送到<b>另一个进程</b>（例如可靠地送），用的是网络层的服务；做法是把应用层消息 M 用传输层头部 <b>H<sub>t</sub></b> 封装起来，得到<b>传输层报文段（segment）</b>。H<sub>t</sub> 供传输层协议实现自己的服务</td><td class="mono">segment&nbsp;&nbsp;H<sub>t</sub> | M</td></tr>
+      <tr><td><b>网络层</b></td><td>把报文段 [H<sub>t</sub>|M] 从<b>一台主机</b>送到<b>另一台主机</b>，用的是链路层的服务；做法是用网络层头部 <b>H<sub>n</sub></b> 封装，得到<b>网络层数据报（datagram）</b></td><td class="mono">datagram&nbsp;&nbsp;H<sub>n</sub> | H<sub>t</sub> | M</td></tr>
+      <tr><td><b>链路层</b></td><td>把数据报 [H<sub>n</sub>|[H<sub>t</sub>|M]] 从一台主机送到<b>相邻</b>主机；做法是用链路层头部 <b>H<sub>l</sub></b> 封装，得到<b>链路层帧（frame）</b></td><td class="mono">frame&nbsp;&nbsp;H<sub>l</sub> | H<sub>n</sub> | H<sub>t</sub> | M</td></tr>
+      <tr><td><b>物理层</b></td><td>把这些比特送上「线」</td><td class="mono">bits</td></tr>
+    </table></div>
+    <p>第 45 页用一个形象的比喻收尾：封装就是<b>套娃（Matryoshka dolls / stacking dolls）</b> —— 一层套一层，每一层只认得自己的那层壳。第 46 页把四条垂直的「塔」并排放好，源侧头部只增不减。</p>
+
+    <div class="box warn"><div class="t">勘误：第 44 页把链路层依赖的层写错了</div>
+      原课件第 44 页写「Link-layer protocol transfers datagram … from host to neighboring host, <b>using network-layer services</b>」。这与其他三句的写法、以及课件自己在第 39 页给出的规则（<b>每层依赖下一层提供的服务</b>）矛盾：链路层下面是物理层，链路层不可能去「使用网络层的服务」。本页按 <b>using link-layer services</b> 的下层——物理层——呈现，即链路层依赖<b>物理层</b>提供的服务。同一页的前三句（应用→传输→网络）均符合「依赖下一层」的规则。
+    </div>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：封装推演 —— 逐层加上头部，看每一层多出了什么</span>
+        <button class="p" id="enUp">上一层 ↓</button>
+        <button class="p" id="enDown">下一层 ↑</button>
+        <button class="sm" id="enReset">回到最上面</button>
+        <div class="seg" id="enSeg">
+          <button class="on" data-en="0">应用层</button>
+          <button data-en="1">传输层</button>
+          <button data-en="2">网络层</button>
+          <button data-en="3">链路层</button>
+          <button data-en="4">物理层</button>
+        </div>
+      </div>
+      <div id="enOut"></div>
+    </div>
+
+    <h3>8.2 端到端视图：谁拆到哪一层<span class="srcref">原第 47 页</span></h3>
+    <p>第 47 页把路径上的中间设备也画进了封装图。关键在于：<b>交换机和路由器不是「全栈」设备</b> —— 它们各自只看得到自己那一层的头部。</p>
+    <ul>
+      <li><b>链路层交换机 link-layer switch</b>：只有物理层与链路层。它拆开帧头 H<sub>l</sub> 做转发，然后重新封装到下一条链路 —— <b>网络层的数据报原样不动地穿过它</b>。</li>
+      <li><b>路由器 router</b>：有物理层、链路层与网络层。它拆到网络层头部 H<sub>n</sub>，据此决定下一跳，再重新封装。</li>
+      <li><b>端主机 host</b>：五层齐全。只有它会把头部一路拆到应用层，把消息 M 交给进程。</li>
+    </ul>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：解封装 —— 报文走到每台设备，哪些头部会被拆掉？</span>
+        <label class="fld">设备
+          <select id="eeSel">
+            <option value="src">源主机（source host）</option>
+            <option value="sw">链路层交换机（switch）</option>
+            <option value="rt">路由器（router）</option>
+            <option value="dst">目的主机（destination host）</option>
+          </select>
+        </label>
+      </div>
+      <div id="eeOut"></div>
+    </div>
+
+    <div class="box ok"><div class="t">一句话记住封装</div>
+      <b>头部属于加它的那一层，也只被对端的同一层（或路径上的同一层设备）读取。</b> 交换机读 H<sub>l</sub>、路由器读 H<sub>n</sub>、主机一路读到 M —— 这就是<a href="#s7">第 7 节</a>「每层只依赖下层、只与对端同层对话」在数据布局上的样子。
+    </div>
+  </section>
+
+  <!-- ================= 9 ================= -->
+  <section id="s9">
+    <h2>9. 无线与移动网络<span class="srcref">原第 48–60 页</span></h2>
+    <p class="lede">课件第 49 页先给了一组数据说明这件事有多重要：<b>无线（移动）电话用户比固定电话用户多得多（2019 年是 10:1）</b>，<b>移动宽带联网设备是固定宽带设备的好几倍（2019 年是 5:1）</b>，4G/5G 蜂窝网也在向互联网协议栈（含 SDN）靠拢。</p>
+
+    <h3>9.1 两个不同的挑战<span class="srcref">原第 49 页</span></h3>
+    <div class="grid g2">
+      <div class="card"><h5>wireless 无线</h5>
+        <p style="margin:0;font-size:14.5px">问题在于<b>「通过无线链路通信」</b>本身 —— 共享介质、误码、信号衰减。</p>
+      </div>
+      <div class="card"><h5>mobility 移动性</h5>
+        <p style="margin:0;font-size:14.5px">问题在于<b>「用户换了接入点之后怎么办」</b> —— 与无线链路没有必然关系。</p>
+      </div>
+    </div>
+    <p>课件特意强调这两个挑战<b>重要但不同</b>：一台不动的台式机用 WiFi 也是 wireless 但不 mobile；反过来，用 4G 的手机在高铁上，两个问题同时出现。</p>
+
+    <h3>9.2 无线网络的四个要素<span class="srcref">原第 50–53 页</span></h3>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>要素</th><th>课件原话的展开</th></tr>
+      <tr><td><b>无线主机 wireless hosts</b></td><td>笔记本、智能手机、IoT 设备；运行应用程序；<b>可以是静止的（非移动）也可以是移动的</b> —— 课件加粗提醒：<b>无线不总等于移动！</b></td></tr>
+      <tr><td><b>基站 base station</b></td><td>通常连到有线网络；起<b>中继（relay）</b>作用，负责在「它的辖区」内的有线网络与无线主机之间转发分组。例如蜂窝基站、802.11 接入点（AP）</td></tr>
+      <tr><td><b>无线链路 wireless link</b></td><td>通常用来把移动设备连到基站，也用作骨干链路；<b>多址接入协议（multiple access protocol）</b>协调链路访问；速率、距离、频段各不相同</td></tr>
+      <tr><td><b>两种模式</b></td><td><b>基础设施模式 infrastructure mode</b>：基站把移动设备接入有线网；<b>切换 handoff</b> 就是移动设备换了提供接入的基站。<b>自组织模式 ad hoc mode</b>：没有基站，节点只能发给链路覆盖范围内的其它节点，节点自己组织成网络、彼此选路</td></tr>
+    </table></div>
+
+    <h3>9.3 各种无线链路能跑多快、覆盖多远<span class="srcref">原第 54 页</span></h3>
+    <p>课件第 54 页是一张柱状图：纵轴是速率、横轴是四类覆盖范围。下面按图上标注重排成表（图上未写数值的两项也如实标出）：</p>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>技术</th><th>图上对应的峰值速率</th><th>覆盖范围（横轴四类）</th></tr>
+      <tr><td class="mono">802.11ax</td><td class="mono">14 Gbps</td><td>Indoor 10–30m</td></tr>
+      <tr><td class="mono">802.11ac</td><td class="mono">3.5 Gbps</td><td>Indoor 10–30m</td></tr>
+      <tr><td class="mono">802.11n</td><td class="mono">600 Mbps</td><td>Indoor 10–30m</td></tr>
+      <tr><td class="mono">802.11g</td><td class="mono">54 Mbps</td><td>Indoor 10–30m</td></tr>
+      <tr><td class="mono">802.11b</td><td class="mono">11 Mbps</td><td>Indoor 10–30m</td></tr>
+      <tr><td class="mono">Bluetooth</td><td class="mono">2 Mbps</td><td>Indoor 10–30m</td></tr>
+      <tr><td class="mono">802.11 af,ah</td><td>在 600 Mbps 与 3.5 Gbps 之间（图上未标数值）</td><td>Outdoor 50–200m 与 Midrange outdoor 200m–4Km 之间</td></tr>
+      <tr><td class="mono">5G</td><td class="mono">10 Gbps</td><td>Midrange 与 Long range 方向（条形横跨）</td></tr>
+      <tr><td class="mono">4G LTE</td><td>在 54 Mbps 与 600 Mbps 之间（图上未标数值）</td><td>Long range outdoor 4Km–15Km</td></tr>
+    </table></div>
+    <p>横轴的四个覆盖档位是：<b>Indoor 10–30m · Outdoor 50–200m · Midrange outdoor 200m–4Km · Long range outdoor 4Km–15Km</b>。可见规律很直白：<b>速率越高，覆盖越小</b> —— 10 Gbps 级的 5G 与 14 Gbps 的 802.11ax 都撑不到最远的那一档。</p>
+
+    <h3>9.4 无线网络分类：2 × 2<span class="srcref">原第 57 页</span></h3>
+    <p>课件用「有没有基础设施」× 「一跳还是多跳」把无线网络分成四类：</p>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th></th><th>single hop 单跳</th><th>multiple hops 多跳</th></tr>
+      <tr><td><b>infrastructure<br>有基础设施</b></td><td>主机连到<b>基站</b>（WiFi、蜂窝），基站再连到更大的互联网</td><td>主机可能要经过若干无线节点<b>中继</b>才能连到更大的互联网：<b>mesh net</b>（网状网）</td></tr>
+      <tr><td><b>no infrastructure<br>无基础设施</b></td><td>没有基站，也没有与更大互联网的连接（<b>Bluetooth</b>、ad hoc 网络）</td><td>没有基站、也不连更大的互联网；可能要中继才能到达某个无线节点：<b>MANET</b>（移动自组织网）、<b>VANET</b>（车载自组织网）</td></tr>
+    </table></div>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：无线链路特性 —— 点一个技术，看速率档位与覆盖</span>
+      </div>
+      <div id="wlOut"></div>
+    </div>
+
+    <h3>9.5 什么是移动性<span class="srcref">原第 58–60 页</span></h3>
+    <p>第 58 页把移动性画成一个<b>从「不移动」到「高度移动」的光谱</b>，四档依次是：</p>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>档位</th><th>情形</th><th>课件态度</th></tr>
+      <tr><td class="mono">1</td><td>设备在<b>网络之间</b>移动，但移动时<b>关机</b>了</td><td>—</td></tr>
+      <tr><td class="mono">2</td><td>设备在<b>同一运营商的同一个 AP</b> 范围内移动</td><td>—</td></tr>
+      <tr><td class="mono">3</td><td>设备在<b>同一运营商的多个 AP 之间</b>移动</td><td><b>我们关心的是这两档！</b></td></tr>
+      <tr><td class="mono">4</td><td>设备在<b>多个运营商的网络之间</b>移动，同时保持连接不断</td><td><b>我们关心的是这两档！</b></td></tr>
+    </table></div>
+    <p>第 59 页把第 3、4 档的困难写成一个问题：如果设备从 Verizon 的网跑到 AT&T 的网，<b>「网络」怎么知道要把分组转发到新网络去？</b> 第 60 页则分析它对上层协议的影响 —— 逻辑上应该很小（<b>尽力而为的服务模型没有变</b>，TCP 和 UDP 也确实能跑在无线与移动链路上），但<b>性能上</b>并非如此。</p>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：无线网络 2×2 分类 + 移动性光谱 —— 点格子 / 点档位</span>
+        <div class="seg" id="txSeg">
+          <button class="on" data-tx="0">有基础设施 · 单跳</button>
+          <button data-tx="1">有基础设施 · 多跳</button>
+          <button data-tx="2">无基础设施 · 单跳</button>
+          <button data-tx="3">无基础设施 · 多跳</button>
+        </div>
+      </div>
+      <div id="txOut"></div>
+    </div>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：移动性光谱 —— 四档移动性，看课件关心哪两档</span>
+        <div class="seg" id="mbSeg">
+          <button data-mb="0">第 1 档：跨网络但关机</button>
+          <button data-mb="1">第 2 档：同一 AP 内</button>
+          <button class="on" data-mb="2">第 3 档：同一运营商的多个 AP 之间</button>
+          <button data-mb="3">第 4 档：跨运营商且不断线</button>
+        </div>
+      </div>
+      <div id="mbOut"></div>
+    </div>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：无线对上层的影响 —— 逻辑上 vs 性能上</span>
+        <div class="seg" id="wiSeg">
+          <button class="on" data-wi="logic">逻辑上（应该很小）</button>
+          <button data-wi="perf">性能上（并不小）</button>
+        </div>
+      </div>
+      <div id="wiOut"></div>
+    </div>
+
+    <div class="box warn"><div class="t">勘误：课件第 60 页把 scarce 拼成了 scare</div>
+      原课件第 60 页最后一条写作 <code>bandwidth a scare resource for wireless links</code>，语义应为 <b>scarce</b>（稀缺），少了一个字母 c。本页按「<b>带宽是无线链路的稀缺资源</b>」呈现 —— 该条的含义不受影响。
+    </div>
+  </section>
+
+  <!-- ================= 10 ================= -->
+  <section id="s10">
+    <h2>10. 网络核心与性能<span class="srcref">原第 62–79 页</span></h2>
+    <p class="lede">从第 62 页起是 <b>Additional Slides</b>（补充页）：网络核心、性能、互联网历史。这一节讲前两块 —— <b>数据在网络中央怎么被搬动</b>，以及<b>为什么它会慢、会丢、会堵</b>。</p>
+
+    <h3>10.1 网络核心：两种交换方式<span class="srcref">原第 64 页</span></h3>
+    <p>网络核心是<b>互相连接的路由器组成的网格</b>。课件把它归结为「一个根本问题」：数据是怎么穿过网络的？两条路：</p>
+    <div class="grid g2">
+      <div class="card"><h5>线路交换 circuit switching</h5>
+        <p style="margin:0;font-size:14.5px">每次通话<b>预留一条专用线路</b>；典型例子是电话网。<br><span class="chip gray">课件中文批注：线路预留</span></p>
+      </div>
+      <div class="card"><h5>分组交换 packet switching</h5>
+        <p style="margin:0;font-size:14.5px">数据被切成离散的「<b>块</b>」在网络中传送，不预留资源。<br><span class="chip gray">课件中文批注：随到随发</span></p>
+      </div>
+    </div>
+    <p>第 64 页进一步说明分组交换：主机把应用层消息切成<b>分组</b>；网络把分组<b>从一个路由器转发到下一个</b>，沿着从源到目的地的路径、跨过一条条链路。</p>
+
+    <h3>10.2 两个关键功能：转发与路由<span class="srcref">原第 65–67 页</span></h3>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>功能</th><th>作用范围</th><th>课件原话的展开</th></tr>
+      <tr><td><b>转发 forwarding</b><br>（又名 switching）</td><td><b>局部</b>动作</td><td>把到达的<b>分组从路由器的输入链路搬到合适的输出链路</b> —— 靠的是一张<b>本地转发表</b>：按分组头里的值查出该走哪条输出链路</td></tr>
+      <tr><td><b>路由 routing</b></td><td><b>全局</b>动作</td><td>决定分组要走的<b>源到目的地路径</b> —— 由<b>路由算法</b>完成，结果被写进各路由器的转发表</td></tr>
+    </table></div>
+    <p>课件第 65 页给出一张本地转发表的样例（左侧是表，右侧是「一个到达的分组，头里的目的地址是 0111」）：</p>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th class="mono">分组头里的值</th><th class="mono">输出链路</th></tr>
+      <tr><td class="mono">0100</td><td class="mono">3</td></tr>
+      <tr><td class="mono">0101</td><td class="mono">2</td></tr>
+      <tr><td class="mono">0111</td><td class="mono">2</td></tr>
+      <tr><td class="mono">1001</td><td class="mono">1</td></tr>
+    </table></div>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：转发表查找 —— 输入头里的值，看它该走哪条输出链路（判对错）</span>
+        <label class="fld">头里的值 <input type="text" id="fwIn" value="0111" size="8" spellcheck="false"></label>
+        <button class="p" id="fwGo">我猜是这条</button>
+        <label class="fld">输出链路
+          <select id="fwOut2"></select>
+        </label>
+        <button class="sm" data-fw="0100">0100</button>
+        <button class="sm" data-fw="0101">0101</button>
+        <button class="sm" data-fw="0111">0111（课件图上的例子）</button>
+        <button class="sm" data-fw="1001">1001</button>
+      </div>
+      <div id="fwOut"></div>
+    </div>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：路由算法 → 转发表 —— 在示例拓扑上跑最短路，再看某台路由器的转发表</span>
+        <label class="fld">起点 <select id="rtFrom"></select></label>
+        <label class="fld">看哪台路由器的转发表 <select id="rtView"></select></label>
+        <div class="seg" id="rtSeg">
+          <button class="on" data-rt="dij">最短路路由</button>
+          <button data-rt="hops">最少跳数路由</button>
+        </div>
+      </div>
+      <div id="rtOut"></div>
+    </div>
+
+    <div class="box warn"><div class="t">这个示例拓扑是本页自建的</div>
+      课件第 65–67 页只给了功能定义与一张转发表，<b>没有给出任何具体的网络拓扑</b>（第 66、67 页是两张交通地图的照片）。上面交互里的 6 节点拓扑是本页为了演示「全局路由 → 局部转发表」而自建的示例，链路代价也是本页设定的；课件的结论只有两条：<b>路由是全局的、转发是本地的查表</b>。
+    </div>
+
+    <h3>10.3 时延与丢包从哪来<span class="srcref">原第 71–75 页</span></h3>
+    <p>第 71 页解释为什么要讲度量（metrics）：为了<b>评估系统性能</b>。交通系统看堵车、延误、事故、车流；互联网看<b>拥塞、时延、丢包、吞吐量</b>。第 72 页给出三条因果链：</p>
+    <ul>
+      <li>分组在路由器缓冲区里<b>排队</b>，等待轮到它被发送（<b>排队时延</b>）；</li>
+      <li>当到达链路的速率<b>（暂时）超过输出链路的能力</b>时，队列长度就会增长；</li>
+      <li>当保存排队分组的内存<b>满了</b>，<b>丢包</b>就发生了。</li>
+    </ul>
+    <p>第 75 页补上了丢包之后的事：链路前的队列（缓冲区）容量有限；到达<b>满队列</b>的分组会被丢弃；被丢掉的分组<b>可能由上一个节点重传、由源端系统重传，也可能根本不重传</b>。</p>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：路由器缓冲区队列模拟 —— 到达率超过输出能力时会发生什么</span>
+        <label class="fld">前 <input type="text" id="qsBurst" value="6" size="4" spellcheck="false"> 个时隙，每时隙到达
+          <input type="text" id="qsA" value="2" size="3" spellcheck="false"> 个分组</label>
+        <label class="fld">之后每时隙到达 <input type="text" id="qsB" value="1" size="3" spellcheck="false"> 个分组</label>
+        <label class="fld">缓冲区容量 <input type="text" id="qsCap" value="4" size="4" spellcheck="false"> 个分组</label>
+        <label class="fld">共模拟 <input type="text" id="qsT" value="20" size="4" spellcheck="false"> 个时隙（每个时隙发送 1 个）</label>
+        <button class="p" id="qsGo">模拟</button>
+        <button class="sm" data-qs="burst=6;a=3;b=0;cap=4;t=20">突发 3 倍，之后不再到达</button>
+        <button class="sm" data-qs="burst=99;a=1;b=1;cap=4;t=20">到达率恰好等于输出能力</button>
+        <button class="sm" data-qs="burst=99;a=2;b=2;cap=4;t=20">长期过载</button>
+        <button class="sm" data-qs="burst=0;a=0;b=1;cap=4;t=20">无突发（课件理想情形）</button>
+      </div>
+      <div id="qsOut"></div>
+    </div>
+
+    <h3>10.4 真实互联网的时延：traceroute<span class="srcref">原第 73–74 页</span></h3>
+    <p>课件用 <code>traceroute</code> 展示「真实的时延与丢包长什么样」。它的原理是：对第 <i>i</i> 跳，<b>发出三个 TTL 字段值为 i 的分组</b>；第 i 台路由器会把这些分组<b>退还给发送方</b>；发送方测量<b>从发出到收到回应的间隔</b>，就得到到第 i 跳的时延。</p>
+    <p>第 74 页是课件给的实测输出（从 <code>gaia.cs.umass.edu</code> 到 <code>www.eurecom.fr</code>）：</p>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：traceroute 实测表 —— 看每一跳的时延与「相邻两跳的差值」</span>
+        <label class="fld">度量
+          <select id="trSel">
+            <option value="min">第 1 次测量</option>
+            <option value="mid">第 2 次测量</option>
+            <option value="max">第 3 次测量</option>
+            <option value="avg">三次平均</option>
+          </select>
+        </label>
+      </div>
+      <div id="trOut"></div>
+    </div>
+
+    <div class="box"><div class="t">课件在这一页留了两个问题</div>
+      图上标注了两处：第 8 跳是<b>跨洋链路（trans-oceanic link）</b>；第 10–12 跳一带的时延<b>看起来变小了，为什么？</b> 用上面的交互把「相邻两跳的差值」列出来，你会看到差值<b>可以为负</b> —— 因为每一跳的数字是独立测量的时延，属于不同的分组、不同的排队状态，<b>不是一条可加的时间线</b>。另外第 17、18 跳是 <code>* * *</code>，课件注明 <b>`*` 表示没有回应（探测包丢失，或该路由器不回应）</b>。
+    </div>
+
+    <h3>10.5 吞吐量<span class="srcref">原第 76–78 页</span></h3>
+    <p><b>吞吐量（throughput）</b>是比特从发送方到接收方的<b>速率</b>（比特/时间单位）。课件区分两种口径：<b>瞬时</b>（某一时刻的速率）与<b>平均</b>（较长时间段上的速率）。第 76 页用「管道 + 流体」来比喻：服务器把比特（流体）以 R<sub>s</sub> 的速率注入管道。</p>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>情形</th><th>平均端到端吞吐量</th><th>依据</th></tr>
+      <tr><td>R<sub>s</sub> &lt; R<sub>c</sub></td><td class="mono">R<sub>s</sub></td><td>服务器这一端是瓶颈</td></tr>
+      <tr><td>R<sub>s</sub> &gt; R<sub>c</sub></td><td class="mono">R<sub>c</sub></td><td>链路这一端是瓶颈</td></tr>
+      <tr><td>10 条连接共享骨干链路 R</td><td class="mono">min(R<sub>s</sub>, R<sub>c</sub>, R / 10)</td><td>10 条连接（大致公平地）分享骨干瓶颈链路</td></tr>
+    </table></div>
+    <p><b>瓶颈链路（bottleneck link）</b>的定义：端到端路径上<b>限制</b>了端到端吞吐量的那条链路。课件第 78 页还说：实践中，<b>R<sub>c</sub> 或 R<sub>s</sub> 常常就是瓶颈</b>。</p>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：吞吐量瓶颈计算器 —— 改三个速率与连接数，看谁是瓶颈</span>
+        <label class="fld">R<sub>s</sub> 服务器速率 <input type="text" id="thRs" value="10" size="6" spellcheck="false"> Mbps</label>
+        <label class="fld">R<sub>c</sub> 链路速率 <input type="text" id="thRc" value="100" size="6" spellcheck="false"> Mbps</label>
+        <label class="fld">R 骨干链路 <input type="text" id="thRb" value="500" size="6" spellcheck="false"> Mbps</label>
+        <label class="fld">连接数 n <input type="text" id="thN" value="10" size="4" spellcheck="false"></label>
+        <button class="p" id="thGo">计算</button>
+        <button class="sm" data-th="rs=10;rc=100;rb=500;n=10">课件例：Rs 是瓶颈</button>
+        <button class="sm" data-th="rs=100;rc=10;rb=500;n=10">课件例：Rc 是瓶颈</button>
+        <button class="sm" data-th="rs=100;rc=100;rb=500;n=10">10 条连接抢骨干（R/10）</button>
+        <button class="sm" data-th="rs=5;rc=20;rb=500;n=1">单连接：min(Rs, Rc)</button>
+      </div>
+      <div id="thOut"></div>
+    </div>
+
+    <div class="box ok"><div class="t">互联网的「结构」是钱和政策的产物</div>
+      第 68–69 页讲互联网结构时给了一张分层图：中心是少数<b>连接良好的大网</b> —— <b>Tier-1 商业 ISP</b>（如 Level 3、Sprint、AT&amp;T、NTT，全国/国际覆盖）与<b>内容提供商网络</b>（如 Google、Facebook，用自己的私有网络把数据中心连到互联网，常常绕过 tier-1 与区域 ISP）；中间是 <b>IXP</b>（互联网交换点）与<b>区域 ISP</b>；外侧是成百上千的<b>接入 ISP</b>。课件对此的解释只有一句：<b>它的演化由经济与国家政策驱动</b> —— 不是技术指标推出来的。
+    </div>
+  </section>
+
+  <!-- ================= 11 ================= -->
+  <section id="s11">
+    <h2>11. 互联网历史<span class="srcref">原第 80–84 页</span></h2>
+    <p class="lede">补充页的最后一块是历史。课件把它切成五个时段 —— 每一段都对应一次「想法变成了基础设施」的转变。</p>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：互联网历史时间轴 —— 点一个时段看它列了哪些里程碑</span>
+        <div class="seg" id="tlSeg"></div>
+      </div>
+      <div id="tlOut"></div>
+    </div>
+
+    <h3>11.1 五个时段<span class="srcref">原第 80–84 页</span></h3>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>时段</th><th>一句话</th><th>关键条目（课件原文）</th></tr>
+      <tr><td><b>1961–1972</b><br>早期分组交换原理</td><td>先把「分组交换行不行」论证清楚</td><td>1961 Kleinrock 排队论证明分组交换有效；1964 Baran 军用网中的分组交换；1967 ARPAnet 由 ARPA 立项；1969 第一个 ARPAnet 节点运行；1972 ARPAnet 公开演示、NCP 第一个主机-主机协议、第一个电子邮件程序、ARPAnet 有 15 个节点</td></tr>
+      <tr><td><b>1972–1980</b><br>互联、新网与专有网</td><td>「网际」的思想成型</td><td>1970 夏威夷 ALOHAnet 卫星网；1974 Cerf 与 Kahn 的互联架构；1976 Xerox PARC 的以太网；70 年代末的专有架构 DECnet / SNA / XNA；1979 ARPAnet 有 200 个节点</td></tr>
+      <tr><td><b>1980–1990</b><br>新协议、网络大爆发</td><td>协议标准化 + 国家网络互联</td><td>1982 smtp 邮件协议；1983 部署 TCP/IP；1983 DNS 用于「名字 → IP 地址」的转换；1985 ftp 协议；1988 TCP 拥塞控制；CSnet / BITnet / NSFnet / Minitel；十万台主机接入这个网络的联合体</td></tr>
+      <tr><td><b>1990、2000s</b><br>商业化与 Web</td><td>从科研网变成商业网</td><td>90 年代初 ARPAnet 退役；1991 NSF 解除对 NSFnet 商用的限制（1995 退役）；90 年代初的 Web：超文本（Bush 1945、Nelson 1960s）、HTML 与 HTTP 出自 Berners-Lee、1994 Mosaic 与后来的 Netscape；90 年代末 Web 商业化；1990s 末–2000s 更多「杀手应用」：即时通信、P2P 文件共享；网络安全走向前台；约 5000 万台主机、1 亿多用户；骨干链路进入 Gbps 级</td></tr>
+      <tr><td><b>2005 至今</b><br>规模、SDN、移动、云</td><td>宽带普及 + 内容商自建网络 + 云</td><td>家庭宽带积极部署（10–100 余 Mbps）；2008 软件定义网络 SDN；高速无线接入（4G/5G、WiFi）日益普遍；服务提供商（Google、FB、Microsoft）自建网络，绕开商业互联网、把自己「贴近」终端用户；企业把服务跑在「云」上（AWS、Azure）；智能手机崛起（2017 年移动设备数超过固定设备）；2023 年约 150 亿台设备联网（statista.com）</td></tr>
+    </table></div>
+
+    <h3>11.2 为什么今天仍然是这套架构<span class="srcref">原第 81 页</span></h3>
+    <p>课件在 1972–1980 那一页的右栏单独列出了 <b>Cerf 与 Kahn 的互联原则</b>，并注明它们<b>定义了今天的互联网架构</b>：</p>
+    <div class="grid g2">
+      <div class="card"><h5>四条原则</h5>
+        <ul style="margin:0;font-size:14.5px">
+          <li><b>极简与自治</b>（minimalism, autonomy）—— 互联网络<b>不需要</b>网络内部做任何改动；</li>
+          <li><b>尽力而为的服务模型</b>（best-effort service model）；</li>
+          <li><b>无状态路由</b>（stateless routing）；</li>
+          <li><b>去中心化控制</b>（decentralized control）。</li>
+        </ul>
+      </div>
+      <div class="card"><h5>这四条解释了本讲的许多「为什么」</h5>
+        <ul style="margin:0;font-size:14.5px">
+          <li>为什么中间设备如此简单（<a href="#s8">第 8 节</a>：交换机只看到链路层、路由器只看到网络层）；</li>
+          <li>为什么丢包不会有人替你补上（<a href="#s10">第 10 节</a>：重传要由端点或上游决定）；</li>
+          <li>为什么无线链路一丢包，TCP 就误判成拥塞（<a href="#s9">第 9 节</a>）；</li>
+          <li>为什么互联网能在没有中心管理者的前提下不断长大。</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 12 ================= -->
+  <section id="s12">
+    <h2>12. 总结与测验<span class="srcref">原第 61 页</span></h2>
+    <p class="lede">课件第 61 页的自评是「我们覆盖了<b>一大摞</b>材料」。这一讲的目标不是让你会写网络程序，而是让你<b>拿到一套词汇与一张地图</b>：有了它，后面关于协议、并发服务器、Web 的一切都会好读很多。</p>
+
+    <h3>12.1 讲完了什么<span class="srcref">原第 61 页</span></h3>
+    <div class="grid g2">
+      <div class="card"><h5>五个主题（课件第 61 页原文的顺序）</h5>
+        <ul style="margin:0;font-size:14.5px">
+          <li>What is the Internet? What is a protocol?</li>
+          <li>Network edge: hosts, access network, physical media</li>
+          <li>Network Security</li>
+          <li>Protocol layers, service models</li>
+          <li>Wireless and Mobile Networks</li>
+        </ul>
+      </div>
+      <div class="card"><h5>你现在拥有了（课件原话）</h5>
+        <ul style="margin:0;font-size:14.5px">
+          <li>网络世界的<b>上下文、全局视野、词汇表与「手感」</b>（context, overview, vocabulary, "feel" of networking）；</li>
+          <li>以及<b>继续深入下去的更多细节与乐趣</b>（more depth, detail, and fun to follow）。</li>
+        </ul>
+      </div>
+    </div>
+
+    <h3>12.2 测验<span class="srcref">12 题</span></h3>
+    <p>每题选完立刻判分并给出解析，解析里写明依据在本讲的哪一节。</p>
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：本讲测验</span>
+        <button class="sm" id="qzReset">重来</button>
+      </div>
+      <div id="qzOut"></div>
+    </div>
+
+    <div class="box ok"><div class="t">下一讲会用到这里的什么</div>
+      下一讲要把这套词汇用在真正的代码上：<b>套接字（socket）</b>是应用层与传输层之间的那个「钩子」，<b>客户端-服务器</b>是网络边缘的两种角色，<b>端口号</b>让传输层把字节流交给正确的进程，而 <b>HTTP</b> 就是应用层协议里最常见的那一个。这一讲建立的「层 → 服务 → 封装」框架，会在你看每一行网络代码时反复派上用场。
+    </div>
+  </section>
+</main>
+
+</div>
+
+<div class="footer">
+  本页由原课件 PDF 翻译整理而成 · 数值计算与可视化均为页面内实时计算 · 可对照原课件页码阅读。
+</div>
+<button class="totop" id="toTop">↑ 顶部</button>
+
+<script>
+"use strict";
+/* ============================================================
+   计算机网络（第 22 讲）· 交互式课件 —— 全部逻辑
+   约定：所有计算在页面内实时完成；无效输入必须给出提示而不是抛错。
+   本讲没有 64 位整数运算（课件里没有子网掩码/位运算内容），
+   因此一律用 Number；所有速率换算都显式声明单位口径。
+   顶层以 function 声明的
+     netTransmitDelay / netFileTime / netThroughputOf / netForwardLookup /
+     netDijkstra / netQueueSim / netWirelessRateMbps / netEncapLayout
+   是判分基准，由 tools/verify_ics22.js 与独立的 Python 参考实现逐项比对。
+   ============================================================ */
+
+const $  = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const badBox = msg => `<div class="box bad"><div class="t">输入无效</div>${esc(msg)}</div>`;
+const kvAttr = str => {
+  const out = {};
+  String(str).split(';').forEach(part => {
+    const i = part.indexOf('=');
+    if (i > 0) out[part.slice(0, i).trim()] = part.slice(i + 1).trim();
+  });
+  return out;
+};
+
+/* ---------- 数值输入与格式化 ---------- */
+/** 解析一个正的十进制数（允许小数、下划线分隔、首尾空格）；非法返回 null */
+function netParsePos(str) {
+  const t = String(str).trim().replace(/[_,\s]/g, '');
+  if (!/^\d+(\.\d+)?$/.test(t)) return null;
+  const v = Number(t);
+  if (!isFinite(v) || v <= 0) return null;
+  return v;
+}
+/** 解析一个非负整数（允许 0）；非法返回 null */
+function netParseInt(str) {
+  const t = String(str).trim().replace(/[_,\s]/g, '');
+  if (!/^\d+$/.test(t)) return null;
+  const v = parseInt(t, 10);
+  return isFinite(v) ? v : null;
+}
+const netFmt = (v, digits) => {
+  if (!isFinite(v)) return '—';
+  const d = digits === undefined ? 3 : digits;
+  if (Math.abs(v) >= 1000) return v.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  return Number(v.toFixed(d)).toString();
+};
+/** 秒 → 人类可读（µs / ms / s / min / h） */
+function netFmtTime(sec) {
+  if (!isFinite(sec) || sec < 0) return '—';
+  if (sec === 0) return '0 s';
+  if (sec < 1e-3) return netFmt(sec * 1e6, 3) + ' µs';
+  if (sec < 1) return netFmt(sec * 1e3, 3) + ' ms';
+  if (sec < 60) return netFmt(sec, 3) + ' s';
+  if (sec < 3600) {
+    const m = Math.floor(sec / 60), s = sec - m * 60;
+    return m + ' min ' + netFmt(s, 1) + ' s';
+  }
+  const h = Math.floor(sec / 3600), m = Math.floor((sec - h * 3600) / 60);
+  return h + ' h ' + m + ' min';
+}
+/* 单位口径（页面上也会写出来）：1 MB = 8×10^6 bit，1 GB = 8×10^9 bit，
+   1 Mbit = 10^6 bit，1 Mbps = 10^6 bit/s。 */
+const NET_BITS_PER = { mb: 8e6, kb: 8e3, mbits: 1e6, gb: 8e9 };
+
+/* ============================================================
+   判分基准 1：发送时延与文件传输时间（课件第 23 页的公式）
+   ============================================================ */
+
+/** 课件第 23 页：transmission delay = L(bits) / R(bits/sec) → 秒 */
+function netTransmitDelay(Lbits, Rbps) {
+  return Lbits / Rbps;
+}
+/** 传一个「字节数 × 每字节 8 位」的文件需要多久（秒）；rateMbps 为 Mbps */
+function netFileTime(bits, rateMbps) {
+  return bits / (rateMbps * 1e6);
+}
+
+/* ============================================================
+   判分基准 2：吞吐量（课件第 76–78 页）
+   ============================================================ */
+
+/** 单连接端到端吞吐量（Mbps）：min(Rs, Rc, R共享/n)。课件给的例子是 n = 10。 */
+function netThroughputOf(rs, rc, rb, n) {
+  if (!(n >= 1)) return NaN;
+  return Math.min(rs, rc, rb / n);
+}
+/** 谁是瓶颈：返回 'Rs' / 'Rc' / 'R/n' / 并列（用数组） */
+function netBottlenecks(rs, rc, rb, n) {
+  const t = netThroughputOf(rs, rc, rb, n);
+  if (!isFinite(t)) return [];
+  const out = [];
+  if (rs === t) out.push('Rs');
+  if (rc === t) out.push('Rc');
+  if (rb / n === t) out.push('R共享/n');
+  return out;
+}
+
+/* ============================================================
+   判分基准 3：转发表查找（课件第 65 页原表）
+   ============================================================ */
+const NET_FWTABLE = [
+  { v: '0100', out: 3 },
+  { v: '0101', out: 2 },
+  { v: '0111', out: 2 },
+  { v: '1001', out: 1 },
+];
+/** 按课件第 65 页的转发表查输出链路；查不到返回 null */
+function netForwardLookup(headerValue) {
+  const t = String(headerValue).trim();
+  const hit = NET_FWTABLE.find(r => r.v === t);
+  return hit ? hit.out : null;
+}
+/** 本页示例拓扑上的输出链路数（用于「猜输出链路」下拉） */
+const NET_FWLINKS = [1, 2, 3, 4];
+
+/* ============================================================
+   判分基准 4：路由算法（课件第 65 页的「全局动作」）
+   本页自建示例拓扑（课件没有给拓扑，见第 10 节的说明框）
+   ============================================================ */
+const NET_TOPO_NODES = ['A', 'B', 'C', 'D', 'E', 'F'];
+const NET_TOPO_EDGES = [
+  ['A', 'B', 2], ['A', 'C', 5], ['B', 'C', 2], ['B', 'D', 4],
+  ['C', 'D', 1], ['C', 'E', 7], ['D', 'E', 3], ['D', 'F', 6], ['E', 'F', 1],
+];
+/** 邻接表：mode = 'dij'（按链路代价）或 'hops'（每条链路代价 1） */
+function netAdj(mode) {
+  const idx = {};
+  NET_TOPO_NODES.forEach((n, i) => { idx[n] = i; });
+  const n = NET_TOPO_NODES.length;
+  const adj = [];
+  for (let i = 0; i < n; i++) adj.push([]);
+  for (const [a, b, w] of NET_TOPO_EDGES) {
+    const c = (mode === 'hops') ? 1 : w;
+    adj[idx[a]].push([idx[b], c]);
+    adj[idx[b]].push([idx[a], c]);
+  }
+  return adj;
+}
+/** Dijkstra（O(n²) 选最小，n 很小）：返回 { dist:[], next:[] }，
+ *  dist[i] = 从 src 到 i 的最短距离（不可达为 Infinity），
+ *  next[i] = 从 src 到 i 的最短路径上 src 的下一跳节点下标（src 自身为 -1，不可达为 -1）。 */
+function netDijkstra(srcName, mode) {
+  const idx = {};
+  NET_TOPO_NODES.forEach((n, i) => { idx[n] = i; });
+  const src = idx[srcName];
+  const n = NET_TOPO_NODES.length;
+  if (src === undefined) return null;
+  const adj = netAdj(mode);
+  const dist = new Array(n).fill(Infinity);
+  const done = new Array(n).fill(false);
+  const next = new Array(n).fill(-1);
+  dist[src] = 0;
+  /* 用「前驱」推 next：先记 prev，最后回溯 */
+  const prev = new Array(n).fill(-1);
+  for (let it = 0; it < n; it++) {
+    let u = -1, best = Infinity;
+    for (let i = 0; i < n; i++) if (!done[i] && dist[i] < best) { best = dist[i]; u = i; }
+    if (u < 0) break;
+    done[u] = true;
+    for (const [v, w] of adj[u]) {
+      const nd = dist[u] + w;
+      if (nd < dist[v]) { dist[v] = nd; prev[v] = u; }
+    }
+  }
+  for (let i = 0; i < n; i++) {
+    if (i === src) { next[i] = -1; continue; }
+    if (!isFinite(dist[i])) { next[i] = -1; continue; }
+    let cur = i;
+    while (prev[cur] !== -1 && prev[cur] !== src) cur = prev[cur];
+    next[i] = (prev[cur] === src) ? cur : -1;
+  }
+  return { dist, next, src };
+}
+/** fromName 的直连邻居（按 NET_TOPO_EDGES） */
+function netNeighbors(name) {
+  const out = [];
+  for (const [a, b] of NET_TOPO_EDGES) {
+    if (a === name) out.push(b);
+    else if (b === name) out.push(a);
+  }
+  return out;
+}
+/** 「要转发去 dst，这台路由器的下一跳可以给谁」的**全部**合法答案：
+ *  x 必须是它的邻居，且 d(x, 本机) + d(x, dst) = d(本机, dst)。
+ *  最短路出现并列时答案不止一个 —— 判分必须接受其中任意一个。 */
+function netValidNextHops(routerName, dstName, mode) {
+  const nodes = NET_TOPO_NODES;
+  if (routerName === dstName) return [];
+  const d = netDijkstra(routerName, mode);
+  if (!d) return [];
+  const total = d.dist[nodes.indexOf(dstName)];
+  if (!isFinite(total)) return [];
+  return netNeighbors(routerName).filter(x => {
+    const dx = netDijkstra(x, mode);
+    if (!dx) return false;
+    const a = dx.dist[nodes.indexOf(routerName)];
+    const b = dx.dist[nodes.indexOf(dstName)];
+    return isFinite(a) && isFinite(b) && (a + b === total);
+  });
+}
+/** 从某台路由器出发、按最短路得到的转发表：目的节点 → 下一跳 */
+function netForwardTableOf(fromName, mode) {
+  const r = netDijkstra(fromName, mode);
+  if (!r) return null;
+  const rows = [];
+  NET_TOPO_NODES.forEach((name, i) => {
+    if (i === r.src) return;
+    rows.push({ dst: name, next: r.next[i] < 0 ? '不可达' : NET_TOPO_NODES[r.next[i]], dist: r.dist[i] });
+  });
+  return rows;
+}
+
+/* ============================================================
+   判分基准 5：路由器缓冲区队列与丢包（课件第 72、75 页）
+   离散时隙模型（本页定义，页面上写明）：
+     · 一个时隙 = 输出链路发送一个分组所需的时间，即每个时隙最多服务 1 个分组
+     · 第 t 个时隙（从 0 开始）到达 a(t) 个分组：t < burst 时 a = aBurst，否则 a = aSteady
+     · 到达先入队：装不下（缓冲容量 cap）的部分立刻丢弃（丢包）
+     · 然后从队头发走 1 个（队列为空则链路空闲）
+   ============================================================ */
+function netQueueSim(opt) {
+  const burst = opt.burst, aBurst = opt.aBurst, aSteady = opt.aSteady, cap = opt.cap, T = opt.T;
+  const ticks = [];
+  let q = 0, totalArr = 0, totalAcc = 0, totalLost = 0, totalServed = 0, maxQ = 0;
+  for (let t = 0; t < T; t++) {
+    const arrive = (t < burst) ? aBurst : aSteady;
+    const free = cap - q;
+    const accepted = Math.min(arrive, free);
+    const lost = arrive - accepted;
+    q += accepted;
+    totalArr += arrive; totalAcc += accepted; totalLost += lost;
+    const qArr = q;
+    if (q > maxQ) maxQ = q;
+    const served = q > 0 ? 1 : 0;
+    q -= served;
+    totalServed += served;
+    ticks.push({ t, arrive, accepted, lost, qArr, served, qEnd: q });
+  }
+  return { ticks, totalArr, totalAcc, totalLost, totalServed, maxQ, qEnd: q };
+}
+
+/* ============================================================
+   判分基准 6：课件第 54 页「选定无线链路的特性」图上的数值
+   rateMbps = null 表示该条形在图上没有标注具体数值
+   ============================================================ */
+const NET_WIRELESS = [
+  { key: 'ax',   label: '802.11ax',      rateText: '14 Gbps',  rateMbps: 14000, cover: 'Indoor 10–30m' },
+  { key: 'ac',   label: '802.11ac',      rateText: '3.5 Gbps', rateMbps: 3500,  cover: 'Indoor 10–30m' },
+  { key: 'n',    label: '802.11n',       rateText: '600 Mbps', rateMbps: 600,   cover: 'Indoor 10–30m' },
+  { key: 'g',    label: '802.11g',       rateText: '54 Mbps',  rateMbps: 54,    cover: 'Indoor 10–30m' },
+  { key: 'b',    label: '802.11b',       rateText: '11 Mbps',  rateMbps: 11,    cover: 'Indoor 10–30m' },
+  { key: 'bt',   label: 'Bluetooth',     rateText: '2 Mbps',   rateMbps: 2,     cover: 'Indoor 10–30m' },
+  { key: 'afah', label: '802.11 af,ah',  rateText: '介于 600 Mbps 与 3.5 Gbps（图上未标数值）', rateMbps: null, cover: 'Outdoor 50–200m 与 Midrange outdoor 之间' },
+  { key: '5g',   label: '5G',            rateText: '10 Gbps',  rateMbps: 10000, cover: 'Midrange / Long range 方向（条形横跨）' },
+  { key: 'lte',  label: '4G LTE',        rateText: '介于 54 Mbps 与 600 Mbps（图上未标数值）', rateMbps: null, cover: 'Long range outdoor 4Km–15Km' },
+];
+/** 第 54 页图上标注的峰值速率（Mbps）；未标注的返回 null */
+function netWirelessRateMbps(key) {
+  const r = NET_WIRELESS.find(x => x.key === key);
+  return r ? r.rateMbps : null;
+}
+const NET_COVER_TIERS = ['Indoor 10–30m', 'Outdoor 50–200m', 'Midrange outdoor 200m–4Km', 'Long range outdoor 4Km–15Km'];
+
+/* ============================================================
+   判分基准 7：封装布局（课件第 42–46 页）
+   ============================================================ */
+const NET_ENCAP = [
+  { i: 0, layer: 'application', cn: '应用层', unit: 'message', cnUnit: '消息',
+    layout: 'M', parts: ['M'], page: 42,
+    add: '应用层不添加头部 —— 消息 M 就是应用要交换的内容',
+    note: '应用之间交换消息来实现某种应用服务，它用的是传输层的服务。' },
+  { i: 1, layer: 'transport', cn: '传输层', unit: 'segment', cnUnit: '报文段',
+    layout: 'Ht | M', parts: ['Ht', 'M'], page: 42,
+    add: '加上传输层头部 Ht',
+    note: '传输层把消息 M 从一个进程送到另一个进程（例如可靠地送），它用的是网络层的服务；Ht 供传输层协议实现自己的服务。' },
+  { i: 2, layer: 'network', cn: '网络层', unit: 'datagram', cnUnit: '数据报',
+    layout: 'Hn | Ht | M', parts: ['Hn', 'Ht', 'M'], page: 43,
+    add: '加上网络层头部 Hn',
+    note: '网络层把报文段 [Ht|M] 从一台主机送到另一台主机，它用的是链路层的服务；Hn 供网络层协议实现自己的服务。' },
+  { i: 3, layer: 'link', cn: '链路层', unit: 'frame', cnUnit: '帧',
+    layout: 'Hl | Hn | Ht | M', parts: ['Hl', 'Hn', 'Ht', 'M'], page: 44,
+    add: '加上链路层头部 Hl',
+    note: '链路层把数据报 [Hn|[Ht|M]] 从一台主机送到相邻主机。课件第 44 页此处写作「using network-layer services」，与第 39 页「每层依赖下一层」的规则矛盾，本页按链路层依赖物理层呈现（见第 8 节勘误框）。' },
+  { i: 4, layer: 'physical', cn: '物理层', unit: 'bits', cnUnit: '比特',
+    layout: 'Hl | Hn | Ht | M（按比特上线）', parts: ['Hl', 'Hn', 'Ht', 'M'], page: 46,
+    add: '不再添加头部，把上面整串按比特送上「线」',
+    note: '物理层负责「线上的比特」：具体怎么传每个 bit、用什么调制格式。' },
+];
+/** 第 i 层封装的头部布局（课件第 42–46 页） */
+function netEncapLayout(i) {
+  return (i >= 0 && i < NET_ENCAP.length) ? NET_ENCAP[i].layout : null;
+}
+
+/* ============================================================
+   课件内容数据（全部来自原课件，见每项的 page 字段）
+   ============================================================ */
+const NET_ACCESS = [
+  { key: 'hfc-lo', name: 'HFC 电缆（低档）', down: 40, up: 30, page: 17, shared: '家庭共享到 cable headend', media: '光纤 + 同轴电缆（hybrid fiber coax）', dev: 'cable modem、cable splitter、CMTS' },
+  { key: 'hfc-hi', name: 'HFC 电缆（高档）', down: 1200, up: 100, page: 17, shared: '家庭共享到 cable headend', media: '光纤 + 同轴电缆（hybrid fiber coax）', dev: 'cable modem、cable splitter、CMTS' },
+  { key: 'dsl-lo', name: 'DSL（低档）', down: 24, up: 3.5, page: 18, shared: '到中心局独占（dedicated）', media: '已有的电话线', dev: 'DSL modem、DSL splitter、DSLAM' },
+  { key: 'dsl-hi', name: 'DSL（高档）', down: 52, up: 16, page: 18, shared: '到中心局独占（dedicated）', media: '已有的电话线', dev: 'DSL modem、DSL splitter、DSLAM' },
+  { key: 'eth', name: '家庭有线以太网', down: 1000, up: 1000, page: 19, shared: '家庭内部共享', media: '双绞线以太网', dev: '路由器 / 防火墙 / NAT 一体盒' },
+  { key: 'wifi', name: '家庭 WiFi 接入点', down: 450, up: 450, page: 19, shared: '家庭内部共享（无线）', media: '无线电', dev: 'WiFi 无线接入点（54、450 Mbps）' },
+  { key: 'dc', name: '数据中心链路（取 100 Gbps）', down: 100000, up: 100000, page: 22, shared: '互联成百上千台服务器', media: '高带宽链路（10s–100s Gbps）', dev: '高性能交换机' },
+];
+
+const NET_MEDIA = [
+  { key: 'tp5', name: '双绞线 Category 5', cls: '导引媒介 guided', page: 24, rate: '100 Mbps、1 Gbps 以太网', desc: '两根互相绝缘的铜线绞在一起' },
+  { key: 'tp6', name: '双绞线 Category 6', cls: '导引媒介 guided', page: 24, rate: '10 Gbps 以太网', desc: '两根互相绝缘的铜线绞在一起' },
+  { key: 'coax', name: '同轴电缆 Coaxial cable', cls: '导引媒介 guided', page: 25, rate: '每频道约 100 Mbps 量级', desc: '两根同心的铜导体；双向；宽带 —— 一条电缆上划分多个频道' },
+  { key: 'fiber', name: '光纤 Fiber optic cable', cls: '导引媒介 guided', page: 25, rate: '10–100 余 Gbps（点对点）', desc: '玻璃纤维里跑光脉冲，一个脉冲一个比特；中继器可隔很远，不受电磁噪声影响' },
+  { key: 'radio', name: '无线电（总述）', cls: '非导引媒介 unguided', page: 26, rate: '视链路类型而定', desc: '信号在电磁波谱的不同频段中传播；没有物理导线；广播、半双工；受反射、阻挡、干扰/噪声影响' },
+  { key: 'wlan', name: '无线局域网 WiFi', cls: '非导引媒介 unguided', page: 26, rate: '10–100 余 Mbps', desc: '覆盖 10 余米' },
+  { key: 'cell', name: '广域蜂窝（4G/5G）', cls: '非导引媒介 unguided', page: 26, rate: '10 余 Mbps（4G）', desc: '覆盖约 10 公里' },
+  { key: 'bt', name: '蓝牙 Bluetooth', cls: '非导引媒介 unguided', page: 26, rate: '有限速率', desc: '短距离；定位是「线缆替代品」' },
+  { key: 'mw', name: '地面微波 terrestrial microwave', cls: '非导引媒介 unguided', page: 26, rate: '45 Mbps 频道', desc: '点对点' },
+  { key: 'sat', name: '卫星 satellite', cls: '非导引媒介 unguided', page: 26, rate: '下行可达 < 100 Mbps（Starlink）', desc: '270 毫秒端到端时延（同步轨道）' },
+];
+
+/* 第 26 页与第 54 页给出的、有确切数字的链路速率（用于「传多久」换算） */
+const NET_RATE_PRESETS = [
+  { key: 'ax', label: '802.11ax（第 54 页图）', mbps: 14000, page: 54 },
+  { key: '5g', label: '5G（第 54 页图）', mbps: 10000, page: 54 },
+  { key: 'ac', label: '802.11ac（第 54 页图）', mbps: 3500, page: 54 },
+  { key: 'n', label: '802.11n（第 54 页图）', mbps: 600, page: 54 },
+  { key: 'g', label: '802.11g（第 54 页图）', mbps: 54, page: 54 },
+  { key: 'b', label: '802.11b（第 54 页图）', mbps: 11, page: 54 },
+  { key: 'bt', label: 'Bluetooth（第 54 页图）', mbps: 2, page: 54 },
+  { key: 'wlan-lo', label: '无线局域网 WiFi（第 26 页，取 10 Mbps 下限）', mbps: 10, page: 26 },
+  { key: 'wlan-hi', label: '无线局域网 WiFi（第 26 页，取 100 Mbps）', mbps: 100, page: 26 },
+  { key: 'cell', label: '广域蜂窝 4G（第 26 页，10 余 Mbps）', mbps: 10, page: 26 },
+  { key: 'mw', label: '地面微波（第 26 页，45 Mbps 频道）', mbps: 45, page: 26 },
+  { key: 'sat', label: '卫星下行（第 26 页，< 100 Mbps）', mbps: 100, page: 26 },
+];
+
+const NET_ATTACKS = [
+  { key: 'mal', name: '恶意软件 malware', page: 29,
+    how: '从病毒（virus）、蠕虫（worm）或木马（trojan horse）进入主机；常常自我复制，从被感染主机寻找进入其它主机的入口',
+    harm: '间谍软件记录击键与访问过的网站，并把信息上传到收集站点；被感染主机可能被编入僵尸网络（botnet），用于发垃圾邮件与 DDoS 攻击',
+    defense: ['鉴别 authentication（确认「你是你」）', '访问限制 access restrictions（需要口令的入口）', '防火墙 firewalls（默认关闭、过滤进入的分组）'] },
+  { key: 'sniff', name: '分组嗅探 packet sniffing', page: 30,
+    how: '在广播媒介（共享以太网、无线）上把网络接口设为混杂模式（promiscuous），读取 / 记录所有经过的分组',
+    harm: '连口令都能被读到；课件提到本课程章节实验用的 Wireshark 就是一个（免费的）分组嗅探器',
+    defense: ['机密性 confidentiality（加密，让读到的分组看不懂）'] },
+  { key: 'spoof', name: '伪造身份 IP spoofing', page: 31,
+    how: '注入一个源地址为假的分组',
+    harm: '接收方会把分组当成来自另一个（可信的）地址 —— 课件第 31 页把它归为「假身份」一类攻击',
+    defense: ['鉴别 authentication（端点鉴别，确认对方身份）', '防火墙 firewalls（按发送方过滤进入的分组）'] },
+  { key: 'dos', name: '拒绝服务 DoS / DDoS', page: 32,
+    how: '三步：1. 选定目标 → 2. 攻破网络中其它主机（组建 botnet）→ 3. 从这些被控制的主机向目标发包',
+    harm: '攻击者用虚假流量淹没资源（服务器、带宽），使合法流量无法使用',
+    defense: ['防火墙 firewalls（检测 / 应对 DoS 攻击）', '访问与可用性 access and availability（服务必须能被访问、能用）'] },
+];
+
+const NET_SEC_ITEMS = [
+  { key: 'enc', name: '加密 encryption', page: 33,
+    text: '课件在「防线」一栏写明：confidentiality: via encryption（机密性靠加密实现）。',
+    hit: ['保密'], miss: ['鉴别', '完整', '可用'] },
+  { key: 'sig', name: '数字签名 digital signature', page: 33,
+    text: '课件在「防线」一栏写明：integrity checks: digital signatures prevent/detect tampering（数字签名阻止 / 检测篡改）。',
+    hit: ['完整'], miss: ['保密', '鉴别', '可用'] },
+  { key: 'sim', name: 'SIM 卡（蜂窝网的硬件身份）', page: 33,
+    text: '课件在「防线」一栏写明：authentication: proving you are who you say you are；cellular networks provides hardware identity via SIM card。',
+    hit: ['鉴别'], miss: ['保密', '完整', '可用'] },
+  { key: 'vpn', name: '口令保护的 VPN', page: 33,
+    text: '课件把它归在 access restrictions（访问限制）之下：password-protected VPNs。',
+    hit: ['可用'], miss: ['保密', '鉴别', '完整'] },
+  { key: 'fw', name: '防火墙 firewalls', page: 33,
+    text: '课件：专用「middlebox」，装在接入网与核心网里；默认关闭（off-by-default），过滤进入的分组以限制发送方、接收方与应用；并检测 / 应对 DoS 攻击。',
+    hit: ['可用'], miss: ['保密', '鉴别', '完整'] },
+  { key: 'tls', name: 'TLS / IP sec / 802.11 / 4G-5G', page: 34,
+    text: '课件把它们列为「基本技术」的应用场景（安全电子邮件、安全传输 TLS、IP sec、802.11、4G/5G），并没有逐条点名它们实现了第 35 页的哪几个目标。',
+    hit: [], miss: ['保密', '鉴别', '完整', '可用'], none: true },
+  { key: 'ids', name: '防火墙 + IDS（运行安全）', page: 34,
+    text: '课件把 firewalls 与 IDS 归入 operational security（运行安全）这一小类，与密码学/报文完整性/端点鉴别并列。',
+    hit: [], miss: ['保密', '鉴别', '完整', '可用'], none: true },
+];
+
+const NET_STACK = [
+  { i: 0, en: 'application', cn: '应用层', duty: '支撑网络应用（supporting network applications）',
+    protos: 'HTTP, IMAP, SMTP, DNS', zh: '传什么样数据？干什么事', page: 41 },
+  { i: 1, en: 'transport', cn: '传输层', duty: '进程到进程的数据传输（process-process data transfer）',
+    protos: 'TCP, UDP', zh: '从哪里到哪里？需要确认吗？可靠传输？', page: 41 },
+  { i: 2, en: 'network', cn: '网络层', duty: '把数据报从源路由到目的地（routing of datagrams from source to destination）',
+    protos: 'IP, routing protocols', zh: '途径哪些地方？', page: 41 },
+  { i: 3, en: 'link', cn: '链路层', duty: '相邻网络元素之间的数据传输（data transfer between neighboring network elements）',
+    protos: 'Ethernet, 802.11 (WiFi), PPP', zh: '有线 or 无线链路？下一站是哪？链路可访问吗？', page: 41 },
+  { i: 4, en: 'physical', cn: '物理层', duty: '「线上」的比特（bits "on the wire"）',
+    protos: '（课件未给例子）', zh: '具体怎么传每个 bit 数据？什么调制格式？', page: 41 },
+];
+
+const NET_AIR = [
+  { key: 'ticket', name: '买票 / 投诉', service: 'ticketing service', page: 38,
+    below: '它之下是行李、登机口、跑道、航线这些服务', map: '应用层 application',
+    why: '这一段是「用户直接打交道的服务」，对应最靠上、直接面向应用的层。' },
+  { key: 'baggage', name: '托运行李 / 取行李', service: 'baggage service', page: 38,
+    below: '它之下是登机口、跑道、航线', map: '传输层 transport',
+    why: '它负责「把货（数据）从一端可靠地交到另一端」，是端到端的搬运。' },
+  { key: 'gate', name: '登机 / 下机', service: 'gate service', page: 38,
+    below: '它之下是跑道与航线', map: '网络层 network',
+    why: '它决定「走哪条路、经过哪些节点」。' },
+  { key: 'runway', name: '起飞 / 降落', service: 'runway service', page: 38,
+    below: '它之下是航线（一段段地面的衔接）', map: '链路层 link',
+    why: '它只管「相邻两地之间」这一段的实际搬运。' },
+  { key: 'routing', name: '航线（可有多次）', service: 'routing service', page: 38,
+    below: '最底层，靠机场与空管设施的实际运行', map: '物理层 physical',
+    why: '它是最底层的「实际运动」，上面所有服务都建立在它之上。' },
+];
+
+const NET_ENDNODES = [
+  { key: 'src', name: '源主机 source host', layers: '应用 · 传输 · 网络 · 链路 · 物理（五层齐全）', page: 47,
+    act: '从上往下逐层封装：M → Ht|M → Hn|Ht|M → Hl|Hn|Ht|M，最后由物理层把比特送上链路',
+    keeps: '它加上了 Ht、Hn、Hl 三个头部' },
+  { key: 'sw', name: '链路层交换机 link-layer switch', layers: '物理 · 链路（只有两层）', page: 47,
+    act: '拆开链路层帧头 Hl，据此决定从哪个口转发，然后为下一段链路重新封装一个 Hl',
+    keeps: '网络层的数据报原样穿过它 —— 它看不到也改不了 Hn 与 Ht' },
+  { key: 'rt', name: '路由器 router', layers: '物理 · 链路 · 网络（三层）', page: 47,
+    act: '一路拆到网络层头部 Hn，据此做转发决定（这就是第 10 节的转发表查找），再重新封装 Hn 与 Hl',
+    keeps: '传输层头部 Ht 与应用消息 M 对它是透明的 —— 它不改也不读' },
+  { key: 'dst', name: '目的主机 destination host', layers: '应用 · 传输 · 网络 · 链路 · 物理（五层齐全）', page: 47,
+    act: '逐层解封装：物理层收到比特 → 链路层拆 Hl → 网络层拆 Hn → 传输层拆 Ht → 应用层拿到消息 M',
+    keeps: '只有端主机能把头部拆到应用层，把 M 交给进程' },
+];
+
+const NET_TAXONOMY = [
+  { key: 0, infra: '有基础设施', hops: '单跳',
+    desc: '主机连到基站（WiFi、蜂窝），基站再连到更大的互联网。',
+    ex: 'WiFi、蜂窝网络', page: 57 },
+  { key: 1, infra: '有基础设施', hops: '多跳',
+    desc: '主机可能要先经过若干无线节点中继，才能连到更大的互联网。',
+    ex: 'mesh net（网状网）', page: 57 },
+  { key: 2, infra: '无基础设施', hops: '单跳',
+    desc: '没有基站，也没有与更大互联网的连接。',
+    ex: 'Bluetooth、ad hoc 网络', page: 57 },
+  { key: 3, infra: '无基础设施', hops: '多跳',
+    desc: '没有基站、也不连更大的互联网；可能要中继才能到达某个无线节点。',
+    ex: 'MANET（移动自组织网）、VANET（车载自组织网）', page: 57 },
+];
+
+const NET_MOBILITY = [
+  { key: 0, text: '设备在网络之间移动，但移动时关机了', care: false },
+  { key: 1, text: '设备在同一家运营商的同一个 AP 范围内移动', care: false },
+  { key: 2, text: '设备在同一家运营商的多个 AP 之间移动', care: true },
+  { key: 3, text: '设备在多家运营商的网络之间移动，同时保持连接不断', care: true },
+];
+
+const NET_WIMPACT = {
+  logic: [
+    '尽力而为（best-effort）的服务模型保持不变',
+    'TCP 与 UDP 确实能（也确实在）跑在无线与移动链路上',
+  ],
+  perf: [
+    '分组丢失 / 时延来自比特错误（被丢弃的分组、链路层重传带来的时延），以及切换（handover）时的丢失',
+    'TCP 把「丢包」理解成「拥塞」，于是不必要地减小拥塞窗口',
+    '实时业务会受时延损伤（delay impairments）',
+    '带宽是无线链路的稀缺资源（课件原文此处把 scarce 误拼为 scare）',
+  ],
+};
+
+const NET_TRACEROUTE = [
+  { hop: 1, host: 'cs-gw', ip: '128.119.240.254', rtts: [1, 1, 2] },
+  { hop: 2, host: 'border1-rt-fa5-1-0.gw.umass.edu', ip: '128.119.3.145', rtts: [1, 1, 2] },
+  { hop: 3, host: 'cht-vbns.gw.umass.edu', ip: '128.119.3.130', rtts: [6, 5, 5] },
+  { hop: 4, host: 'jn1-at1-0-0-19.wor.vbns.net', ip: '204.147.132.129', rtts: [16, 11, 13] },
+  { hop: 5, host: 'jn1-so7-0-0-0.wae.vbns.net', ip: '204.147.136.136', rtts: [21, 18, 18] },
+  { hop: 6, host: 'abilene-vbns.abilene.ucaid.edu', ip: '198.32.11.9', rtts: [22, 18, 22] },
+  { hop: 7, host: 'nycm-wash.abilene.ucaid.edu', ip: '198.32.8.46', rtts: [22, 22, 22] },
+  { hop: 8, host: '62.40.103.253', ip: '62.40.103.253', rtts: [104, 109, 106], note: '跨洋链路（trans-oceanic link）' },
+  { hop: 9, host: 'de2-1.de1.de.geant.net', ip: '62.40.96.129', rtts: [109, 102, 104] },
+  { hop: 10, host: 'de.fr1.fr.geant.net', ip: '62.40.96.50', rtts: [113, 121, 114] },
+  { hop: 11, host: 'renater-gw.fr1.fr.geant.net', ip: '62.40.103.54', rtts: [112, 114, 112] },
+  { hop: 12, host: 'nio-n2.cssi.renater.fr', ip: '193.51.206.13', rtts: [111, 114, 116], note: '课件问：这里的时延看起来变小了，为什么？' },
+  { hop: 13, host: 'nice.cssi.renater.fr', ip: '195.220.98.102', rtts: [123, 125, 124] },
+  { hop: 14, host: 'r3t2-nice.cssi.renater.fr', ip: '195.220.98.110', rtts: [126, 126, 124] },
+  { hop: 15, host: 'eurecom-valbonne.r3t2.ft.net', ip: '193.48.50.54', rtts: [135, 128, 133] },
+  { hop: 16, host: '194.214.211.25', ip: '194.214.211.25', rtts: [126, 128, 126] },
+  { hop: 17, host: '*', ip: '', rtts: null },
+  { hop: 18, host: '*', ip: '', rtts: null },
+  { hop: 19, host: 'fantasia.eurecom.fr', ip: '193.55.113.142', rtts: [132, 128, 136] },
+];
+
+const NET_HISTORY = [
+  { key: 0, span: '1961–1972', title: '早期分组交换原理', page: 80,
+    note: '先把「分组交换到底行不行」论证清楚，再动手建网。',
+    items: [
+      ['1961', 'Kleinrock —— 排队论证明分组交换的有效性'],
+      ['1964', 'Baran —— 军用网中的分组交换'],
+      ['1967', 'ARPAnet 由 Advanced Research Projects Agency 立项'],
+      ['1969', '第一个 ARPAnet 节点开始运行'],
+      ['1972', 'ARPAnet 公开演示；NCP（Network Control Protocol）成为第一个主机-主机协议；第一个电子邮件程序；ARPAnet 有 15 个节点'],
+    ] },
+  { key: 1, span: '1972–1980', title: '互联、新网与专有网', page: 81,
+    note: 'Cerf 与 Kahn 的互联原则定义了今天的互联网架构。',
+    items: [
+      ['1970', 'ALOHAnet 卫星网在夏威夷'],
+      ['1974', 'Cerf 与 Kahn —— 互联网络的架构（极简与自治、尽力而为、无状态路由、去中心化控制）'],
+      ['1976', '以太网在 Xerox PARC'],
+      ['70 年代末', '专有架构：DECnet、SNA、XNA'],
+      ['1979', 'ARPAnet 有 200 个节点'],
+    ] },
+  { key: 2, span: '1980–1990', title: '新协议、网络大爆发', page: 82,
+    note: '协议标准化与国家级网络的互联同时发生。',
+    items: [
+      ['1982', 'smtp 邮件协议定义'],
+      ['1983', '部署 TCP/IP'],
+      ['1983', 'DNS 定义，用于「名字 → IP 地址」的转换'],
+      ['1985', 'ftp 协议定义'],
+      ['1988', 'TCP 拥塞控制'],
+      ['同期', '新的国家级网络：CSnet、BITnet、NSFnet、Minitel；十万台主机接入这个网络的联合体'],
+    ] },
+  { key: 3, span: '1990、2000s', title: '商业化与 Web', page: 83,
+    note: '从科研网变成商业网，Web 出现并商业化。',
+    items: [
+      ['90 年代初', 'ARPAnet 退役'],
+      ['1991', 'NSF 解除对 NSFnet 商用的限制（1995 年退役）'],
+      ['90 年代初', 'Web：超文本（Bush 1945、Nelson 1960s）；HTML 与 HTTP 出自 Berners-Lee'],
+      ['1994', 'Mosaic，后来的 Netscape'],
+      ['90 年代末', 'Web 商业化'],
+      ['1990s 末–2000s', '更多杀手应用：即时通信、P2P 文件共享；网络安全走向前台；约 5000 万台主机、1 亿多用户；骨干链路进入 Gbps 级'],
+    ] },
+  { key: 4, span: '2005 至今', title: '规模、SDN、移动、云', page: 84,
+    note: '宽带普及、内容商自建网络、服务上云。',
+    items: [
+      ['—', '家庭宽带积极部署（10–100 余 Mbps）'],
+      ['2008', '软件定义网络 SDN'],
+      ['—', '高速无线接入（4G/5G、WiFi）日益普遍'],
+      ['—', '服务提供商（Google、FB、Microsoft）自建网络：绕开商业互联网，把自己「贴近」终端用户'],
+      ['—', '企业把服务跑在「云」上（AWS、Azure）'],
+      ['2017', '智能手机崛起：互联网上的移动设备数超过固定设备'],
+      ['2023', '约 150 亿台设备联网（statista.com）'],
+    ] },
+];
+
+const NET_QUIZ = [
+  { q: '课件第 9 页说，协议定义了哪三件事？',
+    opts: ['格式、次序、动作', '速率、带宽、时延', '端口、地址、路由', '加密、鉴别、完整性'],
+    ans: 0, v: ['fmt-order-act', 'metric', 'addr', 'sec'],
+    exp: '课件原话：protocols define the <b>format</b>, <b>order</b> of messages sent and received among network entities, and <b>actions</b> taken on message transmission, receipt。（第 2 节）' },
+  { q: '课件第 23 页给出的传输时延公式是？',
+    opts: ['L / R（比特数 ÷ 链路速率）', 'R / L', 'L × R', 'L / (R × 分组数)'],
+    ans: 0, v: ['L-over-R', 'inv', 'mul', 'div-n'],
+    exp: 'transmission delay = 把一个 L 比特分组推进链路的时间 = L(bits) / R(bits/sec)。（第 4 节）' },
+  { q: 'R<sub>s</sub> = 100 Mbps、R<sub>c</sub> = 10 Mbps、共享骨干 R = 500 Mbps、10 条连接时，单连接的端到端吞吐量是？',
+    opts: ['10 Mbps', '100 Mbps', '50 Mbps', '500 Mbps'],
+    ans: 0, v: ['rc', 'rs', 'r-over-10', 'r'],
+    exp: 'min(R<sub>s</sub>, R<sub>c</sub>, R/n) = min(100, 10, 50) = <b>10 Mbps</b> —— 瓶颈是 R<sub>c</sub>。（第 10 节）' },
+  { q: '课件第 65 页的转发表里，头里的值 <code>0101</code> 应该走哪条输出链路？',
+    opts: ['2', '1', '3', '查不到'],
+    ans: 0, v: [2, 1, 3, null],
+    exp: '第 65 页的表：0100 → 3、<b>0101 → 2</b>、0111 → 2、1001 → 1。（第 10 节）' },
+  { q: '路径上的哪台设备只处理到<b>链路层</b>（不碰网络层头部）？',
+    opts: ['链路层交换机', '路由器', '端主机', '以上都要处理到网络层'],
+    ans: 0, v: ['sw', 'rt', 'host', 'all'],
+    exp: '交换机只有物理层与链路层；路由器多一层（网络层）；只有端主机五层齐全。（第 8 节）' },
+  { q: '课件第 54 页的图上，速率最高的那条是？',
+    opts: ['802.11ax（14 Gbps）', '5G（10 Gbps）', '802.11ac（3.5 Gbps）', '802.11n（600 Mbps）'],
+    ans: 0, v: ['ax', '5g', 'ac', 'n'],
+    exp: '图上标注：14 Gbps 对应 802.11ax，10 Gbps 对应 5G，3.5 Gbps 对应 802.11ac。（第 9 节）' },
+  { q: '课件第 54 页的图上，Bluetooth 对应多少？',
+    opts: ['2 Mbps', '11 Mbps', '54 Mbps', '图上没标'],
+    ans: 0, v: [2, 11, 54, null],
+    exp: '图上最低一条就是 Bluetooth = 2 Mbps。（第 9 节）' },
+  { q: 'traceroute 输出里的 <code>* * *</code> 是什么意思？',
+    opts: ['没有回应（探测包丢失，或路由器不回应）', '时延恰好为 0', '该跳不存在', '该跳被加密了'],
+    ans: 0, v: ['no-resp', 'zero', 'missing', 'enc'],
+    exp: '课件第 74 页注明：* means no response (probe lost, router not replying)。（第 10 节）' },
+  { q: '课件第 58 页说「我们关心的是这两档」—— 指的是哪两档移动性？',
+    opts: ['同一运营商的多个 AP 之间移动 / 跨运营商且保持连接',
+           '跨网络但关机 / 同一 AP 内移动',
+           '只有跨运营商一档', '关机与待机的区别'],
+    ans: 0, v: ['3-4', '1-2', '4', 'none'],
+    exp: '第 58 页把移动性画成四档，标注「We\'re interested in these!」的是第 3、4 档。（第 9 节）' },
+  { q: '课件第 28 页说明，互联网最初的设计设想是？',
+    opts: ['一群相互信任的用户连在一张透明的网络上',
+           '一张默认加密的军用网络',
+           '一张按流量计费的商业网络',
+           '一张只有研究机构能接入的封闭网络'],
+    ans: 0, v: ['trusting', 'enc', 'commercial', 'closed'],
+    exp: '课件原话：original vision: "a group of mutually trusting users attached to a transparent network"。也正因如此，安全是后来「追赶」上来的。（第 6 节）' },
+  { q: '分层的两个好处是？',
+    opts: ['显式结构便于识别各部分关系；模块化便于维护与升级',
+           '提高带宽；降低时延',
+           '减少头部开销；提高安全性',
+           '让所有层用同一种协议'],
+    ans: 0, v: ['struct-mod', 'speed', 'overhead', 'same'],
+    exp: '课件第 40 页：explicit structure allows identification, relationship of system\'s pieces；modularization eases maintenance, updating of system（某层的实现变化对系统其余部分透明）。（第 7 节）' },
+  { q: 'Cerf 与 Kahn 的互联原则里，服务模型是哪一种？',
+    opts: ['best-effort（尽力而为）', 'guaranteed bandwidth（保证带宽）', 'circuit-switched（线路交换）', 'priority queueing（优先级队列）'],
+    ans: 0, v: ['best-effort', 'gbw', 'circuit', 'prio'],
+    exp: '课件第 81 页列出四条原则：极简与自治、<b>尽力而为的服务模型</b>、无状态路由、去中心化控制。（第 11 节）' },
+];
+
+/* ============================================================
+   0 · 页码地图（原课件 84 页 → 本页 13 节）
+   ============================================================ */
+const NET_PAGEMAP = [
+  [1, 3, 's0'], [4, 8, 's1'], [9, 10, 's2'], [11, 22, 's3'], [23, 23, 's4'],
+  [24, 26, 's5'], [27, 35, 's6'], [36, 41, 's7'], [42, 47, 's8'], [48, 60, 's9'],
+  [61, 61, 's12'], [62, 79, 's10'], [80, 84, 's11'],
+];
+const NET_SEC_TITLE = {
+  s0: '课程导览', s1: '互联网的两种视角', s2: '什么是协议', s3: '网络边缘与接入网',
+  s4: '主机如何发送分组', s5: '物理媒介', s6: '网络安全', s7: '协议分层与协议栈',
+  s8: '封装与解封装', s9: '无线与移动网络', s10: '网络核心与性能（补充页）',
+  s11: '互联网历史（补充页）', s12: '总结与测验',
+};
+/** 原课件第 p 页落在本页哪一节；越界返回 null */
+function netSectionOfPage(p) {
+  for (const [a, b, s] of NET_PAGEMAP) if (p >= a && p <= b) return s;
+  return null;
+}
+let ovCur = 23;
+function renderOv() {
+  const cells = [];
+  for (let p = 1; p <= 84; p++) {
+    const s = netSectionOfPage(p);
+    const on = (p === ovCur);
+    cells.push(`<button data-ov="${p}" style="min-width:34px;padding:4px 6px;font-family:var(--font-mono);font-size:12.5px;`
+      + (on ? 'background:var(--accent);border-color:var(--accent);color:var(--accent-ink)' : '') + `">${p}</button>`);
+  }
+  const s = netSectionOfPage(ovCur);
+  const sec = NET_PAGEMAP.find(r => r[2] === s);
+  const range = sec ? (sec[0] === sec[1] ? `${sec[0]}` : `${sec[0]}–${sec[1]}`) : '—';
+  $('#ovOut').innerHTML = `
+    <div style="display:flex;flex-wrap:wrap;gap:4px;margin:6px 0 12px">${cells.join('')}</div>
+    <div class="readout">
+      <dt>原第 ${ovCur} 页</dt><dd>属于 <a href="#${s}">第 ${s.slice(1)} 节 · ${esc(NET_SEC_TITLE[s])}</a></dd>
+      <dt>这一节的页码范围</dt><dd class="mono">原第 ${range} 页（共 ${sec ? sec[1] - sec[0] + 1 : 0} 页）</dd>
+      <dt>覆盖检查</dt><dd>84 页全部落到 13 个章节里，无遗漏</dd>
+    </div>`;
+}
+
+/* ============================================================
+   1 · 三种视角（第 4–8 页）
+   ============================================================ */
+const NET_VIEWS = {
+  bolt: { title: '零件视角（nuts and bolts，第 5、7 页）', items: [
+    ['hosts', '主机 hosts = 端系统', '数十亿台联网的计算设备，运行网络应用，处在互联网的「边缘」。第 6 页用一整屏照片举例：冰箱、车载、摄像头、AR 设备、游戏机、健身手环……'],
+    ['switch', '分组交换机 packet switches', '转发分组（数据块）的设备 —— 路由器（router）与交换机（switch）。'],
+    ['links', '通信链路 communication links', '光纤、铜缆、无线电、卫星；链路的<b>传输速率</b>又叫链路容量 / 链路带宽（bandwidth）。'],
+    ['nets', '网络 networks', '设备、路由器与链路的集合，由某个组织管理：家庭网络、企业网络、移动网络、区域 ISP……'],
+    ['non', '网络的网络 network of networks', '互联网不是一张网，而是「互联起来的 ISP」构成的网。'],
+    ['proto', '协议无处不在 protocols everywhere', 'HTTP（Web）、流媒体、Skype、TCP、IP、WiFi、4G/5G、Ethernet —— 协议控制着消息的收发。'],
+    ['std', '标准 standards', 'RFC（Request for Comments）文件；由 IETF（Internet Engineering Task Force）制定。'],
+  ] },
+  svc: { title: '服务视角（services view，第 8 页）', items: [
+    ['apps', '基础设施为应用提供服务', 'Web、流媒体、多媒体电话会议、电子邮件、游戏、电子商务、社交媒体、互联家电……'],
+    ['api', '为分布式应用提供编程接口', '一组「钩子」（hooks），让收发消息的应用能够「接上」并使用传输服务。'],
+    ['opt', '提供多种服务选项', '课件原话：类似邮政服务 —— 平信与挂号信不是一回事。'],
+  ] },
+  soc: { title: '社会类比（第 4 页）', items: [
+    ['people', '人与实体 → 互联网组件', '社会里先得有人；互联网里先得有主机、路由器、链路这些「实体」。'],
+    ['service', '服务 → 互联网服务', '社会有分工与服务；互联网有 Web、邮件、视频这些服务。'],
+    ['law', '法律与规则 → 协议与标准', '规矩定义上面两者的行为 —— 这正是协议干的活。'],
+  ] },
+};
+let vbView = 'bolt', vbSel = null;
+function renderVb() {
+  const v = NET_VIEWS[vbView];
+  const btns = Object.keys(NET_VIEWS).map(k =>
+    `<button class="sm" data-vbv="${k}" ${k === vbView ? 'style="background:var(--accent);border-color:var(--accent);color:var(--accent-ink)"' : ''}>${esc(NET_VIEWS[k].title.split('（')[0])}</button>`).join('');
+  const items = v.items.map(([k, n, d]) =>
+    `<button class="sm" data-vbi="${k}" ${k === vbSel ? 'style="background:var(--accent);border-color:var(--accent);color:var(--accent-ink)"' : ''}>${esc(n)}</button>`).join('');
+  const cur = v.items.find(x => x[0] === vbSel);
+  $('#vbOut').innerHTML = `
+    <div class="ctrls" style="margin:10px 0">${btns}</div>
+    <p style="margin:0 0 8px;font-weight:650;font-size:14.5px">${esc(v.title)}</p>
+    <div class="ctrls" style="margin:0 0 10px">${items}</div>
+    ${cur ? `<div class="box" style="margin:0"><div class="t">${esc(cur[1])}</div>${cur[2]}</div>`
+          : '<div class="box" style="margin:0">点上面任一项看它的说明。</div>'}`;
+}
+
+/* ============================================================
+   2 · 协议拆解（第 9–10 页）
+   ============================================================ */
+const NET_PROTO = {
+  time: { name: '人类：问时间（第 10 页例）', msgs: ['你：Hi', '对方：Hi', '你：Got the time?', '对方：2:00'],
+    format: '口语短句 + 约定俗成的应答格式（时间用「几点几分」回答）',
+    order: '先打招呼 → 对方回应 → 再提问 → 对方回答。顺序不能反：一见面就问「几点了」在多数语境下是失礼的',
+    act: '听到问句就报出当前时间；听到招呼就回礼' },
+  tcp: { name: '网络：TCP 连接建立（第 10 页例）', msgs: ['客户端：TCP connection request', '服务器：TCP connection response'],
+    format: 'TCP 报文段：固定的头部字段（源/目的端口、序号、标志位……）',
+    order: '请求在前、应答在后；应答没到，后面的话都发不出去',
+    act: '服务器收到请求就分配连接状态并回应；客户端收到应答才认为连接建立 —— 然后才能发数据' },
+  http: { name: '网络：HTTP 取网页（第 10 页例）', msgs: ['客户端：GET http://gaia.cs.umass.edu/kurose_ross', '服务器：<file>'],
+    format: 'HTTP 请求行（方法 + URL）+ 响应报文（状态 + 内容）',
+    order: '先建 TCP 连接，再发 GET，再收响应；响应必须匹配上一个请求',
+    act: '服务器按 URL 取出文件内容写回客户端' },
+  walk: { name: '人类：过马路（第 10 页的设问「other human protocols?」）', msgs: ['行人：看一眼信号灯', '车辆：红灯停 / 绿灯行', '行人：走斑马线通过'],
+    format: '信号灯的颜色、斑马线的位置 —— 大家「认得出」的约定格式',
+    order: '先看灯 → 灯允许 → 再走；不能反过来',
+    act: '红灯时车辆停、行人停；绿灯时各自按道通行' },
+  phone: { name: '人类：打电话（第 10 页的设问「other human protocols?」）', msgs: ['主叫：拨号', '被叫：振铃', '被叫：「喂？」', '主叫：「你好，我是……」'],
+    format: '电话号码的位数与格式、问候语的格式',
+    order: '拨号 → 振铃 → 先接听的一方出声 → 再自报身份',
+    act: '无人接听则挂断；接通后双方轮流说话（类似半双工的口头约定）' },
+};
+function renderPr() {
+  const k = $('#prSel').value;
+  const p = NET_PROTO[k] || NET_PROTO.time;
+  const flow = p.msgs.map((m, i) => `<div class="step on"><div class="h">第 ${i + 1} 条消息</div><div class="m">${esc(m)}</div></div>`).join('');
+  $('#prOut').innerHTML = `
+    <p style="margin:0 0 6px;font-weight:650;font-size:14.5px">${esc(p.name)}</p>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>协议的三个要素</th><th>这个场景里是什么</th></tr>
+      <tr><td><b>格式 format</b></td><td>${p.format}</td></tr>
+      <tr><td><b>次序 order</b></td><td>${p.order}</td></tr>
+      <tr><td><b>动作 actions</b></td><td>${p.act}</td></tr>
+    </table></div>
+    <div style="margin-top:6px">${flow}</div>`;
+}
+
+/* ============================================================
+   3.2 · 接入网算速度（第 16–22 页速率 + 第 23 页公式）
+   ============================================================ */
+function fdApplyPreset() {
+  const a = NET_ACCESS.find(x => x.key === $('#fdPre').value);
+  if (a) { $('#fdDown').value = String(a.down); $('#fdUp').value = String(a.up); }
+}
+function renderFd() {
+  const down = netParsePos($('#fdDown').value), up = netParsePos($('#fdUp').value), size = netParsePos($('#fdSize').value);
+  if (down === null || up === null || size === null) {
+    $('#fdOut').innerHTML = badBox('请填正数：下行速率、上行速率（Mbps）与文件大小（GB）。');
+    return;
+  }
+  const a = NET_ACCESS.find(x => x.key === $('#fdPre').value);
+  const bits = size * NET_BITS_PER.gb;
+  const tDown = netFileTime(bits, down), tUp = netFileTime(bits, up);
+  const ratio = down / up;
+  $('#fdOut').innerHTML = `
+    <div class="readout">
+      <dt>文件比特数</dt><dd>${netFmt(bits, 0)} bit（按 1 GB = 8×10⁹ bit）</dd>
+      <dt>下行 ${netFmt(down, 3)} Mbps</dt><dd>${netFmtTime(tDown)}</dd>
+      <dt>上行 ${netFmt(up, 3)} Mbps</dt><dd>${netFmtTime(tUp)}</dd>
+      <dt>上下行不对称比</dt><dd>${netFmt(ratio, 2)} : 1</dd>
+    </div>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>预设</th><th>速率（课件原文）</th><th>共享 / 独占</th><th>介质与设备</th></tr>
+      <tr><td>${esc(a ? a.name : '自定义')}</td>
+          <td class="mono">↓ ${netFmt(down, 3)} / ↑ ${netFmt(up, 3)} Mbps</td>
+          <td>${esc(a ? a.shared : '—')}</td>
+          <td>${esc(a ? a.media + ' · ' + a.dev : '—')}</td></tr>
+    </table></div>
+    <p style="margin:8px 0 0;font-size:13.5px;color:var(--muted)">算法：时延 = 比特数 ÷ 速率（课件第 23 页的 L / R）。1 MB = 8×10⁶ bit，1 GB = 8×10⁹ bit。选「预设」会自动填入课件上的速率，也可以直接改数字。</p>`;
+}
+
+/* ============================================================
+   3.3 · 家庭网络漫游（第 19 页）
+   ============================================================ */
+const NET_HOME = {
+  dev: { n: '无线与有线设备', d: '家里的笔记本、手机、电视、游戏机……它们处在网络边缘，跑的是应用。' },
+  ap: { n: 'WiFi 无线接入点（54、450 Mbps）', d: '无线设备通过它接入家庭网络。它是「基站 / 接入点」在最熟悉的场景里的样子。' },
+  eth: { n: '有线以太网（1 Gbps）', d: '固定设备用双绞线直连路由器，速率 1 Gbps（第 19 页原话）。' },
+  modem: { n: 'cable or DSL modem', d: '把家庭网络接到运营商的接入网：电缆接入用 cable modem，电话线接入用 DSL modem。' },
+  router: { n: 'router / firewall / NAT', d: '路由 + 防火墙 + NAT，课件注明它们常常合并在一个盒子里。' },
+  isp: { n: 'to/from headend or central office', d: '对外接向电缆头端（headend）或电话局（central office），再进 ISP。' },
+};
+let hmSel = 'dev';
+function renderHm() {
+  const box = (k, x, y, w, h, label, fs) => {
+    const sel = (k === hmSel);
+    return `<g data-hm="${k}" style="cursor:pointer">
+      <rect x="${x}" y="${y}" width="${w}" height="${h}" rx="8" fill="var(--paper-soft)"
+        stroke="${sel ? 'var(--accent)' : 'var(--line)'}" stroke-width="${sel ? 2.6 : 1.4}"/>
+      <text x="${x + w / 2}" y="${y + h / 2 + 4}" text-anchor="middle" font-size="${fs || 11.5}" font-weight="650"
+        fill="${sel ? 'var(--accent)' : 'var(--ink)'}">${esc(label)}</text></g>`;
+  };
+  const arrow = (x1, y1, x2, y2, label) => `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="var(--muted)" stroke-width="1.5"/>
+    ${label ? `<text x="${(x1 + x2) / 2}" y="${(y1 + y2) / 2 - 5}" text-anchor="middle" font-size="10.5" fill="var(--muted)">${esc(label)}</text>` : ''}`;
+  const cur = NET_HOME[hmSel];
+  $('#hmOut').innerHTML = `
+    <svg viewBox="0 0 620 210" style="width:min(600px,100%);height:auto" font-family="var(--font-sans)">
+      ${box('dev', 6, 30, 130, 60, '无线 + 有线设备')}
+      ${box('ap', 168, 6, 130, 50, 'WiFi 接入点')}
+      ${box('eth', 168, 66, 130, 50, '有线以太网')}
+      ${box('router', 330, 30, 130, 60, 'router / firewall / NAT', 11)}
+      ${box('modem', 330, 110, 130, 44, 'cable / DSL modem', 11)}
+      ${box('isp', 492, 30, 122, 60, 'headend 或 central office', 10.5)}
+      ${arrow(138, 60, 166, 42, '无线')}
+      ${arrow(138, 70, 166, 86, '有线')}
+      ${arrow(300, 40, 328, 50, '')}
+      ${arrow(300, 88, 328, 74, '')}
+      ${arrow(462, 74, 462, 108, '')}
+      ${arrow(462, 60, 490, 60, '')}
+      <text x="6" y="196" font-size="10.5" fill="var(--muted)">点任意方框看说明 · 速率均取自课件第 19 页</text>
+    </svg>
+    <div class="box" style="margin:10px 0 0"><div class="t">${esc(cur.n)}</div>${esc(cur.d)}</div>`;
+}
+
+/* ============================================================
+   4 · 发送时延（第 23 页）
+   ============================================================ */
+function renderTd() {
+  const msg = netParsePos($('#tdMsg').value);
+  const unit = $('#tdMsgUnit').value;
+  const L = netParsePos($('#tdL').value);
+  const R = netParsePos($('#tdR').value);
+  if (msg === null || L === null || R === null) {
+    $('#tdOut').innerHTML = badBox('三个输入都要是正数：消息长度、分组长度 L（bit）、链路速率 R（Mbps）。');
+    return;
+  }
+  const bits = msg * NET_BITS_PER[unit];
+  const packets = Math.ceil(bits / L);
+  const Rbps = R * 1e6;
+  const perPacket = netTransmitDelay(L, Rbps);
+  const onLink = netTransmitDelay(packets * L, Rbps);
+  const rawTotal = netTransmitDelay(bits, Rbps);
+  const pad = packets * L - bits;
+  const unitName = { mb: 'MB', kb: 'KB', mbits: 'Mbit' }[unit];
+  $('#tdOut').innerHTML = `
+    <div class="readout">
+      <dt>消息总比特数</dt><dd>${netFmt(bits, 0)} bit（${netFmt(msg, 3)} ${unitName}）</dd>
+      <dt>分组个数</dt><dd>${packets} 个（每个 ${netFmt(L, 0)} bit；最后一组补 ${netFmt(pad, 0)} bit）</dd>
+      <dt>链路速率 R</dt><dd>${netFmt(R, 3)} Mbps = ${netFmt(Rbps, 0)} bit/s</dd>
+      <dt>单个分组的发送时延 L/R</dt><dd>${netFmtTime(perPacket)}</dd>
+      <dt>把全部 ${packets} 个分组推上链路</dt><dd>${netFmtTime(onLink)}</dd>
+      <dt>若不分组的「总位数/R」</dt><dd>${netFmtTime(rawTotal)}</dd>
+    </div>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>时延项</th><th>公式</th><th>数值</th></tr>
+      <tr><td>单分组发送时延</td><td class="mono">L / R</td><td class="mono">${netFmtTime(perPacket)}</td></tr>
+      <tr><td>k 个分组的发送时延总和</td><td class="mono">k·L / R</td><td class="mono">${netFmtTime(onLink)}</td></tr>
+      <tr><td>按总位数算</td><td class="mono">bits / R</td><td class="mono">${netFmtTime(rawTotal)}</td></tr>
+    </table></div>
+    <p style="margin:8px 0 0;font-size:13.5px;color:var(--muted)">两者只差补位的比特：${netFmt(pad, 0)} bit 是最后一个分组的填充。课件第 23 页只给了单分组的 L / R；「k 个分组」与「补位」是本页按同一公式推出来的。</p>`;
+}
+
+/* ============================================================
+   5.2 · 物理媒介速查（第 24–26 页）
+   ============================================================ */
+function renderPm() {
+  const m = NET_MEDIA.find(x => x.key === $('#pmSel').value) || NET_MEDIA[0];
+  $('#pmOut').innerHTML = `
+    <div class="readout">
+      <dt>分类</dt><dd>${esc(m.cls)}</dd>
+      <dt>速率（课件原文）</dt><dd>${esc(m.rate)}</dd>
+      <dt>出处</dt><dd>原第 ${m.page} 页</dd>
+    </div>
+    <div class="box" style="margin:6px 0 0"><div class="t">${esc(m.name)}</div>${esc(m.desc)}</div>
+    <p style="margin:10px 0 0;font-size:13.5px;color:var(--muted)">课件第 24 页的定义：导引媒介（guided media）中信号在固体介质里传播（铜、光纤、同轴）；非导引媒介（unguided media）中信号自由传播（无线电）。</p>`;
+}
+
+/* ============================================================
+   5.3 · 文件在这种链路上要传多久
+   ============================================================ */
+function rlPopulate() {
+  $('#rlSel').innerHTML = NET_RATE_PRESETS.map(r =>
+    `<option value="${r.key}">${esc(r.label)}</option>`).join('');
+}
+function renderRl() {
+  const key = $('#rlSel').value;
+  const r = NET_RATE_PRESETS.find(x => x.key === key) || NET_RATE_PRESETS[0];
+  const size = netParsePos($('#rlSize').value);
+  if (size === null) { $('#rlOut').innerHTML = badBox('文件大小要是正数（单位 GB）。'); return; }
+  const bits = size * NET_BITS_PER.gb;
+  const t = netFileTime(bits, r.mbps);
+  const rows = NET_RATE_PRESETS.map(x => {
+    const tt = netFileTime(bits, x.mbps);
+    return `<tr${x.key === key ? ' class="hl"' : ''}><td>${esc(x.label)}</td><td class="mono">${netFmt(x.mbps, 3)} Mbps</td><td class="mono">${netFmtTime(tt)}</td></tr>`;
+  }).join('');
+  $('#rlOut').innerHTML = `
+    <div class="readout">
+      <dt>所选链路</dt><dd>${esc(r.label)}</dd>
+      <dt>速率</dt><dd>${netFmt(r.mbps, 3)} Mbps</dd>
+      <dt>${netFmt(size, 3)} GB 需要</dt><dd>${netFmtTime(t)}</dd>
+    </div>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>链路（速率出处见括号里的页号）</th><th>速率</th><th>传 ${netFmt(size, 3)} GB</th></tr>${rows}
+    </table></div>
+    <p style="margin:8px 0 0;font-size:13.5px;color:var(--muted)">算法：时延 = 比特数 ÷ 速率（课件第 23 页的 L / R），1 GB = 8×10⁹ bit。表里只列课件给出确切数字的链路；第 54 页图上未标数值的两条（802.11 af,ah 与 4G LTE）不参与换算。</p>`;
+}
+
+/* ============================================================
+   6.1 · 攻击 → 防线（第 29–33 页）
+   ============================================================ */
+function renderAt() {
+  const a = NET_ATTACKS.find(x => x.key === $('#atSel').value) || NET_ATTACKS[0];
+  const defs = a.defense.map(d => `<li>${esc(d)}</li>`).join('');
+  $('#atOut').innerHTML = `
+    <p style="margin:0 0 6px;font-weight:650;font-size:14.5px">${esc(a.name)}（原第 ${a.page} 页）</p>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>它是怎么得手的</th><td>${esc(a.how)}</td></tr>
+      <tr><th>会造成什么</th><td>${esc(a.harm)}</td></tr>
+    </table></div>
+    <div class="box" style="margin:10px 0 0"><div class="t">课件第 33 页的防线里，与它相关的是</div>
+      <ul style="margin:4px 0 0">${defs}</ul>
+      <p style="margin:6px 0 0;font-size:13.5px;color:var(--muted)">注意：这里的一对一归类是本页按第 33–34 页的防线清单做的归纳，<b>课件并没有逐条给出「攻击 → 防线」的对应关系</b>。</p>
+    </div>`;
+}
+
+/* ============================================================
+   6.3 · 安全目标核对表（第 33–35 页）
+   ============================================================ */
+function scPopulate() {
+  $('#scSel').innerHTML = NET_SEC_ITEMS.map(x =>
+    `<option value="${x.key}">${esc(x.name)}（原第 ${x.page} 页）</option>`).join('');
+}
+function renderSc() {
+  const it = NET_SEC_ITEMS.find(x => x.key === $('#scSel').value) || NET_SEC_ITEMS[0];
+  const goals = [
+    ['保密', '机密性 confidentiality', '只有发送方与预期的接收方能看懂内容'],
+    ['鉴别', '鉴别 authentication', '确认彼此的身份'],
+    ['完整', '报文完整性 message integrity', '消息没被改动过（或被察觉）'],
+    ['可用', '访问与可用性 access &amp; availability', '服务必须能被访问、能用'],
+  ];
+  const rows = goals.map(([k, n, d]) => {
+    const hit = it.hit.includes(k);
+    return `<tr><td>${n}</td><td>${d}</td><td><span class="chip ${hit ? 'ok' : 'gray'}">${hit ? '课件点名 ✓' : '课件未点名'}</span></td></tr>`;
+  }).join('');
+  $('#scOut').innerHTML = `
+    <p style="margin:0 0 6px;font-weight:650;font-size:14.5px">${esc(it.name)}</p>
+    <div class="box"><div class="t">课件原文怎么说</div>${esc(it.text)}</div>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>安全目标（第 35 页）</th><th>含义</th><th>这个手段对得上吗</th></tr>${rows}
+    </table></div>
+    ${it.none ? '<div class="box warn"><div class="t">课件没有把它们和四个目标对上</div>第 34 页只把它们列为「基本技术的应用场景 / 运行安全」，并没有说它们各自实现第 35 页的哪几个目标。本页不替课件补这层对应。</div>'
+      : '<p style="margin:8px 0 0;font-size:13.5px;color:var(--muted)">上表的「课件点名 ✓」只依据第 33 页那一栏的原话；没被点名的目标不代表它一定做不到，只代表课件没说。</p>'}`;
+}
+
+/* ============================================================
+   7.2 · 五层协议栈漫游（第 41 页）
+   ============================================================ */
+let stSel = 0;
+function renderSt() {
+  const rows = NET_STACK.slice().reverse().map(l => {
+    const on = (l.i === stSel);
+    return `<div data-stl="${l.i}" style="cursor:pointer;border:1px solid ${on ? 'var(--accent)' : 'var(--line)'};
+      border-left:6px solid ${on ? 'var(--accent)' : 'var(--line)'};border-radius:var(--radius-sm);
+      padding:9px 13px;margin:6px 0;background:${on ? 'var(--card)' : 'var(--paper-soft)'}">
+      <b>${l.i + 1}. ${l.cn} <span class="en">${l.en}</span></b>
+      <span style="color:var(--muted);font-size:13.5px"> · ${esc(l.protos)}</span></div>`;
+  }).join('');
+  const l = NET_STACK[stSel];
+  $('#stOut').innerHTML = `
+    <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:flex-start">
+      <div style="flex:1;min-width:260px">
+        <div style="font-size:12.5px;color:var(--muted);margin-bottom:4px">↓ 用户/应用在顶部，比特在底部 · 点任意一层</div>
+        ${rows}
+      </div>
+      <div style="flex:1;min-width:260px">
+        <div class="box" style="margin:0"><div class="t">第 ${l.i + 1} 层 · ${l.cn} ${l.en}</div>
+          <div class="readout" style="margin:6px 0 0">
+            <dt>职责</dt><dd style="font-family:var(--font-sans)">${esc(l.duty)}</dd>
+            <dt>代表协议</dt><dd>${esc(l.protos)}</dd>
+            <dt>课件中文批注</dt><dd style="font-family:var(--font-sans)">${esc(l.zh)}</dd>
+            <dt>出处</dt><dd>原第 ${l.page} 页</dd>
+          </div>
+        </div>
+      </div>
+    </div>`;
+}
+
+/* ============================================================
+   7.1 · 航空类比（第 38–40 页）
+   ============================================================ */
+function renderAr() {
+  const a = NET_AIR.find(x => x.key === $('#arSel').value) || NET_AIR[0];
+  $('#arOut').innerHTML = `
+    <p style="margin:0 0 6px;font-weight:650;font-size:14.5px">${esc(a.name)} → ${esc(a.service)}（原第 ${a.page} 页）</p>
+    <div class="readout">
+      <dt>它在哪一层</dt><dd style="font-family:var(--font-sans)">${esc(a.map)}<span class="chip gray" style="margin-left:8px">本页类比，非课件原文</span></dd>
+      <dt>它依赖什么</dt><dd style="font-family:var(--font-sans)">${esc(a.below)}</dd>
+      <dt>为什么这样对应</dt><dd style="font-family:var(--font-sans)">${esc(a.why)}</dd>
+    </div>
+    <div class="box" style="margin:4px 0 0"><div class="t">课件在第 39 页给的定义</div>
+      每一层都<b>实现一个服务</b>，靠的是它自己内部的层内动作，并<b>依赖下一层提供的服务</b>。第 40 页补上两个理由：显式结构便于识别系统各部分的关系；模块化便于维护与升级（某层实现改变，对系统其余部分透明）。
+    </div>`;
+}
+
+/* ============================================================
+   8.1 · 封装推演（第 42–46 页）
+   ============================================================ */
+let enSel = 0;
+function netEncapBlocks(parts) {
+  return parts.map((p, i) => {
+    const isMsg = (p === 'M');
+    const bg = isMsg ? 'var(--frac-bg)' : 'var(--accent-soft)';
+    const fg = isMsg ? 'var(--frac-fg)' : 'var(--accent)';
+    return `<span style="display:inline-block;border:1px solid var(--line);border-radius:6px;padding:4px 10px;
+      margin:0 2px;background:${bg};color:${fg};font-family:var(--font-mono);font-weight:650">${p}</span>`;
+  }).join('<span style="color:var(--muted)">|</span>');
+}
+function renderEn() {
+  const cur = NET_ENCAP[enSel];
+  const steps = NET_ENCAP.map(l => {
+    const on = (l.i === enSel);
+    return `<tr${on ? ' class="hl"' : ''}><td><b>${l.cn}</b><br><span class="en">${l.layer}</span></td>
+      <td class="mono">${esc(l.unit)}<br><span style="color:var(--muted)">${esc(l.cnUnit)}</span></td>
+      <td class="mono">${esc(l.layout)}</td>
+      <td>${esc(l.add)}</td>
+      <td class="mono">${l.page}</td></tr>`;
+  }).join('');
+  $('#enOut').innerHTML = `
+    <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:6px 0 12px">
+      ${NET_ENCAP.map(l => {
+        const on = (l.i === enSel);
+        return `<button data-enl="${l.i}" style="border:1px solid ${on ? 'var(--accent)' : 'var(--line)'};
+          background:${on ? 'var(--accent-soft)' : 'var(--card)'};color:${on ? 'var(--accent)' : 'var(--ink)'}">
+          ${l.i + 1}. ${l.cn}</button>`;
+      }).join('<span style="color:var(--muted)">→</span>')}
+    </div>
+    <div style="border:1px dashed var(--line);border-radius:var(--radius-sm);padding:14px;background:var(--paper-soft);text-align:center">
+      <div style="font-size:12.5px;color:var(--muted);margin-bottom:8px">当前：第 ${cur.i + 1} 层 · ${esc(cur.cn)} —— 数据单元是「${esc(cur.cnUnit)}」</div>
+      <div style="font-size:17px">${netEncapBlocks(cur.parts)}</div>
+    </div>
+    <div class="box" style="margin:12px 0 0"><div class="t">这一层做了什么</div>${esc(cur.add)}<br>${esc(cur.note)}</div>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>层</th><th>数据单元</th><th>布局</th><th>这一层加什么</th><th>原页</th></tr>${steps}
+    </table></div>
+    <p style="margin:8px 0 0;font-size:13.5px;color:var(--muted)">四层头部的记号沿用课件：H<sub>t</sub> 传输层、H<sub>n</sub> 网络层、H<sub>l</sub> 链路层；M 是应用消息。第 45 页用「套娃」来比喻这件事。</p>`;
+}
+
+/* ============================================================
+   8.2 · 解封装：谁拆到哪一层（第 47 页）
+   ============================================================ */
+function renderEe() {
+  const e = NET_ENDNODES.find(x => x.key === $('#eeSel').value) || NET_ENDNODES[0];
+  const chain = ['物理', '链路', '网络', '传输', '应用'];
+  const has = k => {
+    if (e.key === 'sw') return (k === '物理' || k === '链路');
+    if (e.key === 'rt') return (k === '物理' || k === '链路' || k === '网络');
+    return true;
+  };
+  const chainHtml = chain.map((k, i) => {
+    const on = has(k);
+    return `<span data-eechain="${k}" style="display:inline-block;border:1px solid ${on ? 'var(--accent)' : 'var(--line)'};
+      border-radius:6px;padding:4px 10px;margin:2px;background:${on ? 'var(--accent-soft)' : 'transparent'};
+      color:${on ? 'var(--accent)' : 'var(--muted)'};font-weight:650;font-size:13.5px">${k}层</span>`
+      + (i < chain.length - 1 ? '<span style="color:var(--muted)">·</span>' : '');
+  }).join('');
+  const table = NET_ENDNODES.map(x => {
+    const on = (x.key === e.key);
+    return `<tr${on ? ' class="hl"' : ''}><td><b>${esc(x.name)}</b><br><span class="en">${esc(x.layers)}</span></td>
+      <td>${esc(x.act)}</td><td>${esc(x.keeps)}</td><td class="mono">${x.page}</td></tr>`;
+  }).join('');
+  $('#eeOut').innerHTML = `
+    <p style="margin:0 0 6px;font-weight:650;font-size:14.5px">${esc(e.name)}</p>
+    <div style="margin:6px 0 10px">${chainHtml}</div>
+    <div class="box" style="margin:0"><div class="t">它做什么</div>${esc(e.act)}<br>${esc(e.keeps)}</div>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>设备</th><th>对报文做什么</th><th>它能看见 / 改动的头部</th><th>原页</th></tr>${table}
+    </table></div>`;
+}
+
+/* ============================================================
+   9 · 无线链路特性（第 54 页）
+   ============================================================ */
+let wlSel = 'ax';
+function renderWl() {
+  const rows = NET_WIRELESS.map(w => {
+    const on = (w.key === wlSel);
+    return `<tr${on ? ' class="hl"' : ''}><td><b>${esc(w.label)}</b></td><td class="mono">${esc(w.rateText)}</td>
+      <td>${w.rateMbps === null ? '<span class="chip gray">图上未标数值</span>' : ''}${esc(w.cover)}</td></tr>`;
+  }).join('');
+  const cur = NET_WIRELESS.find(x => x.key === wlSel) || NET_WIRELESS[0];
+  const rank = NET_WIRELESS.filter(x => x.rateMbps !== null).sort((a, b) => b.rateMbps - a.rateMbps);
+  const pos = rank.findIndex(x => x.key === wlSel);
+  $('#wlOut').innerHTML = `
+    <div class="ctrls" style="margin:0 0 10px">${NET_WIRELESS.map(w =>
+      `<button class="sm" data-wl="${w.key}" ${w.key === wlSel ? 'style="background:var(--accent);border-color:var(--accent);color:var(--accent-ink)"' : ''}>${esc(w.label)}</button>`).join('')}</div>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>技术</th><th>图上标注的峰值速率</th><th>覆盖范围（横轴四档）</th></tr>${rows}
+    </table></div>
+    <div class="readout">
+      <dt>选中</dt><dd>${esc(cur.label)}</dd>
+      <dt>速率</dt><dd class="mono">${esc(cur.rateText)}</dd>
+      <dt>覆盖</dt><dd>${esc(cur.cover)}</dd>
+      <dt>在有数值的 ${rank.length} 项里排第</dt><dd>${pos < 0 ? '—（图上未标数值）' : (pos + 1) + ' 快（共 ' + rank.length + ' 项有数值）'}</dd>
+    </div>
+    <p style="margin:8px 0 0;font-size:13.5px;color:var(--muted)">横轴四档（课件原文）：${NET_COVER_TIERS.map(esc).join(' · ')}。有序号的规律是：<b>速率越高、覆盖越小</b>。</p>`;
+}
+
+/* ============================================================
+   9.4 · 无线网络分类 2×2（第 57 页）
+   ============================================================ */
+let txSel = 0;
+function renderTx() {
+  const cell = (idx) => {
+    const c = NET_TAXONOMY[idx], on = (idx === txSel);
+    return `<div data-txc="${idx}" style="cursor:pointer;border:1px solid ${on ? 'var(--accent)' : 'var(--line)'};
+      border-radius:var(--radius-sm);padding:11px 14px;background:${on ? 'var(--card)' : 'var(--paper-soft)'}">
+      <div style="font-size:12.5px;color:var(--muted)">${esc(c.infra)} · ${esc(c.hops)}</div>
+      <div style="margin-top:4px;font-size:14.5px">${esc(c.desc)}</div>
+      <div style="margin-top:6px"><span class="chip gray">${esc(c.ex)}</span></div></div>`;
+  };
+  const c = NET_TAXONOMY[txSel];
+  $('#txOut').innerHTML = `
+    <div class="grid g2" style="margin:8px 0 12px">${cell(0)}${cell(1)}${cell(2)}${cell(3)}</div>
+    <div class="box" style="margin:0"><div class="t">${esc(c.infra)} · ${esc(c.hops)}（原第 ${c.page} 页）</div>
+      ${esc(c.desc)}<br><b>例子：</b>${esc(c.ex)}</div>`;
+}
+
+/* ============================================================
+   9.5 · 移动性光谱（第 58 页）
+   ============================================================ */
+let mbSel = 2;
+function renderMb() {
+  const bar = NET_MOBILITY.map(m => {
+    const on = (m.key === mbSel);
+    return `<div data-mbk="${m.key}" style="cursor:pointer;flex:1;min-width:150px;border:1px solid ${on ? 'var(--accent)' : 'var(--line)'};
+      border-radius:var(--radius-sm);padding:10px 12px;background:${on ? 'var(--card)' : 'var(--paper-soft)'}">
+      <div style="font-weight:650;color:${on ? 'var(--accent)' : 'var(--ink)'};font-size:13.5px">第 ${m.key + 1} 档</div>
+      <div style="font-size:13.5px;margin-top:4px">${esc(m.text)}</div>
+      <div style="margin-top:6px">${m.care ? '<span class="chip ok">课件关注</span>' : '<span class="chip gray">课件未强调</span>'}</div></div>`;
+  }).join('');
+  const c = NET_MOBILITY[mbSel];
+  $('#mbOut').innerHTML = `
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin:8px 0 12px">${bar}</div>
+    <div class="box" style="margin:0"><div class="t">第 ${c.key + 1} 档${c.care ? '（课件标注：We\'re interested in these!）' : ''}</div>
+      ${esc(c.text)}<br>${c.care
+        ? '这一档是课件真正关心的：设备在移动中<b>连接不断</b>，问题落在「怎么让它一直收得到分组」上 —— 第 59 页把它写成「网络怎么知道要把分组转发到新网络去？」'
+        : '这一档虽然也是移动，但课件没有把它当作要解决的问题：或者移动时关机了，或者移动范围小到接入点没变。'}
+    </div>
+    <p style="margin:8px 0 0;font-size:13.5px;color:var(--muted)">课件第 49 页特意区分了两件事：<b>wireless（无线链路本身）</b>与 <b>mobility（换了接入点之后怎么办）</b>。这个光谱讲的是后者。</p>`;
+}
+
+/* ============================================================
+   9.5 · 无线对上层的影响（第 60 页）
+   ============================================================ */
+function renderWi() {
+  const on = $('#wiSeg .on');
+  const mode = on ? on.dataset.wi : 'logic';
+  const set = NET_WIMPACT[mode];
+  const other = (mode === 'logic') ? 'perf' : 'logic';
+  $('#wiOut').innerHTML = `
+    <div class="box ${mode === 'logic' ? 'ok' : 'warn'}" style="margin:8px 0 12px">
+      <div class="t">${mode === 'logic' ? '逻辑上：影响应该很小' : '性能上：影响并不小'}</div>
+      <ul style="margin:4px 0 0">${set.map(x => `<li>${x}</li>`).join('')}</ul>
+    </div>
+    <div class="box" style="margin:0;opacity:.85"><div class="t">课件另一栏说什么</div>
+      <ul style="margin:4px 0 0">${NET_WIMPACT[other].map(x => `<li>${x}</li>`).join('')}</ul>
+    </div>
+    <p style="margin:8px 0 0;font-size:13.5px;color:var(--muted)">课件第 60 页的结论：<b>服务模型没变（还是尽力而为），变的是性能</b>。其中「TCP 把丢包当成拥塞」这一条与<a href="#s10">第 10 节</a>的丢包成因直接相关。</p>`;
+}
+
+/* ============================================================
+   10.2 · 转发表查找（第 65 页）
+   ============================================================ */
+let fwVerdict = null;   /* {val, guess, right} */
+function fwPopulate() {
+  $('#fwOut2').innerHTML = NET_FWLINKS.map(n => `<option value="${n}">输出链路 ${n}</option>`).join('');
+}
+function renderFw() {
+  const rows = NET_FWLINKS.map(() => '');   /* 占位，下面直接构造 */
+  const val = $('#fwIn').value.trim();
+  const guess = parseInt($('#fwOut2').value, 10);
+  let verdict = '';
+  if (fwVerdict) {
+    const right = netForwardLookup(fwVerdict.val);
+    verdict = right === null
+      ? `<div class="box warn"><div class="t">查不到这个值</div><code>${esc(fwVerdict.val)}</code> 不在课件第 65 页的转发表里 —— 表里只有 <code>0100 / 0101 / 0111 / 1001</code> 四个值。</div>`
+      : (fwVerdict.right
+          ? `<div class="box ok"><div class="t">对：走输出链路 ${right}</div>头里的值 <code>${esc(fwVerdict.val)}</code> 在表里对应输出链路 <b>${right}</b>，你猜的是 ${fwVerdict.guess} ✓</div>`
+          : `<div class="box bad"><div class="t">不对：应该是输出链路 ${right}</div>头里的值 <code>${esc(fwVerdict.val)}</code> 对应输出链路 <b>${right}</b>，你猜的是 ${fwVerdict.guess} ✗。<br>转发表是<b>本地</b>动作的唯一依据 —— 查表、走线，没有别的判断。</div>`);
+  }
+  const table = NET_FWTABLE.map(r => {
+    const hit = (fwVerdict && fwVerdict.val === r.v);
+    return `<tr${hit ? ' class="hl"' : ''}><td class="mono">${r.v}</td><td class="mono">${r.out}</td>
+      <td>${hit ? '<span class="chip">课件图上的例子</span>' : ''}</td></tr>`;
+  }).join('');
+  $('#fwOut').innerHTML = `
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>分组头里的值</th><th>输出链路</th><th></th></tr>${table}
+    </table></div>
+    <p style="margin:4px 0 0;font-size:13.5px;color:var(--muted)">输入 4 位二进制、选一条输出链路、按「我猜是这条」。当前输入：<code>${esc(val || '（空）')}</code>，当前选择：<code>${isNaN(guess) ? '—' : guess}</code>。</p>
+    ${verdict}`;
+}
+function fwJudge() {
+  const val = $('#fwIn').value.trim();
+  const guess = parseInt($('#fwOut2').value, 10);
+  if (!/^[01]{4}$/.test(val)) {
+    fwVerdict = null;
+    $('#fwOut').innerHTML = badBox('头里的值要写 4 位二进制，例如 0111。');
+    return;
+  }
+  const right = netForwardLookup(val);
+  fwVerdict = { val, guess, right: (right !== null && right === guess) };
+  renderFw();
+}
+
+/* ============================================================
+   10.2 · 路由算法 → 转发表（第 65 页的概念 + 本页示例拓扑）
+   ============================================================ */
+let rtMode = 'dij', rtAns = null;
+function rtPopulate() {
+  const opts = NET_TOPO_NODES.map(n => `<option value="${n}">${n}</option>`).join('');
+  $('#rtFrom').innerHTML = opts;
+  $('#rtView').innerHTML = opts;
+  $('#rtView').value = 'C';
+}
+function rtQuestion(rt) {
+  /* 选一个「离 rtView 最远」的目的地，作为要猜的下一跳 */
+  const r = netDijkstra(rt, rtMode);
+  if (!r) return null;
+  let best = -1, bestD = -Infinity;
+  NET_TOPO_NODES.forEach((n, i) => {
+    if (i === r.src || !isFinite(r.dist[i])) return;
+    if (r.dist[i] > bestD) { bestD = r.dist[i]; best = i; }
+  });
+  if (best < 0) return null;
+  const dst = NET_TOPO_NODES[best];
+  const valid = netValidNextHops(rt, dst, rtMode);
+  return {
+    dst,
+    next: r.next[best] < 0 ? null : NET_TOPO_NODES[r.next[best]],
+    valid,
+    dist: bestD,
+  };
+}
+function renderRt() {
+  const from = $('#rtFrom').value || 'A';
+  const view = $('#rtView').value || 'C';
+  const g = netDijkstra(from, rtMode);
+  const rows = netForwardTableOf(view, rtMode) || [];
+  const q = rtQuestion(view);
+  /* 上图：以 from 为根的全局最短路径树 */
+  const pos = { A: [70, 40], B: [250, 40], C: [70, 150], D: [250, 150], E: [430, 92], F: [570, 40] };
+  const W = 640, H = 200;
+  const onTree = new Set();
+  NET_TOPO_NODES.forEach((n, i) => {
+    if (i === g.src || !isFinite(g.dist[i])) return;
+    const j = NET_TOPO_NODES.indexOf(n);
+    /* 回溯前驱：这里用与 dijkstra 相同的 next 反推一条边 */
+    const nx = g.next[j];
+    if (nx >= 0) onTree.add(NET_TOPO_NODES[nx] + '-' + n);
+  });
+  const edges = NET_TOPO_EDGES.map(([a, b, w]) => {
+    const x1 = pos[a][0], y1 = pos[a][1], x2 = pos[b][0], y2 = pos[b][1];
+    const tree = onTree.has(a + '-' + b) || onTree.has(b + '-' + a);
+    const c = tree ? 'var(--accent)' : 'var(--line)';
+    return `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${c}" stroke-width="${tree ? 3 : 1.4}"/>
+      <text x="${(x1 + x2) / 2}" y="${(y1 + y2) / 2 - 5}" text-anchor="middle" font-size="10.5" fill="var(--muted)">${rtMode === 'hops' ? 1 : w}</text>`;
+  }).join('');
+  const nodes = NET_TOPO_NODES.map(n => {
+    const i = NET_TOPO_NODES.indexOf(n);
+    const isFrom = (n === from), isView = (n === view);
+    const d = isFinite(g.dist[i]) ? g.dist[i] : '∞';
+    return `<g><circle cx="${pos[n][0]}" cy="${pos[n][1]}" r="17" fill="var(--paper-soft)"
+        stroke="${isFrom || isView ? 'var(--accent)' : 'var(--line)'}" stroke-width="${isFrom || isView ? 2.6 : 1.4}"/>
+      <text x="${pos[n][0]}" y="${pos[n][1] + 4.5}" text-anchor="middle" font-size="13" font-weight="700" fill="var(--ink)">${n}</text>
+      <text x="${pos[n][0]}" y="${pos[n][1] + 30}" text-anchor="middle" font-size="10.5" fill="var(--muted)">d=${d}</text></g>`;
+  }).join('');
+  const qHtml = q ? `
+    <div class="box" style="margin:12px 0 0"><div class="t">小考：路由器 ${view} 收到一个目的地址是 ${q.dst} 的分组，下一跳该给谁？</div>
+      <div class="ctrls" style="margin:8px 0 0">
+        ${NET_TOPO_NODES.filter(n => n !== view).map(n =>
+          `<button data-rtans="${n}" ${rtAns ? (n === q.next ? 'style="background:var(--accent);border-color:var(--accent);color:var(--accent-ink)"' : '') : ''}>${n}</button>`).join('')}
+      </div>
+      ${rtAns ? (q.valid.indexOf(rtAns) >= 0
+        ? `<div class="box ok" style="margin:8px 0 0"><div class="t">对：下一跳是 ${rtAns}</div>按${rtMode === 'dij' ? '最短路' : '最少跳数'}算法，${view} 到 ${q.dst} 的距离是 ${q.dist}；${rtAns} 满足 d(${view},${rtAns}) + d(${rtAns},${q.dst}) = d(${view},${q.dst})，所以它确实在一条最短路径上。${q.valid.length > 1 ? '这道题的正确答案不止一个（存在并列最短路）：' + q.valid.join(' / ') + ' 都可以。' : ''}</div>`
+        : `<div class="box bad" style="margin:8px 0 0"><div class="t">不对：下一跳应该是 ${q.valid.join(' 或 ')}</div>${view} 到 ${q.dst} 的距离是 ${q.dist}；从 ${view} 出发的第一站必须落在最短路径上${q.valid.length > 1 ? '（这道题有并列最短路，' + q.valid.join(' / ') + ' 都对）' : ''} —— 这张「目的 → 下一跳」的表就是路由器唯一的依据。</div>`)
+      : '<p style="margin:8px 0 0;font-size:13.5px;color:var(--muted)">点一个节点作答。</p>'}
+    </div>` : '';
+  $('#rtOut').innerHTML = `
+    <svg viewBox="0 0 ${W} ${H}" style="width:min(620px,100%);height:auto" font-family="var(--font-sans)">
+      ${edges}${nodes}
+      <text x="6" y="${H - 4}" font-size="10.5" fill="var(--muted)">上图：以 ${from} 为根的全局最短路径树（${rtMode === 'dij' ? '按链路代价' : '每条链路代价都算 1'}）· 粗线是算出来的路径</text>
+    </svg>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>从 ${from} 到</th>${NET_TOPO_NODES.map(n => `<th class="mono">${n}</th>`).join('')}</tr>
+      <tr><td>距离</td>${NET_TOPO_NODES.map((n, i) => `<td class="mono">${isFinite(g.dist[i]) ? g.dist[i] : '∞'}</td>`).join('')}</tr>
+    </table></div>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>路由器 ${view} 的转发表</th><th>目的节点</th><th>下一跳</th><th>距离</th></tr>
+      ${rows.map(r => `<tr><td>（本地动作）</td><td class="mono">${r.dst}</td><td class="mono">${r.next}</td><td class="mono">${isFinite(r.dist) ? r.dist : '∞'}</td></tr>`).join('')}
+    </table></div>
+    <p style="margin:8px 0 0;font-size:13.5px;color:var(--muted)">左边这张「目的 → 下一跳」的表就是转发用的表：路由器只做查表，不做全局计算。上面的路径是<b>路由算法</b>算出来的全局结果，落到每台路由器上就变成了这样一张<b>本地</b>表 —— 这正是课件第 65 页「Routing 是全局动作、Forwarding 是局部动作」的意思。</p>
+    ${qHtml}`;
+}
+
+/* ============================================================
+   10.3 · 路由器缓冲区队列模拟（第 72、75 页）
+   ============================================================ */
+let qsData = null;
+function qsRead() {
+  const burst = netParseInt($('#qsBurst').value), a = netParseInt($('#qsA').value);
+  const b = netParseInt($('#qsB').value), cap = netParseInt($('#qsCap').value), T = netParseInt($('#qsT').value);
+  if (burst === null || a === null || b === null || cap === null || T === null) return { err: '五个输入都要是非负整数。' };
+  if (cap < 1) return { err: '缓冲区容量至少为 1 个分组（否则所有到达的分组都会立刻被丢掉）。' };
+  if (T < 1 || T > 60) return { err: '模拟时隙数取 1–60 之间（太多画不下）。' };
+  if (a > 20 || b > 20) return { err: '每时隙到达的分组数取 0–20 之间。' };
+  return { opt: { burst, aBurst: a, aSteady: b, cap, T } };
+}
+function renderQs() {
+  const r = qsRead();
+  if (r.err) { $('#qsOut').innerHTML = badBox(r.err); return; }
+  const res = netQueueSim(r.opt);
+  qsData = res;
+  const { cap, T } = r.opt;
+  const W = 660, H = 210, X0 = 44, X1 = W - 16, Y0 = 158, YT = 34;
+  const xw = T > 1 ? (X1 - X0) / T : 0;
+  const ys = q => Y0 - (Y0 - YT) * (q / Math.max(cap, 1));
+  /* 阶梯线：队列在时隙末的长度 */
+  let d = '', prevQ = 0;
+  res.ticks.forEach((tk, i) => {
+    const x1 = X0 + i * xw, x2 = X0 + (i + 1) * xw;
+    d += `M${x1} ${ys(prevQ)} L${x1} ${ys(tk.qEnd)} L${x2} ${ys(tk.qEnd)} `;
+    prevQ = tk.qEnd;
+  });
+  const lossMarks = res.ticks.filter(tk => tk.lost > 0).map(tk =>
+    `<line x1="${X0 + tk.t * xw + xw / 2}" y1="${YT - 8}" x2="${X0 + tk.t * xw + xw / 2}" y2="${Y0}"
+      stroke="var(--sign)" stroke-width="1" stroke-dasharray="3 3"/>
+     <text x="${X0 + tk.t * xw + xw / 2}" y="${YT - 12}" text-anchor="middle" font-size="10.5" fill="var(--sign)">−${tk.lost}</text>`).join('');
+  const servLine = res.ticks.filter(tk => tk.served === 1).map(tk =>
+    `<rect x="${X0 + tk.t * xw + 2}" y="${Y0 + 2}" width="${Math.max(xw - 4, 1)}" height="6" fill="var(--accent)" opacity=".65"/>`).join('');
+  const xticks = res.ticks.map((tk, i) => (T <= 24 || i % 5 === 0)
+    ? `<text x="${X0 + tk.t * xw + xw / 2}" y="${Y0 + 22}" text-anchor="middle" font-size="9.5" fill="var(--muted)">${tk.t}</text>` : '').join('');
+  const rows = res.ticks.map(tk => `<tr${tk.lost > 0 ? ' class="hl"' : ''}><td class="mono">${tk.t}</td><td class="mono">${tk.arrive}</td>
+    <td class="mono">${tk.accepted}</td><td class="mono">${tk.lost || '—'}</td><td class="mono">${tk.qArr}</td>
+    <td class="mono">${tk.served}</td><td class="mono">${tk.qEnd}</td></tr>`).join('');
+  $('#qsOut').innerHTML = `
+    <svg viewBox="0 0 ${W} ${H}" style="width:min(640px,100%);height:auto" font-family="var(--font-sans)">
+      <line class="axisline" x1="${X0}" y1="${Y0}" x2="${X1}" y2="${Y0}"/>
+      <line class="axisline" x1="${X0}" y1="${YT}" x2="${X0}" y2="${Y0}"/>
+      <text x="${X0 - 6}" y="${YT + 4}" text-anchor="end" font-size="10.5" fill="var(--muted)">${cap}</text>
+      <text x="${X0 - 6}" y="${Y0 + 4}" text-anchor="end" font-size="10.5" fill="var(--muted)">0</text>
+      <text x="${X0 - 6}" y="${(YT + Y0) / 2}" text-anchor="end" font-size="10.5" fill="var(--muted)">队列</text>
+      ${servLine}
+      <path d="${d.trim()}" fill="none" stroke="var(--accent)" stroke-width="2.4"/>
+      ${lossMarks}
+      ${xticks}
+      <text x="${X1}" y="${Y0 + 22}" text-anchor="end" font-size="10.5" fill="var(--muted)">时隙 →</text>
+      <text x="${X0}" y="${YT - 24}" font-size="10.5" fill="var(--muted)">红色虚线与 −n＝该时隙因缓冲区满而丢掉的分组数；底部蓝色小条＝该时隙链路发送了 1 个分组</text>
+      <text x="${X0}" y="${H - 6}" font-size="10.5" fill="var(--muted)">每个时隙：先到达（超出容量的立刻丢弃）→ 再从队头发走 1 个（队列空则链路空闲）</text>
+    </svg>
+    <div class="readout">
+      <dt>共到达</dt><dd>${res.totalArr} 个分组</dd>
+      <dt>被接受</dt><dd>${res.totalAcc} 个</dd>
+      <dt>被丢弃（丢包）</dt><dd>${res.totalLost} 个</dd>
+      <dt>被发送</dt><dd>${res.totalServed} 个</dd>
+      <dt>队列长度峰值</dt><dd>${res.maxQ}（容量 ${cap}）</dd>
+      <dt>模拟结束时队列</dt><dd>${res.qEnd} 个</dd>
+    </div>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>时隙</th><th>到达</th><th>入队</th><th>丢弃</th><th>队列入队后</th><th>发送</th><th>时隙末队列</th></tr>${rows}
+    </table></div>
+    <p style="margin:8px 0 0;font-size:13.5px;color:var(--muted)">这个模型是<b>本页定义的</b>离散时隙模型（一个时隙＝发送一个分组的时间），用来演示课件第 72、75 页的三条结论：分组在缓冲区排队；到达速率<b>暂时</b>超过输出能力时队列增长；缓冲区满则丢包。课件本身没有给出具体的排队模型。</p>`;
+}
+
+/* ============================================================
+   10.4 · traceroute 实测表（第 74 页）
+   ============================================================ */
+function renderTr() {
+  const which = $('#trSel').value;
+  const pick = h => {
+    if (!h.rtts) return null;
+    if (which === 'min') return h.rtts[0];
+    if (which === 'mid') return h.rtts[1];
+    if (which === 'max') return h.rtts[2];
+    return (h.rtts[0] + h.rtts[1] + h.rtts[2]) / 3;
+  };
+  let prev = null;
+  const rows = NET_TRACEROUTE.map(h => {
+    const v = pick(h);
+    let delta = '—', cls = '';
+    if (v !== null && prev !== null) {
+      const dv = v - prev;
+      delta = (dv > 0 ? '+' : (dv < 0 ? '−' : '±')) + netFmt(Math.abs(dv), 2);
+      cls = dv < 0 ? ' style="color:var(--warn)"' : '';
+    }
+    if (v !== null) prev = v;
+    const label = which === 'avg' ? (v === null ? '*' : netFmt(v, 2) + ' ms（三次平均）') : (v === null ? '*' : v + ' ms');
+    return `<tr><td class="mono">${h.hop}</td><td class="mono">${esc(h.host)}${h.ip ? ' (' + esc(h.ip) + ')' : ''}</td>
+      <td class="mono">${h.rtts ? h.rtts.join(' / ') + ' ms' : '* * *'}</td>
+      <td class="mono">${label}</td><td class="mono"${cls}>${delta}</td>
+      <td>${h.note ? esc(h.note) : ''}</td></tr>`;
+  }).join('');
+  $('#trOut').innerHTML = `
+    <p style="margin:0 0 8px;font-size:14px"><code>traceroute: gaia.cs.umass.edu → www.eurecom.fr</code>（课件第 74 页的实测输出）</p>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>跳</th><th>路由器（IP）</th><th>三次测量</th><th>本表取用</th><th>与上一跳的差</th><th>课件标注</th></tr>${rows}
+    </table></div>
+    <p style="margin:8px 0 0;font-size:13.5px;color:var(--muted)">「与上一跳的差」是页面现算的（本跳时延 − 上一跳时延）：<b>它可以为负</b>。因为每一跳的数字都是独立测量的一次时延，属于不同的分组、不同的排队状态，不是一条可加的时间线 —— 这正是课件问「looks like delays decrease! Why?」的答案。第 17、18 跳的 <code>* * *</code> 表示没有回应（探测包丢失，或该路由器不回应），不参与差值计算。</p>`;
+}
+
+/* ============================================================
+   10.5 · 吞吐量瓶颈（第 76–78 页）
+   ============================================================ */
+function renderTh() {
+  const rs = netParsePos($('#thRs').value), rc = netParsePos($('#thRc').value);
+  const rb = netParsePos($('#thRb').value), n = netParseInt($('#thN').value);
+  if (rs === null || rc === null || rb === null || n === null || n < 1) {
+    $('#thOut').innerHTML = badBox('三个速率要是正数（Mbps），连接数要是 ≥1 的整数。');
+    return;
+  }
+  const t = netThroughputOf(rs, rc, rb, n);
+  const b = netBottlenecks(rs, rc, rb, n);
+  const bn = b.length ? b.join(' / ') : '—';
+  const share = rb / n;
+  $('#thOut').innerHTML = `
+    <div class="formula" style="text-align:center">min(R<sub>s</sub>, R<sub>c</sub>, R / n) = min(${netFmt(rs, 3)}, ${netFmt(rc, 3)}, ${netFmt(rb, 3)} / ${n}) = <b>${netFmt(t, 4)} Mbps</b></div>
+    <div class="readout">
+      <dt>单连接端到端吞吐量</dt><dd>${netFmt(t, 4)} Mbps</dd>
+      <dt>瓶颈链路</dt><dd>${esc(bn)}</dd>
+      <dt>每条连接分到的骨干带宽 R/n</dt><dd>${netFmt(share, 4)} Mbps</dd>
+      <dt>n = 1 时（即第 77 页的两种情形）</dt><dd>min(R<sub>s</sub>, R<sub>c</sub>) = ${netFmt(Math.min(rs, rc), 4)} Mbps</dd>
+    </div>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>瓶颈判定</th><th>值</th></tr>
+      <tr><td>R<sub>s</sub>（服务器注入速率）</td><td class="mono">${netFmt(rs, 4)}${rs === t ? ' ← 最小' : ''}</td></tr>
+      <tr><td>R<sub>c</sub>（链路速率）</td><td class="mono">${netFmt(rc, 4)}${rc === t ? ' ← 最小' : ''}</td></tr>
+      <tr><td>R / n（每条连接分到的骨干）</td><td class="mono">${netFmt(share, 4)}${share === t ? ' ← 最小' : ''}</td></tr>
+    </table></div>
+    <p style="margin:8px 0 0;font-size:13.5px;color:var(--muted)">课件第 78 页给的例子是 <b>10 条连接</b>共享骨干链路 R，并注明实践中 R<sub>c</sub> 或 R<sub>s</sub> 常常就是瓶颈。把 n 改成别的值就是「n 条连接公平分享」的推广 —— 这属于本页的推广，不是课件原话。</p>`;
+}
+
+/* ============================================================
+   11 · 互联网历史时间轴（第 80–84 页）
+   ============================================================ */
+let tlSel = 0;
+function tlPopulate() {
+  $('#tlSeg').innerHTML = NET_HISTORY.map(h =>
+    `<button data-tl="${h.key}" ${h.key === tlSel ? 'class="on"' : ''}>${esc(h.span)}</button>`).join('');
+}
+function renderTl() {
+  const h = NET_HISTORY[tlSel];
+  const items = h.items.map(([y, t]) => `<tr><td class="mono">${esc(y)}</td><td>${esc(t)}</td></tr>`).join('');
+  const total = NET_HISTORY.reduce((s, x) => s + x.items.length, 0);
+  $('#tlOut').innerHTML = `
+    <div class="ctrls" style="margin:10px 0">${NET_HISTORY.map(x =>
+      `<button class="sm" data-tlg="${x.key}" ${x.key === tlSel ? 'style="background:var(--accent);border-color:var(--accent);color:var(--accent-ink)"' : ''}>${esc(x.span)}</button>`).join('')}</div>
+    <p style="margin:0 0 6px;font-weight:650;font-size:15px">${esc(h.span)}：${esc(h.title)}<span class="srcref">原第 ${h.page} 页</span></p>
+    <div class="box" style="margin:6px 0 10px">${esc(h.note)}</div>
+    <div class="tbl-wrap"><table class="tbl"><tr><th>年份</th><th>发生了什么</th></tr>${items}</table></div>
+    <p style="margin:8px 0 0;font-size:13.5px;color:var(--muted)">这是第 ${h.key + 1} / ${NET_HISTORY.length} 个时段；五个时段共 ${total} 条里程碑（全部来自课件第 80–84 页）。</p>`;
+}
+
+/* ============================================================
+   12 · 测验
+   ============================================================ */
+let qzState = NET_QUIZ.map(() => null);
+const NET_LETTERS = ['A', 'B', 'C', 'D'];
+function renderQz() {
+  const list = NET_QUIZ.map((q, i) => {
+    const done = qzState[i] !== null;
+    const ok = done && qzState[i] === q.ans;
+    const btns = q.opts.map((o, j) => {
+      let style = '';
+      if (done) {
+        if (j === q.ans) style = 'background:var(--ok-bg);border-color:var(--ok-bd)';
+        else if (j === qzState[i]) style = 'background:var(--bad-bg);border-color:var(--bad-bd)';
+        else style = 'opacity:.55';
+      }
+      return `<button class="sm" data-qzo="${i}:${j}" style="${style}" ${done ? 'disabled' : ''}>${NET_LETTERS[j]}. ${esc(o)}</button>`;
+    }).join('');
+    return `<div class="puzzle${done ? (ok ? ' correct' : ' wrong') + ' done' : ''}">
+      <div class="q">${i + 1}. ${q.q}
+        <small style="margin-top:8px">${btns}</small>
+        <div class="exp"><span class="verdict" style="color:${ok ? 'var(--frac)' : 'var(--sign)'}">${ok ? '✓ 答对了' : '✗ 再想想'}</span>
+          <br>${q.exp}</div>
+      </div></div>`;
+  }).join('');
+  const answered = qzState.filter(x => x !== null).length;
+  const right = NET_QUIZ.filter((q, i) => qzState[i] === q.ans).length;
+  const score = `<div class="box ${answered === 0 ? '' : (right === answered ? 'ok' : 'warn')}" style="margin:12px 0 0">
+    <div class="t">得分：${right} / ${NET_QUIZ.length}（已答 ${answered} 题）</div>
+    ${answered === 0 ? '还没开始 —— 每题选完立刻给出解析。' : (answered < NET_QUIZ.length ? `还有 ${NET_QUIZ.length - answered} 题没答。` : (right === NET_QUIZ.length ? '全对！' : '把错的几题对照解析再看一遍对应章节。'))}
+  </div>`;
+  $('#qzOut').innerHTML = list + score;
+}
+
+/* ============================================================
+   初始化
+   ============================================================ */
+function tdSet(opt) {
+  if (opt.msg !== undefined) $('#tdMsg').value = opt.msg;
+  if (opt.l !== undefined) $('#tdL').value = opt.l;
+  if (opt.r !== undefined) $('#tdR').value = opt.r;
+  renderTd();
+}
+function thSet(opt) {
+  if (opt.rs !== undefined) $('#thRs').value = opt.rs;
+  if (opt.rc !== undefined) $('#thRc').value = opt.rc;
+  if (opt.rb !== undefined) $('#thRb').value = opt.rb;
+  if (opt.n !== undefined) $('#thN').value = opt.n;
+  renderTh();
+}
+function qsSet(opt) {
+  if (opt.burst !== undefined) $('#qsBurst').value = opt.burst;
+  if (opt.a !== undefined) $('#qsA').value = opt.a;
+  if (opt.b !== undefined) $('#qsB').value = opt.b;
+  if (opt.cap !== undefined) $('#qsCap').value = opt.cap;
+  if (opt.t !== undefined) $('#qsT').value = opt.t;
+  renderQs();
+}
+function initAll() {
+  /* --- 全局事件委托 --- */
+  document.addEventListener('click', e => {
+    const t = e.target;
+    const cl = sel => t.closest(sel);
+    let el;
+    if ((el = cl('[data-ov]'))) { ovCur = parseInt(el.dataset.ov, 10); renderOv(); return; }
+    if ((el = cl('[data-vbv]'))) { vbView = el.dataset.vbv; vbSel = null; renderVb(); return; }
+    if ((el = cl('[data-vbi]'))) { vbSel = el.dataset.vbi; renderVb(); return; }
+    if ((el = cl('[data-td]'))) { tdSet(kvAttr(el.dataset.td)); return; }
+    if ((el = cl('[data-hm]'))) { hmSel = el.dataset.hm; renderHm(); return; }
+    if ((el = cl('[data-at]'))) { return; }
+    if ((el = cl('[data-stl]'))) { stSel = parseInt(el.dataset.stl, 10); renderSt(); return; }
+    if ((el = cl('[data-enl]'))) { enSel = parseInt(el.dataset.enl, 10); renderEn(); return; }
+    if ((el = cl('[data-wl]'))) { wlSel = el.dataset.wl; renderWl(); return; }
+    if ((el = cl('[data-txc]'))) { txSel = parseInt(el.dataset.txc, 10); renderTx(); return; }
+    if ((el = cl('[data-mbk]'))) { mbSel = parseInt(el.dataset.mbk, 10); renderMb(); return; }
+    if ((el = cl('[data-tlg]'))) { tlSel = parseInt(el.dataset.tlg, 10); renderTl(); return; }
+    if ((el = cl('[data-fw]'))) { $('#fwIn').value = el.dataset.fw; fwVerdict = null; renderFw(); return; }
+    if ((el = cl('[data-rtans]'))) { rtAns = el.dataset.rtans; renderRt(); return; }
+    if ((el = cl('[data-qs]'))) { qsSet(kvAttr(el.dataset.qs)); return; }
+    if ((el = cl('[data-th]'))) { thSet(kvAttr(el.dataset.th)); return; }
+    if ((el = cl('[data-qzo]'))) {
+      const [i, j] = el.dataset.qzo.split(':').map(Number);
+      if (qzState[i] !== null) return;
+      qzState[i] = j; renderQz(); return;
+    }
+  });
+
+  /* --- 0 页码地图 --- */
+  renderOv();
+
+  /* --- 1 三种视角 --- */
+  $$('#vbSeg button').forEach(b => b.addEventListener('click', () => {
+    vbView = b.dataset.vb; vbSel = null;
+    $$('#vbSeg button').forEach(x => x.classList.toggle('on', x === b));
+    renderVb();
+  }));
+  renderVb();
+
+  /* --- 2 协议拆解 --- */
+  $('#prSel').addEventListener('change', renderPr);
+  renderPr();
+
+  /* --- 3.2 接入网算速度 --- */
+  fdApplyPreset();
+  $('#fdPre').addEventListener('change', () => { fdApplyPreset(); renderFd(); });
+  $('#fdGo').addEventListener('click', renderFd);
+  ['#fdDown', '#fdUp', '#fdSize'].forEach(id => $(id).addEventListener('keydown', e => { if (e.key === 'Enter') renderFd(); }));
+  renderFd();
+
+  /* --- 3.3 家庭网络 --- */
+  renderHm();
+
+  /* --- 4 发送时延 --- */
+  $('#tdGo').addEventListener('click', renderTd);
+  ['#tdMsg', '#tdL', '#tdR'].forEach(id => $(id).addEventListener('keydown', e => { if (e.key === 'Enter') renderTd(); }));
+  $('#tdMsgUnit').addEventListener('change', renderTd);
+  renderTd();
+
+  /* --- 5.2 物理媒介 --- */
+  $('#pmSel').addEventListener('change', renderPm);
+  renderPm();
+
+  /* --- 5.3 链路传文件 --- */
+  rlPopulate();
+  $('#rlSel').addEventListener('change', renderRl);
+  $('#rlGo').addEventListener('click', renderRl);
+  $('#rlSize').addEventListener('keydown', e => { if (e.key === 'Enter') renderRl(); });
+  renderRl();
+
+  /* --- 6.1 攻击 → 防线 --- */
+  $('#atSel').addEventListener('change', renderAt);
+  renderAt();
+
+  /* --- 6.3 安全目标 --- */
+  scPopulate();
+  $('#scSel').addEventListener('change', renderSc);
+  renderSc();
+
+  /* --- 7.2 协议栈 --- */
+  renderSt();
+
+  /* --- 7.1 航空类比 --- */
+  $('#arSel').addEventListener('change', renderAr);
+  renderAr();
+
+  /* --- 8.1 封装 --- */
+  $('#enUp').addEventListener('click', () => { enSel = Math.min(enSel + 1, NET_ENCAP.length - 1); renderEn(); });
+  $('#enDown').addEventListener('click', () => { enSel = Math.max(enSel - 1, 0); renderEn(); });
+  $('#enReset').addEventListener('click', () => { enSel = 0; renderEn(); });
+  $$('#enSeg button').forEach(b => b.addEventListener('click', () => {
+    enSel = parseInt(b.dataset.en, 10);
+    $$('#enSeg button').forEach(x => x.classList.toggle('on', x === b));
+    renderEn();
+  }));
+  renderEn();
+
+  /* --- 8.2 解封装 --- */
+  $('#eeSel').addEventListener('change', renderEe);
+  renderEe();
+
+  /* --- 9 无线链路特性 --- */
+  renderWl();
+  $$('#txSeg button').forEach(b => b.addEventListener('click', () => {
+    txSel = parseInt(b.dataset.tx, 10);
+    $$('#txSeg button').forEach(x => x.classList.toggle('on', x === b));
+    renderTx();
+  }));
+  renderTx();
+  $$('#mbSeg button').forEach(b => b.addEventListener('click', () => {
+    mbSel = parseInt(b.dataset.mb, 10);
+    $$('#mbSeg button').forEach(x => x.classList.toggle('on', x === b));
+    renderMb();
+  }));
+  renderMb();
+  $$('#wiSeg button').forEach(b => b.addEventListener('click', () => {
+    $$('#wiSeg button').forEach(x => x.classList.toggle('on', x === b));
+    renderWi();
+  }));
+  renderWi();
+
+  /* --- 10.2 转发表查找 --- */
+  fwPopulate();
+  $('#fwGo').addEventListener('click', fwJudge);
+  $('#fwIn').addEventListener('keydown', e => { if (e.key === 'Enter') fwJudge(); });
+  $('#fwOut2').addEventListener('change', () => { if (fwVerdict) renderFw(); });
+  renderFw();
+
+  /* --- 10.2 路由算法 --- */
+  rtPopulate();
+  $('#rtFrom').addEventListener('change', () => { rtAns = null; renderRt(); });
+  $('#rtView').addEventListener('change', () => { rtAns = null; renderRt(); });
+  $$('#rtSeg button').forEach(b => b.addEventListener('click', () => {
+    rtMode = b.dataset.rt; rtAns = null;
+    $$('#rtSeg button').forEach(x => x.classList.toggle('on', x === b));
+    renderRt();
+  }));
+  renderRt();
+
+  /* --- 10.3 队列模拟 --- */
+  $('#qsGo').addEventListener('click', renderQs);
+  ['#qsBurst', '#qsA', '#qsB', '#qsCap', '#qsT'].forEach(id =>
+    $(id).addEventListener('keydown', e => { if (e.key === 'Enter') renderQs(); }));
+  renderQs();
+
+  /* --- 10.4 traceroute --- */
+  $('#trSel').addEventListener('change', renderTr);
+  renderTr();
+
+  /* --- 10.5 吞吐量 --- */
+  $('#thGo').addEventListener('click', renderTh);
+  ['#thRs', '#thRc', '#thRb', '#thN'].forEach(id => $(id).addEventListener('keydown', e => { if (e.key === 'Enter') renderTh(); }));
+  renderTh();
+
+  /* --- 11 时间轴 --- */
+  tlPopulate();
+  renderTl();
+
+  /* --- 12 测验 --- */
+  renderQz();
+  $('#qzReset').addEventListener('click', () => { qzState = NET_QUIZ.map(() => null); renderQz(); });
+}
+
+if (typeof document !== 'undefined' && document.addEventListener) {
+  document.addEventListener('DOMContentLoaded', initAll);
+}
+</script>
+</body>
+</html>

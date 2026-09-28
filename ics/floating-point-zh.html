@@ -37,6 +37,8 @@
   nav.toc .sub{padding-left:26px;font-size:13.5px;color:#5b6472}
 
   main{min-width:0}
+main p,main li,main dd,main dt,main h2,main h3,main h4,main h5,
+main .box,main .card,main .readout,main .puzzle,main .step{overflow-wrap:anywhere}
   section{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:26px 28px;margin-bottom:22px;box-shadow:var(--shadow);scroll-margin-top:70px}
   section>h2{margin:0 0 6px;font-size:25px;letter-spacing:-.01em}
   section>.lede{color:var(--muted);margin:0 0 20px;font-size:14.5px}
@@ -57,7 +59,9 @@
   .grid{display:grid;gap:14px}
   .g2{grid-template-columns:repeat(2,minmax(0,1fr))}
   .g3{grid-template-columns:repeat(3,minmax(0,1fr))}
-  @media(max-width:820px){.g2,.g3{grid-template-columns:1fr}}
+  /* 窄屏单列：必须用 minmax(0,1fr)。写成 1fr 时轨道最小宽度是 auto，
+   单元格里只要有长代码行（<pre>）就撑破容器，整页横向溢出。 */
+@media(max-width:820px){.g2,.g3{grid-template-columns:minmax(0,1fr)}}
 
   .card{border:1px solid var(--line);border-radius:10px;padding:15px 17px;background:#fcfdfe}
   .card h5{margin:0 0 7px;font-size:15px}
@@ -95,7 +99,7 @@
   .bits .grp.ge{background:#f5faff}
   .bits .grp.gf{background:#f4fcf7}
   .bits.sm .b{width:19px;height:26px;font-size:12px;border-radius:4px}
-  .fw{display:flex;flex-wrap:wrap;gap:8px 18px;align-items:flex-start;margin:4px 0 2px}
+  .fw{display:flex;flex-wrap:wrap;gap:8px 18px;align-items:flex-start;margin:4px 0 2px;min-width:0}
   .fgrp{min-width:0}
   .fcap{font-size:12px;color:var(--muted);margin-bottom:4px;font-weight:600}
   .fcap b{font-family:var(--mono);font-size:12.5px}
@@ -179,7 +183,11 @@
   .stylebar a{text-decoration:none;padding:4px 11px;border:1px solid var(--line);border-radius:99px;color:var(--muted);background:var(--card);font-weight:600}
   .stylebar a:hover{border-color:var(--accent);color:var(--accent)}
   .stylebar a.cur{background:var(--accent);color:#fff;border-color:var(--accent)}
-  @media(max-width:960px){.stylebar{padding:12px 16px 0}}
+  .stylebar>span{flex:0 0 auto}
+@media(max-width:960px){.stylebar{padding:12px 16px 0}}
+/* 25 讲之后药丸很多：窄屏折行会吃掉大半屏，改成单行横滑 */
+@media(max-width:820px){.stylebar{flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;
+  scrollbar-width:thin}.stylebar a{flex:0 0 auto;font-size:12px;padding:4px 10px}}
 </style>
 </head>
 <body>
@@ -191,12 +199,32 @@
 
 <div class="stylebar">
   <span>课件：</span>
-  <a href="ics01-zh.html">第 1 讲 · 课程概述</a>
-  <a href="bits-bytes-ints-zh.html">第 2 讲 · 位、字节与整数</a>
-  <a href="floating-point-zh.html" class="cur" onclick="return false">第 3 讲 · 浮点数（当前）</a>
-  <a href="ics04-zh.html">第 4 讲 · 机器级编程基础</a>
-  <a href="ics05-zh.html">第 5 讲 · 机器级编程 II：控制</a>
-  <a href="datalab-zh.html">Data Lab 实验</a>
+  <a href="ics01-zh.html" title="第 1 讲 · 课程概述">第 1 讲</a>
+  <a href="bits-bytes-ints-zh.html" title="第 2 讲 · 位、字节与整数">第 2 讲</a>
+  <a href="floating-point-zh.html" class="cur" onclick="return false" title="第 3 讲 · 浮点数">第 3 讲 · 浮点数（当前）</a>
+  <a href="ics04-zh.html" title="第 4 讲 · 机器级编程 I：基础">第 4 讲</a>
+  <a href="ics05-zh.html" title="第 5 讲 · 机器级编程 II：控制">第 5 讲</a>
+  <a href="ics06-zh.html" title="第 6 讲 · 机器级编程 III：过程">第 6 讲</a>
+  <a href="ics07-zh.html" title="第 7 讲 · 机器级编程 IV：数据">第 7 讲</a>
+  <a href="ics08-zh.html" title="第 8 讲 · 机器级编程 V：高级">第 8 讲</a>
+  <a href="ics09-zh.html" title="第 9 讲 · 处理器体系结构：ISA 与逻辑">第 9 讲</a>
+  <a href="ics10-zh.html" title="第 10 讲 · 处理器体系结构：顺序实现">第 10 讲</a>
+  <a href="ics11-zh.html" title="第 11 讲 · 处理器体系结构：流水线">第 11 讲</a>
+  <a href="ics12-zh.html" title="第 12 讲 · 存储层次结构">第 12 讲</a>
+  <a href="ics13-zh.html" title="第 13 讲 · 缓存存储器">第 13 讲</a>
+  <a href="ics14-zh.html" title="第 14 讲 · 代码优化">第 14 讲</a>
+  <a href="ics15-zh.html" title="第 15 讲 · 链接">第 15 讲</a>
+  <a href="ics16-zh.html" title="第 16 讲 · 异常控制流 I">第 16 讲</a>
+  <a href="ics17-zh.html" title="第 17 讲 · 异常控制流 II">第 17 讲</a>
+  <a href="ics18-zh.html" title="第 18 讲 · 系统级 I/O">第 18 讲</a>
+  <a href="ics19-zh.html" title="第 19 讲 · 虚拟内存 I">第 19 讲</a>
+  <a href="ics20-zh.html" title="第 20 讲 · 虚拟内存 II">第 20 讲</a>
+  <a href="ics21-zh.html" title="第 21 讲 · 动态内存分配">第 21 讲</a>
+  <a href="ics22-zh.html" title="第 22 讲 · 网络基础">第 22 讲</a>
+  <a href="ics23-zh.html" title="第 23 讲 · 网络编程">第 23 讲</a>
+  <a href="ics24-zh.html" title="第 24 讲 · 并发编程">第 24 讲</a>
+  <a href="ics25-zh.html" title="第 25 讲 · 同步">第 25 讲</a>
+  <a href="datalab-zh.html" title="Data Lab 实验">Data Lab 实验</a>
   <a href="variants/index.html">◧ 全部预览</a>
 </div>
 

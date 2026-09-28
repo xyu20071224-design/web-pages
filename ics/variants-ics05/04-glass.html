@@ -61,6 +61,10 @@ img{max-width:100%}
 .layout{max-width:var(--page-max);margin:0 auto;padding:22px;display:grid;
   grid-template-columns:var(--nav-w) minmax(0,1fr);gap:var(--gap)}
 main{min-width:0}
+/* 长 URL / 长标识符没有断行点，会把容器整个撑破（窄屏尤其明显）。
+   只作用于文本容器；表格故意不加，让它走 .tbl-wrap 的横向滚动。 */
+main p,main li,main dd,main dt,main h2,main h3,main h4,main h5,
+main .box,main .card,main .readout,main .puzzle,main .step{overflow-wrap:anywhere}
 
 /* ---------- 目录 ---------- */
 nav.toc{position:sticky;top:var(--nav-sticky-top);align-self:start;max-height:calc(100vh - 84px);overflow:auto;padding-right:4px}
@@ -95,7 +99,9 @@ hr{border:0;border-top:1px dashed var(--line);margin:24px 0}
 .grid{display:grid;gap:14px}
 .g2{grid-template-columns:repeat(2,minmax(0,1fr))}
 .g3{grid-template-columns:repeat(3,minmax(0,1fr))}
-@media(max-width:820px){.g2,.g3{grid-template-columns:1fr}}
+/* 窄屏单列：必须用 minmax(0,1fr)。写成 1fr 时轨道最小宽度是 auto，
+   单元格里只要有长代码行（<pre>）就撑破容器，整页横向溢出。 */
+@media(max-width:820px){.g2,.g3{grid-template-columns:minmax(0,1fr)}}
 .card{border:var(--card-border);border-radius:var(--radius-sm);padding:15px 17px;background:var(--paper-soft);box-shadow:var(--shadow-card)}
 .card h5{margin:0 0 7px}
 .card.pad0{padding:0;overflow:hidden}
@@ -119,10 +125,13 @@ table.tbl th,table.tbl td{border:1px solid var(--line);padding:8px 11px;text-ali
 table.tbl th{background:var(--tbl-head);font-weight:650;font-size:13.5px;white-space:nowrap}
 table.tbl td.mono,table.tbl th.mono{font-family:var(--font-mono);font-size:13.5px}
 table.tbl tr:hover td{background:var(--tbl-hover)}
+/* 当前行高亮：interactive 表格用它标出「正在看的那一行」。
+   注意 --tbl-hover 是悬停色，深色皮肤下故意比底色亮，所以 hl 用同一套变量。 */
+table.tbl tr.hl td{background:var(--sel-bg)}
 .tbl-wrap{overflow-x:auto}
 
 /* ---------- 位串控件 ---------- */
-.fw{display:flex;flex-wrap:wrap;gap:8px 18px;align-items:flex-start;margin:4px 0 2px}
+.fw{display:flex;flex-wrap:wrap;gap:8px 18px;align-items:flex-start;margin:4px 0 2px;min-width:0}
 .fgrp{min-width:0}
 .fcap{font-size:12px;color:var(--muted);margin-bottom:4px;font-weight:600}
 .fcap b{font-family:var(--font-mono);font-size:12.5px}
@@ -167,12 +176,17 @@ button:hover{background:var(--sel-bg)}
 button.p{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
 button.sm{padding:4px 10px;font-size:13px}
 button.pill{border-radius:var(--radius-pill)}
-.seg{display:inline-flex;border:1px solid var(--line);border-radius:var(--radius-sm);overflow:hidden}
+/* 按钮组默认不换行：项一多就会把 .ctrls 撑破。允许它缩到容器宽度并横向滚动。 */
+.seg{display:inline-flex;max-width:100%;border:1px solid var(--line);
+  border-radius:var(--radius-sm);overflow-x:auto;overflow-y:hidden}
 .seg button{border:0;border-radius:0;border-right:1px solid var(--line);padding:6px 13px}
 .seg button:last-child{border-right:0}
 .seg button.on{background:var(--accent);color:var(--accent-ink)}
 
 /* ---------- 分步演示 ---------- */
+/* .steps 是 .step 的包裹层（skill 词汇表里列了但一直没定义）——
+   仅给一点上下留白，步骤块自己的边距由 .step 负责。 */
+.steps{margin:12px 0}
 .step{border:1px solid var(--line);border-radius:var(--radius-sm);padding:11px 15px;margin:9px 0;
   background:var(--paper-soft);opacity:.42;transition:opacity .2s}
 .step.on{opacity:1;background:var(--card)}
@@ -404,7 +418,11 @@ button.p:hover{background:linear-gradient(135deg,#8b6cff,#7855ff);color:#fff;
   color:var(--muted);background:var(--card);font-weight:600}
 .stylebar a:hover{border-color:var(--accent);color:var(--accent)}
 .stylebar a.cur{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.stylebar>span{flex:0 0 auto}
 @media(max-width:960px){.stylebar{padding:12px 16px 0}}
+/* 25 讲之后药丸很多：窄屏折行会吃掉大半屏，改成单行横滑 */
+@media(max-width:820px){.stylebar{flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;
+  scrollbar-width:thin}.stylebar a{flex:0 0 auto;font-size:12px;padding:4px 10px}}
 
 </style>
 </head>
@@ -426,7 +444,27 @@ button.p:hover{background:linear-gradient(135deg,#8b6cff,#7855ff);color:#fff;
   <a href="../variants-ics01/index.html">↗ 第 1 讲 · 课程概述</a>
   <a href="../variants-bits/index.html">↗ 第 2 讲 · 位、字节与整数</a>
   <a href="../variants/index.html">↗ 第 3 讲 · 浮点数</a>
-  <a href="../variants-ics04/index.html">↗ 第 4 讲 · 机器级编程基础</a>
+  <a href="../variants-ics04/index.html">↗ 第 4 讲 · 机器级编程 I：基础</a>
+  <a href="../variants-ics06/index.html">↗ 第 6 讲 · 机器级编程 III：过程</a>
+  <a href="../variants-ics07/index.html">↗ 第 7 讲 · 机器级编程 IV：数据</a>
+  <a href="../variants-ics08/index.html">↗ 第 8 讲 · 机器级编程 V：高级</a>
+  <a href="../variants-ics09/index.html">↗ 第 9 讲 · 处理器体系结构：ISA 与逻辑</a>
+  <a href="../variants-ics10/index.html">↗ 第 10 讲 · 处理器体系结构：顺序实现</a>
+  <a href="../variants-ics11/index.html">↗ 第 11 讲 · 处理器体系结构：流水线</a>
+  <a href="../variants-ics12/index.html">↗ 第 12 讲 · 存储层次结构</a>
+  <a href="../variants-ics13/index.html">↗ 第 13 讲 · 缓存存储器</a>
+  <a href="../variants-ics14/index.html">↗ 第 14 讲 · 代码优化</a>
+  <a href="../variants-ics15/index.html">↗ 第 15 讲 · 链接</a>
+  <a href="../variants-ics16/index.html">↗ 第 16 讲 · 异常控制流 I</a>
+  <a href="../variants-ics17/index.html">↗ 第 17 讲 · 异常控制流 II</a>
+  <a href="../variants-ics18/index.html">↗ 第 18 讲 · 系统级 I/O</a>
+  <a href="../variants-ics19/index.html">↗ 第 19 讲 · 虚拟内存 I</a>
+  <a href="../variants-ics20/index.html">↗ 第 20 讲 · 虚拟内存 II</a>
+  <a href="../variants-ics21/index.html">↗ 第 21 讲 · 动态内存分配</a>
+  <a href="../variants-ics22/index.html">↗ 第 22 讲 · 网络基础</a>
+  <a href="../variants-ics23/index.html">↗ 第 23 讲 · 网络编程</a>
+  <a href="../variants-ics24/index.html">↗ 第 24 讲 · 并发编程</a>
+  <a href="../variants-ics25/index.html">↗ 第 25 讲 · 同步</a>
   <a href="../variants-lab/index.html">↗ Data Lab 实验</a>
 </div>
 

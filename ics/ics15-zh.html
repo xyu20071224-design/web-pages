@@ -1,0 +1,2563 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-deck="ics15">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>链接（Linking） · 交互式课件（中文）</title>
+<style>
+/* ==========================================================================
+   base.css —— 结构基础样式（所有风格共用）
+   只使用 CSS 变量，不含任何具体配色；由各主题覆盖变量与少量结构规则。
+   ========================================================================== */
+
+:root{
+  /* 颜色（每个主题必须覆盖） */
+  --bg:#f6f7f9; --card:#fff; --ink:#15181d; --muted:#697586; --line:#e4e7ec;
+  --accent:#2563eb; --accent-ink:#fff; --accent-soft:#eaf1ff;
+  --sign:#e5484d; --exp:#0b7fd4; --frac:#18915a; --warn:#b45309;
+  --sign-bg:#fdecec; --sign-fg:#a3262b; --sign-bd:#f6cdcf;
+  --exp-bg:#e8f2fd;  --exp-fg:#0a5f9e;  --exp-bd:#c7ddf5;
+  --frac-bg:#e9f7ef; --frac-fg:#116b43; --frac-bd:#c8e8d5;
+  --ok-bg:#f2fbf6; --ok-bd:#9ed3b4; --bad-bg:#fff5f5; --bad-bd:#f1b5b8;
+  --warn-bg:#fffbeb; --gray-bg:#eef1f5; --gray-fg:#5b6472;
+  --paper-soft:#fcfdfe; --code-bg:#f1f3f7; --code-bd:#e6e9ef;
+  --tbl-head:#f7f9fc; --tbl-hover:#fafbfd;
+  --sel-bg:#eef1f5;
+
+  /* 字体 */
+  --font-sans:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",system-ui,sans-serif;
+  --font-mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+  --font-display:var(--font-sans);
+  --tracking-title:normal;
+
+  /* 形状 */
+  --radius:12px; --radius-sm:8px; --radius-pill:99px;
+  --border-w:1px; --shadow:0 1px 2px rgba(16,24,40,.06),0 1px 3px rgba(16,24,40,.1);
+  --shadow-card:none;
+  --card-border:var(--border-w) solid var(--line);
+
+  /* 布局 */
+  --page-max:1180px; --nav-w:236px; --gap:26px; --sec-pad:26px 28px;
+  --nav-sticky-top:64px; --anchor-offset:70px;
+  --font-size:16px; --line-height:1.75;
+}
+
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font-sans);
+  font-size:var(--font-size);line-height:var(--line-height);-webkit-font-smoothing:antialiased}
+img{max-width:100%}
+
+/* ---------- 顶栏 ---------- */
+.topbar{position:sticky;top:0;z-index:50;background:var(--card);border-bottom:1px solid var(--line)}
+.topbar-in{max-width:var(--page-max);margin:0 auto;padding:10px 22px;display:flex;align-items:center;gap:14px}
+.brand{font-weight:700;letter-spacing:var(--tracking-title);font-family:var(--font-display)}
+.brand small{font-weight:500;color:var(--muted);margin-left:8px;font-size:12.5px}
+.progress{margin-left:auto;display:flex;align-items:center;gap:10px;font-size:12.5px;color:var(--muted)}
+.progress .bar{width:150px;height:6px;border-radius:var(--radius-pill);background:var(--line);overflow:hidden}
+.progress .bar>i{display:block;height:100%;width:0;background:var(--accent);transition:width .25s}
+
+/* ---------- 主体布局 ---------- */
+.layout{max-width:var(--page-max);margin:0 auto;padding:22px;display:grid;
+  grid-template-columns:var(--nav-w) minmax(0,1fr);gap:var(--gap)}
+main{min-width:0}
+/* 长 URL / 长标识符没有断行点，会把容器整个撑破（窄屏尤其明显）。
+   只作用于文本容器；表格故意不加，让它走 .tbl-wrap 的横向滚动。 */
+main p,main li,main dd,main dt,main h2,main h3,main h4,main h5,
+main .box,main .card,main .readout,main .puzzle,main .step{overflow-wrap:anywhere}
+
+/* ---------- 目录 ---------- */
+nav.toc{position:sticky;top:var(--nav-sticky-top);align-self:start;max-height:calc(100vh - 84px);overflow:auto;padding-right:4px}
+nav.toc h4{margin:0 0 8px;font-size:12px;letter-spacing:.12em;color:var(--muted);text-transform:uppercase;font-weight:600}
+nav.toc a{display:block;padding:7px 11px;border-radius:var(--radius-sm);color:var(--ink);opacity:.78;
+  text-decoration:none;font-size:14.5px;border-left:2.5px solid transparent}
+nav.toc a:hover{background:var(--sel-bg);opacity:1}
+nav.toc a.active{background:var(--accent-soft);color:var(--accent);border-left-color:var(--accent);font-weight:600;opacity:1}
+nav.toc a .n{display:inline-block;min-width:20px;color:var(--muted);font-size:12.5px;font-variant-numeric:tabular-nums}
+nav.toc a.active .n{color:var(--accent)}
+nav.toc .sub{padding-left:26px;font-size:13.5px;opacity:.7}
+
+/* ---------- 章节 ---------- */
+section{background:var(--card);border:var(--card-border);border-radius:var(--radius);
+  padding:var(--sec-pad);margin-bottom:22px;box-shadow:var(--shadow);scroll-margin-top:var(--anchor-offset)}
+section>h2{margin:0 0 6px;font-size:25px;letter-spacing:-.01em;font-family:var(--font-display)}
+section>.lede{color:var(--muted);margin:0 0 20px;font-size:14.5px}
+h3{font-size:18.5px;margin:26px 0 10px;padding-left:11px;border-left:3.5px solid var(--accent);font-family:var(--font-display)}
+h4{font-size:16px;margin:18px 0 8px;font-family:var(--font-display)}
+h5{font-size:15px;font-family:var(--font-display)}
+p{margin:10px 0}
+ul,ol{margin:10px 0;padding-left:22px}
+li{margin:5px 0}
+code{font-family:var(--font-mono);font-size:.89em;background:var(--code-bg);border:1px solid var(--code-bd);border-radius:5px;padding:1px 5px}
+.mono{font-family:var(--font-mono)}
+a{color:var(--accent)}
+hr{border:0;border-top:1px dashed var(--line);margin:24px 0}
+.srcref{font-size:11.5px;color:var(--muted);font-weight:500;font-family:var(--font-sans);margin-left:8px;vertical-align:middle;white-space:nowrap;opacity:.75}
+.en{color:var(--muted);font-size:.92em}
+
+/* ---------- 栅格与卡片 ---------- */
+.grid{display:grid;gap:14px}
+.g2{grid-template-columns:repeat(2,minmax(0,1fr))}
+.g3{grid-template-columns:repeat(3,minmax(0,1fr))}
+/* 窄屏单列：必须用 minmax(0,1fr)。写成 1fr 时轨道最小宽度是 auto，
+   单元格里只要有长代码行（<pre>）就撑破容器，整页横向溢出。 */
+@media(max-width:820px){.g2,.g3{grid-template-columns:minmax(0,1fr)}}
+.card{border:var(--card-border);border-radius:var(--radius-sm);padding:15px 17px;background:var(--paper-soft);box-shadow:var(--shadow-card)}
+.card h5{margin:0 0 7px}
+.card.pad0{padding:0;overflow:hidden}
+
+/* ---------- 提示框 ---------- */
+.box{border:1px solid var(--line);border-left:4px solid var(--accent);background:var(--accent-soft);
+  border-radius:var(--radius-sm);padding:12px 16px;margin:14px 0}
+.box.warn{border-left-color:var(--warn);background:var(--warn-bg)}
+.box.bad{border-left-color:var(--sign);background:var(--bad-bg)}
+.box.ok{border-left-color:var(--frac);background:var(--ok-bg)}
+.box .t{font-weight:650;font-size:14.5px;margin-bottom:2px}
+
+/* ---------- 公式 ---------- */
+.formula{font-family:var(--font-mono);background:var(--paper-soft);border:1px solid var(--line);
+  border-radius:var(--radius-sm);padding:14px 17px;margin:14px 0;font-size:16.5px;text-align:center;overflow-x:auto}
+.formula.big{font-size:20px}
+
+/* ---------- 表格 ---------- */
+table.tbl{width:100%;border-collapse:collapse;font-size:14.5px;margin:14px 0}
+table.tbl th,table.tbl td{border:1px solid var(--line);padding:8px 11px;text-align:left;vertical-align:top}
+table.tbl th{background:var(--tbl-head);font-weight:650;font-size:13.5px;white-space:nowrap}
+table.tbl td.mono,table.tbl th.mono{font-family:var(--font-mono);font-size:13.5px}
+table.tbl tr:hover td{background:var(--tbl-hover)}
+/* 当前行高亮：interactive 表格用它标出「正在看的那一行」。
+   注意 --tbl-hover 是悬停色，深色皮肤下故意比底色亮，所以 hl 用同一套变量。 */
+table.tbl tr.hl td{background:var(--sel-bg)}
+.tbl-wrap{overflow-x:auto}
+
+/* ---------- 位串控件 ---------- */
+.fw{display:flex;flex-wrap:wrap;gap:8px 18px;align-items:flex-start;margin:4px 0 2px;min-width:0}
+.fgrp{min-width:0}
+.fcap{font-size:12px;color:var(--muted);margin-bottom:4px;font-weight:600}
+.fcap b{font-family:var(--font-mono);font-size:12.5px}
+.bits{display:flex;flex-wrap:wrap;gap:2px;font-family:var(--font-mono);margin:4px 0}
+.bits .b{width:25px;height:33px;display:flex;align-items:center;justify-content:center;
+  border-radius:6px;font-size:15px;cursor:pointer;user-select:none;border:1px solid transparent;
+  transition:transform .06s,background .12s;font-weight:600}
+.bits .b:hover{transform:translateY(-2px)}
+.bits .b.s{background:var(--sign-bg);color:var(--sign-fg);border-color:var(--sign-bd)}
+.bits .b.e{background:var(--exp-bg);color:var(--exp-fg);border-color:var(--exp-bd)}
+.bits .b.f{background:var(--frac-bg);color:var(--frac-fg);border-color:var(--frac-bd)}
+.bits .b.sel{outline:2px solid var(--ink);outline-offset:1px}
+.bits.sm .b{width:19px;height:26px;font-size:12px;border-radius:4px}
+.fgrp .bits{flex-wrap:wrap;max-width:100%;gap:2px}
+.fgrp.ge .bits{max-width:300px}
+
+/* ---------- 读数表 ---------- */
+.readout{display:grid;grid-template-columns:auto 1fr;gap:4px 16px;font-size:14.5px;margin:12px 0}
+.readout dt{color:var(--muted);font-weight:600;font-family:var(--font-mono);font-size:13.5px;padding-top:2px}
+.readout dd{margin:0;font-family:var(--font-mono)}
+
+/* ---------- 小标签 ---------- */
+.chip{display:inline-block;font-size:12.5px;padding:2px 9px;border-radius:var(--radius-pill);
+  background:var(--accent-soft);color:var(--accent);font-weight:600}
+.chip.ok{background:var(--frac-bg);color:var(--frac-fg)}
+.chip.bad{background:var(--sign-bg);color:var(--sign-fg)}
+.chip.warn{background:var(--warn-bg);color:var(--warn)}
+.chip.gray{background:var(--gray-bg);color:var(--gray-fg)}
+.kbd{font-family:var(--font-mono);font-size:13px;background:var(--code-bg);border:1px solid var(--code-bd);
+  border-bottom-width:2px;border-radius:6px;padding:1px 7px}
+
+/* ---------- 控件 ---------- */
+.ctrls{display:flex;flex-wrap:wrap;gap:9px;align-items:center;margin:12px 0}
+label.fld{display:inline-flex;align-items:center;gap:7px;font-size:14px;color:var(--ink);max-width:100%;flex-wrap:wrap;min-width:0}
+label.fld select,label.fld input{min-width:0;max-width:100%}
+input[type=text],input[type=number],select{font-family:var(--font-mono);font-size:14px;padding:6px 10px;
+  border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--card);color:var(--ink)}
+input[type=text]:focus,input[type=number]:focus,select:focus{outline:2px solid var(--accent-soft);border-color:var(--accent)}
+button{font-family:var(--font-sans);font-size:14px;font-weight:600;padding:7px 15px;border-radius:var(--radius-sm);
+  border:1px solid var(--line);background:var(--card);color:var(--ink);cursor:pointer}
+button:hover{background:var(--sel-bg)}
+button.p{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+button.sm{padding:4px 10px;font-size:13px}
+button.pill{border-radius:var(--radius-pill)}
+/* 按钮组默认不换行：项一多就会把 .ctrls 撑破。允许它缩到容器宽度并横向滚动。 */
+.seg{display:inline-flex;max-width:100%;border:1px solid var(--line);
+  border-radius:var(--radius-sm);overflow-x:auto;overflow-y:hidden}
+.seg button{border:0;border-radius:0;border-right:1px solid var(--line);padding:6px 13px}
+.seg button:last-child{border-right:0}
+.seg button.on{background:var(--accent);color:var(--accent-ink)}
+
+/* ---------- 分步演示 ---------- */
+/* .steps 是 .step 的包裹层（skill 词汇表里列了但一直没定义）——
+   仅给一点上下留白，步骤块自己的边距由 .step 负责。 */
+.steps{margin:12px 0}
+.step{border:1px solid var(--line);border-radius:var(--radius-sm);padding:11px 15px;margin:9px 0;
+  background:var(--paper-soft);opacity:.42;transition:opacity .2s}
+.step.on{opacity:1;background:var(--card)}
+.step .h{font-size:13px;font-weight:700;color:var(--accent);letter-spacing:.02em;margin-bottom:3px}
+.step .m{font-family:var(--font-mono);font-size:14.5px;overflow-x:auto}
+.step .e{font-size:13.5px;color:var(--muted);margin-top:3px}
+
+/* ---------- 折叠与答案 ---------- */
+.reveal{border:1px solid var(--line);border-radius:var(--radius-sm);padding:11px 15px;margin:8px 0;background:var(--paper-soft)}
+.reveal summary{cursor:pointer;font-weight:600;font-size:14.5px}
+.reveal[open]{background:var(--card)}
+.ans{margin-top:8px;padding-top:8px;border-top:1px dashed var(--line);font-size:14.5px}
+
+/* ---------- 判断题 ---------- */
+.puzzle{border:1px solid var(--line);border-radius:var(--radius-sm);padding:12px 15px;margin:9px 0;
+  display:flex;gap:13px;align-items:flex-start;background:var(--paper-soft)}
+.puzzle .q{font-family:var(--font-mono);font-size:15px;flex:1;min-width:0;overflow-x:auto;white-space:nowrap}
+.puzzle .q small{font-family:var(--font-sans);color:var(--muted);display:block;white-space:normal}
+.puzzle .btns{display:flex;gap:6px;flex-shrink:0}
+.puzzle.correct{border-color:var(--ok-bd);background:var(--ok-bg)}
+.puzzle.wrong{border-color:var(--bad-bd);background:var(--bad-bg)}
+.puzzle .exp{margin-top:9px;padding-top:9px;border-top:1px dashed var(--line);font-size:14.5px;
+  display:none;white-space:normal;font-family:var(--font-sans)}
+.puzzle.done .exp{display:block}
+.puzzle .exp .verdict{font-weight:700}
+
+/* ---------- 分布图 ---------- */
+.tick{stroke:#94a3b8;stroke-width:1.4}
+.tick.dn{stroke:var(--exp)}
+.tick.nm{stroke:var(--frac)}
+.ticklabel{font-size:9.5px;fill:var(--muted);font-family:var(--font-mono)}
+.axisline{stroke:var(--line);stroke-width:1.2}
+.axislabel{font-size:11px;fill:var(--muted)}
+
+/* ---------- 页脚 / 回到顶部 ---------- */
+.footer{max-width:var(--page-max);margin:0 auto;padding:8px 22px 40px;color:var(--muted);font-size:13px}
+.totop{position:fixed;right:22px;bottom:22px;z-index:40;box-shadow:var(--shadow);display:none}
+
+/* ---------- 响应式 ---------- */
+@media(max-width:960px){
+  .layout{grid-template-columns:1fr;padding:16px}
+  nav.toc{position:static;max-height:none;display:flex;flex-wrap:wrap;gap:6px;
+    background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:10px}
+  nav.toc h4{width:100%;margin-bottom:2px}
+  nav.toc a{border-left:0;padding:5px 10px;font-size:13px}
+  nav.toc .sub{display:none}
+  section{padding:20px 17px}
+}
+@media print{
+  nav.toc,.topbar,.totop{display:none}
+  .layout{display:block}
+  section{break-inside:avoid;box-shadow:none}
+}
+
+/* ---------- 风格切换条（各主题通用） ---------- */
+.stylebar{max-width:var(--page-max);margin:0 auto;padding:14px 22px 0;display:flex;gap:8px;
+  flex-wrap:wrap;align-items:center;font-size:12.5px;color:var(--muted)}
+.stylebar>span{font-weight:600}
+.stylebar a{text-decoration:none;padding:4px 11px;border:1px solid var(--line);border-radius:var(--radius-pill);
+  color:var(--muted);background:var(--card);font-weight:600}
+.stylebar a:hover{border-color:var(--accent);color:var(--accent)}
+.stylebar a.cur{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.stylebar>span{flex:0 0 auto}
+@media(max-width:960px){.stylebar{padding:12px 16px 0}}
+/* 25 讲之后药丸很多：窄屏折行会吃掉大半屏，改成单行横滑 */
+@media(max-width:820px){.stylebar{flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;
+  scrollbar-width:thin}.stylebar a{flex:0 0 auto;font-size:12px;padding:4px 10px}}
+
+</style>
+</head>
+<body>
+
+<div class="topbar"><div class="topbar-in">
+  <div class="brand">链接 Linking<small>《计算机系统导论》第 15 讲 · 中文交互版</small></div>
+  <div class="progress"><span id="pgText">学习进度 0%</span><span class="bar"><i id="pgBar"></i></span></div>
+</div></div>
+<div class="stylebar">
+  <span>课件：</span>
+  <a href="ics01-zh.html" title="第 1 讲 · 课程概述">第 1 讲</a>
+  <a href="bits-bytes-ints-zh.html" title="第 2 讲 · 位、字节与整数">第 2 讲</a>
+  <a href="floating-point-zh.html" title="第 3 讲 · 浮点数">第 3 讲</a>
+  <a href="ics04-zh.html" title="第 4 讲 · 机器级编程 I：基础">第 4 讲</a>
+  <a href="ics05-zh.html" title="第 5 讲 · 机器级编程 II：控制">第 5 讲</a>
+  <a href="ics06-zh.html" title="第 6 讲 · 机器级编程 III：过程">第 6 讲</a>
+  <a href="ics07-zh.html" title="第 7 讲 · 机器级编程 IV：数据">第 7 讲</a>
+  <a href="ics08-zh.html" title="第 8 讲 · 机器级编程 V：高级">第 8 讲</a>
+  <a href="ics09-zh.html" title="第 9 讲 · 处理器体系结构：ISA 与逻辑">第 9 讲</a>
+  <a href="ics10-zh.html" title="第 10 讲 · 处理器体系结构：顺序实现">第 10 讲</a>
+  <a href="ics11-zh.html" title="第 11 讲 · 处理器体系结构：流水线">第 11 讲</a>
+  <a href="ics12-zh.html" title="第 12 讲 · 存储层次结构">第 12 讲</a>
+  <a href="ics13-zh.html" title="第 13 讲 · 缓存存储器">第 13 讲</a>
+  <a href="ics14-zh.html" title="第 14 讲 · 代码优化">第 14 讲</a>
+  <a href="ics15-zh.html" class="cur" onclick="return false" title="第 15 讲 · 链接">第 15 讲 · 链接（当前）</a>
+  <a href="ics16-zh.html" title="第 16 讲 · 异常控制流 I">第 16 讲</a>
+  <a href="ics17-zh.html" title="第 17 讲 · 异常控制流 II">第 17 讲</a>
+  <a href="ics18-zh.html" title="第 18 讲 · 系统级 I/O">第 18 讲</a>
+  <a href="ics19-zh.html" title="第 19 讲 · 虚拟内存 I">第 19 讲</a>
+  <a href="ics20-zh.html" title="第 20 讲 · 虚拟内存 II">第 20 讲</a>
+  <a href="ics21-zh.html" title="第 21 讲 · 动态内存分配">第 21 讲</a>
+  <a href="ics22-zh.html" title="第 22 讲 · 网络基础">第 22 讲</a>
+  <a href="ics23-zh.html" title="第 23 讲 · 网络编程">第 23 讲</a>
+  <a href="ics24-zh.html" title="第 24 讲 · 并发编程">第 24 讲</a>
+  <a href="ics25-zh.html" title="第 25 讲 · 同步">第 25 讲</a>
+  <a href="datalab-zh.html" title="Data Lab 实验">Data Lab 实验</a>
+  <a href="variants-ics15/index.html">◧ 全部预览</a>
+</div>
+<div class="layout">
+  <nav class="toc">
+    <h4>目录</h4>
+    <a href="#s0"><span class="n">0</span>课程导览</a>
+    <a href="#s1"><span class="n">1</span>编译工具链</a>
+    <a href="#s2"><span class="n">2</span>目标文件与 ELF</a>
+    <a href="#s3"><span class="n">3</span>符号与符号解析</a>
+    <a href="#s4"><span class="n">4</span>重定位两步走</a>
+    <a href="#s5"><span class="n">5</span>重定位条目与修补</a>
+    <a href="#s6"><span class="n">6</span>静态库</a>
+    <a href="#s7"><span class="n">7</span>加载与动态链接</a>
+    <a href="#s8"><span class="n">8</span>库打桩</a>
+    <a href="#s9"><span class="n">9</span>总结与测验</a>
+  </nav>
+
+  <main>
+<!-- ================= 0 ================= -->
+  <section id="s0">
+    <h2>课程导览<span class="srcref">原第 1–2 页</span></h2>
+    <p class="lede">北京大学《计算机系统导论》第 15 讲：<b>链接（Linking）</b>。这一讲回答一个被很多人跳过、但天天在用的过程：<b>一个个 <code>.o</code> 文件是怎么被拼成一个能跑的可执行文件的</b>。课件第 2 页的提纲把它拆成四块：目标文件、链接机制（符号与符号解析、重定位）、库、动态链接与库打桩。</p>
+
+    <div class="grid g3">
+      <div class="card"><h5>本讲提纲<span class="srcref">原第 2 页</span></h5>
+        <ol style="margin:0;padding-left:20px;font-size:14.5px">
+          <li>链接：把目标文件组合成程序</li>
+          <li>目标文件（三类）与 ELF 格式</li>
+          <li>链接机制之一：符号与符号解析</li>
+          <li>链接机制之二：重定位</li>
+          <li>库：静态库与共享库</li>
+          <li>动态链接、加载与执行</li>
+          <li>库打桩（library interpositioning）</li>
+        </ol>
+      </div>
+      <div class="card"><h5>一句话核心</h5>
+        <p style="margin:0;font-size:14.5px">链接器只做两件事：<b>符号解析</b>（把每个符号引用接到唯一一个符号定义上）与<b>重定位</b>（把各模块同类型的节合并、分配运行时地址、再把代码与数据里所有引用改写过去）。其余的一切 —— 库、动态链接、打桩 —— 都是这两件事在不同时机（编译时 / 加载时 / 运行时）的变体。</p>
+      </div>
+      <div class="card"><h5>为什么值得学</h5>
+        <p style="margin:0;font-size:14.5px">课件第 67 页的收尾：链接<b>通常悄无声息</b>，偶尔给出<b>匪夷所思的错误</b>（符号解析错误、<code>.o</code>／<code>.a</code>／<code>.so</code> 的顺序依赖）；而对高手来说，理解链接才能用库打桩去<b>追踪</b>别人的程序。这一讲里的「谜题」「顺序」「类型不检查」都是真实会咬人的坑。</p>
+      </div>
+    </div>
+
+    <h3>0.1 三大主题与原页码</h3>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>主题</th><th>原课件页码</th><th>要回答的问题</th></tr>
+      <tr><td><b>工具链与目标文件</b></td><td class="mono">3–8、14–18</td><td>gcc 背后调用了谁？<code>.o</code>／<code>a.out</code>／<code>.so</code> 有什么区别？ELF 里那些 <code>.text</code>／<code>.data</code>／<code>.bss</code>／<code>.symtab</code>／<code>.rel.text</code> 各是干什么的？</td></tr>
+      <tr><td><b>符号与符号解析</b></td><td class="mono">11–13、19–25</td><td>哪些符号会进符号表？强符号与弱符号冲突时听谁的？为什么说链接器<b>不做类型检查</b>？</td></tr>
+      <tr><td><b>重定位</b></td><td class="mono">26–36</td><td>重定位条目长什么样？<code>R_X86_64_32</code> 与 <code>R_X86_64_PC32</code> 各自往那 4 个字节里写什么值？</td></tr>
+      <tr><td><b>库：静态与动态</b></td><td class="mono">38–53</td><td><code>.a</code> 与 <code>.so</code> 怎么造、怎么用？为什么命令行顺序要紧？加载时链接与运行时链接差在哪？</td></tr>
+      <tr><td><b>库打桩</b></td><td class="mono">54–66</td><td>怎样在编译期、链接期、加载／运行期把 <code>malloc</code>／<code>free</code> 换成自己的实现？</td></tr>
+    </table></div>
+
+    <div class="box"><div class="t">本页使用说明</div>
+      标有 <span class="chip gray">可交互</span> 的地方都能点击或输入，所有计算都在浏览器里实时完成。<a href="#s5">第 5 节的重定位表查看器与重定位计算器</a>最值得反复玩：它把课件第 36 页那张三列对照图变成可以改参数的活工具；<a href="#s6">第 6 节的静态库顺序模拟器</a>则把课件第 44 页那条「库写在前面就报错」的规则一步步演给你看。页面里所有「判对错」的基准（重定位求值、符号解析三规则、静态库扫描算法、ELF 重定位条目解码）都已用独立参考实现与真实 x86-64 目标文件交叉验证。
+    </div>
+  </section>
+
+  <!-- ================= 1 ================= -->
+  <section id="s1">
+    <h2>1. 从 .c 到可执行文件：编译工具链<span class="srcref">原第 3–8 页</span></h2>
+    <p class="lede">课件第 3 页先给出这一讲反复使用的例子 —— 两个文件、一个数组、一个函数调用；第 4 页指出真正干活的是 gcc 背后的四个程序。<b>链接是这条流水线的最后一步，也是本讲的主题</b>。</p>
+
+    <h3>1.1 课件的示例程序<span class="srcref">原第 3、8 页</span></h3>
+    <div class="grid g2">
+      <div class="formula" style="text-align:left;font-size:13.5px">/* main.c */<br>
+        int sum(int *a, int n);<br>
+        int array[2] = {1, 2};<br><br>
+        int main(int argc, char** argv)<br>
+        {<br>
+        &nbsp;&nbsp;int val = sum(array, 2);<br>
+        &nbsp;&nbsp;return val;<br>
+        }</div>
+      <div class="formula" style="text-align:left;font-size:13.5px">/* sum.c */<br>
+        int sum(int *a, int n)<br>
+        {<br>
+        &nbsp;&nbsp;int i, s = 0;<br>
+        &nbsp;&nbsp;for (i = 0; i &lt; n; i++) {<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;s += a[i];<br>
+        &nbsp;&nbsp;}<br>
+        &nbsp;&nbsp;return s;<br>
+        }</div>
+    </div>
+    <p>这一对文件贯穿全讲：<code>main.c</code> <b>定义</b>了 <code>array</code> 与 <code>main</code>、<b>引用</b>了 <code>sum</code>；<code>sum.c</code> <b>定义</b>了 <code>sum</code>。链接器的全部工作就是把这两半接上。</p>
+
+    <h3>1.2 gcc 是「编译器驱动」<span class="srcref">原第 4 页</span></h3>
+    <p>课件第 4 页的流程图把 <code>hello.c</code> 一路送到 <code>hello</code>，中间经过四个程序：</p>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>阶段</th><th>程序</th><th>输入 → 输出</th><th>做什么<span class="srcref">原第 5–7 页</span></th></tr>
+      <tr><td><b>预处理</b></td><td class="mono">cpp</td><td class="mono">hello.c → hello.i</td><td>只做文本替换：# 指令全部展开</td></tr>
+      <tr><td><b>编译</b></td><td class="mono">cc1</td><td class="mono">hello.i → hello.s</td><td>把 C 代码翻译成汇编代码</td></tr>
+      <tr><td><b>汇编</b></td><td class="mono">as / gas</td><td class="mono">hello.s → hello.o</td><td>把汇编翻译成二进制目标代码（还带着符号表与重定位条目）</td></tr>
+      <tr><td><b>链接</b></td><td class="mono">ld</td><td class="mono">hello.o（+ 启动代码 + 库）→ hello</td><td>符号解析 + 重定位，产出可执行文件</td></tr>
+    </table></div>
+    <p>顺手记住课件第 4 页图上的五个名词：<span class="mono">程序源文件 Program Source</span> → <span class="mono">修改后的源文件 Modified Source</span> → <span class="mono">汇编代码 Assembly Code</span> → <span class="mono">目标代码 Object Code</span> → <span class="mono">可执行代码 Executable Code</span>。</p>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：工具链漫游 —— 点阶段看它调用谁、吃什么、吐什么</span>
+        <span class="chip" data-tc="cpp">cpp</span><span class="chip gray" data-tc="cc1">cc1</span>
+        <span class="chip gray" data-tc="as">as/gas</span><span class="chip gray" data-tc="ld">ld</span>
+      </div>
+      <div id="tcOut"></div>
+    </div>
+
+    <h3>1.3 停在半路的四条命令行<span class="srcref">原第 5–8 页</span></h3>
+    <p>课件第 5 页提到 <code>-E</code>、第 6 页提到 <code>cc1</code>、第 7 页提到 <code>gas</code>、第 8 页给出完整命令 <code>linux&gt; gcc -Og -o prog main.c sum.c</code>。把这几条串起来看，就能明白「<code>.o</code> 是怎么来的」：</p>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：gcc 命令生成器 —— 选停在哪一步</span>
+        <label class="fld">源文件 <input type="text" id="gcBase" value="main" size="8" spellcheck="false"></label>
+        <label class="fld">停在哪
+          <select id="gcSel"></select>
+        </label>
+        <button class="p" id="gcGo">生成命令</button>
+        <button class="sm" data-gc="hello">课件例子 hello</button>
+        <button class="sm" data-gc="main">课件例子 main</button>
+      </div>
+      <div id="gcOut"></div>
+    </div>
+
+    <h3>1.4 汇编器产出的东西：以 hello 为例<span class="srcref">原第 6–7 页</span></h3>
+    <p>课件第 6 页给出 <code>cc1</code> 的输出（节选）：格式串进了 <code>.rodata</code> 的 <code>.LC0</code>，<code>main</code> 的代码进了 <code>.text</code>：</p>
+    <div class="formula" style="text-align:left;font-size:13.5px">
+      &nbsp;&nbsp;.section&nbsp;&nbsp;&nbsp;&nbsp;.rodata<br>
+      .LC0:<br>
+      &nbsp;&nbsp;.string "hello, world %d\n"<br>
+      &nbsp;&nbsp;.text<br>
+      main:<br>
+      &nbsp;&nbsp;pushq&nbsp;&nbsp;&nbsp;%rbp<br>
+      &nbsp;&nbsp;movq&nbsp;&nbsp;&nbsp;&nbsp;%rsp, %rbp<br>
+      &nbsp;&nbsp;movl&nbsp;&nbsp;&nbsp;&nbsp;$4, %esi<br>
+      &nbsp;&nbsp;movl&nbsp;&nbsp;&nbsp;&nbsp;$.LC0, %edi<br>
+      &nbsp;&nbsp;movl&nbsp;&nbsp;&nbsp;&nbsp;$0, %eax<br>
+      &nbsp;&nbsp;call&nbsp;&nbsp;&nbsp;&nbsp;printf<br>
+      &nbsp;&nbsp;popq&nbsp;&nbsp;&nbsp;&nbsp;%rbp<br>
+      &nbsp;&nbsp;ret</div>
+    <p>第 7 页把同一个 hello 用三种工具翻过来看 —— 下面把课件那三种输出重排成一张可读的表：</p>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>课件用的命令</th><th>输出（原文引用）</th></tr>
+      <tr><td class="mono">readelf -a hello | grep .rodata</td><td class="mono">[10] .rodata&nbsp;&nbsp;PROGBITS&nbsp;&nbsp;0000000000495d40&nbsp;&nbsp;00095d40</td></tr>
+      <tr><td class="mono">readelf -a hello | grep "GLOBAL.* main"</td><td class="mono">1591: 0000000000401190&nbsp;&nbsp;31 FUNC&nbsp;&nbsp;GLOBAL DEFAULT&nbsp;&nbsp;6 main</td></tr>
+      <tr><td class="mono">readelf -x .rodata hello</td><td class="mono">0x00495d40&nbsp;&nbsp;01000200 68656c6c 6f2c2077 6f726c64&nbsp;&nbsp;....hello, world<br>
+        0x00495d50&nbsp;&nbsp;2025640a 00464154 414c3a20 6b65726e&nbsp;&nbsp;%d..FATAL: kern</td></tr>
+      <tr><td class="mono">objdump -d hello</td><td class="mono">0000000000401190 &lt;main&gt;:<br>
+        401190:&nbsp;&nbsp;55&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;push&nbsp;&nbsp;%rbp<br>
+        401191:&nbsp;&nbsp;48 89 e5&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;mov&nbsp;&nbsp;&nbsp;%rsp,%rbp<br>
+        401194:&nbsp;&nbsp;be 04 00 00 00&nbsp;&nbsp;mov&nbsp;&nbsp;&nbsp;$0x4,%esi<br>
+        401199:&nbsp;&nbsp;bf 44 5d 49 00&nbsp;&nbsp;mov&nbsp;&nbsp;&nbsp;$0x495d44,%edi<br>
+        40119e:&nbsp;&nbsp;b8 00 00 00 00&nbsp;&nbsp;mov&nbsp;&nbsp;&nbsp;$0x0,%eax<br>
+        4011a3:&nbsp;&nbsp;e8 d8 0e 00 00&nbsp;&nbsp;callq 402080 &lt;_IO_printf&gt;<br>
+        4011a8:&nbsp;&nbsp;b8 00 00 00 00&nbsp;&nbsp;mov&nbsp;&nbsp;&nbsp;$0x0,%eax<br>
+        4011ad:&nbsp;&nbsp;5d&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;pop&nbsp;&nbsp;&nbsp;%rbp<br>
+        4011ae:&nbsp;&nbsp;c3&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;retq<br>
+        4011af:&nbsp;&nbsp;90&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;nop</td></tr>
+    </table></div>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：反汇编里的地址对得上转储吗 —— 输入地址，看它落在哪个字节上</span>
+        <label class="fld">地址 <input type="text" id="hxIn" value="0x495d44" size="12" spellcheck="false"></label>
+        <button class="p" id="hxGo">查这个地址</button>
+        <button class="sm" data-hx="0x495d44">课件里的 0x495d44</button>
+        <button class="sm" data-hx="0x495d40">转储起点 0x495d40</button>
+        <button class="sm" data-hx="0x495d55">0x495d55（下一个字符串）</button>
+      </div>
+      <div id="hxOut"></div>
+    </div>
+
+    <h3>1.5 静态链接全景<span class="srcref">原第 8 页</span></h3>
+    <p>课件第 8 页的图把「分别编译、一次链接」画清楚了：</p>
+    <div class="formula" style="text-align:left;font-size:13.5px">
+      main.c&nbsp;&nbsp;&nbsp;sum.c&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)">← 源文件 Source files</span><br>
+      &nbsp;&nbsp;│&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;│<br>
+      &nbsp;&nbsp;▼&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;▼<br>
+      Translators&nbsp;&nbsp;Translators&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)">← (cpp, cc1, as) 各来一遍</span><br>
+      &nbsp;&nbsp;│&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;│<br>
+      &nbsp;&nbsp;▼&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;▼<br>
+      main.o&nbsp;&nbsp;sum.o&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)">← 可重定位目标文件，分别编译</span><br>
+      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;│<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;▼<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;Linker (ld)<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;│<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;▼<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;prog&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)">← 完全链接的可执行目标文件（含 main.c 与 sum.c 中所有函数）</span></div>
+    <div class="box ok"><div class="t">为什么第 9、10 页说链接器有用</div>
+      <b>模块化</b>：程序可以写成一组较小的源文件，而不是一大坨；公共函数还能攒成库（数学库、标准 C 库……）。
+      <b>效率</b>：时间上 —— 改一个文件只重编这一个，再重新链接即可（其余文件不必重编，还可以并行编译）；空间上 —— 库提供两种省法：<b>静态链接</b>让可执行文件与内存映像里只含真正用到的库代码，<b>动态链接</b>干脆不让可执行文件带库代码，运行时所有进程共享同一份库代码。
+    </div>
+  </section>
+
+  <!-- ================= 2 ================= -->
+  <section id="s2">
+    <h2>2. 三种目标文件与 ELF 格式<span class="srcref">原第 14–18 页</span></h2>
+    <p class="lede">链接器面前只有「模块」。课件第 14 页把模块分成三类，第 15–18 页说明它们用同一个二进制格式 ELF 装着 —— 区别不在格式，而在<b>用途</b>：可重定位（再组合）、可执行（直接复制进内存就能跑）、共享（加载或运行时再链接）。</p>
+
+    <h3>2.1 三类目标文件<span class="srcref">原第 14 页</span></h3>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>类别</th><th>后缀</th><th>课件原话</th></tr>
+      <tr><td><b>可重定位目标文件</b></td><td class="mono">.o</td><td>里面的代码和数据可以与其他可重定位目标文件<b>组合</b>成可执行目标文件；<b>每个 <code>.o</code> 恰好由一个 <code>.c</code> 文件产出</b></td></tr>
+      <tr><td><b>可执行目标文件</b></td><td class="mono">a.out</td><td>代码和数据可以被<b>直接复制到内存</b>并执行</td></tr>
+      <tr><td><b>共享目标文件</b></td><td class="mono">.so</td><td>一类特殊的可重定位目标文件，可以在<b>加载时或运行时</b>被动态加载并链接进程序；Windows 管它叫动态链接库 DLL</td></tr>
+    </table></div>
+
+    <h3>2.2 统一格式 ELF<span class="srcref">原第 15 页</span></h3>
+    <ul>
+      <li>ELF = <b>Executable and Linkable Format</b>，目标文件的标准二进制格式；</li>
+      <li>一种格式覆盖三种文件：<code>.o</code>、<code>a.out</code>、<code>.so</code> —— 统称 <b>ELF 二进制</b>；</li>
+      <li>最初出现在 System V Release 4 Unix（约 1989 年）；Linux 约 1995 年换成 ELF，BSD 更晚，约 1998–2000 年。</li>
+    </ul>
+
+    <h3>2.3 ELF 里装着什么<span class="srcref">原第 16–17 页</span></h3>
+    <p>课件第 16–17 页把 ELF 的部件逐个点名，第 18 页说明为什么同一份文件有「两种看法」。点下面的部件看它的用途，以及它在链接视图／执行视图里的身份：</p>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：ELF 部件查看器</span>
+        <span class="seg" id="elfSeg">
+          <button class="on" data-ev="link">链接视图</button>
+          <button data-ev="exec">执行视图</button>
+        </span>
+      </div>
+      <div class="ctrls" style="margin-top:0">
+        <span class="chip" data-elf="ELF 头">ELF 头</span>
+        <span class="chip gray" data-elf="程序头表／段">程序头表／段</span>
+        <span class="chip gray" data-elf="节头表">节头表</span>
+        <span class="chip gray" data-elf=".text">.text</span>
+        <span class="chip gray" data-elf=".rodata">.rodata</span>
+        <span class="chip gray" data-elf=".data">.data</span>
+        <span class="chip gray" data-elf=".bss">.bss</span>
+        <span class="chip gray" data-elf=".symtab">.symtab</span>
+        <span class="chip gray" data-elf=".rel.text">.rel.text</span>
+        <span class="chip gray" data-elf=".rel.data">.rel.data</span>
+        <span class="chip gray" data-elf=".debug">.debug</span>
+        <span class="chip gray" data-elf=".line / .strtab">.line / .strtab</span>
+        <span class="chip gray" data-elf=".init">.init</span>
+        <span class="chip gray" data-elf=".interp">.interp</span>
+        <span class="chip gray" data-elf=".dynamic">.dynamic</span>
+      </div>
+      <div id="elfOut"></div>
+    </div>
+
+    <div class="box ok"><div class="t">两种看法：节（Section）与段（Segment）</div>
+      课件第 18 页把同一份 ELF 文件并排画了两遍：<b>链接视图</b>看到的是「ELF 头 → 程序头表（可选）→ 节 1…节 n → 节头表（必需）」；<b>执行视图</b>看到的是「ELF 头 → 程序头表（必需）→ 段 1、段 2、段 3……→ 节头表（可选）」。
+      一句话：<b>链接时按节看，执行时按段看</b> —— 段是把若干节合并起来交给加载器的单位。
+      <div style="margin-top:6px">程序头表用来构造进程映像（也就是「执行一个程序」），所以<b>可重定位文件不需要它</b>；反过来，链接时用的文件<b>必须有节头表</b>。</div>
+    </div>
+
+    <div class="box warn"><div class="t">BSS 这个名字的两个说法（课件第 16 页原文）</div>
+      课件同时给出了两个解释：<b>"Block Started by Symbol"</b> 与 <b>"Better Save Space"</b>。它装的是<b>未初始化的全局变量</b>；
+      关键在于后半句：<b>它有节头，但不占文件空间</b> —— 全是 0 的东西没必要真的存进文件里（这一点在执行视图里变成「段在内存里比在文件里大」）。
+    </div>
+  </section>
+
+  <!-- ================= 3 ================= -->
+  <section id="s3">
+    <h2>3. 符号与符号解析<span class="srcref">原第 11–12、19–25 页</span></h2>
+    <p class="lede">链接器的第一步是<b>符号解析</b>（symbol resolution）：<b>把程序里每个符号引用，关联到恰好一个符号定义上</b>。这一步听起来平淡，但「强符号／弱符号」「链接器不做类型检查」这些坑全在这里。</p>
+
+    <h3>3.1 链接器做两件事<span class="srcref">原第 11、13 页</span></h3>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>步骤</th><th>做什么<span class="srcref">原第 11、13 页</span></th></tr>
+      <tr><td><b>第一步：符号解析</b><br><span class="mono">Symbol resolution</span></td><td>程序由符号的<b>定义</b>与<b>引用</b>组成（<code>void swap() {…}</code> 定义 <code>swap</code>，<code>swap();</code> 引用 <code>swap</code>，<code>int *xp = &amp;x;</code> 定义 <code>xp</code>、引用 <code>x</code>）。汇编器把定义收进目标文件的<b>符号表</b>（一个条目数组，每项含名字、大小、位置）；链接器则把<b>每个引用接上恰好一个定义</b>。</td></tr>
+      <tr><td><b>第二步：重定位</b><br><span class="mono">Relocation</span></td><td>把各模块里同类型的代码节与数据节<b>合并成单个节</b>；把符号从 <code>.o</code> 里的相对位置搬到可执行文件里的<b>最终绝对地址</b>；再把所有对这些符号的引用改成新位置。（第 4、5 节详细讲）</td></tr>
+    </table></div>
+
+    <h3>3.2 三类链接器符号<span class="srcref">原第 19、21 页</span></h3>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>类别</th><th>定义</th><th>例子</th></tr>
+      <tr><td><b>全局符号</b><br><span class="mono">Global</span></td><td>由模块 m 定义、并能被其他模块引用</td><td>非 static 的 C 函数、非 static 的全局变量</td></tr>
+      <tr><td><b>外部符号</b><br><span class="mono">External</span></td><td>被模块 m 引用、但由别的模块定义</td><td><code>main.o</code> 里的 <code>sum</code></td></tr>
+      <tr><td><b>局部符号</b><br><span class="mono">Local</span></td><td>只由模块 m 自己定义并引用</td><td>用 <code>static</code> 定义的函数与全局变量</td></tr>
+    </table></div>
+    <div class="box warn"><div class="t">「局部符号」不是「局部变量」</div>
+      课件第 19 页专门加了一句：<b>Local linker symbols are not local program variables.</b>
+      函数里的局部（非 static）变量在栈上（课件第 21 页：local non-static C variables: stored on the stack），跟链接器毫无关系；而<b>局部 static 变量</b>虽然名字里带「局部」，却要真的分配空间 —— 存在 <code>.bss</code> 或 <code>.data</code> 里，并在符号表里占一条（还是「局部符号」）。
+      <div style="margin-top:8px">课件第 21 页的 <span class="mono">static-local.c</span>：</div>
+      <div class="formula" style="text-align:left;font-size:13.5px;margin-top:6px">
+        static int x = 15;　　　　　<span style="font-family:var(--font-sans);color:var(--muted)">/* 文件作用域，名字就叫 x */</span><br><br>
+        int f() { static int x = 17; return x++; }　<span style="font-family:var(--font-sans);color:var(--muted)">/* 编译器给唯一名字 x.1721 */</span><br>
+        int g() { static int x = 19; return x += 14; }　<span style="font-family:var(--font-sans);color:var(--muted)">/* 另一个 x.1724 */</span><br>
+        int h() { return x += 27; }　<span style="font-family:var(--font-sans);color:var(--muted)">/* 这里用的是文件作用域那个 x */</span>
+      </div>
+      课件原话：编译器为<b>每一处定义</b>在 <code>.data</code> 里分配空间，并在符号表里建一条<b>唯一名字</b>的局部符号 —— 例如 <code>x</code>、<code>x.1721</code>、<code>x.1724</code>。
+      （那两个数字是编译器自己生成的计数器，不同编译器／不同版本会不一样。）
+    </div>
+
+    <h3>3.3 符号表长什么样：nm 的输出<span class="srcref">原第 12 页</span></h3>
+    <p>课件第 12 页先用 <code>gcc -c</code> 各生成一个 <code>.o</code>，再用 <code>nm</code> 看符号表：</p>
+    <div class="grid g2">
+      <div class="formula" style="text-align:left;font-size:13.5px"># gcc -c -o main.o main.c<br># nm main.o<br>
+        <span style="color:var(--muted)">0000000000000000</span> D array<br>
+        <span style="color:var(--muted)">0000000000000000</span> T main<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;U sum</div>
+      <div class="formula" style="text-align:left;font-size:13.5px"># gcc -c -o sum.o sum.c<br># nm sum.o<br>
+        <span style="color:var(--muted)">0000000000000000</span> T sum</div>
+    </div>
+    <p>课件第 12 页还提示可以用 <code>objdump -t main.o</code>、<code>objdump -t sum.o</code> 看同样的东西，并在末尾强调一句：<b>汇编器不会为函数声明建立条目</b>（例子里的 <code>sum1</code> 只有声明，所以 <code>main.o</code> 里找不到它）。</p>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：符号表查看器 —— 选一种 C 写法，看它在符号表里的样子</span>
+        <label class="fld">写法 <select id="nmSel"></select></label>
+      </div>
+      <div id="nmOut"></div>
+    </div>
+
+    <h3>3.4 重复符号名：强与弱<span class="srcref">原第 22–23 页</span></h3>
+    <p>链接器把符号分成<b>强（strong）</b>与<b>弱（weak）</b>两类。课件第 22 页的对照：<code>p1.c</code> 里的 <code>int foo=5;</code> 与 <code>p1() {}</code> 都是强符号；<code>p2.c</code> 里的 <code>int foo;</code> 是弱符号，<code>p2() {}</code> 是强符号。编译器把这种信息交给汇编器，汇编器再把它隐含地编码进 ELF 的符号表。</p>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>强／弱</th><th>什么样的符号<span class="srcref">原第 22 页</span></th></tr>
+      <tr><td><b>强 Strong</b></td><td>过程（函数）、<b>已初始化</b>的全局变量</td></tr>
+      <tr><td><b>弱 Weak</b></td><td>未初始化的全局变量；或者用 <code>extern</code> 说明符声明的那些</td></tr>
+    </table></div>
+    <div class="grid g3">
+      <div class="card"><h5>规则 1</h5><p style="margin:0;font-size:14.5px">允许多个强符号？<b>不允许</b>。每个条目只能被定义一次，否则链接器报错。</p></div>
+      <div class="card"><h5>规则 2</h5><p style="margin:0;font-size:14.5px">一个强符号 + 多个弱符号：<b>选强符号</b>；对弱符号的那些引用也解析到强符号上。</p></div>
+      <div class="card"><h5>规则 3</h5><p style="margin:0;font-size:14.5px">多个弱符号：<b>任选一个</b>。课件附注：可以用 <code>gcc -fno-common</code> 改掉这种行为。</p></div>
+    </div>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：符号解析器 —— 写下各模块的符号，看链接器怎么裁决</span>
+        <button class="p" id="srGo">解析</button>
+        <button class="sm" data-sr="foo">课件第 22 页的 foo</button>
+        <button class="sm" data-sr="q1">谜题 1</button>
+        <button class="sm" data-sr="q2">谜题 2</button>
+        <button class="sm" data-sr="q3">谜题 3</button>
+        <button class="sm" data-sr="q4">谜题 4</button>
+        <button class="sm" data-sr="q5">谜题 5</button>
+        <button class="sm" data-sr="undef">引用没定义</button>
+      </div>
+      <label class="fld" style="display:block;margin:4px 0 0">符号清单（每行「模块 符号 种类」；种类：<code>strong</code> 强定义／<code>weak</code> 弱定义／<code>undef</code> 只引用／<code>decl</code> 只有声明）
+        <textarea id="srSrc" rows="7" spellcheck="false" style="width:100%;font-family:var(--font-mono);font-size:13.5px;margin-top:6px"></textarea>
+      </label>
+      <div id="srOut"></div>
+    </div>
+
+    <h3>3.5 链接器谜题<span class="srcref">原第 24 页</span></h3>
+    <p>课件第 24 页用五组 <code>p1.c</code>／<code>p2.c</code> 把上面三条规则的后果摊开 —— 这也是最有价值的一页，因为每一个「Evil!」「Nasty!」都是真的会发生的 bug：</p>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>#</th><th>p1.c</th><th>p2.c</th><th>结果（课件原话）</th><th>为什么</th></tr>
+      <tr><td>1</td><td class="mono">int x;<br>p1() {}</td><td class="mono">p1() {}</td>
+        <td><b>链接时错误：两个强符号（p1）</b><br><span class="en">Link time error: two strong symbols (p1)</span></td><td>规则 1：都是函数定义（强）。</td></tr>
+      <tr><td>2</td><td class="mono">int x;<br>p1() {}</td><td class="mono">int x;<br>p2() {}</td>
+        <td>两个 <code>x</code> 会指向<b>同一个未初始化的 int</b><br><span class="en">References to x will refer to the same uninitialized int. Is this what you really want?</span></td>
+        <td>规则 3：两个都是弱符号，任选一个 —— 于是它们成了一个变量。</td></tr>
+      <tr><td>3</td><td class="mono">int x;<br>int y;<br>p1() {}</td><td class="mono">double x;<br>p2() {}</td>
+        <td>p2 里对 <code>x</code> 的写<b>可能覆盖 y</b>！Evil！<br><span class="en">Writes to x in p2 might overwrite y! Evil!</span></td>
+        <td>两个都是弱符号，这次选中了 <code>double</code> 那个 —— 写 8 字节就会压到 <code>y</code> 上。</td></tr>
+      <tr><td>4</td><td class="mono">int x=7;<br>int y=5;<br>p1() {}</td><td class="mono">double x;<br>p2() {}</td>
+        <td>同样：p2 里写 <code>x</code> <b>可能覆盖 y</b>！Nasty！<br><span class="en">Writes to x in p2 might overwrite y! Nasty!</span></td>
+        <td>规则 2：选强符号 <code>int x=7</code>，但 p2 里的代码是按 <code>double</code> 编译的。</td></tr>
+      <tr><td>5</td><td class="mono">int x=7;<br>p1() {}</td><td class="mono">int x;<br>p2() {}</td>
+        <td>两个 <code>x</code> 会指向<b>同一个已初始化的变量</b><br><span class="en">References to x will refer to the same initialized variable.</span></td>
+        <td>规则 2：强符号胜出，弱符号上的引用解析到它。</td></tr>
+    </table></div>
+    <div class="box bad"><div class="t">课件第 24 页的两句警告</div>
+      <b>Important: Linker does not do type checking.</b>（链接器不做类型检查 —— 所以 <code>int x</code> 与 <code>double x</code> 这种冲突它照单全收。）
+      <div style="margin-top:6px"><b>Nightmare scenario</b>：两个一模一样的弱 struct，被不同编译器按不同的对齐规则编译 —— 链接器照样接上，程序在运行时开始出错。</div>
+    </div>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：八道判断题 —— 点在规则与「不检查」的边界上</span>
+        <button class="sm" id="pzReset">重来</button>
+      </div>
+      <div id="pzOut"></div>
+    </div>
+
+    <div class="box warn"><div class="t">本页补充：这条规则在今天需要加一句前提（<code>-fcommon</code>）</div>
+      课件第 22 页把「未初始化的全局变量」归为<b>弱符号</b>，谜题 2、3、5 也都建立在「两个弱符号可以共存」之上。这是传统的 <code>-fcommon</code> 行为。
+      <b>但现代编译器（GCC 10+、clang 11+）已经把 <code>-fno-common</code> 变成默认</b>：本页用 clang 实测（<code>--target=x86_64-linux-gnu</code>，默认参数）确认，<code>int x;</code> 会被放进 <code>.bss</code>
+      并成为<b>强符号</b>（<code>nm</code> 显示 <code>B</code>），加上 <code>-fcommon</code> 才回到课件那种 <code>COMMON</code> 弱符号（<code>nm</code> 显示 <code>C</code>）。
+      <div style="margin-top:6px">后果：在今天的默认参数下，两个文件各写一个 <code>int x;</code> 会变成<b>重复强符号</b>而报链接错误 —— 也就是课件规则 1 而不是规则 3。
+      课件第 23 页其实已经把这层机关写在规则 3 的附注里（「Can override this with <code>gcc -fno-common</code>」），只是没展开说默认值已经反过来了。
+      上面判断题的第 1 题按<b>课件的模型</b>判定（两个 <code>int x;</code> 链接通过），学的时候要记得这层前提。</div>
+    </div>
+
+    <h3>3.6 避免类型不匹配的四条建议<span class="srcref">原第 25 页</span></h3>
+    <ul>
+      <li><b>尽量避免全局变量</b>；</li>
+      <li><b>尽量用 <code>static</code></b>；</li>
+      <li><b>所有非 static 的东西都要在头文件里声明</b>：每个相关的地方都要 include 这个头文件（包括定义这些符号的文件本身）；</li>
+      <li><b>头文件的声明里一律写 <code>extern</code></b>：对函数声明来说虽属多余但无害，对全局变量却能避开「不带 extern 的全局变量」那种古怪行为；</li>
+      <li><b>函数没有参数时一定要写 <code>(void)</code></b>：<code>extern void no_args(void);</code>。不写 <code>void</code> 的意思是「我不说这个函数要什么参数」，这等于<b>关掉参数类型检查</b>。</li>
+    </ul>
+    <div class="box ok"><div class="t">把这四条记成一句话</div>
+      链接器不给类型把关（第 24 页），所以<b>把关的责任全在声明与 <code>static</code> 上</b>：能藏就藏（static）、要露就露在头文件里（extern + 到处 include）、空参数就写 <code>(void)</code>。
+    </div>
+  </section>
+
+  <!-- ================= 4 ================= -->
+  <section id="s4">
+    <h2>4. 重定位：两步走<span class="srcref">原第 26–29 页</span></h2>
+    <p class="lede">第二步<b>重定位</b>（relocation）是把「各自从 0 开始的节」变成「一个可执行文件」的过程。课件第 27 页把它拆成两件事：<b>先合并节并分配地址，再按重定位条目改写引用</b>。这一节先把流程讲清，下一节打开重定位条目看每一个字段。</p>
+
+    <h3>4.1 合并：从若干 .o 到一个可执行文件<span class="srcref">原第 26 页</span></h3>
+    <p>课件第 26 页左边是 <code>main.o</code> 与 <code>sum.o</code>（各有自己的 <code>.text</code>、<code>.data</code>，都从 0 开始），右边是链接之后的 <code>executable</code>：系统代码、系统数据、<code>main()</code>、<code>sum()</code>、更多系统代码、<code>int array[2]={1,2}</code>，末尾还留着 <code>.symtab</code>、<code>.debug</code> 这类「不载入内存」的节。</p>
+    <div class="box"><div class="t">注意图里的三个细节</div>
+      <ul style="margin:0">
+        <li>两个模块的 <code>.text</code> 被<b>拼成一个</b> <code>.text</code>，两个 <code>.data</code> 拼成一个 <code>.data</code> —— 链接器只认节，不认「这是谁写的」；</li>
+        <li>可执行文件里还混进了<b>系统代码与系统数据</b>（启动代码、库代码），它们也是被链接进来的目标文件；</li>
+        <li><code>.symtab</code>、<code>.debug</code> 出现在图里但不会被载入内存 —— 它们只在链接／调试时有用。</li>
+      </ul>
+    </div>
+
+    <h3>4.2 两步重定位<span class="srcref">原第 27 页</span></h3>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>步</th><th>名字</th><th>课件原话</th></tr>
+      <tr><td>一</td><td><b>重定位节与符号定义</b><br><span class="mono">Relocating sections and symbol definitions</span></td>
+        <td>把所有同类型的节合并成一个新的聚合节；再给<b>新的聚合节</b>、<b>输入模块定义的每个节</b>、<b>输入模块定义的每个符号</b>分配运行时内存地址</td></tr>
+      <tr><td>二</td><td><b>重定位符号引用</b><br><span class="mono">Relocating symbol references with sections</span></td>
+        <td>修改代码节与数据节里<b>每一处符号引用</b>，让它们指向正确的运行时地址；这一步依靠可重定位模块里的数据结构 —— <b>重定位条目</b>（relocation entries）</td></tr>
+    </table></div>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：两步重定位 —— 点步骤，看它拿课件第 36 页的地址做什么</span>
+        <span class="seg" id="rsSeg">
+          <button class="on" data-rs="1">① 合并节</button>
+          <button data-rs="2">② 分配地址</button>
+          <button data-rs="3">③ 找条目</button>
+          <button data-rs="4">④ 改写引用</button>
+        </span>
+      </div>
+      <div id="rsOut"></div>
+    </div>
+
+    <h3>4.3 重定位条目长什么样<span class="srcref">原第 28 页</span></h3>
+    <p>课件第 28 页给出 <code>SHT_RELA</code> 型节里的结构体：</p>
+    <div class="formula" style="text-align:left;font-size:13.5px">
+      /* Relocation table entry with addend (in section of type SHT_RELA). */<br>
+      660&nbsp;&nbsp;typedef struct<br>
+      661&nbsp;&nbsp;{<br>
+      662&nbsp;&nbsp;&nbsp;&nbsp;Elf64_Addr&nbsp;&nbsp;&nbsp;r_offset;&nbsp;&nbsp;/* Address */<br>
+      663&nbsp;&nbsp;&nbsp;&nbsp;Elf64_Xword&nbsp;&nbsp;r_info;&nbsp;&nbsp;&nbsp;&nbsp;/* Relocation type and symbol index */<br>
+      664&nbsp;&nbsp;&nbsp;&nbsp;Elf64_Sxword&nbsp;r_addend;&nbsp;&nbsp;/* Addend */<br>
+      665&nbsp;&nbsp;}&nbsp;Elf64_Rela;<br>
+      &nbsp;<br>
+      673&nbsp;&nbsp;#define ELF64_R_SYM(i)&nbsp;&nbsp;((i) &gt;&gt; 32)<br>
+      674&nbsp;&nbsp;#define ELF64_R_TYPE(i)&nbsp;((i) &amp; 0xffffffff)</div>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>字段</th><th>含义（课件原话）</th></tr>
+      <tr><td class="mono">r_offset</td><td>将被修改的那个引用在<b>节内的偏移</b></td></tr>
+      <tr><td class="mono">ELF64_R_SYM(r_info)</td><td>指出这个引用应该指向<b>哪个符号</b>（符号表下标）</td></tr>
+      <tr><td class="mono">ELF64_R_TYPE(r_info)</td><td>告诉链接器<b>怎么改</b>这个引用（重定位类型）</td></tr>
+      <tr><td class="mono">r_addend</td><td>一个常数，某些重定位类型用它做偏移调整</td></tr>
+    </table></div>
+    <p>为什么一个 64 位的 <code>r_info</code> 要拆成两半？因为「符号下标」和「类型」都是小整数，塞进一个 8 字节字段刚好 —— 于是半条重定位条目的全部信息就是「<b>改哪儿</b>（offset）+ <b>改成谁</b>（符号下标）+ <b>怎么改</b>（类型）+ <b>加多少</b>（addend）」。</p>
+
+    <h3>4.4 两种最基本的重定位类型<span class="srcref">原第 29 页</span></h3>
+    <div class="grid g2">
+      <div class="card"><h5>R_X86_64_PC32</h5>
+        <p style="margin:0;font-size:14.5px">重定位一个使用 <b>32 位 PC 相对地址</b>的引用 —— 存的是「从这个字段到目标」的<b>位移</b>（<code>call</code>、<code>jmp</code> 这类指令用的就是它）。</p>
+      </div>
+      <div class="card"><h5>R_X86_64_32 / R_X86_64_32S</h5>
+        <p style="margin:0;font-size:14.5px">重定位一个使用 <b>32 位绝对地址</b>的引用 —— 存的就是目标的绝对地址（<code>mov $array, %edi</code> 这类把地址当立即数用的指令）。32S 表示按有符号解释。</p>
+      </div>
+    </div>
+    <div class="box"><div class="t">为什么汇编器不能自己算</div>
+      汇编器只看得到<b>本文件</b>：它知道 <code>array</code> 在本节里的偏移，但不知道这个节最终被放在哪里，更不知道 <code>sum</code> 会在哪个地址（那要等链接器把所有模块合并完）。
+      所以它只能在原地留一个 32 位的空位（全 0），再写一条重定位条目 ——「改哪儿、改成谁、怎么改、加多少」—— 交给链接器。下一节就来看这张表。
+    </div>
+
+    <h3>4.5 链接器实际怎么改：relocate 例程<span class="srcref">原第 29 页</span></h3>
+    <p>课件第 29 页下半部分印着链接器做重定位的那段例程（原文引用）—— 它把上面两种类型浓缩成一个循环，<b>下面第 5 节的计算器实现的就是这两条分支</b>：</p>
+    <div class="formula" style="text-align:left;font-size:13.5px">
+      for each section s {<br>
+      &nbsp;&nbsp;foreach relocation entry r {<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;refptr = s + r.offset;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)">/* ptr to reference to be relocated */</span><br><br>
+      &nbsp;&nbsp;&nbsp;&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)">/* Relocate a PC-relative reference */</span><br>
+      &nbsp;&nbsp;&nbsp;&nbsp;if (r.type == R_X86_64_PC32) {<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;refaddr = ADDR(s) + r.offset;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)">/* ref's run-time address */</span><br>
+      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;*refptr = (unsigned) (ADDR(r.symbol) + r.addend − refaddr);<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;}<br><br>
+      &nbsp;&nbsp;&nbsp;&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)">/* Relocate an absolute reference */</span><br>
+      &nbsp;&nbsp;&nbsp;&nbsp;if (r.type == R_X86_64_32)<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;*refptr = (unsigned) (ADDR(r.symbol) + r.addend);<br>
+      &nbsp;&nbsp;}<br>
+      }</div>
+    <div class="box ok"><div class="t">这段话里的 <code>ADDR(s)</code> 是「输入模块的节的运行时基址」</div>
+      注意例程里有两个不同的量：<code>refptr = s + r.offset</code> 是<b>指针</b>（拿节的位置当起点），而 <code>refaddr = ADDR(s) + r.offset</code> 是<b>引用处的运行时地址</b> ——
+      两者都用同一个「节」<code>s</code>，而 <code>r.offset</code> 正是这条条目在<b>该节内部</b>的偏移。
+      第 36 页那个例子里的 <code>0xbabf18</code> 就是 <code>ADDR(s)</code>：<code>main.o</code> 自己的 <code>.text</code> 被链接器摆到了那里（合并后的大 <code>.text</code> 从 <code>0xbabe00</code> 开始，系统代码占了前面 0x118 个字节）。
+    </div>
+    <div class="box"><div class="t">例程里没有 <code>r.type</code> 之外的分支</div>
+      只有 PC 相对与绝对两种写法 —— 其它重定位类型（<code>R_X86_64_32S</code>、<code>R_X86_64_64</code>、GOT 相关的一大堆）要么是同一套算式的变体（有符号 / 64 位），要么是给动态链接用的，本讲不展开。
+    </div>
+  </section>
+
+  <!-- ================= 5 ================= -->
+  <section id="s5">
+    <h2>5. 重定位条目与字节修补<span class="srcref">原第 30–36 页</span></h2>
+    <p class="lede">这是本讲最「硬」的一节：课件用七页把 <code>readelf -r</code>、<code>objdump -r -d</code> 的输出与链接后的结果摆在一起。<b>看懂一个重定位条目，就真正看懂了链接</b> —— 下面的查看器与计算器把这三步串成一条可验证的链。</p>
+
+    <h3>5.1 readelf -r：两张重定位表<span class="srcref">原第 30–33 页</span></h3>
+    <p>课件第 30 页对 <code>main.o</code> 跑 <code>readelf -r</code>：<code>.rela.text</code> 有 <b>2 条</b>、<code>.rela.eh_frame</code> 有 <b>1 条</b>，所以原文写「Totally 3 symbols to be relocated」。第 33 页对 <code>sum.o</code> 只看到 <b>1 条</b>（在 <code>.rela.eh_frame</code> 里）：「1 symbol to be relocated (.text)」。</p>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：重定位表查看器 —— 选一张表，逐字段拆开看</span>
+        <label class="fld">表 <select id="reSel"></select></label>
+        <label class="fld">拆解 r_info <input type="text" id="reInfo" value="0x00080000000a" size="18" spellcheck="false"></label>
+        <button class="p" id="reGo">重新拆解</button>
+        <button class="sm" data-re="t=main-text;info=0x00080000000a">第一行：符号下标 8 + 类型 10</button>
+        <button class="sm" data-re="t=main-text;info=0x000a00000002">第二行：符号下标 10 + 类型 2</button>
+        <button class="sm" data-re="t=main-text;info=0x0001ffffffff">类型全 1（看 &amp; 0xffffffff 的作用）</button>
+      </div>
+      <div id="reOut"></div>
+    </div>
+
+    <h3>5.2 课件第 31–32 页的「Dear Linker」<span class="srcref">原第 31–32 页</span></h3>
+    <p>这两页把上面两条条目翻译成了给链接器的「信」，非常清楚地说明了 <code>addend</code> 是干什么的：</p>
+    <div class="grid g2">
+      <div class="card"><h5>对第 1 条（offset 0x15，R_X86_64_32，array + 0）</h5>
+        <p style="margin:0;font-size:14.3px">「亲爱的链接器：请在 <code>.rela.text</code> 节的偏移 <b>0x15</b> 处打一个 32 位的值。等你定下 <code>.data</code> 的地址后，算 <b>array 的地址 + addend（等于 0）</b>，把结果放到指定的地方。」—— 署名：汇编器</p>
+      </div>
+      <div class="card"><h5>对第 2 条（offset 0x1a，R_X86_64_PC32，sum − 4）</h5>
+        <p style="margin:0;font-size:14.3px">「……请在偏移 <b>0x1a</b> 处打一个 32 位的 <b>PC 相对</b>值：定下 <code>sum</code> 的地址后，算 <b>sum 的地址 + addend（等于 −4）− 节地址 + 偏移</b>，把结果放到指定的地方。」</p>
+      </div>
+    </div>
+    <div class="box warn"><div class="t">那个 −4 是哪来的</div>
+      x86-64 的 <code>call</code> 指令是 5 个字节（1 字节操作码 + 4 字节位移），而 CPU 计算目标地址时用的是<b>指令末尾</b>（也就是 <code>refptr + 4</code>）作为基准。
+      但 <code>refptr</code> 按定义指向<b>位移字段本身</b>，两者差 4 个字节 —— 于是 <code>addend = −4</code> 正好把这个差补上。
+      下面 5.3 的计算器会用课件第 36 页的真实地址把这一步算出来（答案是 <code>0x0a</code>）。
+    </div>
+
+    <h3>5.3 链接之后：三列对照<span class="srcref">原第 36 页</span></h3>
+    <p>课件第 36 页把 <code>main.o</code>、<code>sum.o</code> 与最终 <code>executable</code> 并排摆开，写出了全部数字：<code>.text = 0xbabe00</code>、<code>.data = 0xcafe00</code>、<code>addr_of_main = 0xbabf18</code>、<code>addr_of_sum = 0xbabf40</code>、<code>addr_of_array = 0xcafe10</code>，以及 PC32 那条的 <code>offset = 0x1a</code>、<code>addend = −4</code>。下面是同一张图的可读版本：</p>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>main.o 里的机器码（节内偏移）</th><th>executable 里的同一段（绝对地址）</th><th>发生了什么</th></tr>
+      <tr><td class="mono">14: bf <b>00 00 00 00</b></td><td class="mono">babf2c: bf <b>10 fe ca 00</b></td>
+        <td>R_X86_64_32 array + 0：4 个 0 被改写成 <code>addr_of_array = 0x00cafe10</code>（小端 <code>10 fe ca 00</code>）</td></tr>
+      <tr><td class="mono">19: e8 <b>00 00 00 00</b></td><td class="mono">babf31: e8 <b>0a 00 00 00</b></td>
+        <td>R_X86_64_PC32 sum − 4：位移被改写成 <code>0x0a</code>；<code>call</code> 的下一条指令在 <code>0xbabf36</code>，加上 <code>0x0a</code> 正好落在 <code>sum</code> 的 <code>0xbabf40</code> 上</td></tr>
+      <tr><td class="mono">0: 55 / 1: 48 89 e5 / …</td><td class="mono">babf18: 55 / babf19: 48 89 e5 / …</td>
+        <td>不涉及重定位的字节只是「整体搬家」—— 从节内偏移 0 搬到 <code>addr_of_main + 偏移</code></td></tr>
+      <tr><td colspan="2" class="mono">.data 一侧：cafe10: 01 00 / cafe12: 00 00 / cafe14: 02 00</td>
+        <td><code>array = {1, 2}</code> 的两个 int 是 <code>01 00 00 00</code> 与 <code>02 00 00 00</code>，落在 <code>.data = 0xcafe00</code> 起的第 0x10 个字节处</td></tr>
+    </table></div>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：重定位计算器 —— 改参数，现场算该往字段里写什么</span>        <label class="fld">类型
+          <select id="rcType">
+            <option value="2">R_X86_64_PC32（PC 相对）</option>
+            <option value="10">R_X86_64_32（32 位绝对）</option>
+            <option value="11">R_X86_64_32S（32 位绝对·有符号）</option>
+            <option value="1">R_X86_64_64（64 位绝对）</option>
+          </select>
+        </label>
+        <label class="fld">符号地址 <input type="text" id="rcSym" value="0xbabf40" size="11" spellcheck="false"></label>
+        <label class="fld">addend <input type="text" id="rcAdd" value="-4" size="5" spellcheck="false"></label>
+        <label class="fld">引用所在节的基址 <input type="text" id="rcSec" value="0xbabf18" size="10" spellcheck="false"></label>
+        <label class="fld">r_offset <input type="text" id="rcOff" value="0x1a" size="6" spellcheck="false"></label>
+        <button class="p" id="rcGo">计算</button>
+        <button class="sm" data-rc="pc32">课件第 36 页的 PC32 例</button>
+        <button class="sm" data-rc="abs32">课件第 36 页的 32 位绝对例</button>
+        <button class="sm" data-rc="neg">32S 负数</button>
+        <button class="sm" data-rc="big">超过 32 位</button>
+      </div>
+      <div id="rcOut"></div>
+      <div id="rpOut"></div>
+    </div>
+
+    <div class="box warn"><div class="t">两个「节的地址」别搞混（课件第 36 页那张图的关键细节）</div>
+      课件第 36 页同时印了 <code>.text = 0xbabe00</code> 和 <code>addr_of_main = 0xbabf18</code>，看着矛盾，其实是两个不同的东西：
+      <ul style="margin:6px 0 0">
+        <li><code>.text = 0xbabe00</code> 是<b>合并之后</b>那个总代码节的起点 —— 系统代码、启动代码就排在这 0x118 个字节里；</li>
+        <li><code>0xbabf18</code> 是 <b><code>main.o</code> 自己那段 <code>.text</code> 被摆到的地方</b>（正好等于 <code>main</code> 的地址，因为 <code>main</code> 就是 <code>main.o</code> 里 <code>.text</code> 的第一个符号）；同理 <code>sum.o</code> 的 <code>.text</code> 被摆在 <code>0xbabf40</code>；</li>
+        <li><code>r_offset</code> 是<b>相对输入模块那个节</b>的偏移 —— 所以 <code>refptr = ADDR(main.o 的 .text) + r_offset = 0xbabf18 + r_offset</code>。</li>
+      </ul>
+      上面计算器里的「引用所在节的基址」默认就是 <code>0xbabf18</code>：填对了它，<code>rpOut</code> 算出来的字段地址才会正好落在课件印的两个字节上
+      —— <code>0xbabf18 + 0x15 = 0xbabf2d</code>（<code>babf2c: bf …</code> 里的那 4 个字节）与 <code>0xbabf18 + 0x1a = 0xbabf32</code>（<code>babf31: e8 …</code> 里的那 4 个字节）。两边的字节值也一致：<code>10 fe ca 00</code> 与 <code>0a 00 00 00</code>。
+    </div>
+
+    <h3>5.4 可重定位文件里的原始字节<span class="srcref">原第 34–35 页</span></h3>
+    <p>课件第 34 页用 <code>objdump -r -d main.o</code> 把「反汇编」和「重定位条目」叠在一起看 —— 重定位条目<b>正好标在它要改的那个字段的地址上</b>：</p>
+    <div class="formula" style="text-align:left;font-size:13.5px">
+      0000000000000000 &lt;main&gt;:<br>
+      &nbsp;0:&nbsp;&nbsp;55&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;push&nbsp;&nbsp;%rbp<br>
+      &nbsp;1:&nbsp;&nbsp;48 89 e5&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;mov&nbsp;&nbsp;&nbsp;%rsp,%rbp<br>
+      &nbsp;4:&nbsp;&nbsp;48 83 ec 20&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;sub&nbsp;&nbsp;&nbsp;$0x20,%rsp<br>
+      &nbsp;8:&nbsp;&nbsp;89 7d ec&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;mov&nbsp;&nbsp;&nbsp;%edi,-0x14(%rbp)<br>
+      &nbsp;b:&nbsp;&nbsp;48 89 75 e0&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;mov&nbsp;&nbsp;&nbsp;%rsi,-0x20(%rbp)<br>
+      &nbsp;f:&nbsp;&nbsp;be 02 00 00 00&nbsp;&nbsp;&nbsp;mov&nbsp;&nbsp;&nbsp;$0x2,%esi<br>
+      &nbsp;14: bf 00 00 00 00&nbsp;&nbsp;&nbsp;mov&nbsp;&nbsp;&nbsp;$0x0,%edi&nbsp;&nbsp;&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)"># %edi = &amp;array</span><br>
+      &nbsp;15: R_X86_64_32 array&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)"># 重定位条目</span><br>
+      &nbsp;19: e8 00 00 00 00&nbsp;&nbsp;&nbsp;callq&nbsp;1e &lt;main+0x1e&gt;&nbsp;&nbsp;&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)"># sum()</span><br>
+      &nbsp;1a: R_X86_64_PC32 sum-0x4&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)"># 重定位条目</span><br>
+      &nbsp;1e: 89 45 fc&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;mov&nbsp;&nbsp;&nbsp;%eax,-0x4(%rbp)<br>
+      &nbsp;21: 8b 45 fc&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;mov&nbsp;&nbsp;&nbsp;-0x4(%rbp),%eax<br>
+      &nbsp;24: c9&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;leaveq<br>
+      &nbsp;25: c3&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;retq</div>
+    <div class="box"><div class="t">两条条目的 offset 为什么是 0x15 与 0x1a，而不是 0x14 与 0x19</div>
+      因为 <code>r_offset</code> 指的是<b>被改写的那个字段</b>的位置，不是指令开头：<code>bf</code> 是操作码（0x14），4 字节立即数从 0x15 开始；
+      <code>e8</code> 是操作码（0x19），4 字节位移从 0x1a 开始。上面计算器里的 <code>r_offset</code> 填的就是这两个值。
+      <div style="margin-top:6px">课件第 35 页是 <code>sum.o</code> 的同类输出 —— 里面<b>一条重定位标记都没有</b>（因为 <code>sum</code> 的所有引用都在本文件内部，相对跳转不需要外部信息），这与第 33 页 <code>readelf -r sum.o</code> 只有 <code>.rela.eh_frame</code> 一条完全吻合。</div>
+    </div>
+  </section>
+
+  <!-- ================= 6 ================= -->
+  <section id="s6">
+    <h2>6. 静态库：打包一堆函数<span class="srcref">原第 38–44 页</span></h2>
+    <p class="lede">「把常用函数攒成库」是链接器存在的第二大理由。课件第 38 页先摆出两条笨办法，第 39–43 页给出老式答案 —— <b>静态库（<code>.a</code> 归档文件）</b>，第 44 页则点出用它时最容易踩的坑：<b>命令行顺序</b>。</p>
+
+    <h3>6.1 两种笨办法<span class="srcref">原第 38 页</span></h3>
+    <p>程序员需要 Math、I/O、内存管理、字符串处理这些常用函数，可现有的链接框架让它们很难打包：</p>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>办法</th><th>做法</th><th>问题</th></tr>
+      <tr><td><b>办法 1</b></td><td>把所有函数塞进<b>一个源文件</b>，程序员把这个巨大的目标文件链接进自己的程序</td><td>空间与时间上都低效</td></tr>
+      <tr><td><b>办法 2</b></td><td><b>每个函数一个源文件</b>，程序员自己显式地把需要的那几个二进制链接进来</td><td>更高效，但对程序员是负担</td></tr>
+    </table></div>
+
+    <h3>6.2 老式答案：静态库<span class="srcref">原第 39–41 页</span></h3>
+    <ul>
+      <li><b>静态库是 <code>.a</code> 归档文件</b>：把相关的可重定位目标文件<b>拼接</b>成一个文件，并带一个索引（叫做 archive）；</li>
+      <li>链接器被增强了：遇到<b>未解析的外部引用</b>时，它会去一个或多个归档里找这些符号；</li>
+      <li><b>某个归档成员如果解决了引用，它才会被链接进可执行文件</b>。</li>
+    </ul>
+    <div class="formula" style="text-align:left;font-size:13.5px">
+      atoi.c&nbsp;&nbsp;printf.c&nbsp;&nbsp;…&nbsp;&nbsp;random.c&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)">← 一堆源文件</span><br>
+      &nbsp;&nbsp;│&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;│&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;│<br>
+      &nbsp;&nbsp;▼&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;▼&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;▼<br>
+      Translator&nbsp;Translator&nbsp;…&nbsp;Translator<br>
+      &nbsp;&nbsp;│&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;│&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;│<br>
+      &nbsp;&nbsp;▼&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;▼&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;▼<br>
+      atoi.o&nbsp;&nbsp;printf.o&nbsp;&nbsp;…&nbsp;&nbsp;random.o<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;│<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;▼<br>
+      &nbsp;&nbsp;Archiver (ar)&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)">← unix&gt; ar rs libc.a \</span><br>
+      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;│&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;atoi.o printf.o … random.o<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;▼<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;libc.a&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)">← C 标准库</span></div>
+    <p>课件第 40 页还强调：归档器允许<b>增量更新</b> —— 重新编译改动的那个函数，再用新 <code>.o</code> 替换归档里的旧成员即可。</p>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>常用的库<span class="srcref">原第 41 页</span></th><th>大小与成员数（原文引用）</th><th>装什么</th></tr>
+      <tr><td class="mono">libc.a（C 标准库）</td><td>4.6 MB 归档，1496 个目标文件（不同版本不一样）</td><td>I/O、内存分配、信号处理、字符串处理、日期与时间、随机数、整数运算</td></tr>
+      <tr><td class="mono">libm.a（C 数学库）</td><td>2 MB 归档，444 个目标文件（不同版本不一样）</td><td>浮点数学：sin、cos、tan、log、exp、sqrt……</td></tr>
+    </table></div>
+    <p>课件第 41 页还给了查看办法：<code>ar -t /usr/lib/libc.a | sort</code> 与 <code>ar -t /usr/lib/libm.a | sort</code>（输出里能看到 <code>fork.o</code>、<code>fprintf.o</code>、<code>e_acos.o</code>、<code>e_acosf.o</code> 这样的成员名）。</p>
+
+    <h3>6.3 一个完整的例子：libvector.a<span class="srcref">原第 42–43 页</span></h3>
+    <div class="grid g2">
+      <div class="formula" style="text-align:left;font-size:13.5px">/* addvec.c */<br>
+        void addvec(int *x, int *y, int *z, int n) {<br>
+        &nbsp;&nbsp;int i;<br>
+        &nbsp;&nbsp;for (i = 0; i &lt; n; i++)<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;z[i] = x[i] + y[i];<br>
+        }<br><br>
+        /* multvec.c */<br>
+        void multvec(int *x, int *y, int *z, int n) {<br>
+        &nbsp;&nbsp;int i;<br>
+        &nbsp;&nbsp;for (i = 0; i &lt; n; i++)<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;z[i] = x[i] * y[i];<br>
+        }</div>
+      <div class="formula" style="text-align:left;font-size:13.5px">/* main2.c */<br>
+        #include &lt;stdio.h&gt;<br>
+        #include "vector.h"<br><br>
+        int x[2] = {1, 2};<br>
+        int y[2] = {3, 4};<br>
+        int z[2];<br><br>
+        int main(int argc, char** argv)<br>
+        {<br>
+        &nbsp;&nbsp;addvec(x, y, z, 2);<br>
+        &nbsp;&nbsp;printf("z = [%d %d]\n", z[0], z[1]);<br>
+        &nbsp;&nbsp;return 0;<br>
+        }</div>
+    </div>
+    <p>课件第 43 页的流程图：<code>addvec.o</code> 与 <code>multvec.o</code> 经归档器变成 <code>libvector.a</code>；<code>main2.c</code> 经翻译器变成 <code>main2.o</code>；链接器再把 <code>main2.o</code>、<code>addvec.o</code>（从库里按需拉出）、<code>printf.o</code> 以及 printf 需要的其它模块、再加上 <code>libc.a</code>，链接成 <b><code>prog2c</code></b>。</p>
+    <div class="formula" style="text-align:left;font-size:13.5px">unix&gt; gcc –static –o prog2c \&nbsp;&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)">← 第 43 页的命令行</span><br>
+      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;main2.o -L. -lvector<br><br>
+      prog2c：<b>完全链接的可执行目标文件，861,232 字节</b><br>
+      <span style="font-family:var(--font-sans);color:var(--muted)">课件标注：名字里的 "c" 是 "compile-time"（编译时链接）</span></div>
+
+    <h3>6.4 库为什么必须写在后面<span class="srcref">原第 44 页</span></h3>
+    <p>课件第 44 页给出链接器解析外部引用的<b>算法</b>：</p>
+    <ol>
+      <li>按 <b>命令行顺序</b>扫描 <code>.o</code> 与 <code>.a</code> 文件；</li>
+      <li>扫描过程中维护一张<b>当前未解析引用</b>的清单；</li>
+      <li>每遇到一个新的 <code>.o</code> 或 <code>.a</code>（记作 obj），就试着用 obj 里定义的符号去解决清单里的每一项引用；</li>
+      <li>扫描结束时清单里还有东西 —— <b>报错</b>。</li>
+    </ol>
+    <div class="formula" style="text-align:left;font-size:13.5px">unix&gt; gcc -static -o prog2c -L. -lvector main2.o&nbsp;&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)">← 库写到了前面</span><br>
+      main2.o: In function `main':<br>
+      main2.c:(.text+0x19): undefined reference to `addvec'<br>
+      collect2: error: ld returned 1 exit status</div>
+    <div class="box bad"><div class="t">第 44 页的结论</div>
+      <b>命令行顺序要紧！</b>所以有条经验之谈：<b>把库放在命令行的末尾</b>。（原因就在算法里：库在前时，那张未解析清单还是空的 —— 没有任何引用需要它解决，于是它<b>一个成员都不会被拉进来</b>。）
+    </div>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：静态库顺序模拟器 —— 改命令行顺序，看链接器一步一步怎么扫</span>
+        <label class="fld">命令行条目 <input type="text" id="arIn" value="main2.o libvector.a printf.o" size="34" spellcheck="false"></label>
+        <button class="p" id="arGo">按这个顺序链接</button>
+        <button class="sm" data-ar="ok">课件第 43 页的顺序</button>
+        <button class="sm" data-ar="bad">课件第 44 页的错误顺序</button>
+        <button class="sm" data-ar="nolibc">忘了 printf.o</button>
+        <button class="sm" data-ar="multi">还用到 multvec</button>
+      </div>
+      <div id="arOut"></div>
+    </div>
+  </section>
+
+  <!-- ================= 7 ================= -->
+  <section id="s7">
+    <h2>7. 加载与动态链接<span class="srcref">原第 37、45–53 页</span></h2>
+    <p class="lede">静态库的三个缺点（课件第 45 页）逼出了<b>共享库</b>：可执行文件里不再有库代码，运行时所有进程共享<b>同一份</b>库。代价是「链接」这件事从编译时被推迟到了加载时甚至运行时 —— 这一节把三种时机摆清楚。</p>
+
+    <h3>7.1 可执行文件被载入内存长什么样<span class="srcref">原第 37 页</span></h3>
+    <p>课件第 37 页把可执行文件的内存映像从高地址到低地址画了一遍（下面按原文自下而上重排成表）：</p>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>层次（高 → 低）</th><th>课件原文</th><th>说明</th></tr>
+      <tr><td>内核虚拟内存</td><td class="en">Kernel virtual memory</td><td>用户代码看不见（memory invisible to user code）</td></tr>
+      <tr><td>用户栈</td><td class="en">User stack（运行时创建）</td><td><code>%rsp</code> 指向栈顶（课件标注：stack pointer）</td></tr>
+      <tr><td>共享库</td><td class="en">Something uncertain</td><td>课件在这里留了问号，标注「随静态/动态链接而不同（Differs in static/dyn linking）」</td></tr>
+      <tr><td>运行时堆</td><td class="en">Run-time heap（由 malloc 创建）</td><td>堆顶由 <code>brk</code> 标出</td></tr>
+      <tr><td>读写数据段</td><td class="en">Read/write data segment</td><td><code>.data</code>、<code>.bss</code>；课件给的地址是 <code>0x00cafe00</code></td></tr>
+      <tr><td>只读代码段</td><td class="en">Read-only code segment</td><td><code>.init</code>、<code>.text</code>、<code>.rodata</code>；课件给的地址是 <code>0x00babe00</code></td></tr>
+      <tr><td>未使用</td><td class="en">Unused</td><td>不映射</td></tr>
+    </table></div>
+    <div class="box"><div class="t">图上还有两处标注值得记住</div>
+      只有<b>读写数据段</b>与<b>只读代码段</b>是从可执行文件<b>载入</b>（Loaded from the executable file）的；
+      <code>.symtab</code>、<code>.debug</code>、<code>.line</code>、<code>.strtab</code> 与节头表都<b>不会被载入内存</b> —— 它们只在链接／调试时有用。
+      注意这两个地址 <code>0x00babe00</code> / <code>0x00cafe00</code> 与第 5 节重定位例子里用的是同一组数。
+    </div>
+
+    <h3>7.2 为什么需要共享库<span class="srcref">原第 45–46 页</span></h3>
+    <div class="grid g2">
+      <div class="card"><h5>静态库的三个缺点<span class="srcref">原第 45 页</span></h5>
+        <ul style="margin:0;font-size:14.5px">
+          <li>存下来的可执行文件里有<b>重复</b>（每个程序都要一份 libc）；</li>
+          <li>运行中的可执行文件里也有<b>重复</b>；</li>
+          <li>系统库修一个小 bug，<b>每个应用都要重新链接</b>一遍（课件还引了 Google 安全博客里 glibc <code>getaddrinfo</code> 那个著名的 CVE-2015-7547 当例子：要不要把一切都用 glibc 重新构建一遍？）</li>
+        </ul>
+      </div>
+      <div class="card"><h5>共享库<span class="srcref">原第 45–46 页</span></h5>
+        <p style="margin:0;font-size:14.5px">包含代码与数据、可在<b>加载时或运行时</b>被动态加载并链接进应用的目标文件；也叫动态链接库、DLL、<code>.so</code> 文件。
+        Linux 上最常见的是<b>加载时链接</b>（由动态链接器 <code>ld-linux.so</code> 自动完成），标准 C 库 <code>libc.so</code> 通常就是动态链接的。
+        动态链接也可以发生在程序开始之后（<b>运行时链接</b>），在 Linux 上通过 <code>dlopen()</code> 接口完成。共享库的例程还能被多个进程共享。</p>
+        <div style="margin-top:8px;font-size:14.5px;color:var(--muted)">课件第 46 页给运行时链接列了三个用途：<b>分发软件</b>、<b>高性能 Web 服务器</b>（惰性绑定）、<b>运行时的库打桩</b>。</div>
+      </div>
+    </div>
+
+    <h3>7.3 加载时链接<span class="srcref">原第 47–48 页</span></h3>
+    <p>课件第 47 页先把 <code>addvec.c</code>、<code>multvec.c</code> 用 <code>gcc –Og –c … -fpic</code> 编成位置无关的目标文件，再用 <code>gcc -shared</code> 打包成 <code>libvector.so</code>；第 48 页是加载时链接的全过程：</p>
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：两种时机的动态链接 —— 切换看流程与产物</span>
+        <span class="seg" id="dlSeg">
+          <button class="on" data-dl="load">加载时链接（第 47–48 页）</button>
+          <button data-dl="run">运行时链接（第 49–51 页）</button>
+        </span>
+      </div>
+      <div id="dlOut"></div>
+    </div>
+    <div class="box ok"><div class="t">「部分链接」这个词的分量</div>
+      链接器先生成一个 <b>partially linked executable object file</b>（课件第 48 页），它里面留着重定位与符号表信息、<b>却没有库的代码</b>；
+      真正把这些信息用上的是<b>加载时</b>跑起来的动态链接器。所以同一份 <code>main2.c</code>，静态链接出 861,232 字节，加载时动态链接只出 8,488 字节（第 43、48 页）。
+    </div>
+
+    <h3>7.4 运行时链接：程序自己加载库<span class="srcref">原第 49–51 页</span></h3>
+    <p>课件第 49–50 页给了一个完整的 <code>dll.c</code>（节选，原文引用）：</p>
+    <div class="formula" style="text-align:left;font-size:13.5px">
+      #include &lt;stdio.h&gt;<br>
+      #include &lt;stdlib.h&gt;<br>
+      #include &lt;dlfcn.h&gt;<br><br>
+      int x[2] = {1, 2}; int y[2] = {3, 4}; int z[2];<br><br>
+      int main(int argc, char** argv)<br>
+      {<br>
+      &nbsp;&nbsp;void *handle;<br>
+      &nbsp;&nbsp;void (*addvec)(int *, int *, int *, int);<br>
+      &nbsp;&nbsp;char *error;<br><br>
+      &nbsp;&nbsp;/* Dynamically load the shared library that contains addvec() */<br>
+      &nbsp;&nbsp;handle = dlopen("./libvector.so", RTLD_LAZY);<br>
+      &nbsp;&nbsp;if (!handle) { fprintf(stderr, "%s\n", dlerror()); exit(1); }<br><br>
+      &nbsp;&nbsp;/* Get a pointer to the addvec() function we just loaded */<br>
+      &nbsp;&nbsp;addvec = dlsym(handle, "addvec");<br>
+      &nbsp;&nbsp;if ((error = dlerror()) != NULL) { fprintf(stderr, "%s\n", error); exit(1); }<br><br>
+      &nbsp;&nbsp;/* Now we can call addvec() just like any other function */<br>
+      &nbsp;&nbsp;addvec(x, y, z, 2);<br>
+      &nbsp;&nbsp;printf("z = [%d %d]\n", z[0], z[1]);<br><br>
+      &nbsp;&nbsp;/* Unload the shared library */<br>
+      &nbsp;&nbsp;if (dlclose(handle) &lt; 0) { fprintf(stderr, "%s\n", dlerror()); exit(1); }<br>
+      &nbsp;&nbsp;return 0;<br>
+      }</div>
+    <p>第 51 页的流程图与第 48 页几乎一样，只有一处关键差别：<b>加载器把控制权交给程序之后，程序自己再通过 <code>dlopen</code> 去叫动态链接器</b>（原文标注：Call to dynamic linker via dlopen）。链接自己时用 <code>gcc -rdynamic –o prog2r dll.o -ldl</code>，产物 <code>prog2r</code> 是 <b>8784 字节</b>。</p>
+    <div class="box"><div class="t">三个 API 记住就够了</div>
+      <code>dlopen</code> 加载库并返回句柄 → <code>dlsym</code> 按名字取函数地址 → <code>dlclose</code> 卸载。出错时用 <code>dlerror()</code> 取错误信息（课件的代码每一处都检查了它）。
+    </div>
+
+    <h3>7.5 这些依赖信息从哪来<span class="srcref">原第 52 页</span></h3>
+    <ul>
+      <li><code>.interp</code> 节：指定要用<b>哪个动态链接器</b>（也就是 <code>ld-linux.so</code>）；</li>
+      <li><code>.dynamic</code> 节：列出要用到的动态库的<b>名字</b>等信息，例如 <code>(NEEDED) Shared library: [libm.so.6]</code>；</li>
+      <li>想知道具体是哪几个文件，用 <code>ldd</code>。</li>
+    </ul>
+    <div class="formula" style="text-align:left;font-size:13.5px">unix&gt; ldd prog<br>
+      linux-vdso.so.1 =&gt;&nbsp;&nbsp;(0x00007ffcf2998000)<br>
+      libc.so.6 =&gt; /lib/x86_64-linux-gnu/libc.so.6 (0x00007f99ad927000)<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;/lib64/ld-linux-x86-64.so.2 (0x00007f99adcef000)</div>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：ldd 输出解析器 —— 把每一行拆成「库名 / 路径 / 加载地址」</span>
+        <button class="p" id="lddGo">解析</button>
+        <button class="sm" data-ldd="prog">课件第 52 页的 prog</button>
+        <button class="sm" data-ldd="libm">只有一条 libm.so.6</button>
+        <button class="sm" data-ldd="bad">库找不到的情况</button>
+      </div>
+      <label class="fld" style="display:block;margin:4px 0 0">ldd 的输出（每行一条）
+        <textarea id="lddIn" rows="4" spellcheck="false" style="width:100%;font-family:var(--font-mono);font-size:13.5px;margin-top:6px"></textarea>
+      </label>
+      <div id="lddOut"></div>
+    </div>
+
+    <h3>7.6 静态 vs 动态的取舍<span class="srcref">原第 53 页</span></h3>
+    <div class="grid g2">
+      <div class="card"><h5>静态</h5><ul style="margin:0;font-size:14.5px">
+        <li>运行时不需要查找库</li><li>不需要额外的 PLT 间接跳转</li>
+        <li>每个程序里都有一份库的副本，更费内存</li></ul></div>
+      <div class="card"><h5>动态</h5><ul style="margin:0;font-size:14.5px">
+        <li>磁盘／内存占用更少（hello world：<b>7K vs 571K</b>）</li>
+        <li>共享库已经在内存与热缓存里</li>
+        <li>要付出查找与间接跳转的开销</li></ul></div>
+    </div>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：这笔账怎么算 —— 改程序份数，看动态链接省多少</span>
+        <label class="fld">程序份数 <input type="text" id="szN" value="10" size="5" spellcheck="false"></label>
+        <label class="fld">静态一份（KB） <input type="text" id="szS" value="571" size="6" spellcheck="false"></label>
+        <label class="fld">动态一份（KB） <input type="text" id="szD" value="7" size="6" spellcheck="false"></label>
+        <button class="p" id="szGo">算一算</button>
+        <button class="sm" data-sz="1">1 份程序</button>
+        <button class="sm" data-sz="10">10 份程序</button>
+        <button class="sm" data-sz="100">100 份程序</button>
+      </div>
+      <div id="szOut"></div>
+    </div>
+  </section>
+
+  <!-- ================= 8 ================= -->
+  <section id="s8">
+    <h2>8. 库打桩：三种时机<span class="srcref">原第 54–66 页</span></h2>
+    <p class="lede"><b>库打桩（library interpositioning）</b>是一种很强的链接技巧：<b>拦截对任意函数的调用</b>。课件第 55 页说它可以发生在三个时机 —— 编译时、链接时、加载／运行期 —— 而这三者在「要不要源码」「要不要重新编译」上差别很大。第 58–65 页用同一个 <code>malloc</code>／<code>free</code> 追踪程序把三种做法都演了一遍。</p>
+
+    <h3>8.1 什么是库打桩<span class="srcref">原第 54–57 页</span></h3>
+    <p>课件第 55 页：这个技巧在教材（CS:APP）第 7.13 节有完整记述。打桩可以发生在：<b>编译时</b>（源码被编译的时候）、<b>链接时</b>（可重定位目标文件被静态链接成可执行文件的时候）、<b>加载／运行期</b>（可执行文件被载入内存、动态链接并执行的时候）。</p>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>用途<span class="srcref">原第 56–57 页</span></th><th>课件举的例子</th></tr>
+      <tr><td><b>安全</b></td><td>限制（沙箱化）；背后悄悄做加密</td></tr>
+      <tr><td><b>调试</b></td><td>2014 年 Facebook 两位工程师用打桩调试了 iPhone 应用里一个高一岁的凶险 bug：SPDY 网络栈里的代码写错了位置，靠拦截 POSIX 的 <code>write</code>、<code>writev</code>、<code>pwrite</code> 找到根因</td></tr>
+      <tr><td><b>监控与剖析</b></td><td>统计函数被调用的次数、刻画调用点与参数；<code>malloc</code> 追踪（检测内存泄漏、生成地址轨迹）</td></tr>
+      <tr><td><b>错误检查</b></td><td>课程自己的 C Programming Lab 就用定制版 <code>malloc</code>／<code>free</code> 做细致的错误检查；其它实验（malloc、shell、proxy）也用打桩增强检查能力</td></tr>
+    </table></div>
+    <div class="box"><div class="t">被追踪的示例程序<span class="srcref">原第 58 页</span></div>
+      <div class="formula" style="text-align:left;font-size:13.5px;margin:0">
+        #include &lt;stdio.h&gt;<br>#include &lt;malloc.h&gt;<br>#include &lt;stdlib.h&gt;<br><br>
+        int main(int argc, char *argv[])<br>
+        {<br>
+        &nbsp;&nbsp;int i;<br><br>
+        &nbsp;&nbsp;for (i = 1; i &lt; argc; i++) {<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;void *p = malloc(atoi(argv[i]));<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;free(p);<br>
+        &nbsp;&nbsp;}<br><br>
+        &nbsp;&nbsp;return(0);<br>
+        }</div>
+      <div style="margin-top:8px">目标（课件原话）：<b>在不破坏程序、也不修改源码的前提下</b>，把每次分配／释放的地址与大小记录下来。三种解法分别在编译期、链接期、加载／运行期打桩 <code>malloc</code> 与 <code>free</code>。</div>
+    </div>
+
+    <h3>8.2 三种打桩方式<span class="srcref">原第 59–65 页</span></h3>
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：打桩方式台 —— 切换方式、输入被拦截的函数名</span>
+        <span class="seg" id="wrSeg">
+          <button data-ip="compile">编译期</button>
+          <button class="on" data-ip="link">链接期</button>
+          <button data-ip="load">加载／运行期</button>
+        </span>
+        <label class="fld">被拦的函数 <input type="text" id="wrSym" value="malloc" size="10" spellcheck="false"></label>
+        <button class="p" id="wrGo">看它被重定向到哪</button>
+        <button class="sm" data-wr="malloc">malloc</button>
+        <button class="sm" data-wr="free">free</button>
+        <button class="sm" data-wr="write">write</button>
+        <button class="sm" data-wr="printf">printf</button>
+      </div>
+      <div id="wrOut"></div>
+    </div>
+
+    <h4>8.2.1 编译期打桩的关键：宏与 <code>-I.</code></h4>
+    <p>课件第 59 页的 <code>mymalloc.c</code> 用 <code>#ifdef COMPILETIME</code> 包住两个包装函数；第 60 页的 <code>malloc.h</code> 才是真正的机关（原文引用）：</p>
+    <div class="formula" style="text-align:left;font-size:13.5px">#define malloc(size) mymalloc(size)<br>
+      #define free(ptr) myfree(ptr)<br><br>
+      void *mymalloc(size_t size);<br>
+      void myfree(void *ptr);</div>
+    <div class="box warn"><div class="t">为什么必须加 <code>-I.</code></div>
+      课件第 60 页在命令行旁边标了一句：Search for <code>&lt;malloc.h&gt;</code> leads to <code>/usr/include/malloc.h</code> —— 只有把当前目录放到搜索路径前面（<code>-I.</code>），
+      编译器才会用<b>你自己那个</b> <code>malloc.h</code>；否则它会去找系统的头文件，宏就没生效。三个文件的编译命令是
+      <code>gcc -Wall -DCOMPILETIME -c mymalloc.c</code> 与 <code>gcc -Wall -I. -o intc int.c mymalloc.o</code>。
+    </div>
+
+    <h4>8.2.2 链接期打桩的关键：<code>--wrap</code></h4>
+    <p>课件第 61 页的写法：包装函数叫 <code>__wrap_malloc</code>，里面调用 <code>__real_malloc</code> 去够到真正的 libc 实现；第 62 页说明链接器怎么被说服的：</p>
+    <div class="formula" style="text-align:left;font-size:13.5px">gcc -Wall -Wl,--wrap,malloc -Wl,--wrap,free -o intl \&nbsp;&nbsp;&nbsp;int.o mymalloc.o</div>
+    <ul>
+      <li><code>-Wl</code> 把后面的参数<b>转交给链接器</b>，并且把每个逗号换成空格；</li>
+      <li><code>--wrap,malloc</code> 要求链接器用特殊方式解析引用：<b>对 <code>malloc</code> 的引用解析成 <code>__wrap_malloc</code></b>，<b>对 <code>__real_malloc</code> 的引用解析成 <code>malloc</code></b>。（<code>free</code> 同理。）</li>
+    </ul>
+
+    <h4>8.2.3 加载／运行期打桩的关键：<code>LD_PRELOAD</code> 与 <code>RTLD_NEXT</code></h4>
+    <p>课件第 63–64 页的写法很特别：<b>函数名就叫 <code>malloc</code>／<code>free</code></b>（注意它<b>没有</b> <code>#include &lt;malloc.h&gt;</code>），里面对真正的实现用 <code>dlsym(RTLD_NEXT, "malloc")</code> 去拿：</p>
+    <div class="formula" style="text-align:left;font-size:13.5px">void *malloc(size_t size)<br>
+      {<br>
+      &nbsp;&nbsp;void *(*mallocp)(size_t size);<br>
+      &nbsp;&nbsp;char *error;<br><br>
+      &nbsp;&nbsp;mallocp = dlsym(RTLD_NEXT, "malloc"); /* Get addr of libc malloc */<br>
+      &nbsp;&nbsp;if ((error = dlerror()) != NULL) { fputs(error, stderr); exit(1); }<br><br>
+      &nbsp;&nbsp;char *ptr = mallocp(size);&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;/* Call libc malloc */<br>
+      &nbsp;&nbsp;printf("malloc(%d) = %p\n", (int)size, ptr);<br>
+      &nbsp;&nbsp;return ptr;<br>
+      }</div>
+    <div class="formula" style="text-align:left;font-size:13.5px">gcc -Wall -DRUNTIME -shared -fpic -o mymalloc.so mymalloc.c -ldl<br>
+      gcc -Wall -o intr int.c<br>
+      (LD_PRELOAD="./mymalloc.so" ./intr 10 100 1000)</div>
+    <div class="box ok"><div class="t">课件第 65 页对 <code>LD_PRELOAD</code> 的解释（原文）</div>
+      「<b>LD_PRELOAD 环境变量告诉动态链接器：解析未解析的引用（例如对 <code>malloc</code> 的引用）时，先去 <code>mymalloc.so</code> 里找。</b>」
+      课件还提示，有些 shell 要用 <code>env LD_PRELOAD=./mymalloc.so ./intr 10 100 1000</code> 这种写法。
+      三种方式里只有它能用在<b>任何</b>动态链接的二进制上（第 66 页）。
+    </div>
+
+    <h3>8.3 三方式回顾<span class="srcref">原第 66 页</span></h3>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>时机</th><th>怎么做到</th><th>限制</th></tr>
+      <tr><td><b>编译时</b></td><td>对 malloc/free 的调用被<b>宏展开</b>成 mymalloc/myfree</td><td>做法简单，但<b>必须有源码并重新编译</b></td></tr>
+      <tr><td><b>链接时</b></td><td>用链接器技巧做特殊的名字解析：<code>malloc → __wrap_malloc</code>、<code>__real_malloc → malloc</code></td><td>不需要源码，但要在链接这一步插手（要有 <code>.o</code>）</td></tr>
+      <tr><td><b>加载／运行期</b></td><td>自己实现一套 malloc/free，用动态链接在<b>另一个名字下</b>把库里的 malloc/free 载进来（<code>dlsym(RTLD_NEXT, …)</code>）</td><td>可用在<b>任何</b>动态链接的二进制上 —— 连 <code>gcc</code> 自己都能拦：<code>env LD_PRELOAD=./mymalloc.so gcc –c int.c</code></td></tr>
+    </table></div>
+    <div class="box warn"><div class="t">课件第 63 页那处特意标注的对比</div>
+      加载／运行期的写法里 <b>不包含</b> <code>&lt;malloc.h&gt;</code>（课件原文标注：Observe that DON'T have <code>#include &lt;malloc.h&gt;</code>）——
+      因为如果包含了它，编译器会看到 libc 对 <code>malloc</code> 的声明，可能引起属性（如 <code>alloc_size</code>）与你的定义冲突。自己写一个同名函数时，声明与定义必须完全一致。
+    </div>
+  </section>
+
+  <!-- ================= 9 ================= -->
+  <section id="s9">
+    <h2>9. 总结与测验<span class="srcref">原第 54、67 页</span></h2>
+    <p class="lede">课件用两条「总结页」收尾：第 54 页讲链接是什么、可以发生在什么时候，第 67 页讲它在实践中会给你什么麻烦、又能给你什么能力。</p>
+
+    <h3>9.1 链接总结<span class="srcref">原第 54、66–67 页</span></h3>
+    <div class="grid g2">
+      <div class="card"><h5>第 54 页</h5>
+        <ul style="margin:0;font-size:14.5px">
+          <li>链接是一项<b>让程序可以由多个目标文件构造出来</b>的技术；</li>
+          <li>链接可以发生在程序生命周期的<b>不同时刻</b>：<b>编译时</b>（程序被编译时）、<b>加载时</b>（程序被载入内存时）、<b>运行时</b>（程序执行过程中）；</li>
+          <li>理解链接能帮你避开难缠的错误，<b>让你成为更好的程序员</b>。</li>
+        </ul>
+      </div>
+      <div class="card"><h5>第 67 页</h5>
+        <ul style="margin:0;font-size:14.5px">
+          <li><b>通常</b>：它就这么发生了，没什么大不了；</li>
+          <li><b>有时</b>：奇怪的错误 —— 坏的符号解析、<code>.o</code>／<code>.a</code>／<code>.so</code> 之间的<b>顺序依赖</b>；</li>
+          <li><b>对高级用户</b>：用打桩来追踪程序 —— <b>有源码没源码都行</b>。</li>
+        </ul>
+      </div>
+    </div>
+    <div class="box ok"><div class="t">把这一讲压成四句话</div>
+      <ol style="margin:0">
+        <li><b>工具链</b>：cpp → cc1 → as → ld；汇编器产出可重定位目标文件（<code>.o</code>），链接器产出可执行文件（<code>a.out</code>），共享库是 <code>.so</code>。</li>
+        <li><b>符号解析</b>：每个引用接上唯一一个定义；多个强符号报错，强压弱，多个弱任选一个 —— 而且<b>链接器不检查类型</b>。</li>
+        <li><b>重定位</b>：合并节、分配地址、按重定位条目改写引用；PC 相对写「位移」，绝对引用写「地址」。</li>
+        <li><b>库与打桩</b>：静态库按需拉成员（<b>顺序要紧</b>），共享库把链接推到加载时或运行时；<code>#define</code>／<code>--wrap</code>／<code>LD_PRELOAD</code> 是拦截调用的三种时机。</li>
+      </ol>
+    </div>
+
+    <h3>9.2 测验<span class="srcref">9 题</span></h3>
+    <p>每道题选完立刻判分并给出解析。答错不要紧 —— 解析里写清了依据在本讲的哪一节、课件的哪一页。</p>
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：本讲测验</span>
+        <button class="sm" id="qzReset">重来</button>
+      </div>
+      <div id="qzOut"></div>
+    </div>
+  </section>
+  </main>
+</div>
+
+<div class="footer">
+本页由 <code>slides/ICS15-linking-20251106.pdf</code> 翻译整理而成 · 数值计算与可视化均为页面内实时计算。
+</div>
+<button class="totop" id="toTop">↑ 顶部</button>
+
+<script>
+"use strict";
+/* ============================================================
+   链接（Linking）· 交互式课件 —— 全部逻辑
+   约定：所有计算在页面内实时完成；无效输入必须给出提示而不是抛错；
+         地址与重定位一律用 BigInt（不混用 Number 的位运算）。
+
+   顶层以 function 声明的下面这些是页面的「判分基准」，由
+   tools/verify_ics15.js 用独立参考实现（C，x86-64 实测）逐项比对：
+     elfRelocSym / elfRelocType      —— ELF64_R_SYM / R_TYPE 解码
+     relocApply                      —— R_X86_64_32/32S/PC32/64 求值
+     patchLE                         —— 小端字节回填
+     nmLetter                        —— nm 的符号类别字母
+     resolveDefs                     —— 符号解析三规则
+     archiveScan                     —— 静态库命令行顺序扫描
+     ipResolve                       —— 三种库打桩的符号重定向
+   ============================================================ */
+
+const $  = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const badBox = msg => `<div class="box bad"><div class="t">输入无效</div>${esc(msg)}</div>`;
+const kvAttr = str => {
+  const out = {};
+  String(str).split(';').forEach(part => {
+    const i = part.indexOf('=');
+    if (i > 0) out[part.slice(0, i).trim()] = part.slice(i + 1).trim();
+  });
+  return out;
+};
+
+/* ============================================================
+   0 · 整数工具（全部 BigInt）
+   ============================================================ */
+const U32M = (1n << 32n) - 1n;
+function u32(v) { const b = BigInt(v); return ((b % (1n << 32n)) + (1n << 32n)) % (1n << 32n); }
+function u64(v) { const b = BigInt(v); return ((b % (1n << 64n)) + (1n << 64n)) % (1n << 64n); }
+function i32(v) { const b = u32(v); return b >= (1n << 31n) ? b - (1n << 32n) : b; }
+/** 十六进制，指定位数补零（默认 8 位） */
+function hx(v, w = 8) { return '0x' + u64(v).toString(16).padStart(w, '0'); }
+/** 十六进制，不补零 */
+function hxv(v) { const b = BigInt(v); return (b < 0n ? '−0x' + (-b).toString(16) : '0x' + b.toString(16)); }
+function fmtDec(v) { const b = BigInt(v); return (b < 0n ? '−' : '') + (b < 0n ? -b : b).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ','); }
+/** 解析用户输入：0x… / 0b… / 十进制 / 负号 / 下划线分隔 → BigInt（保留符号，失败返回 null） */
+function parseNum(str) {
+  const t = String(str).trim().replace(/[_,\s]/g, '');
+  if (!t) return null;
+  const neg = t.startsWith('-') || t.startsWith('−');
+  const body = neg ? t.slice(1) : (t.startsWith('+') ? t.slice(1) : t);
+  try {
+    let v = null;
+    if (/^0[xX][0-9a-fA-F]+$/.test(body)) v = BigInt(body);
+    else if (/^0[bB][01]+$/.test(body)) v = BigInt(body);
+    else if (/^[0-9]+$/.test(body)) v = BigInt(body);
+    if (v === null) return null;
+    return neg ? -v : v;
+  } catch (e) { return null; }
+}
+/** BigInt → n 字节小端数组（取低 n 字节） */
+function leBytes(v, n) {
+  const b = u64(BigInt(v));
+  const out = [];
+  for (let j = 0; j < n; j++) out.push(Number((b >> BigInt(8 * j)) & 0xffn));
+  return out;
+}
+/** 小端字节数组 → BigInt */
+function bytesToBig(arr) {
+  let v = 0n;
+  arr.forEach((b, j) => { v |= BigInt(Number(b) & 0xff) << BigInt(8 * j); });
+  return u64(v);
+}
+const hexByte = v => (Number(v) & 0xff).toString(16).padStart(2, '0');
+
+/* ============================================================
+   1 · 判分基准：ELF 重定位条目
+   ============================================================ */
+const R_X86_64_NONE = 0, R_X86_64_64 = 1, R_X86_64_PC32 = 2, R_X86_64_PLT32 = 4,
+      R_X86_64_32 = 10, R_X86_64_32S = 11;
+const RELOC_NAME = {
+  0: 'R_X86_64_NONE', 1: 'R_X86_64_64', 2: 'R_X86_64_PC32',
+  3: 'R_X86_64_GOT32', 4: 'R_X86_64_PLT32', 5: 'R_X86_64_COPY',
+  6: 'R_X86_64_GLOB_DAT', 7: 'R_X86_64_JUMP_SLOT', 8: 'R_X86_64_RELATIVE',
+  9: 'R_X86_64_GOTPCREL', 10: 'R_X86_64_32', 11: 'R_X86_64_32S',
+};
+
+/** ELF64_R_SYM(i) = i >> 32（课件第 28 页） */
+function elfRelocSym(info) { return u64(info) >> 32n; }
+/** ELF64_R_TYPE(i) = i & 0xffffffff（课件第 28 页） */
+function elfRelocType(info) { return Number(u64(info) & 0xffffffffn); }
+
+/** 重定位求值：把 refptr 处的字段改成什么值。
+ *  type 用上面的 R_X86_64_* 常量；symAddr/addend/secAddr/offset 都是 BigInt。
+ *  返回 { type, name, refaddr, value（有符号原始值）, bytes, fits, field（真正写进字段的 bytes×8 位值） }
+ *  fits=false 时真实链接器会报 "relocation truncated to fit"。 */
+function relocApply(type, symAddr, addend, secAddr, offset) {
+  const t = Number(type);
+  const sym = BigInt(symAddr), ad = BigInt(addend), sec = BigInt(secAddr), off = BigInt(offset);
+  const refaddr = u64(sec + off);
+  const name = RELOC_NAME[t] || ('类型 ' + t);
+  if (t === R_X86_64_NONE) return { type: t, name, refaddr, value: 0n, bytes: 0, fits: true, field: 0n };
+  let value, bytes, fits;
+  if (t === R_X86_64_64) { value = sym + ad; bytes = 8; fits = true; }
+  else if (t === R_X86_64_PC32 || t === R_X86_64_PLT32) {
+    value = sym + ad - refaddr; bytes = 4;
+    fits = value >= -(1n << 31n) && value <= (1n << 31n) - 1n;
+  } else if (t === R_X86_64_32) {
+    value = sym + ad; bytes = 4;
+    fits = value >= 0n && value <= U32M;
+  } else if (t === R_X86_64_32S) {
+    value = sym + ad; bytes = 4;
+    fits = value >= -(1n << 31n) && value <= (1n << 31n) - 1n;
+  } else {
+    return { type: t, name, refaddr, value: 0n, bytes: 0, fits: false, field: 0n, unknown: true };
+  }
+  /* 写进字段的是 value 截断到 bytes 字节后的位模式（64 位类型要保留高 32 位） */
+  const field = BigInt.asUintN(bytes * 8, value);
+  return { type: t, name, refaddr, value, bytes, fits, field, unknown: false };
+}
+
+/** 小端回填：把 value 的低 n 字节写成数组（判分基准） */
+function patchLE(value, n) {
+  const k = Number(n);
+  if (!(k > 0)) return [];
+  return leBytes(value, k);
+}
+
+/* ============================================================
+   2 · 判分基准：符号表与符号解析
+   ============================================================ */
+/** nm 的符号类别字母。bind 是 ELF st_info 的高 4 位（0 局部 / 1 全局 / 2 弱），
+ *  kind 是该符号所在「位置」：undef / abs / common / text / data / bss / rodata / other。 */
+function nmLetter(bind, kind) {
+  const b = Number(bind) & 0xf;
+  const local = b === 0, weak = b === 2;
+  const k = String(kind);
+  if (k === 'undef') return weak ? 'w' : 'U';
+  if (k === 'abs') return local ? 'a' : 'A';
+  if (k === 'common') return local ? 'c' : 'C';
+  let L;
+  if (k === 'text') L = 'T';
+  else if (k === 'data') L = 'D';
+  else if (k === 'bss') L = 'B';
+  else if (k === 'rodata') L = 'R';
+  else L = 'S';
+  if (weak) return 'W';
+  return local ? L.toLowerCase() : L;
+}
+
+/** 符号解析三规则（课件第 23 页）。
+ *  defs: [{ file, name, kind }]，kind ∈ strong（强定义：过程、已初始化全局变量）
+ *        / weak（弱定义：未初始化全局变量、extern 声明）/ undef（只引用、未定义）/ decl（只有函数声明）
+ *  返回 { ok, errors:[{name,msg}], picks:{name:{kind,idx}}, notes:[] } */
+function resolveDefs(defs) {
+  const byName = new Map();
+  const list = Array.from(defs || [], d => ({ file: d.file, name: String(d.name), kind: d.kind }));
+  list.forEach((d, i) => {
+    if (!byName.has(d.name)) byName.set(d.name, { strong: [], weak: [], undef: [], decl: [] });
+    const e = byName.get(d.name);
+    (e[d.kind] || e.undef).push(i);
+  });
+  const errors = [], picks = {}, notes = [];
+  for (const [name, e] of byName) {
+    if (e.decl.length && !e.strong.length && !e.weak.length && !e.undef.length) {
+      notes.push({ name, idx: e.decl[0], kind: 'decl', msg: '只有声明没有定义 —— 汇编器不为它建立符号表条目，不参与解析' });
+      continue;
+    }
+    if (e.strong.length > 1) {
+      errors.push({ name, msg: `重复定义：${e.strong.length} 个强符号（规则 1：多个强符号不允许）` });
+      picks[name] = { kind: 'error', idx: e.strong[0] };
+      continue;
+    }
+    if (e.strong.length === 1) {
+      picks[name] = { kind: 'strong', idx: e.strong[0] };
+      if (e.weak.length) notes.push({ name, idx: e.strong[0], kind: 'strong', msg: '规则 2：有强符号就选强符号，对弱符号的引用也解析到它' });
+      continue;
+    }
+    if (e.weak.length >= 1) {
+      picks[name] = { kind: 'weak', idx: e.weak[0] };
+      if (e.weak.length > 1) notes.push({ name, idx: e.weak[0], kind: 'weak', msg: `规则 3：${e.weak.length} 个弱符号，任选一个（本页取扫描到的第一个）` });
+      continue;
+    }
+    if (e.undef.length) {
+      errors.push({ name, msg: '未解析的引用（undefined reference）' });
+      picks[name] = { kind: 'undef', idx: e.undef[0] };
+    }
+  }
+  return { ok: errors.length === 0, errors, picks, notes };
+}
+
+/* ============================================================
+   3 · 判分基准：静态库的命令行顺序扫描（课件第 44 页）
+   ============================================================ */
+/** tokens: 命令行条目名（按顺序）；table: 名字 → 条目
+ *   对象文件 { kind:'obj', defines:[…], refs:[…] }
+ *   静态库   { kind:'lib', members:[{ name, defines:[…], refs:[…] }] }
+ *  返回 { ok, unresolved:[…], pulled:[…], trace:[…] } —— 只拉「能解决当前未解析引用」的成员。 */
+function archiveScan(tokens, table) {
+  const defined = new Set(), unresolved = new Set();
+  const pulled = [], trace = [];
+  const addRefs = refs => { (refs || []).forEach(r => { if (!defined.has(r)) unresolved.add(r); }); };
+  for (const t of (tokens || [])) {
+    const e = table[t];
+    if (!e) { trace.push({ token: t, before: [...unresolved].sort(), pulled: [], after: [...unresolved].sort(), note: '未知条目' }); continue; }
+    const before = [...unresolved].sort();
+    if (e.kind === 'obj') {
+      (e.defines || []).forEach(d => { defined.add(d); unresolved.delete(d); });
+      addRefs(e.refs);
+      pulled.push(t);
+      trace.push({ token: t, before, pulled: [t], after: [...unresolved].sort(),
+                   note: '对象文件总是被链接进去（不受引用影响）' });
+    } else {
+      const got = [];
+      let changed = true;
+      while (changed) {
+        changed = false;
+        for (const m of (e.members || [])) {
+          if (pulled.indexOf(m.name) >= 0) continue;
+          if ((m.defines || []).some(d => unresolved.has(d))) {
+            (m.defines || []).forEach(d => { defined.add(d); unresolved.delete(d); });
+            addRefs(m.refs);
+            pulled.push(m.name);
+            got.push(m.name);
+            changed = true;
+          }
+        }
+      }
+      trace.push({ token: t, before, pulled: got, after: [...unresolved].sort(),
+                   note: got.length ? '按引用逐个拉出成员，直到没有新成员被拉入' : '没有任何未解析引用落在库里 —— 一个成员都不会被拉入' });
+    }
+  }
+  return { ok: unresolved.size === 0, unresolved: [...unresolved].sort(), pulled: pulled.slice(), trace };
+}
+
+/* ============================================================
+   4 · 判分基准：库打桩的符号重定向
+   ============================================================ */
+/** 三种打桩方式下，调用点最终会进到哪个函数里。
+ *  mode ∈ compile / link / load；sym 是被打桩的库函数名（malloc、free…） */
+function ipResolve(mode, sym) {
+  const s = String(sym).trim().replace(/^_+/, '');
+  if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(s)) return null;
+  if (mode === 'compile') return { entry: 'my' + s, real: null, via: `#define ${s}(…) → my${s}(…)（宏替换，编译前生效）` };
+  if (mode === 'link') return { entry: '__wrap_' + s, real: '__real_' + s, via: `-Wl,--wrap,${s}：对 ${s} 的引用改成 __wrap_${s}，对 __real_${s} 的引用改成 ${s}` };
+  if (mode === 'load') return { entry: s, real: s, via: `自定义 ${s}() 里用 dlsym(RTLD_NEXT, "${s}") 拿到库里真正的 ${s}` };
+  return null;
+}
+
+/* 课件第 4 页的工具链四步 */
+const PIPELINE = [
+  { k: 'cpp', hold: '预处理器 cpp', file: 'hello.c', out: 'hello.i',
+    cmd: 'gcc -E hello.c -o hello.i', src: '程序源文件 Program Source',
+    dst: '修改后的源文件 Modified Source',
+    does: '只做文本替换：# 指令在这一步展开 —— #include 把被包含文件的文本原样贴进来，#define 把宏替换成它的值。',
+    eg: 'printf("hello, world %d\\n", FOO) 里 FOO 是 4，展开后变成 printf("hello, world %d\\n", 4)' },
+  { k: 'cc1', hold: '编译器 cc1', file: 'hello.i', out: 'hello.s',
+    cmd: 'gcc -S hello.i -o hello.s', src: '修改后的源文件 Modified Source',
+    dst: '汇编代码 Assembly Code',
+    does: '把高级 C 代码翻译成汇编代码 —— 这一步决定用哪些指令、哪些寄存器。',
+    eg: 'main 里的 printf 调用变成 movl $4, %esi / movl $.LC0, %edi / call printf' },
+  { k: 'as', hold: '汇编器 as/gas', file: 'hello.s', out: 'hello.o',
+    cmd: 'gcc -c hello.s -o hello.o', src: '汇编代码 Assembly Code',
+    dst: '目标代码 Object Code',
+    does: '把汇编代码翻译成二进制机器码，并建立符号表与重定位条目 —— 此时地址还没定，所以叫「可重定位」目标文件。',
+    eg: '.LC0 这样的符号地址留空，记一条重定位条目等链接器来填' },
+  { k: 'ld', hold: '链接器 ld', file: 'hello.o + 启动代码 + 库', out: 'hello',
+    cmd: 'gcc -o hello hello.o', src: '目标代码 Object Code', dst: '可执行代码 Executable Code',
+    does: '把若干可重定位目标文件与库拼成一个可执行目标文件：符号解析 + 重定位。',
+    eg: '把 hello.o 里的 call printf 指向 libc 里真正的 printf，把 .LC0 填成运行时的 .rodata 地址' },
+];
+
+/* 课件第 7 页：.rodata 的十六进制转储（地址 → 字节，原文引用） */
+const RODATA_BASE = 0x495d40n;
+const RODATA_HEX = '01000200 68656c6c 6f2c2077 6f726c64 2025640a 00464154 414c3a20 6b65726e';
+const RODATA_BYTES = (() => {
+  const out = [];
+  RODATA_HEX.split(' ').forEach(w => { for (let i = 0; i < w.length; i += 2) out.push(parseInt(w.slice(i, i + 2), 16)); });
+  return out;
+})();
+
+/* 课件第 16–17、37 页：ELF 的节与两张表 */
+const ELF_PARTS = [
+  { n: 'ELF 头', en: 'ELF header', use: '字长、字节序、文件类型（.o / exec / .so）、机器类型……',
+    link: '<b>必需</b>（三种目标文件都有）', exec: '<b>必需</b>', loaded: '不载入内存' },
+  { n: '程序头表／段', en: 'Program header table / Segments', use: '页大小、虚拟地址内存段（由节合并而来）、段大小 —— 用来构造进程映像（执行一个程序）；可重定位文件不需要它',
+    link: '可选（.o 里没有）', exec: '<b>必需</b>', loaded: '决定「哪些节被载入」' },
+  { n: '节头表', en: 'Section header table', use: '每个节的偏移与大小 —— 链接时用的目标文件必须有它',
+    link: '<b>必需</b>', exec: '可选（执行时不再需要）', loaded: '不载入内存' },
+  { n: '.text', en: '代码节', use: '代码（机器指令）', link: '必需', exec: '并进只读代码段', loaded: '载入（只读代码段）' },
+  { n: '.rodata', en: '只读数据节', use: '只读数据：跳转表、字符串常量……', link: '必需', exec: '并进只读代码段', loaded: '载入（只读代码段）' },
+  { n: '.data', en: '数据节', use: '已初始化的全局变量', link: '必需', exec: '并进读写数据段', loaded: '载入（读写数据段）' },
+  { n: '.bss', en: 'BSS 节', use: '未初始化的全局变量；"Block Started by Symbol"、"Better Save Space" —— <b>有节头但不占文件空间</b>',
+    link: '必需', exec: '并进读写数据段', loaded: '载入（读写数据段）' },
+  { n: '.symtab', en: '符号表节', use: '符号表：过程与静态变量的名字、节的名字与位置', link: '必需（链接要用）', exec: '可选', loaded: '不载入内存' },
+  { n: '.rel.text', en: '代码重定位节', use: '.text 的重定位信息：可执行文件里需要修改的指令地址，以及怎么改',
+    link: '必需（链接要用）', exec: '链接后消失', loaded: '不载入内存' },
+  { n: '.rel.data', en: '数据重定位节', use: '.data 的重定位信息：合并后的可执行文件里需要修改的指针数据地址',
+    link: '必需（链接要用）', exec: '链接后消失', loaded: '不载入内存' },
+  { n: '.debug', en: '调试节', use: '符号调试信息（gcc -g）', link: '可选', exec: '可选', loaded: '不载入内存' },
+  { n: '.line / .strtab', en: '行号表 / 字符串表', use: '行号与字符串 —— 课件第 37 页的内存映像图把它们和 .symtab、.debug 归为「不载入内存」的一堆',
+    link: '可选', exec: '可选', loaded: '不载入内存' },
+  { n: '.init', en: '初始化节', use: '程序启动时要跑的一小段代码（课件第 37 页把它和 .text、.rodata 一起归入只读代码段）',
+    link: '—', exec: '并进只读代码段', loaded: '载入（只读代码段）' },
+  { n: '.interp', en: '解释器节', use: '指定用哪个动态链接器（如 ld-linux.so）—— 课件第 52 页',
+    link: '—', exec: '动态链接的可执行文件有', loaded: '读来做动态链接' },
+  { n: '.dynamic', en: '动态信息节', use: '列出需要的动态库名字等信息，例如 <code>(NEEDED) Shared library: [libm.so.6]</code> —— 课件第 52 页',
+    link: '—', exec: '动态链接的可执行文件有', loaded: '读来做动态链接' },
+];
+
+/* 课件第 23 页的三条规则（判断题里引用） */
+const LINKER_RULES = [
+  ['规则 1', '多个强符号不允许 —— 每个条目只能定义一次，否则链接器报错。'],
+  ['规则 2', '一个强符号 + 多个弱符号：选强符号，对弱符号的引用也解析到强符号。'],
+  ['规则 3', '多个弱符号：任选一个（可以用 gcc -fno-common 改掉这种行为）。'],
+];
+
+/* 课件第 30–33 页：readelf -r 的输出（原文引用） */
+const RELOC_TABLES = {
+  'main-text': {
+    title: ".rela.text  (@main.o)", srcref: '原第 30–32 页',
+    head: "Relocation section '.rela.text' at offset 0x560 contains 2 entries:",
+    rows: [
+      { off: '000000000015', info: '00080000000a', type: 'R_X86_64_32', symval: '0000000000000000', name: 'array', addend: 0 },
+      { off: '00000000001a', info: '000a00000002', type: 'R_X86_64_PC32', symval: '0000000000000000', name: 'sum', addend: -4 },
+    ],
+    note: '两处引用：<code>mov $array,%edi</code> 里的绝对地址（32 位），和 <code>call sum</code> 里的 PC 相对位移（32 位）。',
+  },
+  'main-eh': {
+    title: ".rela.eh_frame  (@main.o)", srcref: '原第 30–32 页',
+    head: "Relocation section '.rela.eh_frame' at offset 0x590 contains 1 entries:",
+    rows: [
+      { off: '000000000020', info: '000200000002', type: 'R_X86_64_PC32', symval: '0000000000000000', name: '.text', addend: 0 },
+    ],
+    note: '.eh_frame 是异常处理/栈回溯用的节，它要记录 .text 的位置，所以也留了一条 PC 相对的重定位条目（符号是节符号 .text 本身）。',
+  },
+  'sum-eh': {
+    title: ".rela.eh_frame  (@sum.o)", srcref: '原第 33 页',
+    head: "Relocation section '.rela.eh_frame' at offset 0x4f8 contains 1 entries:",
+    rows: [
+      { off: '000000000020', info: '000200000002', type: 'R_X86_64_PC32', symval: '0000000000000000', name: '.text', addend: 0 },
+    ],
+    note: 'sum.o 的 .text 里没有任何需要重定位的引用（都是本文件内的相对跳转），所以整个 .o 只有这一条。课件原文：1 symbol to be relocated (.text)。',
+  },
+};
+
+/* 课件第 36 页：链接之后的三列对照（原文引用的地址与重定位参数） */
+const LINK_ANCHOR = {
+  textBase: 0xbabe00n,                            /* .text = 0xbabe00 */
+  dataBase: 0xcafe00n,                            /* .data = 0xcafe00 */
+  addrMain: 0xbabf18n, addrSum: 0xbabf40n, addrArray: 0xcafe10n,
+  off32: 0x15n, offPC: 0x1an, addendPC: -4n,
+};
+
+/* 课件第 30 页第一行的 r_info，作为「拆解 r_info」输入框的默认值 */
+const RE_INFO_DEFAULT = '0x00080000000a';
+
+/* 课件第 36 页的重定位例子里，r_offset 是「输入模块节内偏移」，而 main.o 的 .text 被链接器
+   放在 0xbabf18（正好等于 main 的地址 —— main 是 main.o 里 .text 的第一个符号）。
+   所以 refptr = 0xbabf18 + r_offset，与课件印出的 babf2c / babf31 两处字节对得上。 */
+const SECT_MAIN = '0xbabf18';
+
+/* 课件第 52 页：ldd 的输出（原文引用） */
+const LDD_CASES = {
+  prog: 'linux-vdso.so.1 =>  (0x00007ffcf2998000)\nlibc.so.6 => /lib/x86_64-linux-gnu/libc.so.6 (0x00007f99ad927000)\n/lib64/ld-linux-x86-64.so.2 (0x00007f99adcef000)',
+  libm: 'libm.so.6 => /lib/x86_64-linux-gnu/libm.so.6 (0x00007f99ad7c0000)',
+  bad: 'libc.so.6 => not found',
+};
+
+/* 课件第 24/44/58 页 ish：静态库的两种命令行 */
+const ARCH_TOKENS = {
+  'main2.o': { kind: 'obj', defines: ['main'], refs: ['addvec', 'printf'], label: 'main2.o（对象文件）' },
+  'libvector.a': { kind: 'lib', members: [
+      { name: 'addvec.o', defines: ['addvec'], refs: ['printf'] },
+      { name: 'multvec.o', defines: ['multvec'], refs: ['printf'] },
+    ], label: 'libvector.a（静态库：addvec.o、multvec.o）' },
+  'printf.o': { kind: 'obj', defines: ['printf'], refs: [], label: 'printf.o（printf 所在的对象文件）' },
+};
+
+/* 课件第 66 页：打桩三方式回顾（原文引用） */
+const IP_MODES = [
+  { k: 'compile', n: '编译期打桩', srcref: '原第 59–60 页',
+    how: '用宏把调用点换掉：<code>#define malloc(size) mymalloc(size)</code>、<code>#define free(ptr) myfree(ptr)</code>，写在自定义的 malloc.h 里',
+    cmd: ['gcc -Wall -DCOMPILETIME -c mymalloc.c', 'gcc -Wall -I. -o intc int.c mymalloc.o', './intc 10 100 1000'],
+    need: '需要<b>源码</b>，并且<b>要重新编译</b>（宏在预处理阶段生效）',
+    out: ['malloc(10)=0x1ba7010', 'free(0x1ba7010)', 'malloc(100)=0x1ba7030', 'free(0x1ba7030)', 'malloc(1000)=0x1ba70a0', 'free(0x1ba70a0)'] },
+  { k: 'link', n: '链接期打桩', srcref: '原第 61–62 页',
+    how: '用链接器的 <code>--wrap</code> 技巧改名：对 <code>malloc</code> 的引用解析成 <code>__wrap_malloc</code>，对 <code>__real_malloc</code> 的引用解析成 <code>malloc</code>',
+    cmd: ['gcc -Wall -DLINKTIME -c mymalloc.c', 'gcc -Wall -c int.c', 'gcc -Wall -Wl,--wrap,malloc -Wl,--wrap,free -o intl int.o mymalloc.o', './intl 10 100 1000'],
+    need: '需要<b>可重定位目标文件</b>（链接这一步），不必改源码',
+    out: ['malloc(10) = 0x91a010', 'free(0x91a010)', '. . .'] },
+  { k: 'load', n: '加载／运行期打桩', srcref: '原第 63–65 页',
+    how: '自己写一个同名函数，里面用 <code>dlsym(RTLD_NEXT, "malloc")</code> 找到库里真正的实现；再用 <code>LD_PRELOAD</code> 让它先被看到',
+    cmd: ['gcc -Wall -DRUNTIME -shared -fpic -o mymalloc.so mymalloc.c -ldl', 'gcc -Wall -o intr int.c', '(LD_PRELOAD="./mymalloc.so" ./intr 10 100 1000)'],
+    need: '不需要源码，也不必重新编译 —— <b>对任何动态链接的二进制都能用</b>',
+    out: ['malloc(10) = 0x91a010', 'free(0x91a010)', '. . .'] },
+];
+
+/* ============================================================
+   6 · 页面状态
+   ============================================================ */
+const ST = {
+  tc: 'ld',          /* 1 工具链当前阶段 */
+  elf: '节头表',      /* 4 ELF 当前选中的部件 */
+  elfView: 'link',   /* 4 链接视图 / 执行视图 */
+  nm: 'fn',          /* 5 符号表：当前 C 构造 */
+  re: 'main-text',   /* 9 重定位表当前选中 */
+  rs: 1,             /* 8 两步重定位当前步 */
+  dl: 'load',        /* 13 加载时 / 运行时 */
+  ip: 'link',        /* 16 打桩方式 */
+  rc: null,          /* 10 最近一次重定位计算结果 */
+  pz: [],            /* 7 判断题作答 */
+  qz: [],            /* 17 测验作答 */
+};
+
+/* ============================================================
+   7 · 组件 1：编译工具链漫游
+   ============================================================ */
+function renderToolchain() {
+  const idx = Math.max(0, PIPELINE.findIndex(p => p.k === ST.tc));
+  const cur = PIPELINE[idx];
+  $$('[data-tc]').forEach(c => c.classList.toggle('gray', c.dataset.tc !== ST.tc));
+  $('#tcOut').innerHTML = `
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>工具</th><th>命令</th><th>输入</th><th>输出</th><th>产物形态</th></tr>
+      <tr class="hl"><td><b>${esc(cur.hold)}</b></td><td class="mono">${esc(cur.cmd)}</td>
+        <td class="mono">${esc(cur.file)}</td><td class="mono">${esc(cur.out)}</td><td>${esc(cur.dst)}</td></tr>
+    </table></div>
+    <div class="box ok" style="margin-bottom:0"><div class="t">这一步做什么</div>
+      ${cur.does}
+      <div class="mono" style="margin-top:7px;font-size:13px">${esc(cur.eg)}</div></div>`;
+}
+
+/* ============================================================
+   8 · 组件 2：编译器驱动命令与产物
+   ============================================================ */
+const GC_STAGES = [
+  { k: 'E', lab: '只做预处理（-E）', tool: '预处理器 cpp', out: 'main.i',
+    cmd: b => `gcc -E ${b}.c -o ${b}.i`,
+    form: '修改后的源文件 —— 仍然是 C 源码文本，只是 # 指令都展开完了',
+    addr: '不涉及地址' },
+  { k: 'S', lab: '只到汇编（-S）', tool: '编译器 cc1', out: 'main.s',
+    cmd: b => `gcc -S ${b}.c -o ${b}.s`,
+    form: '汇编代码 —— 还是文本，但已经是具体指令、具体寄存器',
+    addr: '符号地址仍是占位符（.LC0 之类）' },
+  { k: 'c', lab: '只到目标文件（-c）', tool: '汇编器 as/gas', out: 'main.o',
+    cmd: b => `gcc -c ${b}.c -o ${b}.o`,
+    form: '<b>可重定位目标文件</b>（.o）—— 二进制，含代码、数据、符号表与重定位条目',
+    addr: '<b>地址还没定</b>：每个节都从 0 开始，外部引用靠重定位条目记账' },
+  { k: 'link', lab: '链接成可执行文件（不加 -c/-S/-E）', tool: '链接器 ld', out: 'prog',
+    cmd: b => `gcc -Og -o prog ${b}.c sum.c`,
+    form: '<b>可执行目标文件</b> —— 代码和数据可以被直接复制到内存里执行',
+    addr: '地址全部定下来：符号解析 + 重定位（本讲第 4、5 节）' },
+];
+function renderGccCmd() {
+  const base = ($('#gcBase').value || '').trim() || 'main';
+  const st = GC_STAGES.find(s => s.k === $('#gcSel').value) || GC_STAGES[3];
+  $('#gcOut').innerHTML = `
+    <div class="readout">
+      <dt>gcc 实际调用</dt><dd>${esc(st.tool)}</dd>
+      <dt>命令行</dt><dd>${esc(st.cmd(base))}</dd>
+      <dt>产物</dt><dd>${esc(st.out)}</dd>
+    </div>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>产物是什么</th><th>地址状态</th></tr>
+      <tr><td>${st.form}</td><td>${st.addr}</td></tr>
+    </table></div>
+    <div class="box" style="margin-bottom:0"><div class="t">为什么 gcc 被叫做「编译器驱动」</div>
+      课件第 4 页：gcc 自己不做编译 —— 它按参数依次<b>调用</b> cpp、cc1、as、ld 四个程序，再把它们的产物接力传下去。
+      所以 <code>-c</code> 停在第 3 步、<code>-S</code> 停在第 2 步、<code>-E</code> 停在第 1 步，不加则一路走到链接。</div>`;
+}
+
+/* ============================================================
+   9 · 组件 3：.rodata 转储的地址核对
+   ============================================================ */
+function rodataRow(addr) {
+  const off = Number(addr - RODATA_BASE);
+  const cells = RODATA_BYTES.map((b, i) =>
+    `<div class="b ${i === off ? 'sel' : 'e'}">${hexByte(b)}</div>`).join('');
+  /* 这一行必须保持不换行（它表示一段连续的字节序列），所以放进 .tbl-wrap 里
+     横向滚动 —— 否则 64 格在窄屏会把整页撑破。 */
+  return `<div class="tbl-wrap"><div class="bits sm" style="flex-wrap:nowrap;width:max-content">${cells}</div></div>`;
+}
+function renderRodata() {
+  const v = parseNum($('#hxIn').value);
+  if (v === null) { $('#hxOut').innerHTML = badBox('请输入一个地址，例如 0x495d44 —— 支持 0x 前缀、十进制或 0b 二进制'); return; }
+  const a = v;
+  const idx = a - RODATA_BASE;
+  if (idx < 0n || idx >= BigInt(RODATA_BYTES.length)) {
+    $('#hxOut').innerHTML = badBox(`地址 ${hx(a, 8)} 不在课件第 7 页的转储范围里：本页只有 ${hx(RODATA_BASE, 8)} – ${hx(RODATA_BASE + BigInt(RODATA_BYTES.length - 1), 8)} 这 ${RODATA_BYTES.length} 个字节`);
+    return;
+  }
+  const i = Number(idx);
+  const b = RODATA_BYTES[i];
+  const ch = (b >= 0x20 && b < 0x7f) ? String.fromCharCode(b) : '（不可打印）';
+  /* 从该地址起按 C 字符串读：遇到 0 结束 */
+  let s = '', j = i;
+  while (j < RODATA_BYTES.length && RODATA_BYTES[j] !== 0 && s.length < 48) { s += String.fromCharCode(RODATA_BYTES[j]); j++; }
+  const terminated = j < RODATA_BYTES.length && RODATA_BYTES[j] === 0;
+  const lead = Number(a - RODATA_BASE) % 16;
+  const rowStart = RODATA_BASE + BigInt(i - lead);
+  const row = RODATA_BYTES.slice(i - lead, i - lead + 16);
+  $('#hxOut').innerHTML = `
+    <div class="readout">
+      <dt>地址</dt><dd>${hx(a, 8)}</dd>
+      <dt>该字节</dt><dd>${hexByte(b)} &nbsp;<code>${esc(ch)}</code>（十进制 ${b}）</dd>
+      <dt>所在 16 字节行</dt><dd>${hx(rowStart, 8)} 起：${row.map(hexByte).join(' ')}</dd>
+      <dt>从该地址读 C 字符串</dt><dd>${s ? '"' + esc(s) + '"' + (terminated ? '（已遇到结尾的 0）' : '（后面没有 0）') : '空串'}</dd>
+    </div>
+    ${rodataRow(a)}
+    <div class="box ok" style="margin-bottom:0"><div class="t">对上了：立即数就是字符串首地址</div>
+      课件第 7 页的反汇编里有一条 <code>bf 44 5d 49 00&nbsp;&nbsp;mov $0x495d44,%edi</code>：<code>%edi</code> 是 <code>printf</code> 的第一个参数（格式串），
+      而 <code>0x495d44</code> 处的字节正是 <code>68</code>（<code>'h'</code>）—— 也就是下面这 16 个字节里下标 4 的那一格。
+      <code>.rodata</code> 从 <code>0x495d40</code> 开始，前 4 个字节 <code>01 00 02 00</code> 是别的数据，
+      格式串 <code>"hello, world %d\n"</code> 从 <code>0x495d44</code> 起、共 15 字节，紧跟一个结尾的 <code>00</code>。</div>`;
+}
+
+/* ============================================================
+   10 · 组件 4：ELF 节的链接视图与执行视图
+   ============================================================ */
+function renderElf() {
+  const cur = ELF_PARTS.find(p => p.n === ST.elf) || ELF_PARTS[0];
+  const link = ST.elfView === 'link';
+  $$('[data-elf]').forEach(c => c.classList.toggle('gray', c.dataset.elf !== ST.elf));
+  const rows = ELF_PARTS.map(p => `<tr${p.n === cur.n ? ' class="hl"' : ''}>
+      <td><b class="mono" style="font-size:13.5px">${esc(p.n)}</b><div style="font-size:12.5px;color:var(--muted)">${esc(p.en)}</div></td>
+      <td>${p.use}</td>
+      <td>${link ? p.link : p.exec}</td>
+      <td>${p.loaded}</td></tr>`).join('');
+  $('#elfOut').innerHTML = `
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>部件</th><th>用途（课件第 16–17 页）</th>
+        <th>${link ? '链接视图（链接时）' : '执行视图（运行时）'}</th><th>是否载入内存</th></tr>
+      ${rows}
+    </table></div>
+    <div class="box ${link ? '' : 'ok'}" style="margin-bottom:0"><div class="t">当前看的是「${link ? '链接视图' : '执行视图'}」</div>
+      ${link
+        ? '课件第 18 页：链接时要看的是<b>节</b>（Section）—— 所以节头表<b>必需</b>，而程序头表可有可无（可重定位文件里就没有）。'
+        : '课件第 18 页：执行时要看的是<b>段</b>（Segment）—— 程序头表<b>必需</b>，它把若干节并成一个段交给加载器；节头表这时反而可以省掉。'}
+      点表格上方的部件名（或上面的胶囊）切换高亮行，看它在两种视图里的身份。</div>`;
+}
+
+/* ============================================================
+   11 · 组件 5：符号表查看器（构造 → nm 字母）
+   ============================================================ */
+const NM_CASES = [
+  { k: 'fn', q: '函数定义', eg: 'int sum(int *a, int n) { … }', letter: 'T', sect: '.text',
+    bind: '全局', strength: '<span class="chip ok">强符号</span>', inTable: '有',
+    why: '过程（函数）是强符号，代码放 .text 节，nm 显示大写 <b>T</b>。课件第 12 页的 <code>main</code>、<code>sum</code> 都是 T。' },
+  { k: 'ginit', q: '已初始化的全局变量', eg: 'int array[2] = {1, 2};', letter: 'D', sect: '.data',
+    bind: '全局', strength: '<span class="chip ok">强符号</span>', inTable: '有',
+    why: '已初始化的全局变量是强符号，放 .data 节，nm 显示 <b>D</b> —— 课件第 12 页 <code>nm main.o</code> 的第一行。' },
+  { k: 'gbss', q: '未初始化的全局变量', eg: 'int x;', letter: 'C（-fcommon）／ B（今天的默认）',
+    sect: 'COMMON 节（老规矩）／ .bss 节（-fno-common）',
+    bind: '全局', strength: '<span class="chip warn">弱符号（-fcommon）</span> / <span class="chip">强符号（-fno-common）</span>', inTable: '有',
+    why: '课件第 22 页：<b>未初始化的全局变量是弱符号</b> —— 这正是课件第 23 页规则 3「多个弱符号任选一个」与第 24 页谜题 2、3、5 的前提。'
+      + '课件自己也注明这层行为可以被 <code>gcc -fno-common</code> 改掉。'
+      + '<b>而今天（GCC 10+ / clang 11+）<code>-fno-common</code> 已经是默认</b>：本页实测确认，默认下 <code>int x;</code> 会被放进 <code>.bss</code> 并成为<b>强符号</b>（nm 显示 <code>B</code>），'
+      + '只有显式加 <code>-fcommon</code> 才会回到课件那种 <code>COMMON</code>（nm 显示 <code>C</code>）的弱符号行为 —— 详见 3.5 节末尾的说明。' },
+  { k: 'staticfn', q: 'static 函数', eg: 'static int helper(void) { … }', letter: 't', sect: '.text',
+    bind: '局部', strength: '<span class="chip gray">局部符号</span>', inTable: '有',
+    why: '课件第 19 页：用 <code>static</code> 定义的函数与全局变量是<b>局部符号</b> —— 只能被本模块定义和引用。nm 用小写字母表示局部符号。' },
+  { k: 'staticg', q: 'static 全局变量', eg: 'static int count = 0;', letter: 'd', sect: '.data',
+    bind: '局部', strength: '<span class="chip gray">局部符号</span>', inTable: '有',
+    why: '同样是局部符号，只是落在 .data 节，所以是小写 <b>d</b>。' },
+  { k: 'externref', q: '只引用、别处定义（外部符号）', eg: 'sum(array, 2);  // 但没有 int sum(…){…}', letter: 'U', sect: '未定义（undefined）',
+    bind: '未定义', strength: '<span class="chip bad">待解析</span>', inTable: '有（值为 U）',
+    why: '课件第 12 页 <code>nm main.o</code> 的第三行就是 <code>U sum</code>；课件第 19 页把这种符号叫做<b>外部符号</b>（external）：本模块引用、别的模块定义，链接器的任务就是把它接上。' },
+  { k: 'fndecl', q: '只有函数声明，没有定义', eg: 'int sum1(int *a, int n);', letter: '（无）', sect: '不进符号表',
+    bind: '—', strength: '<span class="chip gray">不产生符号</span>', inTable: '<b>没有</b>',
+    why: '课件第 12 页原话：汇编器不会为函数声明建立条目 —— 声明只是告诉编译器「有这个函数」，没有代码也没有数据要放。' },
+  { k: 'localvar', q: '函数里的局部（非 static）变量', eg: 'int val = sum(array, 2);  // val', letter: '（无）', sect: '栈／寄存器',
+    bind: '—', strength: '<span class="chip gray">不是链接器符号</span>', inTable: '<b>没有</b>',
+    why: '课件第 19 页原话：local linker symbols are <b>not</b> local program variables。课件第 20 页也画了：链接器对 <code>val</code>、<code>i</code>、<code>s</code> 一无所知。' },
+  { k: 'localstatic', q: '函数里的 static 变量', eg: 'int f() { static int x = 17; return x++; }', letter: 'd / b', sect: '.data 或 .bss',
+    bind: '局部', strength: '<span class="chip gray">局部符号</span>', inTable: '有（名字被改过）',
+    why: '课件第 21 页：局部 static 变量<b>存在 .data 或 .bss 里</b>（不是栈上），编译器为每一处定义分配空间，并在符号表里起唯一名字 —— 例如 <code>x</code>、<code>x.1721</code>、<code>x.1724</code>。' },
+];
+function renderNm() {
+  const c = NM_CASES.find(x => x.k === $('#nmSel').value) || NM_CASES[0];
+  const hasLetter = c.letter !== '（无）';
+  $('#nmOut').innerHTML = `
+    <div class="readout">
+      <dt>写法</dt><dd>${esc(c.eg)}</dd>
+      <dt>nm 字母</dt><dd>${hasLetter ? `<b>${esc(c.letter)}</b>` : '<span class="chip gray">没有符号表条目</span>'}</dd>
+      <dt>所在位置</dt><dd>${esc(c.sect)}</dd>
+      <dt>符号种类</dt><dd>${esc(c.bind)}</dd>
+      <dt>强／弱</dt><dd>${c.strength}</dd>
+      <dt>符号表里有吗</dt><dd>${c.inTable}</dd>
+    </div>
+    <div class="box" style="margin-bottom:0"><div class="t">为什么是这样</div>${c.why}</div>`;
+}
+
+/* ============================================================
+   12 · 组件 6：符号解析器
+   ============================================================ */
+const SR_PRESETS = {
+  foo: { lab: '课件第 22 页的 foo',
+    src: '# 每行一个：模块 符号 种类\n# 种类：strong 强定义（过程、已初始化的全局变量）／weak 弱定义（未初始化全局变量）\n#       undef 只引用没定义／decl 只有函数声明\np1.c  foo  strong\np1.c  p1   strong\np2.c  foo  weak\np2.c  p2   strong' },
+  q1: { lab: '谜题 1', src: 'p1.c  x   weak\np1.c  p1  strong\np2.c  p1  strong' },
+  q2: { lab: '谜题 2', src: 'p1.c  x   weak\np1.c  p1  strong\np2.c  x   weak\np2.c  p2  strong' },
+  q3: { lab: '谜题 3', src: 'p1.c  x   weak\np1.c  y   weak\np1.c  p1  strong\np2.c  x   weak\np2.c  p2  strong' },
+  q4: { lab: '谜题 4', src: 'p1.c  x   strong\np1.c  y   strong\np1.c  p1  strong\np2.c  x   weak\np2.c  p2  strong' },
+  q5: { lab: '谜题 5', src: 'p1.c  x   strong\np1.c  p1  strong\np2.c  x   weak\np2.c  p2  strong' },
+  undef: { lab: '引用没定义 → 报错', src: 'main.c  main     strong\nmain.c  sum      undef' },
+};
+const SR_KIND_CN = { strong: '<span class="chip ok">强定义</span>', weak: '<span class="chip warn">弱定义</span>',
+                     undef: '<span class="chip bad">只引用</span>', decl: '<span class="chip gray">只有声明</span>' };
+const SR_KIND_TXT = { strong: '强定义', weak: '弱定义', undef: '只引用', decl: '只有声明' };
+/** 把 `xxx` 变成 <code>xxx</code>（先转义再加标签） */
+const mdCode = s => esc(String(s)).replace(/`([^`]+)`/g, '<code>$1</code>');
+function parseSymbolSrc(text) {
+  const defs = [], errs = [];
+  String(text).split('\n').forEach((line, i) => {
+    const s = line.replace(/#.*$/, '').trim();
+    if (!s) return;
+    const p = s.split(/[\s,]+/);
+    if (p.length < 3) { errs.push(`第 ${i + 1} 行：需要「模块 符号 种类」三段，得到 ${p.length} 段`); return; }
+    const [file, name, kind] = p;
+    if (!/^[A-Za-z_][A-Za-z0-9_.-]*$/.test(file) || !/^[A-Za-z_][A-Za-z0-9_]*$/.test(name)) {
+      errs.push(`第 ${i + 1} 行：模块名或符号名不合法（${esc(file)} / ${esc(name)}）`); return;
+    }
+    if (!SR_KIND_CN[kind]) { errs.push(`第 ${i + 1} 行：种类只能是 strong / weak / undef / decl，得到「${esc(kind)}」`); return; }
+    defs.push({ file, name, kind });
+  });
+  return { defs, errs };
+}
+function renderSymbols() {
+  const { defs, errs } = parseSymbolSrc($('#srSrc').value);
+  if (errs.length) { $('#srOut').innerHTML = `<div class="box bad"><div class="t">输入格式有误</div>${errs.map(esc).join('<br>')}</div>`; return; }
+  if (!defs.length) { $('#srOut').innerHTML = badBox('至少写一行，例如：p1.c  foo  strong'); return; }
+  const r = resolveDefs(defs);
+  const names = [...new Set(defs.map(d => d.name))];
+  const rows = names.map(n => {
+    const pick = r.picks[n];
+    const defRows = defs.filter(d => d.name === n);
+    const cell = defRows.map(d => {
+      const i = defs.indexOf(d);
+      const isPick = pick && pick.idx === i && pick.kind !== 'error';
+      return `<span class="chip ${isPick ? 'ok' : 'gray'}" style="margin-right:4px">${esc(d.file)}：${SR_KIND_TXT[d.kind]}</span>`;
+    }).join('');
+    let verdict;
+    if (pick && pick.kind === 'error') verdict = '<b>链接错误</b> —— 多个强符号';
+    else if (pick && pick.kind === 'undef') verdict = '没有定义 → undefined reference';
+    else if (pick && pick.kind === 'strong') verdict = '解析到<b>强定义</b>' + (defRows.length > 1 ? '（弱定义被忽略）' : '');
+    else if (pick && pick.kind === 'weak') verdict = '解析到<b>弱定义</b>' + (defRows.filter(d => d.kind === 'weak').length > 1 ? '（多个弱符号，任选一个）' : '');
+    else verdict = '只有声明 —— 不进符号表，不参与解析';
+    return `<tr${pick && pick.kind === 'error' ? ' class="hl"' : ''}><td class="mono"><b>${esc(n)}</b></td><td>${cell}</td><td>${verdict}</td></tr>`;
+  }).join('');
+  const notes = r.notes.map(nt => `<div class="box warn" style="margin:8px 0 0"><div class="t">规则细节：${esc(nt.name)}</div>${esc(nt.msg)}</div>`).join('');
+  $('#srOut').innerHTML = `
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>符号</th><th>各模块里的定义（<span class="chip ok">绿框</span>＝最终被选中）</th><th>链接器怎么解析</th></tr>
+      ${rows}
+    </table></div>
+    <div class="box ${r.ok ? 'ok' : 'bad'}" style="margin-bottom:0"><div class="t">
+      ${r.ok ? '链接成功：没有重复的强符号，也没有悬空的引用' : '链接失败'}</div>
+      ${r.ok
+        ? `共 ${names.length} 个符号全部解析完成。课件第 23 页的三条规则按顺序套用：${LINKER_RULES.map(x => '<b>' + x[0] + '</b>').join(' → ')}。`
+        : r.errors.map(e => `<b>${esc(e.name)}</b>：${esc(e.msg)}`).join('<br>') + '<br>课件第 24 页的谜题 1 就是这种情况：两个文件各有一个 <code>p1()</code> 强定义。'}
+    </div>${notes}`;
+}
+
+/* ============================================================
+   13 · 组件 7：链接器判断题
+   ============================================================ */
+const PUZ = [
+  { q: '`int x;` 在 p1.c 与 p2.c 里各写一次，链接会报「重复定义」错误',
+    a: false, exp: '两个都是<b>弱符号</b>（未初始化的全局变量），命中课件第 23 页规则 3「任选一个」—— 链接通过，只是两个文件里的 x 变成了同一个变量（谜题 2 的坑就在这里）。' },
+  { q: '两个文件里各有一个 `p1() {}` 函数定义，链接会报错',
+    a: true, exp: '函数定义是<b>强符号</b>，命中规则 1：多个强符号不允许 —— 课件第 24 页谜题 1，报 <i>two strong symbols (p1)</i>。' },
+  { q: '链接器会做类型检查，所以 `int x;` 与 `double x;` 冲突时会报错',
+    a: false, exp: '课件第 24 页原话：<b>Important: Linker does not do type checking.</b> 它只认名字，于是「p2 里写 x 会覆盖 y」这种情况照样链接通过（谜题 3、4）。' },
+  { q: '`int x=7;` 与 `double x;` 放在两个文件里，链接器会选 `int x=7;`',
+    a: true, exp: '规则 2：强符号（已初始化的全局变量）胜过弱符号。但危险的是——按 <code>double</code> 编译的那份代码仍然会按 8 字节去写它（谜题 4）。' },
+  { q: '课件说可以用 `gcc -fno-common` 改掉「多个弱符号任选一个」这种行为',
+    a: true, exp: '课件第 23 页规则 3 的附注原话：Can override this with <code>gcc –fno-common</code>。' },
+  { q: '只有函数声明（例如 `int sum1(int *a, int n);`）也会在符号表里留下一条记录',
+    a: false, exp: '课件第 12 页原话：汇编器<b>不会</b>为函数声明建立条目 —— 没有代码、没有数据，就没有符号要记。' },
+  { q: '课件里局部 static 变量在符号表里的名字就是源码里写的 `x`',
+    a: false, exp: '课件第 21 页：编译器为每一处定义起<b>唯一名字</b>，例如 <code>x</code>、<code>x.1721</code>、<code>x.1724</code>，这样三处同名定义互不冲突。' },
+  { q: '函数里的局部变量 `i`、`s` 会作为符号交给链接器处理',
+    a: false, exp: '课件第 20 页：linker knows nothing of i or s。局部（非 static）变量在栈或寄存器里，跟链接无关（课件第 19 页：local linker symbols are not local program variables）。' },
+  { q: '课件提到的「噩梦场景」是：两个一模一样的弱 struct，被不同编译器按不同对齐规则编译',
+    a: true, exp: '课件第 24 页最后一句原话就是这个 —— 链接器不检查类型也不检查对齐，两个模块对同一个名字的理解可能完全不同。' },
+];
+function renderPuzzles() {
+  const done = ST.pz.filter(v => v !== null).length;
+  const right = PUZ.filter((p, i) => ST.pz[i] === p.a).length;
+  const html = PUZ.map((p, i) => {
+    const s = ST.pz[i];
+    const cls = s === null || s === undefined ? '' : (s === p.a ? ' correct done' : ' wrong done');
+    return `<div class="puzzle${cls}">
+      <div class="q" style="white-space:normal">${i + 1}. ${mdCode(p.q)}</div>
+      <div class="btns">
+        <button class="sm" data-pz="${i}:1" ${s !== null && s !== undefined ? 'disabled style="opacity:.55"' : ''}>真</button>
+        <button class="sm" data-pz="${i}:0" ${s !== null && s !== undefined ? 'disabled style="opacity:.55"' : ''}>假</button>
+      </div>
+      <div class="exp"><span class="verdict">${s === null || s === undefined ? '' : s === p.a ? '✓ 答对了' : '✗ 答错了'}</span>
+        &nbsp;正确答案：<b>${p.a ? '真' : '假'}</b><br>${p.exp}</div>
+    </div>`;
+  }).join('');
+  const score = done === 0 ? '' : `<div class="box ${right === PUZ.length ? 'ok' : right >= PUZ.length / 2 ? 'warn' : 'bad'}" style="margin-bottom:0">
+    <div class="t">已答 ${done} / ${PUZ.length}，答对 ${right} 题</div>
+    ${done === PUZ.length
+      ? (right === PUZ.length ? '全对 —— 三条规则和它们的前提都清楚了。' : '错题解析在上面，回第 3 节的三条规则再核一遍。')
+      : '继续答题，每题都会立即给出解析与出处。'}</div>`;
+  $('#pzOut').innerHTML = html + score;
+}
+
+/* ============================================================
+   14 · 组件 8：两步重定位
+   ============================================================ */
+function renderRelocSteps() {
+  const A = LINK_ANCHOR;
+  const offMain = A.addrMain - A.textBase, offSum = A.addrSum - A.textBase, offArray = A.addrArray - A.dataBase;
+  const k = ST.rs;
+  const on = n => n === k ? ' on' : '';
+  $('#rsOut').innerHTML = `
+    <div class="steps">
+      <div class="step${on(1)}"><div class="h">第一步 · 合并同类型的节</div>
+        <div class="m">main.o(.text) + sum.o(.text) → 新的 .text　·　main.o(.data) + sum.o(.data) → 新的 .data</div>
+        <div class="e">课件第 27 页：把输入模块里<b>同类型</b>的节合并成一个新的聚合节。链接器不知道哪个字节是「谁」的，它只知道节。</div></div>
+      <div class="step${on(2)}"><div class="h">第一步（续） · 给节与符号分配运行时地址</div>
+        <div class="m">.text = ${hx(A.textBase, 6)}　.data = ${hx(A.dataBase, 6)}<br>
+          main = ${hx(A.textBase, 6)} + ${hxv(offMain)} = ${hx(A.addrMain)}　·　sum = ${hx(A.textBase, 6)} + ${hxv(offSum)} = ${hx(A.addrSum)}<br>
+          array = ${hx(A.dataBase, 6)} + ${hxv(offArray)} = ${hx(A.addrArray)}</div>
+        <div class="e">课件第 36 页最左边一列给了这三个符号的地址。上面的偏移量是页面对课件地址现算的差值 —— 节基址一改，符号地址全部跟着走。</div></div>
+      <div class="step${on(3)}"><div class="h">第二步 · 找出要改的地方</div>
+        <div class="m">main.o 的 .rela.text 有 2 条：offset ${hxv(A.off32)}（R_X86_64_32 array + 0）与 offset ${hxv(A.offPC)}（R_X86_64_PC32 sum − 4）</div>
+        <div class="e">课件第 27 页：这一步靠可重定位模块里的<b>重定位条目</b>。条目只记录「节内偏移 + 符号 + 加法数」，不记录绝对地址。</div></div>
+      <div class="step${on(4)}"><div class="h">第二步（续） · 改写引用</div>
+        <div class="m">refptr = ADDR(section) + r_offset = ${hx(A.textBase, 6)} + ${hxv(A.offPC)} = ${hx(A.textBase + A.offPC)}<br>
+          *refptr = ADDR(sum) + addend − refaddr = ${hx(A.addrSum)} + (${fmtDec(A.addendPC)}) − ${hx(A.textBase + A.offPC)} = ${hxv(A.addrSum + A.addendPC - (A.textBase + A.offPC))}</div>
+        <div class="e">这一步的结果要在页面上现算 —— 下面第 5 节的重定位计算器会把这两个例子（PC 相对与绝对）都算出来，并回填成小端字节。</div></div>
+    </div>
+    <div class="readout"><dt>分配到的地址</dt>
+      <dd>.text = ${hx(A.textBase, 6)} · .data = ${hx(A.dataBase, 6)} · main = ${hx(A.addrMain)} · sum = ${hx(A.addrSum)} · array = ${hx(A.addrArray)}</dd></div>`;
+}
+
+/* ============================================================
+   15 · 组件 9：重定位表查看器
+   ============================================================ */
+function decodeInfoCard(info) {
+  const sym = elfRelocSym(info), type = elfRelocType(info);
+  const name = RELOC_NAME[type] || `未知类型 ${type}`;
+  const s = hx(info, 16);
+  return `<div class="readout">
+      <dt>r_info</dt><dd>${s}　（高 32 位 = 符号下标，低 32 位 = 类型）</dd>
+      <dt>ELF64_R_SYM</dt><dd>${s.slice(0, 10)} = <b>${sym.toString()}</b>&nbsp;&nbsp;<span style="color:var(--muted)">← i &gt;&gt; 32</span></dd>
+      <dt>ELF64_R_TYPE</dt><dd>${s.slice(10)} = <b>${type}</b> = <b>${esc(name)}</b>&nbsp;&nbsp;<span style="color:var(--muted)">← i &amp; 0xffffffff</span></dd>
+    </div>`;
+}
+function renderRelocTable() {
+  const t = RELOC_TABLES[ST.re] || RELOC_TABLES['main-text'];
+  const rows = t.rows.map(r => `<tr>
+      <td class="mono">${r.off}</td>
+      <td class="mono">${r.info}</td>
+      <td class="mono">${r.type}</td>
+      <td class="mono">${r.symval}</td>
+      <td class="mono"><b>${esc(r.name)}</b> ${r.addend === 0 ? '+ 0' : (r.addend > 0 ? '+ ' + r.addend : '− ' + (-r.addend))}</td>
+      <td class="mono">${elfRelocSym(BigInt('0x' + r.info)).toString()} / ${elfRelocType(BigInt('0x' + r.info))}</td>
+    </tr>`).join('');
+  const el = $('#reInfo');
+  const infoRaw = el ? el.value : RE_INFO_DEFAULT;
+  const iv = parseNum(infoRaw);
+  const infoCard = iv === null
+    ? badBox('r_info 要写成十六进制，例如 0x00080000000a')
+    : decodeInfoCard(u64(iv));
+  $('#reOut').innerHTML = `
+    <div class="formula" style="text-align:left;font-size:13.5px">${esc(t.head)}<br>
+      Offset&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Info&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Type&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Sym.Value&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Sym.Name+Addend</div>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>Offset</th><th>Info</th><th>Type</th><th>Sym.Value</th><th>Sym.Name+Addend</th>
+        <th>由 Info 现算的「下标 / 类型」</th></tr>
+      ${rows}
+    </table></div>
+    <div class="box"><div class="t">这张表怎么读（课件第 28 页）</div>
+      <b>r_offset</b> 是「要改的地方」在<b>本节点内</b>的偏移（不是最终地址）；<b>r_info</b> 里塞了两样东西：符号在符号表里的下标 + 重定位类型；
+      <b>Addend</b> 是常数，PC 相对引用要靠它把「指令末尾」和「字段位置」的差补回来。最后一列就是页面对每一行的 Info 现算出来的。
+      <div style="margin-top:6px">${t.note}</div>
+    </div>
+    <div class="box ok" style="margin-bottom:0"><div class="t">自己拆一个 r_info</div>
+      用上面的输入框填入任意 r_info（默认取课件第 30 页第一行的 <code>00080000000a</code>）：
+      ${infoCard}
+      <div style="font-size:13.5px;color:var(--muted)">课件第 30 页的 <code>00080000000a</code> 拆出来是「符号下标 8 + 类型 10」，
+      而类型 10 正是 <code>R_X86_64_32</code>；第二行 <code>000a00000002</code> 是「符号下标 10 + 类型 2」，即 <code>R_X86_64_PC32</code>。</div></div>`;
+}
+
+/* ============================================================
+   16 · 组件 10/11：重定位计算器 + 字节修补
+   ============================================================ */
+const RC_PRESETS = {
+  pc32: { lab: '课件第 36 页 · PC32 例（sum）', type: '2', sym: '0xbabf40', add: '-4', sec: SECT_MAIN, off: '0x1a' },
+  abs32: { lab: '课件第 36 页 · 32 位绝对（array）', type: '10', sym: '0xcafe10', add: '0', sec: SECT_MAIN, off: '0x15' },
+  big: { lab: '超过 32 位 → 真实链接器会报错', type: '10', sym: '0x123456789', add: '0', sec: SECT_MAIN, off: '0x15' },
+  neg: { lab: '32S 负数（-1）', type: '11', sym: '-1', add: '0', sec: SECT_MAIN, off: '0x15' },
+};
+function currentReloc() {
+  const type = parseInt($('#rcType').value, 10);   /* select 的 value 是纯数字 */
+  const sym = parseNum($('#rcSym').value), add = parseNum($('#rcAdd').value);
+  const sec = parseNum($('#rcSec').value), off = parseNum($('#rcOff').value);
+  if (type !== type || sym === null || add === null || sec === null || off === null) return null;
+  return { type, sym, add, sec, off, r: relocApply(type, u64(sym), add, u64(sec), u64(off)) };
+}
+function renderRelocCalc() {
+  const c = currentReloc();
+  if (!c) {
+    ST.rc = null;
+    $('#rcOut').innerHTML = badBox('类型、符号地址、加法数、节基址、偏移都要能解析成数字（0x… / 十进制 / 负数）');
+    $('#rpOut').innerHTML = '<div class="box warn" style="margin-bottom:0">等上面算出结果再看这里。</div>';
+    return;
+  }
+  ST.rc = c;
+  const r = c.r;
+  if (r.unknown || r.bytes === 0) {
+    $('#rcOut').innerHTML = `<div class="box warn" style="margin-bottom:0"><div class="t">${esc(r.name)}</div>
+      本页只实现课件第 29 页提到的两种基本类型（R_X86_64_32 / R_X86_64_32S 与 R_X86_64_PC32），外加 64 位绝对的 R_X86_64_64。换成这几种再算。</div>`;
+    $('#rpOut').innerHTML = '<div class="box warn" style="margin-bottom:0">没有要写的字节。</div>';
+    return;
+  }
+  const isPC = c.type === 2 || c.type === 4;
+  const expr = isPC
+    ? `ADDR(symbol) + addend − refaddr = ${hx(c.sym)} +  (${fmtDec(c.add)})  − ${hx(r.refaddr)}`
+    : `ADDR(symbol) + addend = ${hx(c.sym)} +  (${fmtDec(c.add)})`;
+  const bytes = patchLE(r.field, r.bytes);
+  const fitsBox = r.fits
+    ? `<div class="box ok" style="margin-bottom:0"><div class="t">装得下：${r.bytes} 字节字段放得下这个值</div>
+         ${isPC ? '位移 ' + fmtDec(r.value) + ' 落在 32 位有符号范围内（−2<sup>31</sup> … 2<sup>31</sup>−1）。' : '值落在该类型允许的范围里。'}</div>`
+    : `<div class="box bad" style="margin-bottom:0"><div class="t">装不下 —— 真实链接器会在这里报错</div>
+         值 ${fmtDec(r.value)} 超出了 ${esc(r.name)} 允许的范围，ld 会给出
+         <code>relocation truncated to fit: ${esc(r.name)}</code> 并拒绝生成可执行文件。</div>`;
+  $('#rcOut').innerHTML = `
+    <div class="readout">
+      <dt>引用处地址 refaddr</dt><dd>ADDR(section) + r_offset = ${hx(c.sec, 6)} + ${hxv(c.off)} = <b>${hx(r.refaddr)}</b></dd>
+      <dt>要写入的算式</dt><dd>${esc(expr)}</dd>
+      <dt>写入值（十进制）</dt><dd><b>${fmtDec(r.value)}</b></dd>
+      <dt>写入值（${r.bytes} 字节补码）</dt><dd>${r.field.toString(16).toUpperCase().padStart(r.bytes * 2, '0')}　= 无符号 ${fmtDec(r.field)} / 有符号 ${fmtDec(r.value)}</dd>
+      <dt>小端字节</dt><dd>${bytes.map(hexByte).join(' ')}</dd>
+    </div>
+    ${fitsBox}`;
+  /* 字节修补视图 */
+  const addr0 = r.refaddr;
+  const before = new Array(r.bytes).fill(0);
+  const cells = bytes.map((b, j) => {
+    const a = addr0 + BigInt(j);
+    return `<tr><td class="mono">${hx(a)}</td><td class="mono">${hexByte(before[j])}</td>
+      <td class="mono"><b>${hexByte(b)}</b></td><td>${before[j] === b ? '不变' : '被改写'}</td></tr>`;
+  }).join('');
+  $('#rpOut').innerHTML = `
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>地址</th><th>改写前</th><th>改写后</th><th></th></tr>${cells}
+    </table></div>
+    <div class="box" style="margin-bottom:0"><div class="t">为什么「改写前」是 0</div>
+      在<b>可重定位</b>目标文件里，这些字段只是占位（课件第 34 页 <code>bf 00 00 00 00</code>、<code>e8 00 00 00 00</code> 里的那 4 个 0 字节），
+      真正的值由链接器现在算出来再填。课件第 36 页的对照图上，<code>babf31: e8 0a 00 00 00</code> 就是 PC32 那条算完之后的样子
+      （<code>0a 00 00 00</code> 小端读回来是 ${hxv(0xan)}）。</div>`;
+}
+
+/* ============================================================
+   17 · 组件 12：静态库的链接顺序
+   ============================================================ */
+const AR_PRESETS = {
+  ok: { lab: '课件第 43 页：main2.o 在前', val: 'main2.o libvector.a printf.o' },
+  bad: { lab: '课件第 44 页：库写到了前面', val: 'libvector.a main2.o printf.o' },
+  nolibc: { lab: '忘了 printf.o', val: 'main2.o libvector.a' },
+  multi: { lab: '拉出 multvec.o 的情况', val: 'main2.o libvector.a multvec.o printf.o' },
+};
+function renderArchive() {
+  const toks = ($('#arIn').value || '').split(/[\s,]+/).filter(Boolean);
+  if (!toks.length) { $('#arOut').innerHTML = badBox('至少写一个条目，例如：main2.o libvector.a'); return; }
+  const unknown = toks.filter(t => !ARCH_TOKENS[t]);
+  if (unknown.length) {
+    $('#arOut').innerHTML = badBox(`认不出这些条目：${unknown.join('、')} —— 只能用 ${Object.keys(ARCH_TOKENS).join('、')}`);
+    return;
+  }
+  const scan = archiveScan(toks, ARCH_TOKENS);
+  const table = Object.keys(ARCH_TOKENS).map(t => {
+    const e = ARCH_TOKENS[t];
+    if (e.kind === 'obj') {
+      return `<tr><td class="mono">${esc(t)}</td><td>对象文件</td><td class="mono">${esc(e.defines.join(', ')) || '—'}</td><td class="mono">${esc(e.refs.join(', ')) || '—'}</td></tr>`;
+    }
+    return e.members.map((m, i) => `<tr><td class="mono">${i === 0 ? esc(t) : ''}</td><td>库成员</td>
+      <td class="mono">${esc(m.name)}：${esc(m.defines.join(', '))}</td>
+      <td class="mono">${esc(m.refs.join(', ')) || '—'}</td></tr>`).join('');
+  }).join('');
+  const trace = scan.trace.map(x => `<tr${x.pulled.length ? '' : ' class="hl"'}>
+      <td class="mono">${esc(x.token)}</td>
+      <td class="mono">${esc(x.before.join(', ')) || '（空）'}</td>
+      <td class="mono">${x.pulled.length ? '<b>' + esc(x.pulled.join(', ')) + '</b>' : '<span class="chip gray">一个都不拉</span>'}</td>
+      <td class="mono">${esc(x.after.join(', ')) || '（空）'}</td>
+      <td>${esc(x.note)}</td></tr>`).join('');
+  $('#arOut').innerHTML = `
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>条目</th><th>是什么</th><th>提供（定义）</th><th>需要（引用）</th></tr>${table}
+    </table></div>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>按顺序扫描到</th><th>扫描前还没解析的引用</th><th>这一步被拉进来</th><th>扫描后还没解析的引用</th><th>说明</th></tr>${trace}
+    </table></div>
+    <div class="box ${scan.ok ? 'ok' : 'bad'}" style="margin-bottom:0"><div class="t">
+      ${scan.ok ? '链接成功' : '链接失败：' + scan.unresolved.map(esc).join('、') + ' 没有定义'}</div>
+      实际被链接进去的条目（按被拉入的顺序）：<span class="mono">${esc(scan.pulled.join(' → '))}</span>
+      ${scan.ok ? '' : '<br>这正是课件第 44 页那条报错 <code>undefined reference to `addvec\'</code> 的由来 —— <b>命令行顺序要紧</b>，库要放到用到它的对象文件<b>后面</b>。'}
+    </div>`;
+}
+
+/* ============================================================
+   18 · 组件 13：加载时链接 vs 运行时链接
+   ============================================================ */
+const DL_STEPS = {
+  load: { n: '加载时链接（load-time linking）', srcref: '原第 47–48 页', prog: 'prog2l', size: '8488 字节',
+    steps: [
+      ['编译共享库', 'gcc -shared -o libvector.so addvec.c multvec.c -fpic', '把 addvec.o、multvec.o 打包成 <b>libvector.so</b>（动态向量库），-fpic 生成位置无关代码'],
+      ['部分链接', 'gcc -o prog2l main2.o ./libvector.so', '链接器只做「部分链接」：prog2l 里留有「重定位与符号表信息」，并没有把库的代码复制进来（课程第 48 页：Relocation and symbol table info）'],
+      ['载入内存', 'Loader (execve)', '加载器把 prog2l 映射进内存，同时发现它需要 libc.so 与 libvector.so'],
+      ['动态链接', 'Dynamic linker (ld-linux.so)', '动态链接器把 libc.so、libvector.so 的代码与数据映射进来，完成符号解析 —— 到这一步才是「内存里完全链接的可执行文件」'],
+    ] },
+  run: { n: '运行时链接（run-time linking）', srcref: '原第 49–51 页', prog: 'prog2r', size: '8784 字节',
+    steps: [
+      ['程序里自己加载', 'handle = dlopen("./libvector.so", RTLD_LAZY);', '课件第 49 页的 dll.c：包含 &lt;dlfcn.h&gt;，运行时才把共享库加载进来（RTLD_LAZY = 惰性绑定）'],
+      ['取函数地址', 'addvec = dlsym(handle, "addvec");', '把函数名换成函数指针 —— 之后就能像普通函数一样调用它（课件第 50 页）'],
+      ['用完卸载', 'if (dlclose(handle) < 0) { … }', '不用了就卸掉。适合「分发软件」「高性能 Web 服务器」「运行时打桩」这类场景（课件第 46 页）'],
+      ['链接自己', 'gcc -rdynamic -o prog2r dll.o -ldl', 'prog2r 要连上 libdl 才能用 dlopen/dlsym；程序自己决定什么时候加载（课件第 51 页）'],
+    ] },
+};
+function renderDynLink() {
+  const d = DL_STEPS[ST.dl] || DL_STEPS.load;
+  $('#dlOut').innerHTML = `
+    <div class="steps">${d.steps.map((s, i) => `<div class="step on">
+      <div class="h">第 ${i + 1} 步 · ${esc(s[0])}</div>
+      <div class="m">${esc(s[1])}</div><div class="e">${s[2]}</div></div>`).join('')}</div>
+    <div class="readout"><dt>产物</dt><dd>${esc(d.prog)}　（部分链接的可执行目标文件）</dd>
+      <dt>课件给的大小</dt><dd><b>${esc(d.size)}</b>　<span style="color:var(--muted)">← 同一份代码静态链接是 861,232 字节（第 43 页）</span></dd>
+      <dt>出处</dt><dd>${esc(d.srcref)}</dd></div>
+    <div class="box" style="margin-bottom:0"><div class="t">区别只有一句话</div>
+      ${ST.dl === 'load'
+        ? '库在<b>程序开始运行之前</b>就被动态链接器接好 —— 对程序来说是透明的，Linux 上的常态。'
+        : '库直到程序<b>自己调用 dlopen()</b> 时才被加载 —— 程序可以选择加载什么、什么时候加载。两者都交给同一个 ld-linux.so 干活。'}</div>`;
+}
+
+/* ============================================================
+   19 · 组件 14：动态依赖查看器
+   ============================================================ */
+function parseLdd(text) {
+  const out = [];
+  String(text).split('\n').forEach(line => {
+    const s = line.trim();
+    if (!s || /^unix>|^linux>|^\$/.test(s)) return;
+    const m = /^(.*?)\s*\(?(0x[0-9a-fA-F]+)\)?\s*$/.exec(s);
+    const addr = m ? m[2] : '';
+    const body = (m ? m[1] : s).trim();
+    const ar = body.split(/\s*=>\s*/);
+    if (ar.length >= 2) {
+      const p = ar[1].trim();
+      /* 有路径 → 普通共享库；not found → 找不到；路径为空（linux-vdso.so.1 => (0x…)）→ 内核虚拟共享对象 */
+      const kind = /not found/i.test(p) ? 'missing' : (p === '' ? 'vdso' : 'shared');
+      out.push({ name: ar[0].trim(), path: p, addr, kind });
+    }
+    else if (body.indexOf('/') >= 0) out.push({ name: '', path: body, addr, kind: 'loader' });
+    else out.push({ name: body, path: '', addr, kind: 'vdso' });
+  });
+  return out;
+}
+function renderLdd() {
+  const rows = parseLdd($('#lddIn').value);
+  if (rows.length === 0) { $('#lddOut').innerHTML = badBox('至少要有一行，像课件第 52 页那样：libc.so.6 => /lib/x86_64-linux-gnu/libc.so.6 (0x00007f99ad927000)'); return; }
+  const nShared = rows.filter(r => r.kind === 'shared').length;
+  const nLoader = rows.filter(r => r.kind === 'loader').length;
+  const nMiss = rows.filter(r => r.kind === 'missing').length;
+  const html = rows.map(r => `<tr${r.kind === 'missing' ? ' class="hl"' : ''}>
+      <td class="mono">${esc(r.name) || '<span class="chip gray">（无名字列）</span>'}</td>
+      <td class="mono">${r.path ? esc(r.path) : '（空）'}</td>
+      <td class="mono">${esc(r.addr) || '—'}</td>
+      <td>${r.kind === 'loader' ? '<b>动态链接器</b>：由 <code>.interp</code> 节指定'
+            : r.kind === 'missing' ? '<span class="chip bad">找不到这个库</span> —— 程序起不来'
+            : r.kind === 'vdso' ? '内核提供的虚拟共享对象'
+            : '普通共享库：由 <code>.dynamic</code> 的 (NEEDED) 条目列出'}</td></tr>`).join('');
+  $('#lddOut').innerHTML = `
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>库名</th><th>实际路径</th><th>加载地址</th><th>它是什么</th></tr>${html}
+    </table></div>
+    <div class="readout"><dt>解析出的行数</dt><dd>共享库 ${nShared} 行 · 动态链接器 ${nLoader} 行 · 找不到 ${nMiss} 行 · 其他 ${rows.length - nShared - nLoader - nMiss} 行</dd></div>
+    <div class="box ok" style="margin-bottom:0"><div class="t">这些依赖信息存在哪</div>
+      课件第 52 页：<code>.interp</code> 节指定用哪个<b>动态链接器</b>（如 <code>ld-linux.so</code>）；
+      <code>.dynamic</code> 节列出需要的<b>库的名字</b>等信息，例如 <code>(NEEDED) Shared library: [libm.so.6]</code>。
+      <code>ldd</code> 只是把这两样读出来再照着找一遍，打在屏幕上。</div>`;
+}
+
+/* ============================================================
+   20 · 组件 15：静态 vs 动态的开销
+   ============================================================ */
+function renderSizeCalc() {
+  const n = parseNum($('#szN').value), st = parseNum($('#szS').value), dy = parseNum($('#szD').value);
+  if (n === null || st === null || dy === null || n <= 0n || st <= 0n || dy <= 0n) {
+    $('#szOut').innerHTML = badBox('三个输入都要是正数：程序份数、静态体积、动态可执行体积（单位 KB）');
+    return;
+  }
+  const cnt = n, S = st, D = dy;
+  const statTotal = cnt * S;
+  const dynTotal = cnt * D + S;              /* 本页模型：共享库在磁盘/内存里只存一份 */
+  const save = statTotal - dynTotal;
+  const pct = Number(save * 1000n / statTotal) / 10;
+  $('#szOut').innerHTML = `
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>方案</th><th>磁盘／内存里的总量</th><th>算式</th></tr>
+      <tr><td>静态链接</td><td class="mono"><b>${fmtDec(statTotal)} KB</b></td>
+        <td class="mono">${cnt.toString()} × ${S.toString()} KB（每个程序一份库代码）</td></tr>
+      <tr><td>动态链接</td><td class="mono"><b>${fmtDec(dynTotal)} KB</b></td>
+        <td class="mono">${cnt.toString()} × ${D.toString()} KB + ${S.toString()} KB（库只留一份）</td></tr>
+    </table></div>
+    <div class="box ${save > 0n ? 'ok' : 'warn'}" style="margin-bottom:0"><div class="t">
+      ${save > 0n ? `省下 ${fmtDec(save)} KB（约 ${pct}%）` : '在这个参数下动态链接并不更省'}</div>
+      ${save > 0n
+        ? `程序跑得越多，省得越多 —— 因为那一份库代码被所有进程共享（课件第 45 页：single copy of library code can be shared across all executing processes）。`
+        : `程序份数太少时，动态链接省不下什么：它省的是「同一个库的第 2、3、4…份副本」。`}
+    </div>
+    <div class="box warn" style="margin-bottom:0;margin-top:10px"><div class="t">这个模型是本页加的，不是课件原文</div>
+      课件第 53 页只给了两个实测数字：hello world 的<b>动态 7K vs 静态 571K</b>。页面把它算成一个可改参数的账：
+      「共享库只留一份、大小按静态体积算」是本页为了方便算账做的<b>简化假设</b>（静态 hello 的 571K 里绝大部分正是 libc）。
+      真实的库体积、页缓存、按需分页都会影响结果 —— 但趋势不变：程序份数越多，动态链接越省。</div>`;
+}
+
+/* ============================================================
+   21 · 组件 16：库打桩的符号重定向
+   ============================================================ */
+function renderInterpose() {
+  const m = IP_MODES.find(x => x.k === ST.ip) || IP_MODES[1];
+  const sym = ($('#wrSym').value || 'malloc').trim();
+  const r = ipResolve(m.k, sym);
+  let redir;
+  if (!r) {
+    redir = badBox(`「${sym}」不像一个函数名 —— 只能填字母、数字、下划线，例如 malloc、free、write、printf`);
+  } else {
+    redir = `<div class="tbl-wrap"><table class="tbl">
+        <tr><th>轮到谁</th><th>实际会执行</th></tr>
+        <tr><td>程序里对 <code>${esc(sym)}</code> 的调用</td><td class="mono"><b>${esc(r.entry)}()</b></td></tr>
+        <tr><td>打桩函数里要「调用真货」时</td>
+          <td class="mono">${m.k === 'load'
+            ? `dlsym(RTLD_NEXT, "${esc(sym)}") 拿到的 <b>${esc(r.real)}()</b>`
+            : m.k === 'link' ? `<b>${esc(r.real)}()</b>（由链接器改名后指向 libc 的 ${esc(sym)}）`
+            : '（编译期打桩里直接调用的就是 libc 的 ' + esc(sym) + '()）'}</td></tr>
+      </table></div>
+      <div class="box" style="margin-bottom:0"><div class="t">重定向是靠什么做到的</div><code>${esc(r.via)}</code></div>`;
+  }
+  $('#wrOut').innerHTML = `
+    <div class="readout">
+      <dt>改动点</dt><dd>${m.how}</dd>
+      <dt>适用条件</dt><dd>${m.need}</dd>
+      <dt>出处</dt><dd>${esc(m.srcref)}</dd>
+    </div>
+    <div class="formula" style="text-align:left;font-size:13.5px">${m.cmd.map(esc).join('<br>')}</div>
+    <div class="formula" style="text-align:left;font-size:13.5px">${m.out.map(esc).join('<br>')}</div>
+    ${redir}`;
+}
+
+/* ============================================================
+   22 · 组件 17：测验
+   ============================================================ */
+const QUIZ = [
+  { q: '工具链里负责「汇编代码 → 二进制目标代码」的是哪个程序？',
+    o: ['cpp（预处理器）', 'cc1（编译器）', 'as/gas（汇编器）', 'ld（链接器）'], a: 2,
+    w: '课件第 7 页：Furthermore, gcc invokes <b>gas</b> to generate object code —— as 把汇编代码翻译成二进制目标代码，同时建立符号表与重定位条目。' },
+  { q: '三类目标文件里，哪一个「每个 .c 文件恰好产出一个」？',
+    o: ['.o 可重定位目标文件', 'a.out 可执行目标文件', '.so 共享目标文件', '三个都是'], a: 0,
+    w: '课件第 14 页：Each .o file is produced from exactly one source (.c) file。可执行文件由多个 .o 与库一起链接得到。' },
+  { q: '`nm main.o` 里符号 `sum` 的类别字母是 `U`，意思是？',
+    o: ['未初始化的全局变量', '在本文件里被引用、但没有定义', '唯一的（unique）符号', '在 .bss 节里'], a: 1,
+    w: '课件第 12 页的 nm 输出：<code>0000000000000000 D array</code> / <code>T main</code> / <code>U sum</code>。U = undefined，链接时要到别的模块去找定义。' },
+  { q: '哪个节「有节头（section header），但不占文件空间」？',
+    o: ['.text', '.rodata', '.data', '.bss'], a: 3,
+    w: '课件第 16 页：.bss 放未初始化的全局变量 —— "Block Started by Symbol"、"Better Save Space"，有节头但不占空间（全 0 不必存进文件）。' },
+  { q: '`R_X86_64_PC32` 要把 refptr 处的 32 位字段改成什么？',
+    o: ['ADDR(symbol) + addend', 'ADDR(symbol) + addend − refaddr（refaddr = 节地址 + r_offset）',
+        '符号在符号表里的下标', 'ADDR(section) + r_offset'], a: 1,
+    w: '课件第 36 页的推导：refptr = ADDR(s) + r.offset，然后 *refptr = (unsigned)(ADDR(r.symbol) + r.addend − refaddr)。PC 相对的意思是「从引用处到目标处的位移」。' },
+  { q: '`ELF64_R_SYM(i)` 与 `ELF64_R_TYPE(i)` 分别是什么运算？',
+    o: ['i >> 32 与 i & 0xffffffff', 'i & 0xffffffff 与 i >> 32', 'i / 32 与 i % 32', 'i << 32 与 i & 0xffff'], a: 0,
+    w: '课件第 28 页原文：<code>#define ELF64_R_SYM(i) ((i) >> 32)</code>、<code>#define ELF64_R_TYPE(i) ((i) & 0xffffffff)</code> —— 一个 64 位的 r_info 塞了两样东西。' },
+  { q: '为什么「库要放在命令行最后」？',
+    o: ['因为库文件比对象文件大', '链接器按命令行顺序扫描，只把「能解决当前未解析引用」的库成员拉进来 —— 库在前时它还没看到那些引用',
+        '因为 gcc 要求 -l 参数必须在最后', '因为静态库不能被多次扫描'], a: 1,
+    w: '课件第 44 页：Scan .o files and .a files in the command line order，扫描时只维护一张未解析引用表；库在前时表还是空的，一个成员都不会被拉入。结果就是 <code>undefined reference to \'addvec\'</code>。' },
+  { q: '课件里 prog2c（静态）与 prog2l（加载时动态链接）的大小分别是？',
+    o: ['861,232 与 8,488 字节', '8,488 与 861,232 字节', '571K 与 7K', '两个都是 8,488 字节'], a: 0,
+    w: '课件第 43 页 prog2c = 861,232 bytes（"c" for "compile-time"），第 48 页 prog2l = 8488 bytes。第 53 页另给了 hello world 的 7K vs 571K。' },
+  { q: '三种打桩方式里，哪一种「不需要源码、也不需要重新编译」？',
+    o: ['编译期打桩（#define）', '链接期打桩（--wrap）', '加载／运行期打桩（LD_PRELOAD + dlsym）', '三种都不需要'], a: 2,
+    w: '课件第 66 页：加载／运行期打桩 Can use with <b>ANY</b> dynamically linked binary。编译期要源码并重编译，链接期要到「可重定位目标文件」这一层。' },
+];
+function renderQuiz() {
+  const answered = ST.qz.filter(v => v !== null).length;
+  const right = QUIZ.filter((q, i) => ST.qz[i] === q.a).length;
+  const list = QUIZ.map((q, i) => {
+    const sel = ST.qz[i];
+    const cls = sel === null || sel === undefined ? '' : sel === q.a ? ' correct done' : ' wrong done';
+    return `<div class="puzzle${cls}" style="flex-direction:column;align-items:stretch">
+      <div class="q" style="white-space:normal"><b>${i + 1}.</b> ${mdCode(q.q)}</div>
+      <div style="display:flex;flex-wrap:wrap;gap:7px;margin-top:8px">
+        ${q.o.map((o, j) => `<button class="sm" data-qz="${i}:${j}"
+          style="${sel === null || sel === undefined ? '' : j === q.a ? 'border-color:var(--ok-bd);background:var(--ok-bg)'
+            : j === sel ? 'border-color:var(--bad-bd);background:var(--bad-bg)' : 'opacity:.6'}">
+          ${'ABCD'[j]}. ${esc(o)}</button>`).join('')}
+      </div>
+      <div class="exp"><span class="verdict">${sel === null || sel === undefined ? '' : sel === q.a ? '✓ 正确' : '✗ 错误'}</span>
+        &nbsp;正确答案：<b>${'ABCD'[q.a]}. ${esc(q.o[q.a])}</b><br>${q.w}</div>
+    </div>`;
+  }).join('');
+  const score = answered === 0 ? '' : `<div class="box ${right === QUIZ.length ? 'ok' : right >= QUIZ.length / 2 ? 'warn' : 'bad'}" style="margin-bottom:0">
+    <div class="t">已答 ${answered} / ${QUIZ.length} 题，答对 ${right} 题</div>
+    ${answered === QUIZ.length
+      ? (right === QUIZ.length ? '全对 —— 从工具链到打桩的整条线都通了。' : '错题上方已标出正确答案与依据，回对应小节再看一遍即可。')
+      : '继续答题，每题都会立即给出解析。'}</div>`;
+  $('#qzOut').innerHTML = list + score;
+}
+
+/* ============================================================
+   23 · 初始化
+   ============================================================ */
+function setSeg(sel, key, val) {
+  $$(sel + ' button').forEach(b => b.classList.toggle('on', b.dataset[key] === String(val)));
+}
+function initAll() {
+  /* --- 1 工具链 --- */
+  renderToolchain();
+  /* --- 2 gcc 命令 --- */
+  $('#gcSel').innerHTML = GC_STAGES.map((s, i) => `<option value="${s.k}"${i === 3 ? ' selected' : ''}>${esc(s.lab)}</option>`).join('');
+  const doGc = () => renderGccCmd();
+  $('#gcSel').addEventListener('change', doGc);
+  $('#gcGo').addEventListener('click', doGc);
+  $('#gcBase').addEventListener('keydown', e => { if (e.key === 'Enter') doGc(); });
+  $$('[data-gc]').forEach(b => b.addEventListener('click', () => { $('#gcBase').value = b.dataset.gc; doGc(); }));
+  doGc();
+  /* --- 3 .rodata 地址核对 --- */
+  const doHx = () => renderRodata();
+  $('#hxGo').addEventListener('click', doHx);
+  $('#hxIn').addEventListener('keydown', e => { if (e.key === 'Enter') doHx(); });
+  $$('[data-hx]').forEach(b => b.addEventListener('click', () => { $('#hxIn').value = b.dataset.hx; doHx(); }));
+  doHx();
+  /* --- 4 ELF 查看器 --- */
+  renderElf();
+  $$('#elfSeg button').forEach(b => b.addEventListener('click', () => {
+    ST.elfView = b.dataset.ev;
+    setSeg('#elfSeg', 'ev', ST.elfView);
+    renderElf();
+  }));
+  /* --- 5 符号表 --- */
+  $('#nmSel').innerHTML = NM_CASES.map(c => `<option value="${c.k}">${esc(c.q)}</option>`).join('');
+  $('#nmSel').addEventListener('change', renderNm);
+  renderNm();
+  /* --- 6 符号解析器 --- */
+  $('#srSrc').value = SR_PRESETS.foo.src;
+  const doSr = () => renderSymbols();
+  $('#srGo').addEventListener('click', doSr);
+  $$('[data-sr]').forEach(b => b.addEventListener('click', () => {
+    const p = SR_PRESETS[b.dataset.sr];
+    if (p) { $('#srSrc').value = p.src; doSr(); }
+  }));
+  doSr();
+  /* --- 7 判断题 --- */
+  ST.pz = PUZ.map(() => null);
+  renderPuzzles();
+  $('#pzReset').addEventListener('click', () => { ST.pz = PUZ.map(() => null); renderPuzzles(); });
+  /* --- 8 两步重定位 --- */
+  renderRelocSteps();
+  $$('#rsSeg button').forEach(b => b.addEventListener('click', () => {
+    ST.rs = parseInt(b.dataset.rs, 10);
+    setSeg('#rsSeg', 'rs', ST.rs);
+    renderRelocSteps();
+  }));
+  /* --- 9 重定位表 --- */
+  $('#reSel').innerHTML = Object.keys(RELOC_TABLES).map(k => {
+    const t = RELOC_TABLES[k];
+    return `<option value="${k}">${esc(t.title)}</option>`;
+  }).join('');
+  ST.re = Object.keys(RELOC_TABLES)[0];
+  const doRe = () => renderRelocTable();
+  $('#reSel').addEventListener('change', () => { ST.re = $('#reSel').value; doRe(); });
+  $('#reGo').addEventListener('click', doRe);
+  $$('[data-re]').forEach(b => b.addEventListener('click', () => {
+    const kv = kvAttr(b.dataset.re);
+    if (kv.t && RELOC_TABLES[kv.t]) { ST.re = kv.t; $('#reSel').value = kv.t; }
+    if (kv.info) $('#reInfo').value = kv.info;
+    doRe();
+  }));
+  doRe();
+  $('#reInfo').addEventListener('keydown', e => { if (e.key === 'Enter') doRe(); });
+  $('#reInfo').addEventListener('change', doRe);
+  /* --- 10/11 重定位计算器 --- */
+  const doRc = () => renderRelocCalc();
+  $('#rcGo').addEventListener('click', doRc);
+  ['#rcSym', '#rcAdd', '#rcSec', '#rcOff'].forEach(id =>
+    $(id).addEventListener('keydown', e => { if (e.key === 'Enter') doRc(); }));
+  $('#rcType').addEventListener('change', doRc);
+  $$('[data-rc]').forEach(b => b.addEventListener('click', () => {
+    const p = RC_PRESETS[b.dataset.rc];
+    if (!p) return;
+    $('#rcType').value = p.type; $('#rcSym').value = p.sym; $('#rcAdd').value = p.add;
+    $('#rcSec').value = p.sec; $('#rcOff').value = p.off;
+    doRc();
+  }));
+  doRc();
+  /* --- 12 静态库顺序 --- */
+  const doAr = () => renderArchive();
+  $('#arGo').addEventListener('click', doAr);
+  $('#arIn').addEventListener('keydown', e => { if (e.key === 'Enter') doAr(); });
+  $$('[data-ar]').forEach(b => b.addEventListener('click', () => {
+    const p = AR_PRESETS[b.dataset.ar];
+    if (p) { $('#arIn').value = p.val; doAr(); }
+  }));
+  doAr();
+  /* --- 13 加载/运行时链接 --- */
+  renderDynLink();
+  $$('#dlSeg button').forEach(b => b.addEventListener('click', () => {
+    ST.dl = b.dataset.dl;
+    setSeg('#dlSeg', 'dl', ST.dl);
+    renderDynLink();
+  }));
+  /* --- 14 ldd --- */
+  $('#lddIn').value = LDD_CASES.prog;      /* 默认值 = 课件第 52 页的输出 */
+  const doLdd = () => renderLdd();
+  $('#lddGo').addEventListener('click', doLdd);
+  $$('[data-ldd]').forEach(b => b.addEventListener('click', () => {
+    const p = LDD_CASES[b.dataset.ldd];
+    if (p) { $('#lddIn').value = p; doLdd(); }
+  }));
+  doLdd();
+  /* --- 15 体积账 --- */
+  const doSz = () => renderSizeCalc();
+  $('#szGo').addEventListener('click', doSz);
+  ['#szN', '#szS', '#szD'].forEach(id => $(id).addEventListener('keydown', e => { if (e.key === 'Enter') doSz(); }));
+  $$('[data-sz]').forEach(b => b.addEventListener('click', () => {
+    $('#szN').value = b.dataset.sz; doSz();
+  }));
+  doSz();
+  /* --- 16 打桩 --- */
+  renderInterpose();
+  $$('#wrSeg button').forEach(b => b.addEventListener('click', () => {
+    ST.ip = b.dataset.ip;
+    setSeg('#wrSeg', 'ip', ST.ip);
+    renderInterpose();
+  }));
+  const doWr = () => renderInterpose();
+  $('#wrGo').addEventListener('click', doWr);
+  $('#wrSym').addEventListener('keydown', e => { if (e.key === 'Enter') doWr(); });
+  $$('[data-wr]').forEach(b => b.addEventListener('click', () => { $('#wrSym').value = b.dataset.wr; doWr(); }));
+  /* --- 17 测验 --- */
+  ST.qz = QUIZ.map(() => null);
+  renderQuiz();
+  $('#qzReset').addEventListener('click', () => { ST.qz = QUIZ.map(() => null); renderQuiz(); });
+  /* --- 全局点击代理：容器里动态渲染出来的按钮 --- */
+  document.addEventListener('click', e => {
+    const t = e.target && e.target.closest ? e.target : null;
+    if (!t) return;
+    const tc = e.target.closest('[data-tc]');
+    if (tc) { ST.tc = tc.dataset.tc; renderToolchain(); return; }
+    const ef = e.target.closest('[data-elf]');
+    if (ef) { ST.elf = ef.dataset.elf; renderElf(); return; }
+    const pz = e.target.closest('[data-pz]');
+    if (pz) {
+      const [i, v] = pz.dataset.pz.split(':');
+      ST.pz[Number(i)] = Number(v) === 1;
+      renderPuzzles(); return;
+    }
+    const qz = e.target.closest('[data-qz]');
+    if (qz) {
+      const [i, v] = qz.dataset.qz.split(':');
+      ST.qz[Number(i)] = Number(v);
+      renderQuiz(); return;
+    }
+  });
+}
+
+document.addEventListener('DOMContentLoaded', initAll);
+</script>
+</body>
+</html>

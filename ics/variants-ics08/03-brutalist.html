@@ -1,0 +1,2294 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-style="brutalist" data-deck="ics08">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>机器级编程 V：高级主题 · 交互式课件（中文）（新粗野版）</title>
+<style>
+/* ==========================================================================
+   base.css —— 结构基础样式（所有风格共用）
+   只使用 CSS 变量，不含任何具体配色；由各主题覆盖变量与少量结构规则。
+   ========================================================================== */
+
+:root{
+  /* 颜色（每个主题必须覆盖） */
+  --bg:#f6f7f9; --card:#fff; --ink:#15181d; --muted:#697586; --line:#e4e7ec;
+  --accent:#2563eb; --accent-ink:#fff; --accent-soft:#eaf1ff;
+  --sign:#e5484d; --exp:#0b7fd4; --frac:#18915a; --warn:#b45309;
+  --sign-bg:#fdecec; --sign-fg:#a3262b; --sign-bd:#f6cdcf;
+  --exp-bg:#e8f2fd;  --exp-fg:#0a5f9e;  --exp-bd:#c7ddf5;
+  --frac-bg:#e9f7ef; --frac-fg:#116b43; --frac-bd:#c8e8d5;
+  --ok-bg:#f2fbf6; --ok-bd:#9ed3b4; --bad-bg:#fff5f5; --bad-bd:#f1b5b8;
+  --warn-bg:#fffbeb; --gray-bg:#eef1f5; --gray-fg:#5b6472;
+  --paper-soft:#fcfdfe; --code-bg:#f1f3f7; --code-bd:#e6e9ef;
+  --tbl-head:#f7f9fc; --tbl-hover:#fafbfd;
+  --sel-bg:#eef1f5;
+
+  /* 字体 */
+  --font-sans:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",system-ui,sans-serif;
+  --font-mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+  --font-display:var(--font-sans);
+  --tracking-title:normal;
+
+  /* 形状 */
+  --radius:12px; --radius-sm:8px; --radius-pill:99px;
+  --border-w:1px; --shadow:0 1px 2px rgba(16,24,40,.06),0 1px 3px rgba(16,24,40,.1);
+  --shadow-card:none;
+  --card-border:var(--border-w) solid var(--line);
+
+  /* 布局 */
+  --page-max:1180px; --nav-w:236px; --gap:26px; --sec-pad:26px 28px;
+  --nav-sticky-top:64px; --anchor-offset:70px;
+  --font-size:16px; --line-height:1.75;
+}
+
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font-sans);
+  font-size:var(--font-size);line-height:var(--line-height);-webkit-font-smoothing:antialiased}
+img{max-width:100%}
+
+/* ---------- 顶栏 ---------- */
+.topbar{position:sticky;top:0;z-index:50;background:var(--card);border-bottom:1px solid var(--line)}
+.topbar-in{max-width:var(--page-max);margin:0 auto;padding:10px 22px;display:flex;align-items:center;gap:14px}
+.brand{font-weight:700;letter-spacing:var(--tracking-title);font-family:var(--font-display)}
+.brand small{font-weight:500;color:var(--muted);margin-left:8px;font-size:12.5px}
+.progress{margin-left:auto;display:flex;align-items:center;gap:10px;font-size:12.5px;color:var(--muted)}
+.progress .bar{width:150px;height:6px;border-radius:var(--radius-pill);background:var(--line);overflow:hidden}
+.progress .bar>i{display:block;height:100%;width:0;background:var(--accent);transition:width .25s}
+
+/* ---------- 主体布局 ---------- */
+.layout{max-width:var(--page-max);margin:0 auto;padding:22px;display:grid;
+  grid-template-columns:var(--nav-w) minmax(0,1fr);gap:var(--gap)}
+main{min-width:0}
+/* 长 URL / 长标识符没有断行点，会把容器整个撑破（窄屏尤其明显）。
+   只作用于文本容器；表格故意不加，让它走 .tbl-wrap 的横向滚动。 */
+main p,main li,main dd,main dt,main h2,main h3,main h4,main h5,
+main .box,main .card,main .readout,main .puzzle,main .step{overflow-wrap:anywhere}
+
+/* ---------- 目录 ---------- */
+nav.toc{position:sticky;top:var(--nav-sticky-top);align-self:start;max-height:calc(100vh - 84px);overflow:auto;padding-right:4px}
+nav.toc h4{margin:0 0 8px;font-size:12px;letter-spacing:.12em;color:var(--muted);text-transform:uppercase;font-weight:600}
+nav.toc a{display:block;padding:7px 11px;border-radius:var(--radius-sm);color:var(--ink);opacity:.78;
+  text-decoration:none;font-size:14.5px;border-left:2.5px solid transparent}
+nav.toc a:hover{background:var(--sel-bg);opacity:1}
+nav.toc a.active{background:var(--accent-soft);color:var(--accent);border-left-color:var(--accent);font-weight:600;opacity:1}
+nav.toc a .n{display:inline-block;min-width:20px;color:var(--muted);font-size:12.5px;font-variant-numeric:tabular-nums}
+nav.toc a.active .n{color:var(--accent)}
+nav.toc .sub{padding-left:26px;font-size:13.5px;opacity:.7}
+
+/* ---------- 章节 ---------- */
+section{background:var(--card);border:var(--card-border);border-radius:var(--radius);
+  padding:var(--sec-pad);margin-bottom:22px;box-shadow:var(--shadow);scroll-margin-top:var(--anchor-offset)}
+section>h2{margin:0 0 6px;font-size:25px;letter-spacing:-.01em;font-family:var(--font-display)}
+section>.lede{color:var(--muted);margin:0 0 20px;font-size:14.5px}
+h3{font-size:18.5px;margin:26px 0 10px;padding-left:11px;border-left:3.5px solid var(--accent);font-family:var(--font-display)}
+h4{font-size:16px;margin:18px 0 8px;font-family:var(--font-display)}
+h5{font-size:15px;font-family:var(--font-display)}
+p{margin:10px 0}
+ul,ol{margin:10px 0;padding-left:22px}
+li{margin:5px 0}
+code{font-family:var(--font-mono);font-size:.89em;background:var(--code-bg);border:1px solid var(--code-bd);border-radius:5px;padding:1px 5px}
+.mono{font-family:var(--font-mono)}
+a{color:var(--accent)}
+hr{border:0;border-top:1px dashed var(--line);margin:24px 0}
+.srcref{font-size:11.5px;color:var(--muted);font-weight:500;font-family:var(--font-sans);margin-left:8px;vertical-align:middle;white-space:nowrap;opacity:.75}
+.en{color:var(--muted);font-size:.92em}
+
+/* ---------- 栅格与卡片 ---------- */
+.grid{display:grid;gap:14px}
+.g2{grid-template-columns:repeat(2,minmax(0,1fr))}
+.g3{grid-template-columns:repeat(3,minmax(0,1fr))}
+/* 窄屏单列：必须用 minmax(0,1fr)。写成 1fr 时轨道最小宽度是 auto，
+   单元格里只要有长代码行（<pre>）就撑破容器，整页横向溢出。 */
+@media(max-width:820px){.g2,.g3{grid-template-columns:minmax(0,1fr)}}
+.card{border:var(--card-border);border-radius:var(--radius-sm);padding:15px 17px;background:var(--paper-soft);box-shadow:var(--shadow-card)}
+.card h5{margin:0 0 7px}
+.card.pad0{padding:0;overflow:hidden}
+
+/* ---------- 提示框 ---------- */
+.box{border:1px solid var(--line);border-left:4px solid var(--accent);background:var(--accent-soft);
+  border-radius:var(--radius-sm);padding:12px 16px;margin:14px 0}
+.box.warn{border-left-color:var(--warn);background:var(--warn-bg)}
+.box.bad{border-left-color:var(--sign);background:var(--bad-bg)}
+.box.ok{border-left-color:var(--frac);background:var(--ok-bg)}
+.box .t{font-weight:650;font-size:14.5px;margin-bottom:2px}
+
+/* ---------- 公式 ---------- */
+.formula{font-family:var(--font-mono);background:var(--paper-soft);border:1px solid var(--line);
+  border-radius:var(--radius-sm);padding:14px 17px;margin:14px 0;font-size:16.5px;text-align:center;overflow-x:auto}
+.formula.big{font-size:20px}
+
+/* ---------- 表格 ---------- */
+table.tbl{width:100%;border-collapse:collapse;font-size:14.5px;margin:14px 0}
+table.tbl th,table.tbl td{border:1px solid var(--line);padding:8px 11px;text-align:left;vertical-align:top}
+table.tbl th{background:var(--tbl-head);font-weight:650;font-size:13.5px;white-space:nowrap}
+table.tbl td.mono,table.tbl th.mono{font-family:var(--font-mono);font-size:13.5px}
+table.tbl tr:hover td{background:var(--tbl-hover)}
+/* 当前行高亮：interactive 表格用它标出「正在看的那一行」。
+   注意 --tbl-hover 是悬停色，深色皮肤下故意比底色亮，所以 hl 用同一套变量。 */
+table.tbl tr.hl td{background:var(--sel-bg)}
+.tbl-wrap{overflow-x:auto}
+
+/* ---------- 位串控件 ---------- */
+.fw{display:flex;flex-wrap:wrap;gap:8px 18px;align-items:flex-start;margin:4px 0 2px;min-width:0}
+.fgrp{min-width:0}
+.fcap{font-size:12px;color:var(--muted);margin-bottom:4px;font-weight:600}
+.fcap b{font-family:var(--font-mono);font-size:12.5px}
+.bits{display:flex;flex-wrap:wrap;gap:2px;font-family:var(--font-mono);margin:4px 0}
+.bits .b{width:25px;height:33px;display:flex;align-items:center;justify-content:center;
+  border-radius:6px;font-size:15px;cursor:pointer;user-select:none;border:1px solid transparent;
+  transition:transform .06s,background .12s;font-weight:600}
+.bits .b:hover{transform:translateY(-2px)}
+.bits .b.s{background:var(--sign-bg);color:var(--sign-fg);border-color:var(--sign-bd)}
+.bits .b.e{background:var(--exp-bg);color:var(--exp-fg);border-color:var(--exp-bd)}
+.bits .b.f{background:var(--frac-bg);color:var(--frac-fg);border-color:var(--frac-bd)}
+.bits .b.sel{outline:2px solid var(--ink);outline-offset:1px}
+.bits.sm .b{width:19px;height:26px;font-size:12px;border-radius:4px}
+.fgrp .bits{flex-wrap:wrap;max-width:100%;gap:2px}
+.fgrp.ge .bits{max-width:300px}
+
+/* ---------- 读数表 ---------- */
+.readout{display:grid;grid-template-columns:auto 1fr;gap:4px 16px;font-size:14.5px;margin:12px 0}
+.readout dt{color:var(--muted);font-weight:600;font-family:var(--font-mono);font-size:13.5px;padding-top:2px}
+.readout dd{margin:0;font-family:var(--font-mono)}
+
+/* ---------- 小标签 ---------- */
+.chip{display:inline-block;font-size:12.5px;padding:2px 9px;border-radius:var(--radius-pill);
+  background:var(--accent-soft);color:var(--accent);font-weight:600}
+.chip.ok{background:var(--frac-bg);color:var(--frac-fg)}
+.chip.bad{background:var(--sign-bg);color:var(--sign-fg)}
+.chip.warn{background:var(--warn-bg);color:var(--warn)}
+.chip.gray{background:var(--gray-bg);color:var(--gray-fg)}
+.kbd{font-family:var(--font-mono);font-size:13px;background:var(--code-bg);border:1px solid var(--code-bd);
+  border-bottom-width:2px;border-radius:6px;padding:1px 7px}
+
+/* ---------- 控件 ---------- */
+.ctrls{display:flex;flex-wrap:wrap;gap:9px;align-items:center;margin:12px 0}
+label.fld{display:inline-flex;align-items:center;gap:7px;font-size:14px;color:var(--ink);max-width:100%;flex-wrap:wrap;min-width:0}
+label.fld select,label.fld input{min-width:0;max-width:100%}
+input[type=text],input[type=number],select{font-family:var(--font-mono);font-size:14px;padding:6px 10px;
+  border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--card);color:var(--ink)}
+input[type=text]:focus,input[type=number]:focus,select:focus{outline:2px solid var(--accent-soft);border-color:var(--accent)}
+button{font-family:var(--font-sans);font-size:14px;font-weight:600;padding:7px 15px;border-radius:var(--radius-sm);
+  border:1px solid var(--line);background:var(--card);color:var(--ink);cursor:pointer}
+button:hover{background:var(--sel-bg)}
+button.p{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+button.sm{padding:4px 10px;font-size:13px}
+button.pill{border-radius:var(--radius-pill)}
+/* 按钮组默认不换行：项一多就会把 .ctrls 撑破。允许它缩到容器宽度并横向滚动。 */
+.seg{display:inline-flex;max-width:100%;border:1px solid var(--line);
+  border-radius:var(--radius-sm);overflow-x:auto;overflow-y:hidden}
+.seg button{border:0;border-radius:0;border-right:1px solid var(--line);padding:6px 13px}
+.seg button:last-child{border-right:0}
+.seg button.on{background:var(--accent);color:var(--accent-ink)}
+
+/* ---------- 分步演示 ---------- */
+/* .steps 是 .step 的包裹层（skill 词汇表里列了但一直没定义）——
+   仅给一点上下留白，步骤块自己的边距由 .step 负责。 */
+.steps{margin:12px 0}
+.step{border:1px solid var(--line);border-radius:var(--radius-sm);padding:11px 15px;margin:9px 0;
+  background:var(--paper-soft);opacity:.42;transition:opacity .2s}
+.step.on{opacity:1;background:var(--card)}
+.step .h{font-size:13px;font-weight:700;color:var(--accent);letter-spacing:.02em;margin-bottom:3px}
+.step .m{font-family:var(--font-mono);font-size:14.5px;overflow-x:auto}
+.step .e{font-size:13.5px;color:var(--muted);margin-top:3px}
+
+/* ---------- 折叠与答案 ---------- */
+.reveal{border:1px solid var(--line);border-radius:var(--radius-sm);padding:11px 15px;margin:8px 0;background:var(--paper-soft)}
+.reveal summary{cursor:pointer;font-weight:600;font-size:14.5px}
+.reveal[open]{background:var(--card)}
+.ans{margin-top:8px;padding-top:8px;border-top:1px dashed var(--line);font-size:14.5px}
+
+/* ---------- 判断题 ---------- */
+.puzzle{border:1px solid var(--line);border-radius:var(--radius-sm);padding:12px 15px;margin:9px 0;
+  display:flex;gap:13px;align-items:flex-start;background:var(--paper-soft)}
+.puzzle .q{font-family:var(--font-mono);font-size:15px;flex:1;min-width:0;overflow-x:auto;white-space:nowrap}
+.puzzle .q small{font-family:var(--font-sans);color:var(--muted);display:block;white-space:normal}
+.puzzle .btns{display:flex;gap:6px;flex-shrink:0}
+.puzzle.correct{border-color:var(--ok-bd);background:var(--ok-bg)}
+.puzzle.wrong{border-color:var(--bad-bd);background:var(--bad-bg)}
+.puzzle .exp{margin-top:9px;padding-top:9px;border-top:1px dashed var(--line);font-size:14.5px;
+  display:none;white-space:normal;font-family:var(--font-sans)}
+.puzzle.done .exp{display:block}
+.puzzle .exp .verdict{font-weight:700}
+
+/* ---------- 分布图 ---------- */
+.tick{stroke:#94a3b8;stroke-width:1.4}
+.tick.dn{stroke:var(--exp)}
+.tick.nm{stroke:var(--frac)}
+.ticklabel{font-size:9.5px;fill:var(--muted);font-family:var(--font-mono)}
+.axisline{stroke:var(--line);stroke-width:1.2}
+.axislabel{font-size:11px;fill:var(--muted)}
+
+/* ---------- 页脚 / 回到顶部 ---------- */
+.footer{max-width:var(--page-max);margin:0 auto;padding:8px 22px 40px;color:var(--muted);font-size:13px}
+.totop{position:fixed;right:22px;bottom:22px;z-index:40;box-shadow:var(--shadow);display:none}
+
+/* ---------- 响应式 ---------- */
+@media(max-width:960px){
+  .layout{grid-template-columns:1fr;padding:16px}
+  nav.toc{position:static;max-height:none;display:flex;flex-wrap:wrap;gap:6px;
+    background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:10px}
+  nav.toc h4{width:100%;margin-bottom:2px}
+  nav.toc a{border-left:0;padding:5px 10px;font-size:13px}
+  nav.toc .sub{display:none}
+  section{padding:20px 17px}
+}
+@media print{
+  nav.toc,.topbar,.totop{display:none}
+  .layout{display:block}
+  section{break-inside:avoid;box-shadow:none}
+}
+
+/* ==========================================================================
+   风格 C · 新粗野主义（Neo-brutalism）
+   厚黑描边 · 硬投影 · 高饱和色块 · 顶部大字报 + 药丸导航
+   ========================================================================== */
+
+:root{
+  --bg:#fdf3d7; --card:#fffdf5; --ink:#111111; --muted:#5b564a; --line:#111111;
+  --accent:#ff3d68; --accent-ink:#fff; --accent-soft:#ffe3ea;
+  --sign:#e01b24; --exp:#0b6fd4; --frac:#0f9d58; --warn:#c2410c;
+  --sign-bg:#ffdfe0; --sign-fg:#b3141c; --sign-bd:#111;
+  --exp-bg:#dcecff;  --exp-fg:#0a5aa8;  --exp-bd:#111;
+  --frac-bg:#dcf7e5; --frac-fg:#0b7a45; --frac-bd:#111;
+  --ok-bg:#e3fbe9; --ok-bd:#111; --bad-bg:#ffe6e6; --bad-bd:#111;
+  --warn-bg:#fff0d6; --gray-bg:#efe9d8; --gray-fg:#4a463c;
+  --paper-soft:#fffdf5; --code-bg:#fff8e1; --code-bd:#111;
+  --tbl-head:#ffe9a8; --tbl-hover:#fffbe8;
+  --sel-bg:#ffe9a8;
+
+  --font-sans:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",system-ui,sans-serif;
+  --font-mono:ui-monospace,"SF Mono",Menlo,Consolas,"Liberation Mono",monospace;
+  --font-display:var(--font-sans);
+  --tracking-title:-.02em;
+
+  --radius:4px; --radius-sm:4px; --radius-pill:99px;
+  --border-w:2px;
+  --shadow:5px 5px 0 var(--line); --shadow-card:4px 4px 0 var(--line);
+  --card-border:2px solid var(--line);
+
+  --page-max:1200px; --nav-w:auto; --gap:0px;
+  --sec-pad:24px 26px; --nav-sticky-top:0px; --anchor-offset:150px;
+  --font-size:16px; --line-height:1.72;
+}
+
+body{background:
+  repeating-linear-gradient(45deg, rgba(17,17,17,.028) 0 12px, transparent 12px 24px),
+  var(--bg)}
+
+/* ---------- 顶栏：大字报（不吸顶，避免与吸顶药丸导航重叠） ---------- */
+.topbar{position:static;background:var(--accent);border-bottom:3px solid var(--line);color:#fff}
+.topbar-in{padding:12px 22px;max-width:var(--page-max)}
+.brand{font-weight:900;font-size:22px;letter-spacing:var(--tracking-title);
+  text-transform:none;text-shadow:2px 2px 0 rgba(17,17,17,.55)}
+.brand small{color:#fff;opacity:.9;font-weight:700;font-size:12px;letter-spacing:.02em}
+.progress{color:#fff;font-weight:700;font-size:12.5px}
+.progress .bar{width:150px;height:12px;border-radius:0;background:#fff;border:2px solid var(--line);overflow:hidden}
+.progress .bar>i{background:repeating-linear-gradient(45deg,#111 0 6px,#ffd93d 6px 12px)}
+
+/* ---------- 导航：横排药丸，吸顶 ---------- */
+.layout{display:block;max-width:var(--page-max);padding:0 22px 26px}
+nav.toc{position:sticky;top:0;z-index:45;display:flex;flex-wrap:wrap;gap:6px;align-items:center;
+  max-height:none;overflow:visible;padding:10px 0;margin:0 0 18px;
+  background:var(--bg);border-bottom:3px solid var(--line)}
+nav.toc h4{width:100%;margin:0 0 2px;font-size:11px;letter-spacing:.16em;color:var(--muted)}
+nav.toc a{border:2px solid var(--line);border-radius:var(--radius-pill);background:var(--card);
+  padding:4px 11px;font-size:12px;font-weight:700;border-left-width:2px;white-space:nowrap;
+  box-shadow:2px 2px 0 var(--line)}
+nav.toc a:hover{background:var(--sel-bg);transform:translate(1px,1px);box-shadow:1px 1px 0 var(--line)}
+nav.toc a.active{background:var(--ink);color:#ffd93d;box-shadow:1px 1px 0 var(--line)}
+nav.toc a .n{color:inherit;opacity:.6;font-weight:800;min-width:auto;margin-right:5px}
+nav.toc .sub{display:none}
+
+/* ---------- 章节：粗框卡片 ---------- */
+section{box-shadow:var(--shadow);margin-bottom:26px;background:var(--card)}
+section>h2{font-size:27px;font-weight:900;display:inline-block;background:var(--ink);color:#ffd93d;
+  padding:3px 14px;margin:0 0 12px;border-radius:2px}
+section>h2 .srcref{color:#ffd93d;opacity:.65}
+section>.lede{font-weight:600;color:var(--muted);margin-bottom:18px}
+h3{font-size:19px;font-weight:900;border-left:0;padding:0 0 0 14px;position:relative;margin-top:28px}
+h3::before{content:"";position:absolute;left:0;top:.28em;width:8px;height:.95em;background:var(--accent);
+  border:2px solid var(--line)}
+h4,h5{font-weight:800}
+code{background:var(--code-bg);border:2px solid var(--line);border-radius:3px;font-weight:600}
+
+/* ---------- 卡片 / 盒：硬投影 + 位移 hover ---------- */
+.card{box-shadow:var(--shadow-card);border-radius:var(--radius);transition:transform .08s,box-shadow .08s}
+.card:hover{transform:translate(2px,2px);box-shadow:2px 2px 0 var(--line)}
+.box{border:2px solid var(--line);border-left-width:8px;border-radius:var(--radius);background:var(--accent-soft);
+  box-shadow:var(--shadow-card)}
+.box.warn{background:var(--warn-bg)}
+.box.bad{background:var(--bad-bg)}
+.box.ok{background:var(--ok-bg)}
+.box .t{font-weight:900;font-size:15px}
+
+.formula{background:#fff;border:2px solid var(--line);border-radius:var(--radius);font-weight:700;
+  box-shadow:var(--shadow-card)}
+.formula.big{font-size:21px}
+
+/* ---------- 表格：粗网格 ---------- */
+table.tbl th,table.tbl td{border:2px solid var(--line);padding:8px 12px}
+table.tbl th{background:var(--tbl-head);font-weight:900;font-size:13px}
+table.tbl tbody tr:nth-child(even) td{background:#fffdf0}
+table.tbl tr:hover td{background:var(--tbl-hover)}
+
+/* ---------- 位视图：色块方格 ---------- */
+.fw{gap:10px 20px;padding:14px;border:2px dashed var(--line);border-radius:var(--radius);background:#fff}
+.fcap{font-weight:800;font-size:11.5px;letter-spacing:.06em;text-transform:uppercase}
+.bits{gap:3px}
+.bits .b{width:26px;height:32px;border-radius:3px;border:2px solid var(--line);font-weight:900}
+.bits .b.s{background:var(--sign-bg);color:var(--sign-fg)}
+.bits .b.e{background:var(--exp-bg);color:var(--exp-fg)}
+.bits .b.f{background:var(--frac-bg);color:var(--frac-fg)}
+.bits .b:hover{transform:translate(1px,1px)}
+.bits .b.sel{outline:3px solid var(--accent);outline-offset:0}
+.bits.sm .b{width:20px;height:26px;font-size:11.5px}
+
+.readout dt{color:var(--muted);font-weight:800}
+
+/* ---------- 控件：可按的实体按钮 ---------- */
+input[type=text],input[type=number],select{border:2px solid var(--line);border-radius:var(--radius);
+  background:#fff;font-weight:700}
+input:focus,select:focus{outline:none;box-shadow:3px 3px 0 var(--line)}
+button{border:2px solid var(--line);border-radius:var(--radius);font-weight:800;background:#fff;
+  box-shadow:3px 3px 0 var(--line);transition:transform .08s,box-shadow .08s}
+button:hover{background:var(--sel-bg);transform:translate(1px,1px);box-shadow:2px 2px 0 var(--line)}
+button.p{background:var(--accent);color:#fff}
+button.p:hover{background:#ff2456}
+button:active{transform:translate(3px,3px);box-shadow:0 0 0 var(--line)}
+.chip{border:2px solid var(--line);border-radius:var(--radius-pill);background:#fff;color:var(--ink);
+  font-weight:800;font-size:12px}
+.chip.ok{background:var(--frac-bg);color:var(--frac-fg)}
+.chip.bad{background:var(--sign-bg);color:var(--sign-fg)}
+.chip.warn{background:var(--warn-bg);color:var(--warn)}
+.chip.gray{background:var(--gray-bg)}
+.seg{border:2px solid var(--line);border-radius:var(--radius);box-shadow:3px 3px 0 var(--line)}
+.seg button{border-right:2px solid var(--line);box-shadow:none;border:0;border-radius:0}
+.seg button:hover{transform:none}
+.seg button.on{background:var(--ink);color:#ffd93d}
+
+/* ---------- 分步演示 ---------- */
+.step{border:2px solid var(--line);border-radius:var(--radius);background:#fff;box-shadow:3px 3px 0 var(--line)}
+.step.on{background:#fffdf5}
+.step .h{color:var(--accent);font-weight:900;font-size:13px;letter-spacing:.02em}
+.step .m{font-weight:600}
+.step .e{color:var(--muted)}
+
+/* ---------- 判断题 ---------- */
+.puzzle{border:2px solid var(--line);border-radius:var(--radius);background:#fff}
+.puzzle.correct{background:var(--ok-bg)}
+.puzzle.wrong{background:var(--bad-bg)}
+.puzzle .q{font-weight:700}
+.reveal{border:2px solid var(--line);border-radius:var(--radius);background:#fff;
+  box-shadow:3px 3px 0 var(--line)}
+.reveal[open]{background:#fffdf5}
+
+.totop{border:2px solid var(--line);box-shadow:4px 4px 0 var(--line);background:#ffd93d;font-weight:900}
+.tick{stroke:#7a6f52}
+.tick.nm{stroke:var(--frac)}
+.tick.dn{stroke:var(--exp)}
+.axisline{stroke:var(--line)}
+
+/* ---------- 响应式 ---------- */
+@media(max-width:960px){
+  .topbar-in{padding:10px 16px}
+  .brand{font-size:18px}
+  .layout{padding:0 16px 20px}
+  nav.toc{gap:6px;padding:10px 0}
+  nav.toc a{padding:4px 10px;font-size:12px}
+  section{padding:20px 16px}
+  section>h2{font-size:22px}
+  .progress .bar{width:90px}
+}
+
+
+/* ---------- 风格切换条（构建时注入，各主题通用） ---------- */
+.stylebar{max-width:var(--page-max);margin:0 auto;padding:14px 22px 0;display:flex;gap:8px;
+  flex-wrap:wrap;align-items:center;font-size:12.5px;color:var(--muted)}
+.stylebar>span{font-weight:600}
+.stylebar a{text-decoration:none;padding:4px 11px;border:1px solid var(--line);border-radius:var(--radius-pill);
+  color:var(--muted);background:var(--card);font-weight:600}
+.stylebar a:hover{border-color:var(--accent);color:var(--accent)}
+.stylebar a.cur{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.stylebar>span{flex:0 0 auto}
+@media(max-width:960px){.stylebar{padding:12px 16px 0}}
+/* 25 讲之后药丸很多：窄屏折行会吃掉大半屏，改成单行横滑 */
+@media(max-width:820px){.stylebar{flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;
+  scrollbar-width:thin}.stylebar a{flex:0 0 auto;font-size:12px;padding:4px 10px}}
+
+</style>
+</head>
+<body>
+
+<header class="topbar"><div class="topbar-in">
+  <div class="brand">机器级编程 V：高级主题 Machine-Level Programming V: Advanced Topics<small>《计算机系统导论》第 8 讲 · 新粗野版</small></div>
+  <div class="progress"><span id="pgText">学习进度 0%</span><span class="bar"><i id="pgBar"></i></span></div>
+</div></header>
+
+<div class="stylebar">
+  <span>风格：</span>
+  <a href="../ics08-zh.html">清爽蓝（原版）</a>
+  <a href="01-academic.html">学术讲义</a>
+  <a href="02-terminal.html">深色终端</a>
+  <a href="04-glass.html">柔和玻璃</a>
+  <a href="index.html">◧ 全部预览</a>
+  <span style="opacity:.5">|</span>
+  <a href="../variants-ics01/index.html">↗ 第 1 讲 · 课程概述</a>
+  <a href="../variants-bits/index.html">↗ 第 2 讲 · 位、字节与整数</a>
+  <a href="../variants/index.html">↗ 第 3 讲 · 浮点数</a>
+  <a href="../variants-ics04/index.html">↗ 第 4 讲 · 机器级编程 I：基础</a>
+  <a href="../variants-ics05/index.html">↗ 第 5 讲 · 机器级编程 II：控制</a>
+  <a href="../variants-ics06/index.html">↗ 第 6 讲 · 机器级编程 III：过程</a>
+  <a href="../variants-ics07/index.html">↗ 第 7 讲 · 机器级编程 IV：数据</a>
+  <a href="../variants-ics09/index.html">↗ 第 9 讲 · 处理器体系结构：ISA 与逻辑</a>
+  <a href="../variants-ics10/index.html">↗ 第 10 讲 · 处理器体系结构：顺序实现</a>
+  <a href="../variants-ics11/index.html">↗ 第 11 讲 · 处理器体系结构：流水线</a>
+  <a href="../variants-ics12/index.html">↗ 第 12 讲 · 存储层次结构</a>
+  <a href="../variants-ics13/index.html">↗ 第 13 讲 · 缓存存储器</a>
+  <a href="../variants-ics14/index.html">↗ 第 14 讲 · 代码优化</a>
+  <a href="../variants-ics15/index.html">↗ 第 15 讲 · 链接</a>
+  <a href="../variants-ics16/index.html">↗ 第 16 讲 · 异常控制流 I</a>
+  <a href="../variants-ics17/index.html">↗ 第 17 讲 · 异常控制流 II</a>
+  <a href="../variants-ics18/index.html">↗ 第 18 讲 · 系统级 I/O</a>
+  <a href="../variants-ics19/index.html">↗ 第 19 讲 · 虚拟内存 I</a>
+  <a href="../variants-ics20/index.html">↗ 第 20 讲 · 虚拟内存 II</a>
+  <a href="../variants-ics21/index.html">↗ 第 21 讲 · 动态内存分配</a>
+  <a href="../variants-ics22/index.html">↗ 第 22 讲 · 网络基础</a>
+  <a href="../variants-ics23/index.html">↗ 第 23 讲 · 网络编程</a>
+  <a href="../variants-ics24/index.html">↗ 第 24 讲 · 并发编程</a>
+  <a href="../variants-ics25/index.html">↗ 第 25 讲 · 同步</a>
+  <a href="../variants-lab/index.html">↗ Data Lab 实验</a>
+</div>
+
+<div class="layout">
+
+<nav class="toc">
+  <h4>目录</h4>
+  <a href="#s0"><span class="n">0</span>课程导览</a>
+  <a href="#s1"><span class="n">1</span>Union：分配与位模式</a>
+  <a href="#s2"><span class="n">2</span>字节序</a>
+  <a href="#s3"><span class="n">3</span>x86-64 内存布局</a>
+  <a href="#s4"><span class="n">4</span>越界引用：fun(i)</a>
+  <a href="#s5"><span class="n">5</span>缓冲区溢出与 gets</a>
+  <a href="#s6"><span class="n">6</span>echo 之死：字节级溢出</a>
+  <a href="#s7"><span class="n">7</span>栈破坏与代码注入</a>
+  <a href="#s8"><span class="n">8</span>防御三式</a>
+  <a href="#s9"><span class="n">9</span>ROP 攻击</a>
+  <a href="#s10"><span class="n">10</span>总结与测验</a>
+</nav>
+
+<main>
+<!-- ================= 0 ================= -->
+  <section id="s0">
+    <h2>课程导览<span class="srcref">原第 1–2 页</span></h2>
+    <p class="lede">北京大学《计算机系统导论》第 8 讲：机器级编程 V —— 高级主题。复合数据（数组、结构体）怎么摆在内存里，上一讲已经看清；这一讲先补上最后一块拼图 <b>union</b>，然后升级到一个更严肃的话题：<b>内存布局会怎样被攻击者利用，我们又怎么防</b>。</p>
+
+    <div class="grid g3">
+      <div class="card"><h5>本讲提纲</h5>
+        <ol style="margin:0;padding-left:20px;font-size:14.5px">
+          <li>Union（联合体）与位模式访问</li>
+          <li>字节序（byte ordering）</li>
+          <li>x86-64 Linux 内存布局</li>
+          <li>缓冲区溢出：漏洞、攻击、防御</li>
+          <li>返回导向编程（ROP）</li>
+        </ol>
+      </div>
+      <div class="card"><h5>一句话核心</h5>
+        <p style="margin:0;font-size:14.5px">内存只是一串字节，<b>怎么解释取决于谁去读它</b>。union 把这句话变成合法语法；字节序把它变成移植性问题；缓冲区溢出把它变成安全问题 —— 攻击者写入的字节，会被 CPU 当成<b>返回地址</b>甚至<b>代码</b>来用。</p>
+      </div>
+      <div class="card"><h5>和上一讲的衔接</h5>
+        <p style="margin:0;font-size:14.5px">上一讲（机器级编程 IV：数据）讲了数组与结构体的分配、对齐与填充。课件第 11 页把三种复合类型列成一张总结表 —— union 是「覆盖式」的第三种，也是本讲通向位级操作的桥。</p>
+      </div>
+    </div>
+
+    <h3>0.1 三大主题与原页码</h3>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>主题</th><th>原课件页码</th><th>要回答的问题</th></tr>
+      <tr><td><b>Unions</b></td><td class="mono">3–11</td><td>同一块内存怎么用不同的「类型眼镜」去读？字节序又怎么捣乱？</td></tr>
+      <tr><td><b>Memory Layout</b></td><td class="mono">12–16</td><td>程序里的每一样东西（全局变量、局部变量、malloc 的块、函数本身）分别落在内存哪个区域？</td></tr>
+      <tr><td><b>Buffer Overflow<br>· Vulnerability</b></td><td class="mono">17–27</td><td><code>gets()</code> 多写的那些字节，是怎么一路写到「返回地址」上的？</td></tr>
+      <tr><td><b>· 攻击与历史</b></td><td class="mono">28–39</td><td>返回地址被改掉之后，攻击者能把程序带去哪里？</td></tr>
+      <tr><td><b>· Protection</b></td><td class="mono">40–47</td><td>栈随机化、不可执行栈、栈金丝雀各挡住什么、挡不住什么？</td></tr>
+      <tr><td><b>· ROP</b></td><td class="mono">48–53</td><td>防御升级之后，攻击者怎么「不注入一行代码」也能为所欲为？</td></tr>
+    </table></div>
+
+    <div class="box"><div class="t">本页使用说明</div>
+      标有 <span class="chip gray">可交互</span> 的地方都能点击或输入，所有计算都在浏览器里实时完成。<a href="#s2">第 2 节的字节序模拟器</a>、<a href="#s6">第 6 节的栈字节可视化器</a>和<a href="#s9">第 9 节的 ROP 追踪器</a>最值得反复玩：它们把课件里十几页的静态图，变成了可以自己出题的工具。页面里所有「判对错」的基准（位模式重解释、字节序组合、返回地址破坏、ROP 寄存器演化）都已用 C 参考实现逐项交叉验证。
+    </div>
+  </section>
+
+  <!-- ================= 1 ================= -->
+  <section id="s1">
+    <h2>1. Union：分配与位模式访问<span class="srcref">原第 3–4 页</span></h2>
+    <p class="lede">union 的规则只有两句：<b>按最大的成员分配空间</b>；<b>同一时刻只能使用一个字段</b>。它不是「多存几份数据」，而是「给同一块内存起几个名字」。</p>
+
+    <h3>1.1 union 怎么分配，struct 怎么分配<span class="srcref">原第 3 页</span></h3>
+    <p>课件用同一组成员定义了两个类型，放在一起对比 —— 成员完全相同，布局天差地别：</p>
+    <div class="formula" style="text-align:left">
+      <div>union U1 {&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;struct S1 {</div>
+      <div>&nbsp;&nbsp;char c;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;char c;</div>
+      <div>&nbsp;&nbsp;int i[2];&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;int i[2];</div>
+      <div>&nbsp;&nbsp;double v;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;double v;</div>
+      <div>} *up;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;} *sp;</div>
+    </div>
+    <ul>
+      <li><b>union U1</b>：按最大成员分配 —— <code>int i[2]</code> 与 <code>double v</code> 都是 8 字节，所以 <code>sizeof(U1) == 8</code>。三个名字全部从 <code>up+0</code> 开始。</li>
+      <li><b>struct S1</b>：按声明顺序排，中间和末尾垫padding（填充）满足对齐 —— <code>c</code> 占 1 字节、垫 3 字节，<code>i[0]</code> 在 4、<code>i[1]</code> 在 8、垫 4 字节，<code>v</code> 在 16–23，<code>sizeof(S1) == 24</code>。</li>
+    </ul>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：点击成员名，看它在两种布局里各覆盖哪些字节</span>
+        <div class="seg" id="uniSeg">
+          <button class="on" data-u="all">全部</button>
+          <button data-u="c">c</button>
+          <button data-u="i0">i[0]</button>
+          <button data-u="i1">i[1]</button>
+          <button data-u="v">v</button>
+        </div>
+      </div>
+      <div id="uniOut"></div>
+    </div>
+
+    <div class="box ok"><div class="t">怎么读这两张字节地图</div>
+      每个格子是<b>一个字节</b>，左下角标的是它相对起始地址的偏移。union 的三行互相<b>重叠</b> —— 这正是「同一块内存、三个名字」；struct 的三行互不重叠，中间灰色的格子是<b>对齐填充</b>（padding），里面什么都不存。
+    </div>
+
+    <h3>1.2 用 union 访问位模式<span class="srcref">原第 4 页</span></h3>
+    <p>union 最经典的用法：让一个 <code>float</code> 和一个 <code>unsigned</code> 共享 4 字节，从而<b>看到浮点数的位表示</b>：</p>
+    <div class="formula" style="text-align:left">
+      <div>typedef union {</div>
+      <div>&nbsp;&nbsp;float f;</div>
+      <div>&nbsp;&nbsp;unsigned u;</div>
+      <div>} bit_float_t;</div>
+    </div>
+    <div class="formula" style="text-align:left">
+      <div>float bit2float(unsigned u)&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;unsigned float2bit(float f)</div>
+      <div>{&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{</div>
+      <div>&nbsp;&nbsp;bit_float_t arg;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;bit_float_t arg;</div>
+      <div>&nbsp;&nbsp;arg.u = u;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;arg.f = f;</div>
+      <div>&nbsp;&nbsp;return arg.f;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;return arg.u;</div>
+      <div>}&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}</div>
+    </div>
+    <p>课件在这两个函数旁边各写了一个问题：<b>「Same as <code>(float) u</code>?」」「Same as <code>(unsigned) f</code>?」</b>—— 答案都是<b>否</b>。下面的工具让你亲手看出差别：</p>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：union 重解释 vs 强制类型转换</span>
+        <label class="fld">输入 <input type="text" id="bfIn" value="5" size="14" spellcheck="false"></label>
+        <div class="seg" id="bfSeg">
+          <button class="on" data-k="u">按 unsigned u</button>
+          <button data-k="f">按 float f</button>
+        </div>
+        <button class="p" id="bfGo">计算</button>
+        <button class="sm" data-bf="k=u;v=5">u = 5</button>
+        <button class="sm" data-bf="k=u;v=0x3f800000">u = 0x3f800000</button>
+        <button class="sm" data-bf="k=f;v=3.14">f = 3.14</button>
+        <button class="sm" data-bf="k=f;v=-2.5">f = −2.5</button>
+      </div>
+      <div id="bfOut"></div>
+    </div>
+
+    <div class="box"><div class="t">为什么「不一样」——一句话说透</div>
+      <b>强制类型转换把数值换算成另一个值</b>（5 变 5.0，3.14 变 3）；<b>union 只是换一副眼镜重读同一位模式</b>（5 这个整数位模式当 float 读是 7 × 10<sup>−45</sup>）。课件第 11 页把 union 的这个用法叫做「<b>绕过类型系统</b>（a way to circumvent the type system）」—— 它合法、有用，但语义和转换完全不同。
+    </div>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：两道判断题</span>
+        <button class="sm" id="uzReset">重来</button>
+      </div>
+      <div id="uzOut"></div>
+    </div>
+  </section>
+
+  <!-- ================= 2 ================= -->
+  <section id="s2">
+    <h2>2. 字节序：同一串字节，两种读法<span class="srcref">原第 5–10 页</span></h2>
+    <p class="lede">short / int / long 在内存里是 2 / 4 / 8 个连续字节 —— 那么<b>哪一头是最高位字节</b>？这个看似无聊的问题，是跨机器交换二进制数据时最经典的坑。</p>
+
+    <h3>2.1 大端与小端<span class="srcref">原第 5 页</span></h3>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>阵营</th><th>规则</th><th>代表</th></tr>
+      <tr><td><b>大端（Big Endian）</b></td><td><b>最高位字节（MSB）放在最低地址</b></td><td>Sparc、Internet（网络字节序）</td></tr>
+      <tr><td><b>小端（Little Endian）</b></td><td><b>最低位字节（LSB）放在最低地址</b></td><td>Intel x86、ARM Android 与 iOS</td></tr>
+      <tr><td><b>双端（Bi-Endian）</b></td><td>可配置成两种中任意一种</td><td>ARM</td></tr>
+    </table></div>
+    <p>课件的原文提醒了两件事：多字节数据在两台字节序不同的机器之间<b>直接传二进制</b>会读反；以及小端阵营里除了 x86，还有今天最常见的 ARM 手机。</p>
+
+    <h3>2.2 课件的测试用 union<span class="srcref">原第 6–7 页</span></h3>
+    <p>课件定义了一个「四合一」union，让 8 个字节同时拥有四种读法，再把 <code>0xf0 … 0xf7</code> 依次写进字节数组：</p>
+    <div class="formula" style="text-align:left">
+      <div>union {</div>
+      <div>&nbsp;&nbsp;unsigned char c[8];&nbsp;&nbsp;&nbsp;&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)">/* 8 × 1 字节 */</span></div>
+      <div>&nbsp;&nbsp;unsigned short s[4];&nbsp;&nbsp;&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)">/* 4 × 2 字节 */</span></div>
+      <div>&nbsp;&nbsp;unsigned int i[2];&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)">/* 2 × 4 字节 */</span></div>
+      <div>&nbsp;&nbsp;unsigned long l[1];&nbsp;&nbsp;&nbsp;&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)">/* 1 × 4 或 8 字节 */</span></div>
+      <div>} dw;</div>
+      <div></div>
+      <div>int j;</div>
+      <div>for (j = 0; j &lt; 8; j++)</div>
+      <div>&nbsp;&nbsp;dw.c[j] = 0xf0 + j;</div>
+    </div>
+    <p>因为四个成员重叠在同一块内存上，<b>打印 s[ ]、i[ ]、l[ ] 就等于用不同宽度去读同一串字节</b> —— 读出来的结果完全由字节序和 long 的宽度决定。</p>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：dw union 字节序模拟器 —— 选一台机器，看打印结果</span>
+        <label class="fld">8 字节（hex） <input type="text" id="boIn" value="f0f1f2f3f4f5f6f7" size="19" spellcheck="false"></label>
+        <div class="seg" id="boSeg">
+          <button class="on" data-m="x86-64">x86-64</button>
+          <button data-m="ia32">IA32</button>
+          <button data-m="sun">Sun</button>
+        </div>
+        <button class="sm" data-bo="f0f1f2f3f4f5f6f7">课件例 f0…f7</button>
+        <button class="sm" data-bo="0102030405060708">01…08</button>
+        <button class="sm" data-bo="0000000000000001">…0001</button>
+      </div>
+      <div id="boOut"></div>
+    </div>
+
+    <div class="box ok"><div class="t">三台机器、三种输出，全部现算</div>
+      上面的四行输出与课件第 8、9、10 页逐字对应：<b>x86-64 与 IA32</b> 是小端（<code>s[0] == 0xf1f0</code>，低字节在前），<b>Sun</b> 是大端（<code>s[0] == 0xf0f1</code>）；而 <code>Long 0</code> 在 IA32 与 Sun 上只有 4 字节宽（<code>long</code> 是 32 位），在 x86-64 上是 8 字节 —— 所以同一份代码在三台机器上打出三种「Long」。改上面的字节，一切随之重算。
+    </div>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：两道判断题</span>
+        <button class="sm" id="bzReset">重来</button>
+      </div>
+      <div id="bzOut"></div>
+    </div>
+  </section>
+
+  <!-- ================= 3 ================= -->
+  <section id="s3">
+    <h2>3. x86-64 Linux 内存布局<span class="srcref">原第 12–16 页</span></h2>
+    <p class="lede">从这一节起视角拉高：一个进程的虚拟地址空间长什么样？课件用三页搭出骨架，再用两页实测地址填上肉。<b>后面所有溢出攻击，都发生在「栈」这个区域里。</b></p>
+
+    <h3>3.1 四个区域<span class="srcref">原第 13 页</span></h3>
+    <p>x86-64 Linux 的虚拟地址空间（示意图，非按比例 —— 课件原话「not drawn to scale」）自高向低分四大块：</p>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>区域</th><th>内容</th><th>关键事实</th></tr>
+      <tr><td><b>栈 Stack</b></td><td>运行时栈，如局部变量</td><td><b>8MB 上限</b>；栈顶在 <code>%rsp</code>；最高到 <code>0x00007FFFFFFFFFFF</code> 附近（约 2<sup>47</sup>），<b>起始位置随机化</b></td></tr>
+      <tr><td><b>堆 Heap</b></td><td>按需动态分配</td><td>调用 <code>malloc()</code> / <code>calloc()</code> / <code>new</code> 时分配</td></tr>
+      <tr><td><b>数据 Data</b></td><td>静态分配的数据</td><td>全局变量、<code>static</code> 变量、字符串常量</td></tr>
+      <tr><td><b>代码 Text<br>+ 共享库</b></td><td>可执行机器指令、只读数据</td><td>从 <code>0x400000</code> 附近开始；共享库的位置<b>随机化</b></td></tr>
+    </table></div>
+    <div class="box warn"><div class="t">两处「randomized」现在只需记住位置</div>
+      课件在这张图上给<b>栈</b>和<b>共享库</b>标了 randomized（随机化）。为什么随机、随机能防什么，第 8 节「系统级防御」会正面回答 —— 这里先把「栈顶地址每次运行都不同」这个事实记下来。
+    </div>
+
+    <h3>3.2 一个程序，各归其位<span class="srcref">原第 14 页</span></h3>
+    <div class="formula" style="text-align:left">
+      <div>char big_array[1L&lt;&lt;24];&nbsp;&nbsp;&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)">/*&nbsp;16 MB&nbsp;*/</span></div>
+      <div>char huge_array[1L&lt;&lt;31];&nbsp;&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)">/*&nbsp;&nbsp;2 GB&nbsp;*/</span></div>
+      <div>int global = 0;</div>
+      <div>int useless() { return 0; }</div>
+      <div>int main ()</div>
+      <div>{</div>
+      <div>&nbsp;&nbsp;void *phuge1, *psmall2, *phuge3, *psmall4;</div>
+      <div>&nbsp;&nbsp;int local = 0;</div>
+      <div>&nbsp;&nbsp;phuge1 = malloc(1L &lt;&lt; 28);&nbsp;&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)">/*&nbsp;256 MB&nbsp;*/</span></div>
+      <div>&nbsp;&nbsp;psmall2 = malloc(1L &lt;&lt; 8);&nbsp;&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)">/*&nbsp;256&nbsp;&nbsp;B&nbsp;*/</span></div>
+      <div>&nbsp;&nbsp;phuge3 = malloc(1L &lt;&lt; 32);&nbsp;&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)">/*&nbsp;&nbsp;&nbsp;4 GB&nbsp;*/</span></div>
+      <div>&nbsp;&nbsp;psmall4 = malloc(1L &lt;&lt; 8);&nbsp;&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)">/*&nbsp;256&nbsp;&nbsp;B&nbsp;*/</span></div>
+      <div>&nbsp;&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)">/* Some print statements ... */</span></div>
+      <div>}</div>
+    </div>
+    <p>「Where does everything go?」—— 答案由<b>分配方式</b>决定，而不是由大小决定：<code>big_array</code>、<code>huge_array</code>、<code>global</code> 是静态分配 → <b>数据区</b>；<code>local</code> 在函数里 → <b>栈</b>；四个 <code>malloc</code> → <b>堆</b>；<code>main</code> / <code>useless</code> 的机器指令 → <b>代码区</b>。</p>
+
+    <h3>3.3 实测地址：把 9 个地址分拣归位<span class="srcref">原第 15 页</span></h3>
+    <p>课件在这一页给出了一次真实运行的 9 个地址（「Exact values can vary」—— 具体值每次会变，但<b>相对位置</b>不变）。先自己给每个地址挑区域，再提交判分：</p>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：地址分拣 —— 每个地址属于哪个区域？</span>
+        <button class="p" id="adGo">判分</button>
+        <button class="sm" id="adReset">重来</button>
+      </div>
+      <div id="adOut"></div>
+    </div>
+
+    <p>判分之后，值得再盯一眼<b>地址之间的距离</b> —— 它们每一处都有解释：</p>
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：课件 9 个地址的两两距离（现算）</span>
+      </div>
+      <div id="mlOut"></div>
+    </div>
+    <p style="font-size:14.5px;color:var(--muted)">注：「块管理开销 16 字节」「mmap 向低地址生长」是对 glibc 分配器行为的解释，课件本身没有展开 —— 距离本身是从课件地址现算出来的事实，解释已明确标注为推断。</p>
+
+    <h3>3.4 Runaway Stack：栈真的会用完<span class="srcref">原第 16 页</span></h3>
+    <p>函数的局部数据住在栈帧里；<b>递归会让栈帧层层嵌套</b>。课件给了一个「失控的栈」：</p>
+    <div class="formula" style="text-align:left">
+      <div>int recurse(int x) {</div>
+      <div>&nbsp;&nbsp;int a[1&lt;&lt;15];&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)">// 4 × 2<sup>15</sup> = 128 KiB</span></div>
+      <div>&nbsp;&nbsp;printf("x = %d. a at %p\n", x, a);</div>
+      <div>&nbsp;&nbsp;a[0] = (1&lt;&lt;14)-1;</div>
+      <div>&nbsp;&nbsp;a[a[0]] = x-1;</div>
+      <div>&nbsp;&nbsp;if (a[a[0]] == 0)</div>
+      <div>&nbsp;&nbsp;&nbsp;&nbsp;return -1;</div>
+      <div>&nbsp;&nbsp;return recurse(a[a[0]]) - 1;</div>
+      <div>}</div>
+    </div>
+    <p>每一帧 128 KiB，从 <code>x = 67</code> 一路递减。课件贴出的运行结果打印到 <code>x = 2</code> 就 <code>Segmentation fault (core dumped)</code> —— 也就是递归约 66 层后栈被吃光。</p>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：栈能塞下多少帧？</span>
+        <label class="fld">栈上限 MB <input type="text" id="rsLim" value="8" size="6" spellcheck="false"></label>
+        <label class="fld">每帧 KiB <input type="text" id="rsFrm" value="128" size="8" spellcheck="false"></label>
+        <button class="p" id="rsGo">估算</button>
+        <button class="sm" data-rs="lim=8;frm=128">课件例</button>
+        <button class="sm" data-rs="lim=8;frm=1">小帧 1 KiB</button>
+        <button class="sm" data-rs="lim=8;frm=1024">大帧 1 MB</button>
+      </div>
+      <div id="rsOut"></div>
+    </div>
+
+    <div class="box"><div class="t">估算值 64 与课件实测 66 差在哪</div>
+      名义上限 8 MB ÷ 128 KiB = <b>64 帧</b>；课件实测打印了 <b>66 行</b>才崩。两个数是同一量级 —— 实际帧距是从课件自己贴出的两个地址算出来的：<code>0x7ffd18aba930 − 0x7ffd18a9a920 = 0x20010</code> = 131088 字节（128 KiB + 16 字节杂项）。上限按页取整、main 的帧、以及内核对栈增长的记账方式都会带来几帧的出入。<b>别把这组数当成精确预言，把「栈会用完、崩在深处」当成结论。</b>
+    </div>
+  </section>
+
+  <!-- ================= 4 ================= -->
+  <section id="s4">
+    <h2>4. 越界引用：一道能精确预言的 bug<span class="srcref">原第 18–19 页</span></h2>
+    <p class="lede">缓冲区溢出的危害听起来抽象，课件先给一道「小题」：<b>数组越界写，到底写到了谁的身上？</b>这道题的每个结果都能在位级重演 —— 也为下一节的栈溢出做好了铺垫。</p>
+
+    <h3>4.1 代码与现象<span class="srcref">原第 18 页</span></h3>
+    <div class="formula" style="text-align:left">
+      <div>typedef struct {</div>
+      <div>&nbsp;&nbsp;int a[2];</div>
+      <div>&nbsp;&nbsp;double d;</div>
+      <div>} struct_t;</div>
+      <div></div>
+      <div>double fun(int i) {</div>
+      <div>&nbsp;&nbsp;volatile struct_t s;</div>
+      <div>&nbsp;&nbsp;s.d = 3.14;</div>
+      <div>&nbsp;&nbsp;s.a[i] = 1073741824;&nbsp;&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)">/* Possibly out of bounds&nbsp;*/</span></div>
+      <div>&nbsp;&nbsp;return s.d;</div>
+      <div>}</div>
+    </div>
+    <p><code>a</code> 只有 2 个 int，却按 <code>i</code> 随便写。课件在两页里给了<b>两台机器</b>的实测结果：</p>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>调用</th><th>第 18 页实测</th><th>第 19 页实测</th><th>为什么</th></tr>
+      <tr><td class="mono">fun(0)</td><td class="mono">3.1400000000</td><td class="mono">3.1400000000</td><td><code>a[0]</code> 写在自己身上，没碰到 <code>d</code></td></tr>
+      <tr><td class="mono">fun(1)</td><td class="mono">3.1400000000</td><td class="mono">3.1400000000</td><td><code>a[1]</code> 同样没碰到 <code>d</code></td></tr>
+      <tr><td class="mono">fun(2)</td><td class="mono">3.1399998665</td><td class="mono">3.1399998665</td><td>写到了 <code>d</code> 的<b>低 4 字节</b> —— 可精确计算</td></tr>
+      <tr><td class="mono">fun(3)</td><td class="mono">2.0000006104</td><td class="mono">2.0000006104</td><td>写到了 <code>d</code> 的<b>高 4 字节</b> —— 可精确计算</td></tr>
+      <tr><td class="mono">fun(4)</td><td class="mono">—（未列）</td><td class="mono">Segmentation fault</td><td rowspan="3">落在结构体<b>之外</b>，写到什么取决于栈上还有谁 —— 课件原话：<b>Result is system specific（结果与系统相关）</b></td></tr>
+      <tr><td class="mono">fun(6)</td><td class="mono">Stack smashing detected</td><td class="mono">—（未列）</td></tr>
+      <tr><td class="mono">fun(8)</td><td class="mono">Segmentation fault</td><td class="mono">3.1400000000</td></tr>
+    </table></div>
+    <div class="box"><div class="t">两页结果不同，不是课件自相矛盾</div>
+      <code>fun(4)</code> 以后写的是<b>结构体外面的未知地带</b> —— 可能是别的局部变量、保存的寄存器、也可能碰上栈金丝雀（于是第 18 页的机器报「stack smashing detected」）。第 19 页那台机器上 <code>fun(8)</code> 碰巧只毁掉了不相干的数据，<code>d</code> 完好，于是照样返回 3.14。<b>越界写从来不保证崩，这正是它可怕的地方。</b>
+    </div>
+
+    <h3>4.2 字节级解释：写到了 <code>d</code> 的哪四个字节<span class="srcref">原第 19 页</span></h3>
+    <p><code>struct_t</code> 的布局：<code>a[0]</code> 在偏移 0–3、<code>a[1]</code> 在 4–7、<code>d</code> 在 8–15。所以 <code>s.a[i]</code> 写的是偏移 <code>4i</code> 处的 4 个字节 —— <code>i = 2</code> 落在 <code>d</code> 的低 4 字节，<code>i = 3</code> 落在高 4 字节。写入的值 1073741824 = 2<sup>30</sup> = <code>0x40000000</code>。3.14 的双精度位模式是 <code>0x40091EB851EB851F</code>，于是：</p>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>调用</th><th>d 的位模式（写入前 → 写入后）</th><th>写入后的值</th></tr>
+      <tr><td class="mono">fun(2)</td><td class="mono">40091EB8<b>51EB851F</b> → 40091EB8<b>40000000</b></td><td class="mono">3.1399998665</td></tr>
+      <tr><td class="mono">fun(3)</td><td class="mono"><b>40091EB8</b>51EB851F → <b>40000000</b>51EB851F</td><td class="mono">2.0000006104</td></tr>
+    </table></div>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：fun(i) 位级解释器 —— 选中 i，看这 4 字节落在哪、d 变成多少</span>
+        <label class="fld">i
+          <select id="fiI">
+            <option>0</option><option>1</option><option selected>2</option><option>3</option>
+            <option>4</option><option>5</option><option>6</option><option>7</option><option>8</option>
+          </select>
+        </label>
+        <button class="sm" data-fi="2">课件例 fun(2)</button>
+        <button class="sm" data-fi="3">fun(3)</button>
+      </div>
+      <div id="fiOut"></div>
+    </div>
+
+    <div class="box ok"><div class="t">这组数字全部可以现算</div>
+      本节的 3.1399998665 与 2.0000006104 都不是抄来的 —— 页面用 <code>Float64Array</code>/<code>Uint32Array</code> 现场 「写 dword → 重读 double」，并与 C 参考实现在几十万个随机双精度数上比对过（0 项不一致）。换句话说：<b>你可以把 3.14 换成任何数自己玩</b>，结论照样成立。
+    </div>
+
+    <div class="box bad"><div class="t">本节和下一节的连接</div>
+      <code>fun(i)</code> 越的是<b>数据</b>的界，毁的是<b>数据</b>（一个 double 的值）。下一节把同样的越界搬到<b>栈</b>上 —— 那里住着比数据贵重得多的东西：<b>函数的返回地址</b>。写坏一个 double 只是数值错了；写坏返回地址，程序就被劫持了。
+    </div>
+  </section>
+
+  <!-- ================= 5 ================= -->
+  <section id="s5">
+    <h2>5. 缓冲区溢出：漏洞从哪来<span class="srcref">原第 20–23 页</span></h2>
+    <p class="lede">「缓冲区溢出（buffer overflow）」= 写数组时<b>超出了分配给它的内存</b>。课件称它是<b>安全漏洞的第一大技术成因</b>（第一大综合成因是社会工程 / 用户无知），最常见的形态是<b>栈上的字符数组没有检查长度</b> —— 有时被称为 stack smashing。</p>
+
+    <h3>5.1 罪魁祸首：<code>gets()</code><span class="srcref">原第 21 页</span></h3>
+    <div class="formula" style="text-align:left">
+      <div><span style="font-family:var(--font-sans);color:var(--muted)">/* Get string from stdin */</span></div>
+      <div>char *gets(char *dest)</div>
+      <div>{</div>
+      <div>&nbsp;&nbsp;int c = getchar();</div>
+      <div>&nbsp;&nbsp;char *p = dest;</div>
+      <div>&nbsp;&nbsp;while (c != EOF &amp;&amp; c != '\n') {</div>
+      <div>&nbsp;&nbsp;&nbsp;&nbsp;*p++ = c;</div>
+      <div>&nbsp;&nbsp;&nbsp;&nbsp;c = getchar();</div>
+      <div>&nbsp;&nbsp;}</div>
+      <div>&nbsp;&nbsp;*p = '\0';</div>
+      <div>&nbsp;&nbsp;return dest;</div>
+      <div>}</div>
+    </div>
+    <p>问题就写在它的身体里：<b>没有任何办法限制读入的字符数</b> —— 用户提供多少，它就写多少。同类问题的还有：<code>strcpy</code>、<code>strcat</code>（拷贝任意长度的字符串），以及带 <code>%s</code> 转换说明的 <code>scanf</code> / <code>fscanf</code> / <code>sscanf</code>。</p>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：gets 会写多少字节？（模拟其逐字节写入 + '\0'）</span>
+        <label class="fld">输入行 <input type="text" id="gsIn" value="hello" size="20" spellcheck="false"></label>
+        <button class="p" id="gsGo">喂给 gets</button>
+        <button class="sm" data-gs="hello">hello</button>
+        <button class="sm" data-gs="01234567890123456789012">课件例 23 字符</button>
+        <button class="sm" data-gs="012345678901234567890123">课件例 24 字符</button>
+      </div>
+      <div id="gsOut"></div>
+    </div>
+
+    <h3>5.2 受害者：<code>echo()</code><span class="srcref">原第 22 页</span></h3>
+    <div class="formula" style="text-align:left">
+      <div><span style="font-family:var(--font-sans);color:var(--muted)">/* Echo Line */</span></div>
+      <div>void echo()</div>
+      <div>{</div>
+      <div>&nbsp;&nbsp;char buf[4];&nbsp;&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)">/* Way too small! */</span>&nbsp;&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)">← btw, how big is big enough?</span></div>
+      <div>&nbsp;&nbsp;gets(buf);</div>
+      <div>&nbsp;&nbsp;puts(buf);</div>
+      <div>}</div>
+      <div>void call_echo() {</div>
+      <div>&nbsp;&nbsp;echo();</div>
+      <div>}</div>
+    </div>
+    <p>课件的真实运行（<code>./bufdemo-nsp</code>）：</p>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>输入</th><th>结果</th></tr>
+      <tr><td class="mono">01234567890123456789012<span class="en">（23 字符）</span></td><td>正常回显，程序安然无恙</td></tr>
+      <tr><td class="mono">012345678901234567890123<span class="en">（24 字符）</span></td><td>回显之后 <b>Segmentation Fault</b></td></tr>
+    </table></div>
+    <p style="font-size:14.5px;color:var(--muted)">只多敲了一个字符，为什么就崩？答案在栈上 —— 第 6 节逐字节拆给你看。</p>
+
+    <h3>5.3 反汇编：栈帧有多大<span class="srcref">原第 23 页</span></h3>
+    <div class="formula" style="text-align:left">
+      <div>00000000004006cf &lt;echo&gt;:</div>
+      <div>&nbsp;&nbsp;4006cf:&nbsp;&nbsp;48 83 ec 18&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;sub&nbsp;&nbsp;&nbsp;$0x18,%rsp&nbsp;&nbsp;&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)"># 帧 = 24 字节</span></div>
+      <div>&nbsp;&nbsp;4006d3:&nbsp;&nbsp;48 89 e7&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;mov&nbsp;&nbsp;&nbsp;%rsp,%rdi&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)"># buf = %rsp</span></div>
+      <div>&nbsp;&nbsp;4006d6:&nbsp;&nbsp;e8 a5 ff ff ff&nbsp;&nbsp;&nbsp;&nbsp;callq&nbsp;400680 &lt;gets&gt;</div>
+      <div>&nbsp;&nbsp;4006db:&nbsp;&nbsp;48 89 e7&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;mov&nbsp;&nbsp;&nbsp;%rsp,%rdi</div>
+      <div>&nbsp;&nbsp;4006de:&nbsp;&nbsp;e8 3d fe ff ff&nbsp;&nbsp;&nbsp;&nbsp;callq&nbsp;400520 &lt;puts@plt&gt;</div>
+      <div>&nbsp;&nbsp;4006e3:&nbsp;&nbsp;48 83 c4 18&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;add&nbsp;&nbsp;&nbsp;$0x18,%rsp</div>
+      <div>&nbsp;&nbsp;4006e7:&nbsp;&nbsp;c3&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;retq</div>
+      <div>call_echo:</div>
+      <div>&nbsp;&nbsp;4006e8:&nbsp;&nbsp;48 83 ec 08&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;sub&nbsp;&nbsp;&nbsp;$0x8,%rsp</div>
+      <div>&nbsp;&nbsp;4006ec:&nbsp;&nbsp;b8 00 00 00 00&nbsp;&nbsp;&nbsp;&nbsp;mov&nbsp;&nbsp;&nbsp;$0x0,%eax</div>
+      <div>&nbsp;&nbsp;4006f1:&nbsp;&nbsp;e8 d9 ff ff ff&nbsp;&nbsp;&nbsp;&nbsp;callq&nbsp;4006cf &lt;echo&gt;</div>
+      <div>&nbsp;&nbsp;4006f6:&nbsp;&nbsp;48 83 c4 08&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;add&nbsp;&nbsp;&nbsp;$0x8,%rsp</div>
+      <div>&nbsp;&nbsp;4006fa:&nbsp;&nbsp;c3&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;retq</div>
+    </div>
+    <div class="box"><div class="t">从这 14 行里要读出两件事</div>
+      <ul style="margin:6px 0 0">
+        <li><code>echo</code> 的帧只有 24 字节（<code>sub $0x18</code>），<code>buf</code> 就放在 <code>%rsp</code> 处 —— 4 字节的数组后面跟着 20 字节的空隙，再上面就是 <code>echo</code> 的<b>返回地址</b>。</li>
+        <li><code>call_echo</code> 里 <code>callq echo</code> 的下一条指令在 <code>0x4006f6</code> —— 这就是压进栈里的返回地址。<b>记住 40 06 f6 这四个字节，下一节主角登场。</b></li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ================= 6 ================= -->
+  <section id="s6">
+    <h2>6. echo 之死：字节级全过程<span class="srcref">原第 24–27 页</span></h2>
+    <p class="lede">这一节把课件四页的栈图合成一个可以动手的工具：你敲的每一个字符，<b>落</b>到栈上哪个字节、有没有碰到返回地址、程序会返回到哪 —— 全部现场算给你看。</p>
+
+    <h3>6.1 溢出前的栈<span class="srcref">原第 24–25 页</span></h3>
+    <p><code>call_echo</code> 执行 <code>callq echo</code> 后，栈上（自低向高）依次是：<b>echo 的 24 字节帧</b>（<code>buf[4]</code> 占 0–3，其后 20 字节空隙）与<b>返回地址 8 字节</b>，值为 <code>0x4006f6</code>，按小端存放成 <code>f6 06 40 00 00 00 00 00</code>……准确说，从低到高是 <code>f6 06 40</code> 加五个 <code>00</code>。x86 的小端序意味着：<b>你输入的第 25 个字节，正好砸在返回地址的最低位上</b>。</p>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：echo 栈字节可视化器 —— 输入一行，看它写到哪</span>
+        <label class="fld">输入 <input type="text" id="stIn" value="01234567890123456789012" size="34" spellcheck="false"></label>
+        <button class="p" id="stGo">写入栈</button>
+        <button class="sm" data-st="01234567890123456789012">课件例 1：23 字符</button>
+        <button class="sm" data-st="012345678901234567890123">课件例 2：24 字符</button>
+        <button class="sm" data-st="01234567">8 字符</button>
+        <button class="sm" data-st="01234567890123456789012345678901">32 字符</button>
+      </div>
+      <div id="stOut"></div>
+    </div>
+
+    <h3>6.2 课件两例的逐字节对照<span class="srcref">原第 26–27 页</span></h3>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>输入</th><th>写入字节数</th><th>栈上发生什么</th><th>后果（课件原文）</th></tr>
+      <tr><td class="mono">0123…12<span class="en">（23 字符）</span></td><td class="mono">23 + 1 = 24</td><td>恰好填满 <code>buf</code> + 20 字节空隙，<b>返回地址分毫未动</b></td><td>「Overflowed buffer, <b>but did not corrupt state</b>」—— 溢出了，但没伤到要害</td></tr>
+      <tr><td class="mono">0123…23<span class="en">（24 字符）</span></td><td class="mono">24 + 1 = 25</td><td>第 25 字节是 <code>'\0'</code> = <code>0x00</code>，砸在返回地址最低字节：<code>40 06 f6</code> → <code>40 06 00</code></td><td>「Program “returned” to <b>0x0400600</b>, and then crashed」—— Segmentation fault</td></tr>
+    </table></div>
+    <div class="box ok"><div class="t">在上面的工具里自己验证</div>
+      把输入换成 24 个字符，注意返回地址那一行：<code>0x4006f6</code> 变成了 <code>0x400600</code> —— <code>ret</code> 会把 <code>%rip</code> 拨到 0x400600，那里不是合法代码，于是段错误。<b>再换 25、26 个字符试试</b>：返回地址的更多字节被改写，「程序」会返回到完全由你输入决定的地方 —— 这正是下一节攻击的起点。
+    </div>
+
+    <div class="box bad"><div class="t">为什么小端序是攻击者的帮凶</div>
+      返回地址 <code>0x4006f6</code> 在栈上从低到高是 <code>f6 06 40 00 …</code>。你从 <code>buf</code> 一路<b>向上</b>写，先碰到的是地址的<b>最低位字节</b>。这意味着：想精确改写返回地址（比如改成 <code>0x4006fb</code>），只需在合适的位置依次写入 <code>fb 06 40 00 00 00 00 00</code> —— 下一节就是这么干的。
+    </div>
+  </section>
+
+  <!-- ================= 7 ================= -->
+  <section id="s7">
+    <h2>7. 攻击：栈破坏、代码注入与一段历史<span class="srcref">原第 28–39 页</span></h2>
+    <p class="lede">上一节结尾看到了「返回地址随输入而变」。攻击者只多做两步：<b>把返回地址改成一个有用心机的值</b>，或 <b>把可执行代码一并写进栈里</b>。这一节先看这两招，再回头看它们掀起过的真实风浪。</p>
+
+    <h3>7.1 栈破坏攻击（Stack Smashing）<span class="srcref">原第 28 页</span></h3>
+    <p>课件用 P / Q / S 三个函数讲清原理：<code>P</code> 调用 <code>Q</code>，<code>Q</code> 里有个 <code>char buf[64]</code> 加 <code>gets(buf)</code>。<code>gets</code> 写入的数据越过 <code>buf</code>，把 <code>Q</code> 的返回地址 A 覆盖成另一个函数 <code>S</code> 的地址。于是：</p>
+    <div class="box bad"><div class="t">一行结论</div>
+      <code>Q</code> 执行 <code>ret</code> 时，跳走的不是回 <code>P</code>，而是跳到 <b>S</b> —— 一段攻击者挑选的「意想不到的代码」。
+    </div>
+
+    <h3>7.2 构造攻击串<span class="srcref">原第 29–31 页</span></h3>
+    <p>回到 <code>echo</code>。课件先定义一个无害的靶子：</p>
+    <div class="formula" style="text-align:left">
+      <div>void smash() {</div>
+      <div>&nbsp;&nbsp;printf("I've been smashed!\n");</div>
+      <div>&nbsp;&nbsp;exit(0);</div>
+      <div>}</div>
+      <div></div>
+      <div>00000000004006fb &lt;smash&gt;:</div>
+      <div>&nbsp;&nbsp;4006fb:&nbsp;&nbsp;&nbsp;48 83 ec 08</div>
+    </div>
+    <p>攻击串 = <b>24 字节填充</b>（把 <code>buf</code> 与空隙填满）+ <b>8 字节目标地址</b> <code>0x4006fb</code>，按小端写成 <code>fb 06 40 00 00 00 00 00</code>：</p>
+    <div class="formula" style="text-align:left">
+      <div>30 31 32 33 34 35 36 37 38 39 30 31 32 33 34 35 36 37 38 39 30 31 32 33&nbsp;&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)">← 24 字节填充</span></div>
+      <div>fb 06 40 00 00 00 00 00&nbsp;&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)">← 新返回地址（小端）</span></div>
+    </div>
+    <p>课件第 31 页演示了投放方式：把十六进制写进 <code>smash-hex.txt</code>，用 <code>hexify</code> 转成原始字节（其中一些字节不可打印），再用管道喂给漏洞程序：</p>
+    <div class="formula" style="text-align:left">
+      <div>linux&gt; cat smash-hex.txt | ./hexify | ./bufdemo-nsp</div>
+      <div>Type a string:012345678901234567890123?@</div>
+      <div><b>I've been smashed!</b></div>
+    </div>
+    <div class="box"><div class="t">注意：p29 与 p31 的地址不一样</div>
+      第 29 页的图里目标写成 <code>fb 06 40 00</code>（0x4006fb），第 31 页的实际运行却用了 <code>c8 06 40 00</code>（0x4006c8）。这不是课件抄错 —— <b>两次构建里 <code>smash</code> 的地址不同</b>，攻击串必须按当次二进制重算。下面的构造器两种都备了。
+    </div>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：攻击串构造器 —— 选定目标地址，看字节怎么摆上栈</span>
+        <label class="fld">填充（≤24 字节） <input type="text" id="akFill" value="01234567890123456789012" size="26" spellcheck="false"></label>
+        <label class="fld">目标地址 <input type="text" id="akTgt" value="0x4006fb" size="12" spellcheck="false"></label>
+        <button class="p" id="akGo">构造</button>
+        <button class="sm" data-ak="t=0x4006fb">0x4006fb（p29）</button>
+        <button class="sm" data-ak="t=0x4006c8">0x4006c8（p31）</button>
+      </div>
+      <div id="akOut"></div>
+    </div>
+
+    <h3>7.3 更狠的一招：代码注入<span class="srcref">原第 32–33 页</span></h3>
+    <p>跳到现成的 <code>smash</code> 只是开胃菜。真正的代码注入攻击把<b>可执行代码的字节表示</b>直接放进输入串：</p>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>步骤</th><th>动作</th></tr>
+      <tr><td class="mono">1</td><td>输入串里含有<b>可执行代码</b>（exploit code，图中 B 处）</td></tr>
+      <tr><td class="mono">2</td><td>用 <code>gets</code> 把它连同<b>缓冲区地址 B</b> 一起写上栈，覆盖返回地址 A</td></tr>
+      <tr><td class="mono">3</td><td><code>Q</code> 执行 <code>ret</code> → <code>%rip</code> 被拨到 B → <b>跳进缓冲区里执行攻击代码</b></td></tr>
+    </table></div>
+    <div class="steps">
+      <div class="step on"><div class="h">ret 之前</div><div class="m">栈上：[exploit code B][pad][返回地址 ← 已被改成 B]</div><div class="e">gets 已经把代码和假返回地址都写好了。</div></div>
+      <div class="step on"><div class="h">Q 执行 ret</div><div class="m">%rip ← Mem[%rsp] = B；%rsp 上移 8</div><div class="e">ret 只做这两件事 —— 它不检查目标是不是合法代码。</div></div>
+      <div class="step on"><div class="h">CPU 在缓冲区里取指</div><div class="m">%rip = B → 执行攻击代码</div><div class="e">传统 x86 对「可读的内存」一律允许执行 —— 栈上的数据自然也能当代码跑。</div></div>
+    </div>
+    <div class="box warn"><div class="t">这一招后来被「封印」了</div>
+      课件第 43 页会讲到：x86-64 给内存分区加上了显式的<b>「执行」权限</b>，栈被标记为不可执行 —— 注入的代码再也不能直接跑。<b>但故事没有结束：第 9 节的 ROP 会展示攻击者如何「不注入一行代码」照样编程。</b>
+    </div>
+
+    <h3>4 字节签名搞垮一场商战：IM War<span class="srcref">原第 36–38 页</span></h3>
+    <p>课件花了三页讲 1999 年的真实商战：7 月微软发布 MSN Messenger，其客户端能连上 AOL 的 AIM 服务器；8 月 AIM 服务器突然「神秘」拒绝 Messenger。随后的拉锯至少有 13 个回合 —— 真相是：</p>
+    <div class="box"><div class="t">AOL 用自己客户端里的缓冲区溢出漏洞反侦察</div>
+      AOL 发现自家 AIM 客户端有个溢出 bug，于是<b>主动利用它</b>：让溢出的攻击代码回传一个 <b>4 字节签名</b>（AIM 客户端内存某处的字节）给服务器。正版客户端能对上签名，微软的客户端对不上 —— 被拦。微软一改代码凑上签名，AOL 就换个签名位置。更有趣的是课件第 38 页那封化名「Phil Bucking」举报 AOL 的邮件 —— 课件原文注明：<b>「It was later determined that this email originated from within Microsoft!」</b>
+    </div>
+
+    <h3>蠕虫与病毒<span class="srcref">原第 34–35、39 页</span></h3>
+    <p>缓冲区溢出横跨几十年的战果（课件第 34 页）：1988 年的原始「Internet 蠕虫」、1999 年的「IM 大战」、2000 年代的 Wii「Twilight hack」…… 其中 1988 年那一场最经典：蠕虫利用 <code>fingerd</code> 服务里的 <code>gets()</code>，把「exploit-code + padding + new-return-address」当参数发过去，在受害机上开出 root shell，几小时内攻陷约 <b>6000</b> 台计算机（约占当时 Internet 的 10%）—— 事件直接催生了设在 CMU 的 <b>CERT</b>。两个名词的严格区分（课件第 39 页）：</p>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>名词</th><th>定义（课件原文）</th></tr>
+      <tr><td><b>蠕虫 Worm</b></td><td>能<b>独立运行</b>，能把<b>完整可用的自身副本</b>传播到其他计算机的程序</td></tr>
+      <tr><td><b>病毒 Virus</b></td><td><b>把自己附加到其他程序上</b>、不能独立运行的代码</td></tr>
+    </table></div>
+    <p>两者的共同点：都被设计成在计算机之间传播并大搞破坏。</p>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：两道判断题</span>
+        <button class="sm" id="wvReset">重来</button>
+      </div>
+      <div id="wvOut"></div>
+    </div>
+  </section>
+
+  <!-- ================= 8 ================= -->
+  <section id="s8">
+    <h2>8. 防御三式<span class="srcref">原第 40–47 页</span></h2>
+    <p class="lede">课件第 40 页把对策收敛成三条路：<b>写代码时避开溢出</b>、<b>系统级保护</b>、<b>让编译器插「栈金丝雀」</b>。三条路各有各的守区，也各有各的盲区。</p>
+
+    <h3>8.1 第一式：从代码上避开<span class="srcref">原第 41 页</span></h3>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>别用</th><th>改用</th><th>理由</th></tr>
+      <tr><td class="mono">gets(buf)</td><td class="mono">fgets(buf, 4, stdin)</td><td><code>fgets</code> 带<b>长度上限</b>，读够 n−1 或遇到换行就停</td></tr>
+      <tr><td class="mono">strcpy</td><td class="mono">strncpy</td><td>同上 —— 拷贝长度有界</td></tr>
+      <tr><td class="mono">scanf("%s", buf)</td><td class="mono">scanf("%3s", buf)</td><td>别用裸 <code>%s</code>；要么用 <code>fgets</code> 读整行，要么用 <code>%ns</code>（n 是合适的整数）</td></tr>
+    </table></div>
+    <div class="formula" style="text-align:left">
+      <div><span style="font-family:var(--font-sans);color:var(--muted)">/* Echo Line */</span></div>
+      <div>void echo()</div>
+      <div>{</div>
+      <div>&nbsp;&nbsp;char buf[4];&nbsp;&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)">/* Way too small! */</span></div>
+      <div>&nbsp;&nbsp;fgets(buf, 4, stdin);&nbsp;&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)">/* 最多读 3 字符 + '\0' */</span></div>
+      <div>&nbsp;&nbsp;puts(buf);</div>
+      <div>}</div>
+    </div>
+
+    <h3>8.2 第二式：系统级保护<span class="srcref">原第 42–43 页</span></h3>
+    <p><b>（a）栈随机化（randomized stack offsets）。</b>程序启动时先在栈上分配一块<b>随机大小</b>的空间，把整个程序的栈地址整体推移 —— 攻击者猜不到注入代码或返回地址该指向哪。课件连测 5 次同一个 <code>local</code> 变量：</p>
+    <div class="formula" style="text-align:left">
+      <div>0x7ffe4d3be87c&nbsp;&nbsp;0x7fff75a4f9fc&nbsp;&nbsp;0x7ffeadb7c80c&nbsp;&nbsp;0x7ffeaea2fdac&nbsp;&nbsp;0x7ffcd452017c</div>
+    </div>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：栈随机化有多「散」？（含示意模拟）</span>
+        <button class="sm" id="asGo">再抽 5 次（示意模拟）</button>
+      </div>
+      <div id="asOut"></div>
+    </div>
+
+    <p><b>（b）不可执行代码段（nonexecutable code segments）。</b>传统 x86 的内存只有「可读 / 可写」标记 —— <b>凡是能读的都能执行</b>，栈上的注入代码照跑不误。x86-64 加入显式的<b>「执行」权限</b>：栈被标记为不可执行，课件原话是 ——</p>
+    <div class="box ok"><div class="t">「Any attempt to execute this code will fail」</div>
+      注入式攻击（7.3 节）就此失效 —— 这直接把攻击者逼向第 9 节的 ROP。
+    </div>
+
+    <h3>8.3 第三式：栈金丝雀（stack canaries）<span class="srcref">原第 44–47 页</span></h3>
+    <p><b>思路</b>：在缓冲区正上方放一个特殊的值（「金丝雀」—— 矿工带金丝雀下井探瓦斯的老典故），函数返回前<b>先检查它有没有被改</b>。GCC 的开关是 <code>-fstack-protector</code>，如今<b>默认开启</b>。课件实测：</p>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>运行</th><th>输入</th><th>结果</th></tr>
+      <tr><td class="mono">./bufdemo-sp</td><td class="mono">0123456<span class="en">（7 字符）</span></td><td>正常回显</td></tr>
+      <tr><td class="mono">./bufdemo-sp</td><td class="mono">01234567<span class="en">（8 字符）</span></td><td><b>*** stack smashing detected ***</b></td></tr>
+    </table></div>
+
+    <p><b>设置金丝雀</b>（<code>gets</code> 之前）与<b>检查金丝雀</b>（返回之前）的汇编 —— 金丝雀取自 <code>%fs:0x28</code>，那是<b>每次运行随机生成、只读段</b>里的值（课件第 45 页的 Aside）：</p>
+    <div class="formula" style="text-align:left">
+      <div><span style="font-family:var(--font-sans);color:var(--muted)"># 设置：把金丝雀放上栈，再抹掉寄存器里的副本</span></div>
+      <div>movq %fs:40, %rax&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)"># Get canary</span></div>
+      <div>movq %rax, 8(%rsp)&nbsp;&nbsp;&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)"># Place on stack</span></div>
+      <div>xorl %eax, %eax&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)"># Erase canary</span></div>
+      <div></div>
+      <div><span style="font-family:var(--font-sans);color:var(--muted)"># 检查：栈上的金丝雀还和 %fs:40 一致吗</span></div>
+      <div>movq 8(%rsp), %rax&nbsp;&nbsp;&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)"># Retrieve from stack</span></div>
+      <div>xorq %fs:40, %rax&nbsp;&nbsp;&nbsp;&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)"># Compare to canary</span></div>
+      <div>je&nbsp;&nbsp;&nbsp;.L6&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)"># If same, OK</span></div>
+      <div>call&nbsp;__stack_chk_fail&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)"># FAIL</span></div>
+    </div>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：canary 模拟器 —— 输入一行，看金丝雀死没死</span>
+        <label class="fld">输入 <input type="text" id="cnIn" value="0123456" size="26" spellcheck="false"></label>
+        <button class="p" id="cnGo">过一遍检查</button>
+        <button class="sm" data-cn="0123456">课件例：7 字符</button>
+        <button class="sm" data-cn="01234567">8 字符</button>
+        <button class="sm" data-cn="01234567890123456789012">23 字符</button>
+        <button class="sm" id="cnReroll">换一只金丝雀</button>
+      </div>
+      <div id="cnOut"></div>
+    </div>
+
+    <div class="box warn"><div class="t">勘误：受保护版栈图里的「20 bytes unused」</div>
+      课件第 46 页的示意图沿用了未保护版本（第 24 页）的「20 bytes unused」标注。但同页反汇编给出的帧是 <code>sub $0x18</code> = <b>24 字节</b>，金丝雀在 <code>8(%rsp)</code> —— 也就是说，从低到高应是：<code>buf[4]</code>（rsp+0–3）→ 4 字节空隙 → <b>金丝雀 8 字节</b>（rsp+8–15）→ 8 字节空隙（rsp+16–23）→ 返回地址。若照示意图的「20 字节 + 金丝雀」排法，帧就得有 40 字节，与 <code>sub $0x18</code> 矛盾。<b>本页按反汇编呈现</b>：金丝雀只比 <code>buf</code> 高 4 字节空隙 —— 这也正是「7 字符没事、8 字符被检测」的算术根据。
+    </div>
+  </section>
+
+  <!-- ================= 9 ================= -->
+  <section id="s9">
+    <h2>9. ROP：返回导向编程<span class="srcref">原第 48–53 页</span></h2>
+    <p class="lede">栈随机化让注入代码「藏不进固定地址」，不可执行栈让注入代码「跑不起来」。攻击者的对策堪称优雅：<b>一行新代码都不注入，全部用程序里现成的代码拼出想要的程序</b> —— 返回导向编程（Return-Oriented Programming, ROP）。</p>
+
+    <h3>9.1 gadget：以 ret 结尾的现成指令串<span class="srcref">原第 48 页</span></h3>
+    <p>ROP 的积木叫 <b>gadget</b>：一段<b>以 <code>ret</code> 结尾</b>的指令序列 —— 而且这个结尾甚至不必是刻意写出的指令，<b>只要字节 <code>0xc3</code> 出现，它就是一条 <code>ret</code></b>。gadget 的三个关键性质（课件原话）：</p>
+    <ul>
+      <li>代码位置在多次运行之间<b>固定不变</b>（代码段不参与随机化）—— 绕过了栈随机化；</li>
+      <li>代码本来就<b>可执行</b> —— 绕过了不可执行栈；</li>
+      <li>但 ROP <b>绕不过栈金丝雀</b> —— canary 依然是有效防线。</li>
+    </ul>
+    <div class="box"><div class="t">课件引的出处</div>
+      Shacham, H. (October 2007). <i>The geometry of innocent flesh on the bone: return-into-libc without function calls (on the x86)</i>. Proceedings of the 14th ACM conference on Computer and communications security (CCS '07), pp. 552–561.
+    </div>
+
+    <h3>9.2 gadget 例 1：借函数的「尾巴」<span class="srcref">原第 49 页</span></h3>
+    <div class="formula" style="text-align:left">
+      <div>long ab_plus_c (long a, long b, long c)</div>
+      <div>{</div>
+      <div>&nbsp;&nbsp;return a*b + c;</div>
+      <div>}</div>
+      <div></div>
+      <div>00000000004004d0 &lt;ab_plus_c&gt;:</div>
+      <div>&nbsp;&nbsp;4004d0:&nbsp;&nbsp;48 0f af fe&nbsp;&nbsp;&nbsp;imul %rsi,%rdi</div>
+      <div>&nbsp;&nbsp;4004d4:&nbsp;&nbsp;48 8d 04 17&nbsp;&nbsp;&nbsp;lea&nbsp; (%rdi,%rdx,1),%rax&nbsp;&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)"># rax ← rdi + rdx</span></div>
+      <div>&nbsp;&nbsp;4004d8:&nbsp;&nbsp;c3&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;retq</div>
+    </div>
+    <p>从 <b>0x4004d4</b> 开始看，这就是一个独立 gadget：<code>lea (%rdi,%rdx,1),%rax</code> 做 <code>rax ← rdi + rdx</code>，<code>ret</code> 收尾 —— 「借用现有函数的末尾」。</p>
+
+    <h3>9.3 gadget 例 2：从立即数里「抠」出指令<span class="srcref">原第 50 页</span></h3>
+    <div class="formula" style="text-align:left">
+      <div>void setval(unsigned *p) {</div>
+      <div>&nbsp;&nbsp;*p = 3347663060u;&nbsp;&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)">/* 0xc78948d4 */</span></div>
+      <div>}</div>
+      <div></div>
+      <div>&lt;setval&gt;:</div>
+      <div>&nbsp;&nbsp;4004d9:&nbsp;&nbsp;c7 07 d4 48 89 c7&nbsp;&nbsp;&nbsp;movl $0xc78948d4,(%rdi)</div>
+      <div>&nbsp;&nbsp;4004df:&nbsp;&nbsp;c3&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;retq</div>
+    </div>
+    <p>这条 <code>movl</code> 的立即数 <code>0xc78948d4</code> 按小端在内存里是 <code>d4 48 89 c7</code> —— 于是从 <b>0x4004dc</b>（偏移 +3）开始读，字节 <code>48 89 c7</code> 恰好是另一条指令：<b><code>mov %rax,%rdi</code></b>（<code>rdi ← rax</code>）。「旧字节的重新利用（repurpose byte codes）」。</p>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：gadget 解码器 —— 点击一个字节，看从它开始能解出什么指令</span>
+        <div class="seg" id="gdSeg">
+          <button class="on" data-g="ab">例 1 · ab_plus_c</button>
+          <button data-g="sv">例 2 · setval</button>
+        </div>
+      </div>
+      <div id="gdOut"></div>
+    </div>
+
+    <h3>9.4 把 gadget 串成程序<span class="srcref">原第 51–53 页</span></h3>
+    <p>ROP 程序 = 栈上排一列 gadget 地址。第一个 <code>ret</code>（比如 <code>echo</code> 被劫持的那次）启动 gadget 1；<b>每个 gadget 末尾的 <code>ret</code> 又从栈上弹出下一个地址</b>，像串行电礼一样一路执行下去：</p>
+    <div class="formula" style="text-align:left">
+      <div>栈（自低向高）：&nbsp;[gadget 1 地址][gadget 2 地址] … [gadget n 地址][code][c3]</div>
+      <div>%rsp 一路向上走，每过一个 c3 就跳进下一个 gadget。</div>
+    </div>
+    <p>课件第 52–53 页把 9.2 与 9.3 的两个 gadget 串起来攻击 <code>echo</code>：</p>
+    <div class="formula" style="text-align:left">
+      <div>30 31 32 33 34 35 36 37 38 39 30 31 32 33 34 35 36 37 38 39 30 31 32 33&nbsp;&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)">← 24 字节填充</span></div>
+      <div>d4 04 40 00 00 00 00 00&nbsp;&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)">← gadget #1 = 0x4004d4&nbsp;（rax ← rdi + rdx）</span></div>
+      <div>dc 04 40 00 00 00 00 00&nbsp;&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)">← gadget #2 = 0x4004dc&nbsp;（rdi ← rax）</span></div>
+    </div>
+    <p>组合效果：<code>rdi ← rdi + rdx</code>。注意课件的双警告：<b>「Multiple gadgets will corrupt stack upwards」</b> —— 每多串一个 gadget，就多毁掉栈上 8 字节；gadget #2 的最后一次 <code>ret</code> 没有安排，程序「goes off somewhere」（跑到不知哪里去）。</p>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：ROP 追踪器 —— 一步步看两个 gadget 怎么接力</span>
+        <label class="fld">%rdi（a） <input type="text" id="rpA" value="7" size="8" spellcheck="false"></label>
+        <label class="fld">%rdx（c） <input type="text" id="rpC" value="3" size="8" spellcheck="false"></label>
+        <button class="p" id="rpNext">下一步</button>
+        <button class="sm" id="rpRun">自动播放</button>
+        <button class="sm" id="rpReset">重来</button>
+      </div>
+      <div id="rpOut"></div>
+    </div>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：两道判断题</span>
+        <button class="sm" id="roReset">重来</button>
+      </div>
+      <div id="roOut"></div>
+    </div>
+  </section>
+
+  <!-- ================= 10 ================= -->
+  <section id="s10">
+    <h2>10. 总结与测验<span class="srcref">原第 2、11 页</span></h2>
+    <p class="lede">用课件第 11 页的复合类型总结表收束三讲「数据」主线，然后做一遍测验 —— 题目全部来自本讲的表格、例题与运行结果。</p>
+
+    <h3>10.1 C 复合类型总结<span class="srcref">原第 11 页</span></h3>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>类型</th><th>要点（课件原文）</th></tr>
+      <tr><td><b>数组 Arrays</b></td><td>内存<b>连续分配</b>；对齐到满足<b>每个元素</b>的对齐要求；指向首元素的指针；<b>无边界检查</b></td></tr>
+      <tr><td><b>结构体 Structures</b></td><td>按<b>声明顺序</b>分配字节；中间和末尾垫 padding 满足对齐</td></tr>
+      <tr><td><b>联合体 Unions</b></td><td><b>覆盖式</b>声明（overlay declarations）；<b>绕过类型系统</b>的一种途径</td></tr>
+    </table></div>
+    <p>「无边界检查」四个字，就是第 4–7 节全部故事的起点。</p>
+
+    <h3>10.2 本讲三幕剧</h3>
+    <div class="grid g3">
+      <div class="card"><h5>第一幕 · 看清字节</h5>
+        <p style="margin:0;font-size:14.5px">union 给同一块内存起多个名字；字节序决定多字节读法；内存布局规定每样东西住在哪。<b>工具：字节地图、字节序模拟器、地址分拣。</b></p>
+      </div>
+      <div class="card"><h5>第二幕 · 溢出与劫持</h5>
+        <p style="margin:0;font-size:14.5px"><code>gets</code> 无界写入 → 越过 <code>buf</code> 与空隙 → 改写返回地址 → <code>ret</code> 把 CPU 带去攻击者指定的地方。<b>工具：栈字节可视化器、攻击串构造器。</b></p>
+      </div>
+      <div class="card"><h5>第三幕 · 攻防升级</h5>
+        <p style="margin:0;font-size:14.5px">有界函数、栈随机化、不可执行栈、金丝雀层层设防；ROP 用现成 gadget 绕过前两道，但<strong>绕不过金丝雀</strong>。<b>工具：canary 模拟器、gadget 解码器、ROP 追踪器。</b></p>
+      </div>
+    </div>
+
+    <h3>10.3 测验<span class="srcref">9 题</span></h3>
+    <p>每道题选完立刻判分并给出解析。答错不要紧 —— 解析里写清了依据在本讲的哪一节。</p>
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：本讲测验</span>
+        <button class="sm" id="qzReset">重来</button>
+      </div>
+      <div id="qzOut"></div>
+    </div>
+  </section>
+</main>
+
+</div>
+
+<div class="footer">
+  本页由原课件 PDF 翻译整理而成 · 数值计算与可视化均为页面内实时计算 · 可对照原课件页码阅读。
+</div>
+<button class="totop" id="toTop">↑ 顶部</button>
+
+<script>
+"use strict";
+/* ============================================================
+   机器级编程 V：高级主题 · 交互式课件 —— 全部逻辑
+   约定：所有计算在页面内实时完成；无效输入必须给出提示而不是抛错。
+   位级运算用 Uint32Array/Float32Array/Float64Array 共享缓冲区；
+   超过 32 位的整数一律用 BigInt。
+   顶层以 function 声明的 u2fValue / f2uBits / castU2F / castF2U /
+   composeInt / clobberD64 / echoNewRA / ropRun 是判分基准，
+   由 tools/verify_ics08.js 拉出来与 C 参考实现逐项比对。
+   ============================================================ */
+
+const $  = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+const MASK64 = (1n << 64n) - 1n;
+const u64 = v => BigInt(v) & MASK64;
+const hex64 = v => '0x' + u64(v).toString(16).toUpperCase().padStart(16, '0');
+const hex64t = v => '0x' + u64(v).toString(16).toUpperCase();
+const hex32 = v => '0x' + (Number(v) >>> 0).toString(16).toUpperCase().padStart(8, '0');
+const hexByte = v => (Number(v) & 0xff).toString(16).toUpperCase().padStart(2, '0');
+const badBox = msg => `<div class="box bad"><div class="t">输入无效</div>${esc(msg)}</div>`;
+const kvAttr = str => {
+  const out = {};
+  String(str).split(';').forEach(part => {
+    const i = part.indexOf('=');
+    if (i > 0) out[part.slice(0, i).trim()] = part.slice(i + 1).trim();
+  });
+  return out;
+};
+
+/* ---------- 浮点位模式（32 位 union 语义的参考实现，供 C 交叉验证） ---------- */
+const _f32 = new Float32Array(1), _u32 = new Uint32Array(_f32.buffer);
+
+/** union 重解释：unsigned u → float 的值（arg.u = u; return arg.f） */
+function u2fValue(u) { _u32[0] = Number(u) >>> 0; return _f32[0]; }
+/** union 重解释：float f → unsigned 的位模式（arg.f = f; return arg.u） */
+function f2uBits(f) { _f32[0] = Math.fround(f); return _u32[0]; }
+/** C 强制转换 (float) u：数值换算，舍入到最近的 float */
+function castU2F(u) { return Math.fround(Number(u) >>> 0); }
+/** C 强制转换 (unsigned) f：截断取整。仅对 0 ≤ f < 2^32 有定义（否则 C 标准视作未定义） */
+function castF2U(f) { return Math.trunc(f) >>> 0; }
+const f32InDomain = f => typeof f === 'number' && isFinite(f) && f >= 0 && f < 4294967296;
+
+/** 浮点数的展示：小数用定点、极端值用指数（返回 HTML，含 <sup>），inf 单独处理 */
+function fmtF(x) {
+  if (Number.isNaN(x)) return 'NaN';
+  if (!isFinite(x)) return x > 0 ? 'inf' : '−inf';
+  if (x === 0) return (1 / x < 0) ? '−0' : '0';
+  const a = Math.abs(x);
+  if (a < 1e-4 || a >= 1e10) {
+    const [m, e] = x.toExponential(6).split('e');
+    return `${m} × 10<sup>${Number(e)}</sup>`;
+  }
+  return String(parseFloat(x.toPrecision(10)));
+}
+
+/** 从十六进制串解析字节序列；非法返回 null */
+function parseHexBytes(str, want) {
+  const t = String(str).trim().replace(/[,\s]/g, '').replace(/^0x/i, '');
+  if (!/^[0-9a-fA-F]*$/.test(t)) return null;
+  const out = [];
+  for (let i = 0; i + 1 < t.length || out.length < want; i += 2) {
+    if (i + 1 >= t.length) return null;
+    out.push(parseInt(t.slice(i, i + 2), 16));
+  }
+  if (want !== undefined && out.length !== want) return null;
+  return out;
+}
+
+/* ============================================================
+   判分基准：字节序组合 / dword 覆写 / 返回地址破坏 / ROP 链
+   （同样是 function 声明，供 verify_ics08.js 与 C 比对）
+   ============================================================ */
+
+/** bytes：按内存顺序（低地址在前）的字节数组；width：2/4/8；endian：'le'|'be'。
+ *  返回按该字节序解释出的无符号整数值（BigInt）。 */
+function composeInt(bytes, endian, width) {
+  let v = 0n;
+  for (let j = 0; j < width; j++) {
+    const b = BigInt(bytes[j] & 0xff);
+    v |= (endian === 'le' ? b << BigInt(8 * j) : b << BigInt(8 * (width - 1 - j)));
+  }
+  return v;
+}
+
+/** 把 32 位 dword 以小端写进 64 位位模式的第 k 个 4 字节（k=0 是最低 4 字节）。
+ *  fun(i) 的本质：s.a[i] 落在 d 的字节 4(i-2) 起。 */
+function clobberD64(baseBits, k, dword) {
+  const shift = BigInt(32 * k);
+  const mask = ~(0xFFFFFFFFn << shift) & MASK64;
+  return (u64(baseBits) & mask) | ((u64(dword) & 0xFFFFFFFFn) << shift);
+}
+
+/** echo 溢出：把输入字节（连同结尾 '\0'）从 %rsp 起连续写入 32 字节窗口。
+ *  返回被改写后的返回地址（BigInt）；若写入没有碰到返回地址（共写 ≤24 字节）返回 null。
+ *  初始返回地址 0x4006f6（call_echo 里 callq echo 的下一条），小端字节 f6 06 40 00 00 00 00 00。 */
+function echoNewRA(bytes) {
+  const n = bytes.length, total = n + 1;
+  if (total <= 24) return null;
+  const ra = [0xf6, 0x06, 0x40, 0x00, 0x00, 0x00, 0x00, 0x00];
+  for (let j = 24; j < 32; j++) {
+    if (j < n) ra[j - 24] = bytes[j] & 0xff;
+    else if (j === n) ra[j - 24] = 0;         // '\0' 落进来
+  }
+  return composeInt(ra, 'le', 8);
+}
+
+/** ROP 链（课件 p52–53）：gadget#1 lea (%rdi,%rdx,1),%rax → rax=rdi+rdx；
+ *  其 ret 弹出 gadget#2 mov %rax,%rdi → rdi=rax。返回 { rax, rdi }。 */
+function ropRun(rdi, rdx) {
+  const rax = u64(rdi + rdx);
+  return { rax, rdi: rax };
+}
+
+/* ============================================================
+   1.1 union vs struct 字节地图
+   ============================================================ */
+function byteCells(list) {
+  return '<div class="bits sm">' + list.map(c => {
+    if (c === null) return '<span class="b" style="width:20px;background:transparent;color:var(--muted)">·</span>';
+    const cls = (c.cls ? ' ' + c.cls : '') + (c.sel ? ' sel' : '');
+    return `<span class="b${cls}" style="width:20px">${esc(c.t)}</span>`;
+  }).join('') + '</div>';
+}
+function byteRuler(n) {
+  return '<div class="bits sm">' + Array.from({ length: n }, (_, j) =>
+    `<span class="b" style="width:20px;background:transparent;color:var(--muted);font-size:10.5px">${j}</span>`).join('') + '</div>';
+}
+
+const U1_MEMBERS = [
+  { key: 'c',  cap: 'char c',      size: 8, cover: j => j === 0 ? 'e' : null },
+  { key: 'i0', cap: 'int i[0]',    size: 8, cover: j => j < 4 ? 'f' : null },
+  { key: 'i1', cap: 'int i[1]',    size: 8, cover: j => j >= 4 && j < 8 ? 'f' : null },
+  { key: 'v',  cap: 'double v',    size: 8, cover: () => 's' },
+];
+const S1_MEMBERS = [
+  { key: 'c',  cap: 'char c',      size: 24, cover: j => j === 0 ? 'e' : null },
+  { key: 'i0', cap: 'int i[0]',    size: 24, cover: j => (j >= 4 && j < 8) ? 'f' : null },
+  { key: 'i1', cap: 'int i[1]',    size: 24, cover: j => (j >= 8 && j < 12) ? 'f' : null },
+  { key: 'v',  cap: 'double v',    size: 24, cover: j => j >= 16 ? 's' : null },
+];
+let uniFocus = 'all';
+
+function renderUnion() {
+  const block = (name, size, members) => {
+    const rows = members.map(m => {
+      const dim = uniFocus !== 'all' && uniFocus !== m.key;
+      const sel = uniFocus === m.key;
+      const cells = Array.from({ length: size }, (_, j) => {
+        const cls = m.cover(j);
+        return cls ? { t: '', cls, sel } : null;
+      });
+      return `<div class="fgrp"${dim ? ' style="opacity:.32"' : ''}>
+        <div class="fcap"><b>${esc(m.cap)}</b></div>${byteCells(cells)}</div>`;
+    }).join('');
+    const pad = size === 24
+      ? `<div class="fgrp"><div class="fcap">对齐填充（<code>·</code> 格，不存放任何内容）</div>${byteCells(
+          Array.from({ length: 24 }, (_, j) => ((j >= 1 && j < 4) || (j >= 12 && j < 16)) ? { t: '·' } : null))}</div>`
+      : '';
+    return `<div class="fgrp"><div class="fcap">${esc(name)} —— 共 ${size} 字节，偏移标在下面</div>
+      ${byteRuler(size)}${rows}${pad}</div>`;
+  };
+  $('#uniOut').innerHTML = `
+    <div class="fw">
+      ${block('union U1（按最大成员分配：8 字节，三个名字都从 up+0 开始）', 8, U1_MEMBERS)}
+    </div>
+    <div style="height:14px"></div>
+    <div class="fw">
+      ${block('struct S1（按声明顺序排 + 对齐填充：24 字节）', 24, S1_MEMBERS)}
+    </div>
+    <div class="box ok" style="margin-bottom:0"><div class="t">一图看懂两种分配</div>
+      union 里 <code>c</code>、<code>i[0]</code>、<code>v</code> 的格子<b>完全重叠</b>（写 <code>v</code> 会连带改掉 <code>c</code> 和 <code>i</code> 眼中的值）；
+      struct 里三者<b>各占各的</b>，灰色格子是为对齐垫进去的、从来不存东西。课件第 3 页的两张图就是这两行。
+    </div>`;
+}
+
+/* ============================================================
+   1.2 union 重解释 vs 强制转换
+   ============================================================ */
+let bfKind = 'u';
+function renderBitFloat() {
+  const raw = $('#bfIn').value.trim();
+  if (bfKind === 'u') {
+    let u;
+    if (/^-?(0[xX][0-9a-fA-F]+|[0-9]+)$/.test(raw.replace(/[_,\s]/g, ''))) {
+      try { u = BigInt(raw.replace(/[_,\s]/g, '')); } catch (e) { u = null; }
+    } else u = null;
+    if (u === null || u < 0n || u > 0xFFFFFFFFn) {
+      $('#bfOut').innerHTML = badBox('按 unsigned 输入时，请给 0 … 0xFFFFFFFF 之间的整数（可写 0x… 十六进制）。');
+      return;
+    }
+    const uN = Number(u);
+    const fval = u2fValue(uN);            // union 路径
+    const fbits = f2uBits(fval);
+    const cast = castU2F(uN);             // (float) u
+    const same = Object.is(fval, cast);
+    $('#bfOut').innerHTML = `
+    <div class="readout">
+      <dt>输入 u</dt><dd>${hex32(uN)} <span style="color:var(--muted)">（十进制 ${uN.toLocaleString('en-US')}）</span></dd>
+      <dt>union：arg.u = u → arg.f</dt><dd><b>${fmtF(fval)}</b>&nbsp;&nbsp;<span style="color:var(--muted)">位模式 ${hex32(fbits)}</span></dd>
+      <dt>转换：(float) u</dt><dd><b>${fmtF(cast)}</b></dd>
+    </div>
+    <div class="box ${same ? 'ok' : 'warn'}" style="margin-bottom:0"><div class="t">${same ? '这两个值碰巧一样' : '不一样 —— 这就是课件那两个问句的答案'}</div>
+      union 把 u 的<b>位模式原样</b>当成 float 读（不换算数值）；<code>(float) u</code> 把 u 的<b>数值</b>换算成最接近的 float。两者一般完全不同。
+      ${uN === 5 ? '课件旁那句话的答案：bit2float(5) ≈ 7 × 10<sup>−45</sup>（把 5 当位模式），而 (float) 5 = 5.0（把 5 当数值）。' : ''}
+    </div>`;
+  } else {
+    let f = null, fromBits = false, t = raw.replace(/[_,\s]/g, '');
+    if (/^0[xX][0-9a-fA-F]{1,8}$/.test(t)) { fromBits = true; f = u2fValue(parseInt(t, 16)); }
+    else if (/^[-+]?(\d+\.?\d*|\.\d+)([eE][-+]?\d+)?$|^[-+]?inf(inity)?$|^nan$|^[-+]?∞$/i.test(t)) {
+      const low = t.toLowerCase();
+      f = low.endsWith('inf') || low === '∞' ? (t.startsWith('-') ? -Infinity : Infinity)
+        : low === 'nan' ? NaN : Number(t);
+    }
+    if (f === null || Number.isNaN(Number(f)) && !fromBits && t.toLowerCase() !== 'nan') {
+      $('#bfOut').innerHTML = badBox('按 float 输入时，请给一个数（如 3.14、−2.5、1e10），或 8 位十六进制位模式（如 0x4048f5c3）。');
+      return;
+    }
+    const f32 = Math.fround(f);
+    const bits = f2uBits(f32);
+    const inDomain = f32InDomain(f32);
+    const cast = inDomain ? castF2U(f32) : null;
+    $('#bfOut').innerHTML = `
+    <div class="readout">
+      <dt>输入 f</dt><dd>${fmtF(f32)}&nbsp;&nbsp;<span style="color:var(--muted)">（float 位模式 ${hex32(bits)}${fromBits ? '，由你给的位模式而来' : ''}）</span></dd>
+      <dt>union：arg.f = f → arg.u</dt><dd><b>${hex32(bits)}</b>&nbsp;&nbsp;<span style="color:var(--muted)">（十进制 ${bits.toLocaleString('en-US')}）</span></dd>
+      <dt>转换：(unsigned) f</dt><dd>${inDomain ? `<b>${cast.toLocaleString('en-US')}</b>&nbsp;&nbsp;<span style="color:var(--muted)">（${hex32(cast)}）—— 小数部分直接丢弃</span>`
+        : '<span class="chip bad">未定义</span>&nbsp;&nbsp;f 不在 0 ≤ f &lt; 2<sup>32</sup> 内，C 标准规定此转换为<b>未定义行为</b>，本页不给值'}</dd>
+    </div>
+    <div class="box warn" style="margin-bottom:0"><div class="t">两个方向都不等价于强制转换</div>
+      <code>float2bit(3.14f)</code> 给出的是 3.14f 的<b>位模式</b> ${hex32(bits)}（一个巨大的无符号数）；<code>(unsigned) 3.14f</code> 做的是<b>数值截断</b> = 3。课件第 11 页管 union 叫「绕过类型系统」—— 眼镜换了，数值没换。
+    </div>`;
+  }
+}
+
+/* ============================================================
+   1.2 / 2.2 / 7.5 / 9.4 判断题（共用外壳）
+   ============================================================ */
+function renderPuzzles(el, list, state, resetId) {
+  const done = state.filter(v => v !== null).length;
+  const right = list.filter((p, i) => state[i] === p.a).length;
+  const html = list.map((p, i) => {
+    const s = state[i];
+    const cls = s === null ? '' : (s === p.a ? ' correct done' : ' wrong done');
+    return `<div class="puzzle${cls}">
+      <div class="q" style="white-space:normal">${esc(p.q)}</div>
+      <div class="btns">
+        <button class="sm" data-pz="${el}:${i}:1" ${s !== null ? 'disabled style="opacity:.55"' : ''}>真</button>
+        <button class="sm" data-pz="${el}:${i}:0" ${s !== null ? 'disabled style="opacity:.55"' : ''}>假</button>
+      </div>
+      <div class="exp"><span class="verdict">${s === null ? '' : s === p.a ? '✓ 答对了' : '✗ 答错了'}</span>
+        &nbsp;正确答案：<b>${p.a ? '真' : '假'}</b><br>${p.exp}</div>
+    </div>`;
+  }).join('');
+  const score = done === 0 ? '' : `<div class="box ${right === list.length ? 'ok' : right >= list.length / 2 ? 'warn' : 'bad'}" style="margin-bottom:0">
+    <div class="t">已答 ${done} / ${list.length}，答对 ${right} 题</div>
+    ${done === list.length ? (right === list.length ? '全对 —— 这一组概念都吃透了。' : '错题的解析就在上面，回对应小节再看一眼即可。') : '继续，答完显示小结。'}</div>`;
+  document.getElementById(el).innerHTML = html + score;
+}
+
+const PUZ_UNION = [
+  { q: '「bit2float(u) 和 (float) u 是同一件事」', a: false,
+    exp: 'union 只换眼镜不换数值：bit2float(5) ≈ 7 × 10<sup>−45</sup>（把 5 当位模式读），(float) 5 = 5.0（把 5 换算成最接近的 float）。见 1.2 节的对照工具。' },
+  { q: '「union 允许同时使用它的所有字段」', a: false,
+    exp: '课件第 3 页原话：Can only use <b>one field at a time</b>。所有字段共享同一块内存，写一个就改了全部。' },
+];
+const PUZ_BYTEORD = [
+  { q: '「在小端机器上，课件 dw 例子里 s[0] 打印出来是 0xf0f1」', a: false,
+    exp: '小端把最低位字节放在最低地址：字节 f0 f1 组成的 short 是 0xf1f0。0xf0f1 是大端读法（Sun）。见 2.3 节模拟器。' },
+  { q: '「网络字节序是大端序」', a: true,
+    exp: '课件第 5 页把 Internet 列在 Big Endian 阵营里 —— 跨机器传二进制数据时要统一按大端解释，这也是 htons/htonl 存在的原因。' },
+];
+const PUZ_WORM = [
+  { q: '「蠕虫必须把自己附加到别的程序里才能运行」', a: false,
+    exp: '那是病毒（virus）的定义。蠕虫（worm）can run by itself，还能把完整可用的自身副本传给其他计算机。见 7.5 节的对照表。' },
+  { q: '「1988 年的 Internet 蠕虫利用了 fingerd 里的 gets() 缓冲区溢出」', a: true,
+    exp: '课件第 35 页：fingerd 用 gets() 读客户端参数，蠕虫发送「exploit-code + padding + new-return-address」，几小时攻陷约 6000 台机器（约占当时 Internet 的 10%）。' },
+];
+const PUZ_ROP = [
+  { q: '「ROP 攻击需要把新的机器码注入到栈上」', a: false,
+    exp: '恰恰相反 —— ROP 的全部要点就是「Use existing code」：用程序里现成的、以 ret(0xc3) 结尾的 gadget 拼程序，从而同时绕过栈随机化与不可执行栈。见 9.1 节。' },
+  { q: '「栈金丝雀能挡住 ROP 攻击」', a: true,
+    exp: '课件第 48 页明确写着 ROP 「Does not overcome stack canaries」。ROP 要连续 ret，必须毁掉金丝雀上方的返回地址，检查环节会先抓住它。' },
+];
+const puzState = { uzOut: PUZ_UNION.map(() => null), bzOut: PUZ_BYTEORD.map(() => null),
+                   wvOut: PUZ_WORM.map(() => null), roOut: PUZ_ROP.map(() => null) };
+
+/* ============================================================
+   2.3 dw union 字节序模拟器
+   ============================================================ */
+const MACHINES = {
+  'x86-64': { endian: 'le', longW: 8, desc: '小端 · long 为 8 字节' },
+  'ia32':   { endian: 'le', longW: 4, desc: '小端 · long 为 4 字节' },
+  'sun':    { endian: 'be', longW: 4, desc: '大端 · long 为 4 字节' },
+};
+let boMachine = 'x86-64';
+
+function renderByteOrder() {
+  const hex = $('#boIn').value.trim().replace(/^0x/i, '');
+  const bytes = parseHexBytes(hex, 8);
+  if (!bytes) {
+    $('#boOut').innerHTML = badBox('请给恰好 8 个字节的十六进制（16 个 hex 数字），例如 f0f1f2f3f4f5f6f7。');
+    return;
+  }
+  const m = MACHINES[boMachine];
+  const le = m.endian === 'le';
+  const groups = (width, count, capFmt, valFmt) => {
+    let out = '';
+    for (let g = 0; g < count; g++) {
+      const slice = bytes.slice(g * width, (g + 1) * width);
+      const val = composeInt(slice, m.endian, width);
+      const lohi = le ? 'LSB 在左' : 'MSB 在左';
+      out += `<div class="fgrp"><div class="fcap">${capFmt(g)} = ${valFmt(val)}&nbsp;<span style="opacity:.65">${lohi}</span></div>${byteCells(slice.map(b => ({ t: hexByte(b) })))}</div>`;
+    }
+    return out;
+  };
+  const prints = {
+    chars: bytes.map(b => '0x' + hexByte(b)).join(','),
+    shorts: Array.from({ length: 4 }, (_, g) => '0x' + composeInt(bytes.slice(g * 2, g * 2 + 2), m.endian, 2).toString(16).toUpperCase().padStart(4, '0')).join(','),
+    ints: Array.from({ length: 2 }, (_, g) => '0x' + composeInt(bytes.slice(g * 4, g * 4 + 4), m.endian, 4).toString(16).toUpperCase().padStart(8, '0')).join(','),
+    long: '0x' + composeInt(bytes.slice(0, m.longW), m.endian, m.longW).toString(16).toUpperCase().padStart(m.longW * 2, '0'),
+  };
+  $('#boOut').innerHTML = `
+    <div class="chip gray">${esc(boMachine)}：${esc(m.desc)}</div>
+    <div class="fw" style="margin-top:10px">
+      <div class="fgrp"><div class="fcap">c[0] … c[7] —— 8 个字节，地址从左到右升高</div>
+        ${byteCells(bytes.map(b => ({ t: hexByte(b) })))}</div>
+    </div>
+    <div class="fw">${groups(2, 4, g => `s[${g}]`, v => '0x' + v.toString(16).toUpperCase().padStart(4, '0'))}</div>
+    <div class="fw">${groups(4, 2, g => `i[${g}]`, v => '0x' + v.toString(16).toUpperCase().padStart(8, '0'))}</div>
+    <div class="fw">${groups(m.longW, 1, () => 'l[0]', v => '0x' + v.toString(16).toUpperCase().padStart(m.longW * 2, '0'))}</div>
+    <div class="formula" style="text-align:left;margin-bottom:0">
+      <div>Characters 0-7 == [${prints.chars}]</div>
+      <div>Shorts&nbsp;&nbsp;&nbsp;&nbsp;0-3 == [${prints.shorts}]</div>
+      <div>Ints&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 0-1 == [${prints.ints}]</div>
+      <div>Long&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 0&nbsp;&nbsp; == [${prints.long}]&nbsp;&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)">← 本机 long 是 ${m.longW} 字节，只读前 ${m.longW} 个</span></div>
+    </div>
+    <div class="box ok" style="margin-bottom:0"><div class="t">和课件逐字对上</div>
+      ${boMachine === 'ia32' ? '这就是课件第 8 页的输出：小端 + 4 字节 long，所以 s[0] = 0xf1f0、Long = 0xf3f2f1f0。'
+        : boMachine === 'sun' ? '这就是课件第 9 页的输出（Sun 是大端）：s[0] = 0xf0f1，字节顺序原样读出。'
+        : '这就是课件第 10 页的输出：小端 + 8 字节 long，Long 一行把 8 个字节全倒过来读。'}
+      换一下上面的字节，四行输出全部重算 —— 判分基准与 C 参考实现比对过（0 项不一致）。
+    </div>`;
+}
+
+/* ============================================================
+   3.3 地址分拣 + 距离读数
+   ============================================================ */
+const ADDR_ITEMS = [
+  { name: 'local',     addr: 0x00007ffe4d3be87cn, ans: 'stack', why: '局部变量，住在运行时栈上 —— 地址在 0x7ff… 高位段。' },
+  { name: 'phuge1',    addr: 0x00007f7262a1e010n, ans: 'heap',  why: 'malloc(1L<<28)（256MB）：glibc 对超大块改用 mmap 单独映射，地址落在共享库附近的 mmap 区 —— 概念上仍属堆。' },
+  { name: 'phuge3',    addr: 0x00007f7162a1d010n, ans: 'heap',  why: 'malloc(1L<<32)（4GB）：同样是 mmap 大块，且后申请的落在更低地址（比 phuge1 低 4 GiB 多）。' },
+  { name: 'psmall4',   addr: 0x000000008359d120n, ans: 'heap',  why: 'malloc(256B)：小塊由堆顶（brk）一带分配，地址紧跟在 big_array 上方不远处。' },
+  { name: 'psmall2',   addr: 0x000000008359d010n, ans: 'heap',  why: 'malloc(256B)：与 psmall4 相邻（见下面的距离读数）。' },
+  { name: 'big_array', addr: 0x0000000080601060n, ans: 'data',  why: '静态分配的未初始化全局数组 → 数据区（BSS）。' },
+  { name: 'huge_array',addr: 0x0000000000601060n, ans: 'data',  why: '同样是静态全局数组，紧贴代码区上方 —— 它 2GB 的身躯一直铺到 big_array 脚下。' },
+  { name: 'main()',    addr: 0x000000000040060cn, ans: 'text',  why: '函数的机器指令 → 代码区（从 0x400000 附近开始）。' },
+  { name: 'useless()', addr: 0x0000000000400590n, ans: 'text',  why: '同为代码区，排在 main 之前。' },
+];
+const AD_OPTS = [['stack', '栈 Stack'], ['heap', '堆 Heap'], ['data', '数据 Data'], ['text', '代码 Text']];
+let adState = ADDR_ITEMS.map(() => '');
+
+function renderAddr() {
+  const rows = ADDR_ITEMS.map((it, i) => {
+    const s = adState[i];
+    const judged = adJudged && s !== '';
+    const ok = judged && s === it.ans;
+    return `<tr${judged ? (ok ? '' : ' class="hl"') : ''}>
+      <td class="mono">${it.name}</td><td class="mono">${hex64(it.addr)}</td>
+      <td><select data-ad="${i}" style="min-width:110px">
+        <option value=""${s === '' ? ' selected' : ''}>— 选区域 —</option>
+        ${AD_OPTS.map(([v, t]) => `<option value="${v}"${s === v ? ' selected' : ''}>${t}</option>`).join('')}
+      </select></td>
+      <td>${judged ? (ok ? '<span class="chip ok">✓</span> ' : '<span class="chip bad">✗</span> ') + it.why : '<span style="color:var(--muted)">先在左侧选一个区域</span>'}</td>
+    </tr>`;
+  }).join('');
+  const score = !adJudged ? '' : (() => {
+    const right = ADDR_ITEMS.filter((it, i) => adState[i] === it.ans).length;
+    return `<div class="box ${right === ADDR_ITEMS.length ? 'ok' : right >= ADDR_ITEMS.length / 2 ? 'warn' : 'bad'}" style="margin-bottom:0">
+      <div class="t">答对 ${right} / ${ADDR_ITEMS.length}</div>
+      判据就一条 ——<b>看数值落在哪个区间</b>：0x400000 附近是代码，紧随其后的高位是数据区，brk/mmap 一带（0x8359…、0x7f7…）是堆，0x7ff… 最高段是栈。</div>`;
+  })();
+  $('#adOut').innerHTML = `
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>名字</th><th>地址（课件第 15 页实测）</th><th>属于哪个区域</th><th>判定与解释</th></tr>
+      ${rows}
+    </table></div>${score}`;
+}
+let adJudged = false;
+
+function renderMallocGaps() {
+  const d = (a, b) => a - b;
+  const rows = [
+    { a: 'huge_array', b: 'big_array', va: 0x0000000000601060n, vb: 0x0000000080601060n,
+      note: () => `${hex64t(d(0x0000000080601060n, 0x0000000000601060n))} = <b>2.00 GiB</b> —— 恰好是 huge_array（1L&lt;&lt;31）的大小：big_array 的起点正是 huge_array 的终点。` },
+    { a: 'psmall2', b: 'psmall4', va: 0x000000008359d010n, vb: 0x000000008359d120n,
+      note: () => `${hex64t(d(0x000000008359d120n, 0x000000008359d010n))} = <b>272 B</b> = 256 请求 + 16 —— <span style="color:var(--muted)">多出的 16 字节与分配器的块管理开销/对齐有关（课件未展开，本页推断）</span>。` },
+    { a: 'phuge3', b: 'phuge1', va: 0x00007f7162a1d010n, vb: 0x00007f7262a1e010n,
+      note: () => `${hex64t(d(0x00007f7262a1e010n, 0x00007f7162a1d010n))} ≈ <b>4 GiB + 4 KiB</b> —— 4GB 请求走 mmap；<b>后申请的 mmap 落在更低地址</b>，所以 4GB 的 phuge3 反而在 256MB 的 phuge1 下方（课件未展开，本页推断）。` },
+  ];
+  $('#mlOut').innerHTML = `<div class="tbl-wrap"><table class="tbl">
+    <tr><th>一对地址（低 → 高）</th><th>距离（现算）</th><th>解释</th></tr>
+    ${rows.map(r => `<tr><td class="mono">${r.a} → ${r.b}</td><td class="mono">${hex64t(r.vb - r.va)}</td><td>${r.note()}</td></tr>`).join('')}
+  </table></div>
+  <div class="readout" style="margin-bottom:0">
+    <dt>记忆点</dt><dd>静态数组的边界 = 数据区的形状；malloc 小块挤在一起、大块被 mmap 甩到共享库旁边 —— 一切都写在地址的差距里。</dd>
+  </div>`;
+}
+
+/* ============================================================
+   3.4 runaway stack 计算器
+   ============================================================ */
+function renderRunaway() {
+  const lim = Number($('#rsLim').value), frm = Number($('#rsFrm').value);
+  if (!isFinite(lim) || !isFinite(frm) || lim <= 0 || frm <= 0 || lim > 4096 || frm > 1048576) {
+    $('#rsOut').innerHTML = badBox('栈上限（MB）与每帧（KiB）都要是正数，且在合理范围内（≤4096 MB / ≤1048576 KiB）。');
+    return;
+  }
+  const frames = Math.floor(lim * 1024 / frm);
+  const measured = 0x7ffd18aba930 - 0x7ffd18a9a920;   // 课件第 16 页两行地址的差
+  $('#rsOut').innerHTML = `
+    <div class="readout">
+      <dt>估算</dt><dd>${lim} MB ÷ ${frm} KiB = <b>${frames} 帧</b>之后，下一次递归就越过栈上限</dd>
+      <dt>课件的例子</dt><dd>每帧 <code>int a[1&lt;&lt;15]</code> = ${frm} KiB，上限 8 MB → 估算 <b>${frames}</b> 帧；实测打印 66 行（x = 67 … x = 2）后 Segmentation fault</dd>
+      <dt>实测帧距</dt><dd>0x7ffd18aba930 − 0x7ffd18a9a920 = <b>${hex32(measured)}</b> = ${measured.toLocaleString('en-US')} 字节（= 128 KiB + 16）</dd>
+      <dt>若帧减半</dt><dd>帧数翻倍 —— 递归深度上限与每帧大小成反比：局部数组是吃栈大户</dd>
+    </div>
+    <div class="box warn" style="margin-bottom:0"><div class="t">估算与实测差的几帧不用纠结</div>
+      上限按页取整、main 自己的帧、内核对栈增长的记账，都会带来 ±几帧的出入。量级对了，结论就对了：<b>递归一深，栈必炸，而且崩在最深处</b>。
+    </div>`;
+}
+
+/* ---------- 64 位位模式 ↔ double（显式小端 DataView） ---------- */
+const _dv8 = new DataView(new ArrayBuffer(8));
+function bitsToF64(bits) {
+  const b = u64(bits);
+  _dv8.setUint32(0, Number(b & 0xFFFFFFFFn), true);
+  _dv8.setUint32(4, Number(b >> 32n), true);
+  return _dv8.getFloat64(0, true);
+}
+function f64Bits(x) {
+  _dv8.setFloat64(0, x, true);
+  return (BigInt(_dv8.getUint32(4, true)) << 32n) | BigInt(_dv8.getUint32(0, true));
+}
+
+/* ============================================================
+   4.2 fun(i) 位级解释器
+   ============================================================ */
+const BITS314 = 0x40091EB851EB851Fn;    // double 3.14 的位模式（课件例的初值）
+let fiI = 2;
+
+function renderFunI() {
+  const i = fiI;
+  const off = 4 * i;                    // s.a[i] 写到 struct 偏移 4i 起，共 4 字节
+  const inside = off >= 8 && off < 16;  // 是否落在 d（偏移 8..15）身上
+  const nCells = Math.max(16, off + 4);
+  const zone = j => j < 8 ? 'e' : j < 16 ? 'f' : '';
+  const cells = Array.from({ length: nCells }, (_, j) => {
+    const c = { t: '', cls: zone(j) };
+    if (j >= off && j < off + 4) c.sel = true;
+    if (j >= 16) c.t = '?';
+    return c;
+  });
+  const caps = '<span style="font-size:12.5px;color:var(--muted)">偏移 0–7：<code>a[0]</code>、<code>a[1]</code>（蓝）· 偏移 8–15：<code>d</code> 的 8 个字节（绿）· 蓝框 = 本次 <code>a[' + i + ']</code> 要写的 4 字节</span>';
+
+  let body;
+  if (i <= 1) {
+    body = `<div class="box ok" style="margin-bottom:0"><div class="t">写在自己身上，d 毫发无损</div>
+      <code>a[${i}]</code> 落在偏移 ${off}–${off + 3}，全在 <code>a</code> 自己的 8 字节里。返回 <code>s.d</code> = <b>3.14</b>（位模式 ${hex64(BITS314)} 原样）。这就是课件两台机器上 <code>fun(0)</code>、<code>fun(1)</code> 都返回 3.1400000000 的原因。</div>`;
+  } else if (i <= 3) {
+    const k = i - 2;                    // d 内的 dword 序号：0 = 低 4 字节，1 = 高 4 字节
+    const nb = clobberD64(BITS314, k, 0x40000000);
+    const val = bitsToF64(nb);
+    const before = hex64(BITS314).slice(2), after = hex64(nb).slice(2);
+    const loChanged = k === 0;
+    const pat = s => `<span class="mono">${loChanged ? s.slice(0, 8) + ' <b>' + s.slice(8) + '</b>' : '<b>' + s.slice(0, 8) + '</b> ' + s.slice(8)}</span>`;
+    body = `
+    <div class="readout">
+      <dt>写入位置</dt><dd>偏移 ${off}–${off + 3} = <code>d</code> 的${k === 0 ? '<b>低 4 字节</b>（d0…d3）' : '<b>高 4 字节</b>（d4…d7）'}</dd>
+      <dt>写入值</dt><dd>1073741824 = 2<sup>30</sup> = ${hex32(0x40000000)}</dd>
+      <dt>d 位模式</dt><dd>${pat(before)} → ${pat(after)}</dd>
+      <dt>d 新值</dt><dd><b>${val.toFixed(10)}</b>&nbsp;&nbsp;<span style="color:var(--muted)">（完整精度 ${val}）</span></dd>
+    </div>
+    <div class="box ok" style="margin-bottom:0"><div class="t">与课件第 18–19 页打印一致（本页现算，C 复核）</div>
+      3.14 = ${hex64(BITS314)}；把${k === 0 ? '低' : '高'} 4 字节换成 40000000，得到 ${hex64(nb)}，解释回 double 就是 <b>${val.toFixed(10)}</b> —— 课件打印的 fun(${i}) 正是这个数。</div>`;
+  } else {
+    body = `<div class="box warn" style="margin-bottom:0"><div class="t">落在结构体之外 —— 结果与系统相关（Result is system specific）</div>
+      <code>a[${i}]</code> 要写的偏移 ${off}–${off + 3} 已越出 <code>struct_t</code> 的 16 字节。那里住着什么（别的局部变量？保存的寄存器？栈金丝雀？）因机器与编译选项而异：
+      <ul style="margin:6px 0 0">
+        <li>第 18 页的机器：<code>fun(6)</code> → Stack smashing detected，<code>fun(8)</code> → Segmentation fault</li>
+        <li>第 19 页的机器：<code>fun(4)</code> → Segmentation fault，<code>fun(8)</code> → 照样返回 3.1400000000</li>
+      </ul>
+      越界写不保证立刻崩 —— 它只是悄悄毁掉别人的字节。第 5 节开始，被毁的将是「返回地址」。</div>`;
+  }
+  $('#fiOut').innerHTML = `
+    <div class="fw"><div class="fgrp"><div class="fcap">struct_t 的字节地图（${
+      nCells > 16 ? '共显示 ' + nCells + ' 字节 —— 超出的部分属于「别人的地盘」' : '16 字节'})</div>${byteCells(cells)}</div></div>
+    <div style="margin:6px 0 2px">${caps}</div>
+    ${body}`;
+}
+
+/* ============================================================
+   5.1 gets 字节计数器
+   ============================================================ */
+function strBytes(str) {
+  const out = [];
+  for (const ch of String(str)) {
+    const code = ch.charCodeAt(0);
+    if (code > 255) return null;
+    out.push(code);
+  }
+  return out;
+}
+const byteChips = (bytes, clsFn) => '<div class="bits sm">' + bytes.map((b, j) => {
+  const c = typeof clsFn === 'function' ? (clsFn(j, b) || '') : '';
+  const ch = b >= 32 && b < 127 ? String.fromCharCode(b) : '·';
+  return `<span class="b${c}" style="width:24px" title="${hexByte(b)}">${esc(ch)}</span>`;
+}).join('') + '</div>';
+
+function renderGets() {
+  const bytes = strBytes($('#gsIn').value);
+  if (bytes === null) { $('#gsOut').innerHTML = badBox('本演示只用单字节（ASCII）字符 —— 检查到多字节字符。'); return; }
+  const total = bytes.length + 1;
+  const verdict = total <= 4
+    ? ['ok', `全部 ${total} 字节都在 buf[4] 里 —— 连溢出都算不上`]
+    : total <= 24
+      ? ['warn', `越过 buf[4]，但 ${total} 字节还没有越出 echo 的 24 字节帧 —— 伤不到返回地址`]
+      : ['bad', `${total} 字节将越过整个 24 字节帧 —— 第 ${25}…${total} 字节会砸在返回地址上`];
+  $('#gsOut').innerHTML = `
+    <div class="fw"><div class="fgrp"><div class="fcap">gets 逐字节写入（· 处为不可打印字符），最后一格补 '\\0'</div>
+      ${byteChips(bytes, () => 'e')}${'<span class="b e" style="width:24px;display:inline-flex;align-items:center;justify-content:center">\\0</span>'}</div></div>
+    <div class="readout">
+      <dt>字符数</dt><dd>${bytes.length}（加 '\\0' 共 <b>${total}</b> 字节落盘）</dd>
+      <dt>返回值</dt><dd>dest 本身 —— gets 永远「成功」，它没有任何机制阻止你写越界</dd>
+    </div>
+    <div class="box ${verdict[0]}" style="margin-bottom:0"><div class="t">${verdict[1]}</div>
+      ${total > 24 ? '回到 <a href="#s6">第 6 节的可视化器</a>看这些字节的确切落点。' : '想看它在栈上的确切落点，去 <a href="#s6">第 6 节</a>。'}</div>`;
+}
+
+/* ============================================================
+   6. echo 栈字节可视化器（核心）
+   ============================================================ */
+const RA_INIT = [0xf6, 0x06, 0x40, 0x00, 0x00, 0x00, 0x00, 0x00];   // 0x4006f6 的小端字节
+
+function renderEchoStack() {
+  const bytes = strBytes($('#stIn').value);
+  if (bytes === null) { $('#stOut').innerHTML = badBox('本演示只用单字节（ASCII）字符 —— 检查到多字节字符。'); return; }
+  const n = bytes.length, total = n + 1;
+  const slots = Array.from({ length: 32 }, (_, j) => (j >= 24 ? RA_INIT[j - 24] : null));
+  const written = Array(32).fill(false);
+  for (let j = 0; j < Math.min(total, 32); j++) {
+    slots[j] = j < n ? bytes[j] : 0;
+    written[j] = true;
+  }
+  const rowOf = (cells, markWritten) => '<div class="bits sm">' + cells.map((b, j) => {
+    const zone = j < 4 ? 'e' : j >= 24 ? 's' : '';
+    const w = markWritten && written[j];
+    return `<span class="b${zone}${w ? ' sel' : ''}" style="width:20px" title="rsp+${j}">${b === null ? '·' : hexByte(b)}</span>`;
+  }).join('') + '</div>';
+  const ruler = '<div class="bits sm">' + Array.from({ length: 32 }, (_, j) =>
+    `<span class="b" style="width:20px;background:transparent;color:var(--muted);font-size:10px">${j}</span>`).join('') + '</div>';
+  const newRA = echoNewRA(bytes);
+  let verdict, vcls;
+  if (total <= 4) { vcls = 'ok'; verdict = `全部 ${total} 字节都在 buf[4] 里，程序毫发无损`; }
+  else if (total <= 24) {
+    vcls = 'warn';
+    verdict = `溢出了 buf（写了 ${total} 字节），但只漫过 ${total - 4} 字节空隙 —— 「Overflowed buffer, but did not corrupt state」`;
+  } else if (total <= 32) {
+    vcls = 'bad';
+    const raBytes = [];
+    for (let j = 24; j < 32; j++) raBytes.push(slots[j]);
+    verdict = `返回地址有 ${Math.min(total, 32) - 24} 个低字节被改写：0x4006f6 → <b>${hex64(newRA)}</b>。ret 会把 %rip 拨到这里 —— ${hex64(newRA) === '0x0000000000400600' ? '0x400600 不是合法代码 → Segmentation fault（课件例 2）' : '那里若不是合法代码，同样段错误'}`;
+  } else {
+    vcls = 'bad';
+    verdict = `写入 ${total} 字节：返回地址整个被改写成 <b>${hex64(newRA)}</b>，且更上面的 call_echo 栈帧也被破坏 —— 后果更加不可测`;
+  }
+  $('#stOut').innerHTML = `
+    <div class="fw"><div class="fgrp"><div class="fcap">写入前：rsp+0..3 是 buf（蓝）· rsp+4..23 是空隙 · rsp+24..31 是返回地址 0x4006f6（红，小端 f6 06 40）</div>${rowOf(slots, false)}</div></div>
+    <div class="fw"><div class="fgrp"><div class="fcap">gets 写入后：蓝框 = 被你的输入（含 '\\0'）覆盖的字节</div>${rowOf(slots, true)}</div></div>
+    <div style="margin:4px 0 8px">${ruler}<span style="font-size:11.5px;color:var(--muted)">格子上方数字 = 相对 %rsp 的字节偏移；红区 = 返回地址</span></div>
+    <div class="readout">
+      <dt>写入字节</dt><dd>${n} 个字符 + '\\0' = <b>${total}</b> 字节（echo 帧只有 24 字节宽）</dd>
+      <dt>返回地址</dt><dd>${newRA === null ? `${hex64(0x4006f6)}（<b>未被触碰</b>）` : `0x4006f6 → <b>${hex64(newRA)}</b>`}</dd>
+    </div>
+    <div class="box ${vcls}" style="margin-bottom:0"><div class="t">${verdict}</div>
+      把输入加长 / 缩短一个字符再试 —— 第 25 字节起，你的输入就是「程序将要返回到的地址」。</div>`;
+}
+
+/* ============================================================
+   7.2 攻击串构造器
+   ============================================================ */
+function renderAttack() {
+  const bytes = strBytes($('#akFill').value);
+  if (bytes === null) { $('#akOut').innerHTML = badBox('填充只支持单字节（ASCII）字符。'); return; }
+  let tgt;
+  const tRaw = $('#akTgt').value.trim().replace(/[_,\s]/g, '');
+  if (/^(0[xX])?[0-9a-fA-F]+$|^-?[0-9]+$/.test(tRaw)) { try { tgt = u64(BigInt(tRaw)); } catch (e) { tgt = null; } } else tgt = null;
+  if (tgt === null || tgt > 0xFFFFFFFFFFFFn) { $('#akOut').innerHTML = badBox('目标地址请给 0 … 0xFFFFFFFFFFFF 之间的整数（可写 0x…）。'); return; }
+  if (bytes.length > 24) { $('#akOut').innerHTML = badBox('填充最多 24 字节 —— echo 的帧只有这么宽，再多就先于地址改写别的数据了。'); return; }
+  const fill = bytes.slice();
+  while (fill.length < 24) fill.push(0x2e);          // 不足 24 字节用 '.' 补齐，正好够到返回地址
+  const tgtBytes = [];
+  for (let j = 0; j < 8; j++) tgtBytes.push(Number((tgt >> BigInt(8 * j)) & 0xffn));
+  const full = fill.concat(tgtBytes);
+  const hexStr = full.map(hexByte).join(' ');
+  const cells = full.map(b => ({ t: hexByte(b) }));
+  const targetTxt = hex64t(tgt);
+  const known = { '0x4006FB': 'smash()（课件第 29 页构建）—— ret 后执行 printf("I\'ve been smashed!") 然后 exit(0)',
+                  '0x4006C8': 'smash()（课件第 31 页那次构建）—— 同一个攻击，二进制不同地址就不同' };
+  $('#akOut').innerHTML = `
+    <div class="fw"><div class="fgrp"><div class="fcap">攻击串共 32 字节：前 24 字节填充（蓝 = 你的输入，灰点 = 自动补齐的 '.'），后 8 字节 = 目标地址（小端）</div>
+      <div class="bits sm">${cells.slice(0, 24).map((c, j) =>
+        `<span class="b${j < bytes.length ? 'e' : 'f'}" style="width:20px" title="rsp+${j}">${c.t}</span>`).join('') +
+        cells.slice(24).map((c, j) => `<span class="b s" style="width:20px" title="rsp+${24 + j}（返回地址）">${c.t}</span>`).join('')}</div></div></div>
+    <div class="formula" style="text-align:left">
+      <div>Attack String (Hex)</div>
+      <div>${hexStr}</div>
+    </div>
+    <div class="readout">
+      <dt>投放命令</dt><dd class="mono">cat smash-hex.txt | ./hexify | ./bufdemo-nsp</dd>
+      <dt>ret 之后</dt><dd>%rip ← <b>${targetTxt}</b>${known[targetTxt] ? ' —— ' + known[targetTxt] : ' —— 若那里没有可执行代码，程序段错误'}</dd>
+    </div>
+    <div class="box ok" style="margin-bottom:0"><div class="t">和 6.4 节连起来看</div>
+      溢出示例只写到「返回地址被破坏」；这里多写的 8 字节是<b>精心挑选的值</b> —— 破坏（crash）升级成了<b>劫持（hijack）</b>。小端序让地址的最低位字节先上栈，正好对齐。
+    </div>`;
+}
+
+/* ============================================================
+   8.2 栈随机化演示
+   ============================================================ */
+const ASLR_SEEDS = ['0x7ffe4d3be87c', '0x7fff75a4f9fc', '0x7ffeadb7c80c', '0x7ffeaea2fdac', '0x7ffcd452017c'];
+function varyBits(list) {
+  let mask = 0n;
+  for (let i = 0; i < list.length; i++)
+    for (let j = i + 1; j < list.length; j++) mask |= (list[i] ^ list[j]);
+  let cnt = 0;
+  while (mask) { cnt += Number(mask & 1n); mask >>= 1n; }
+  return cnt;
+}
+function renderAslr(extra) {
+  const base = ASLR_SEEDS.map(s => BigInt(s));
+  const rows = (list, cap) => `<div class="fgrp"><div class="fcap">${cap}</div>
+    <div style="font-family:var(--font-mono);font-size:13.5px;line-height:1.9">${list.map(hex64t).join('<br>')}</div></div>`;
+  const c1 = varyBits(base);
+  let html = `
+    <div class="fw">${rows(base, '课件第 42 页连测 5 次 local 的地址（真实机器）')}</div>
+    <div class="readout" style="margin-top:10px">
+      <dt>随机幅度</dt><dd>这 5 个地址互不相同的位共 <b>${c1} 位</b> —— 攻击者无法预测栈上数据的确切位置</dd>
+      <dt>不变的骨架</dt><dd>高 16 位始终是 0x7ff… 一带 —— 随机的不是「栈在哪一带」，而是「具体偏移多少」</dd>
+    </div>`;
+  if (extra && extra.length) {
+    html += `<div class="fw" style="margin-top:6px">${rows(extra, '再抽 5 次（<b>本页示意模拟</b>：高位固定 0x7ffc…0x7fff，低 34 位随机 —— 真实范围由内核决定）')}</div>`;
+  }
+  html += `<div class="box warn" style="margin-bottom:0"><div class="t">随机化挡住什么、挡不住什么</div>
+    它让<b>「写死的攻击地址」</b>失效（猜不准注入代码或跳板的确切位置），但挡不住 9.4 节 ROP 那种<b>地址固定在代码段</b>的打法。防御从来是组合拳。</div>`;
+  $('#asOut').innerHTML = html;
+}
+
+/* ============================================================
+   8.3 canary 模拟器
+   ============================================================ */
+let cnCanary = Array.from({ length: 8 }, () => Math.floor(Math.random() * 256));
+
+function renderCanary() {
+  const bytes = strBytes($('#cnIn').value);
+  if (bytes === null) { $('#cnOut').innerHTML = badBox('本演示只用单字节（ASCII）字符。'); return; }
+  const n = bytes.length, total = n + 1;
+  const slots = Array.from({ length: 32 }, (_, j) => (j >= 8 && j < 16 ? cnCanary[j - 8] : null));
+  const written = Array(32).fill(false);
+  for (let j = 0; j < Math.min(total, 32); j++) { slots[j] = j < n ? bytes[j] : 0; written[j] = true; }
+  const corrupt = total >= 9;                       // 第 9 字节起落进金丝雀（rsp+8..15）
+  const rowOf = mark => '<div class="bits sm">' + slots.map((b, j) => {
+    const zone = j < 4 ? 'e' : (j >= 8 && j < 16) ? 's' : '';
+    const w = mark && written[j];
+    return `<span class="b${zone}${w ? ' sel' : ''}" style="width:20px" title="rsp+${j}">${b === null ? '·' : hexByte(b)}</span>`;
+  }).join('') + '</div>';
+  const ruler = '<div class="bits sm">' + Array.from({ length: 32 }, (_, j) =>
+    `<span class="b" style="width:20px;background:transparent;color:var(--muted);font-size:10px">${j}</span>`).join('') + '</div>';
+  let verdict, vcls;
+  if (total <= 4) { vcls = 'ok'; verdict = `${total} 字节全在 buf[4] 里，连溢出都没有`; }
+  else if (total <= 8) {
+    vcls = 'ok';
+    verdict = `写了 ${total} 字节：漫过 buf 与 4 字节空隙，<b>金丝雀分毫未动</b> → xorq 结果为零 → je .L6 → 正常返回（课件 7 字符例）`;
+  } else {
+    vcls = 'bad';
+    verdict = `第 9 字节起落进金丝雀（rsp+8）→ xorq 结果非零 → je 不跳 → <b>call __stack_chk_fail</b> → 「*** stack smashing detected ***」（课件 8 字符例）${total > 16 ? '；此时返回地址也已被毁，但检查发生在 ret 之前 —— 攻击来不及发生' : ''}`;
+  }
+  $('#cnOut').innerHTML = `
+    <div class="fw"><div class="fgrp"><div class="fcap">受保护的帧（按第 45 页反汇编）：buf（蓝）· 4 字节空隙 · <b>金丝雀（红，本页示例值 ${cnCanary.map(hexByte).join(' ')}</b>）· 8 字节空隙 · 返回地址</div>${rowOf(false)}</div></div>
+    <div class="fw"><div class="fgrp"><div class="fcap">gets 写入后（蓝框 = 被覆盖）</div>${rowOf(true)}</div></div>
+    <div style="margin:4px 0 8px">${ruler}</div>
+    <div class="readout">
+      <dt>金丝雀来源</dt><dd><code>%fs:0x28</code> —— 分段寻址的只读段，<b>每次运行随机生成</b>（第 45 页 Aside）</dd>
+      <dt>检查时序</dt><dd>movq 8(%rsp),%rax → xorq %fs:40,%rax → je .L6 → （不等则）call __stack_chk_fail</dd>
+    </div>
+    <div class="box ${vcls}" style="margin-bottom:0"><div class="t">${verdict}</div></div>`;
+}
+
+/* ============================================================
+   9.2/9.3 gadget 解码器
+   ============================================================ */
+const GD_EXAMPLES = {
+  ab: { cap: 'ab_plus_c（课件第 49 页）', base: 0x4004d0,
+        bytes: [0x48, 0x0f, 0xaf, 0xfe, 0x48, 0x8d, 0x04, 0x17, 0xc3], pre: 4,
+        gadget: { addr: 0x4004d4, txt: 'rax ← rdi + rdx', src: '借用现有函数的尾巴（Use tail end of existing functions）' } },
+  sv: { cap: 'setval（课件第 50 页）', base: 0x4004d9,
+        bytes: [0xc7, 0x07, 0xd4, 0x48, 0x89, 0xc7, 0xc3], pre: 3,
+        gadget: { addr: 0x4004dc, txt: 'rdi ← rax', src: '重新利用字节码（Repurpose byte codes）：48 89 c7 藏在 movl 的立即数里' } },
+};
+const GD_DEC = [
+  { len: 4, bytes: [0x48, 0x0f, 0xaf, 0xfe], txt: 'imul %rsi,%rdi', note: 'rdi ← rdi × rsi（低 64 位）' },
+  { len: 4, bytes: [0x48, 0x8d, 0x04, 0x17], txt: 'lea (%rdi,%rdx,1),%rax', note: 'rax ← rdi + rdx —— 例 1 的 gadget' },
+  { len: 2, bytes: [0xc7, 0x07], imm: 4, txt: 'movl $imm,(%rdi)', note: '把 4 字节立即数写进 %rdi 指向的内存 —— 例 2 的宿主指令' },
+  { len: 3, bytes: [0x48, 0x89, 0xc7], txt: 'mov %rax,%rdi', note: 'rdi ← rax —— 例 2 的 gadget' },
+  { len: 1, bytes: [0xc3], txt: 'retq', note: '弹 8 字节进 %rip —— gadget 的收尾，单字节 0xc3' },
+];
+let gdKey = 'ab', gdClick = null;
+
+function gdDecodeAt(ex, off) {
+  for (const d of GD_DEC) {
+    if (off + d.len > ex.bytes.length) continue;
+    let ok = true;
+    for (let j = 0; j < d.bytes.length; j++) if (ex.bytes[off + j] !== d.bytes[j]) { ok = false; break; }
+    if (!ok) continue;
+    if (d.imm) {
+      if (off + d.len + d.imm > ex.bytes.length) continue;
+      let imm = 0;
+      for (let j = 0; j < d.imm; j++) imm |= ex.bytes[off + d.len + j] << (8 * j);
+      return { len: d.len + d.imm, txt: `movl $${hex32(imm)},(%rdi)`, note: d.note, hi: d.len };
+    }
+    return { len: d.len, txt: d.txt, note: d.note, hi: d.len };
+  }
+  return null;
+}
+
+function renderGadget() {
+  const ex = GD_EXAMPLES[gdKey];
+  if (gdClick === null || gdClick >= ex.bytes.length) gdClick = ex.pre;
+  const dec = gdDecodeAt(ex, gdClick);
+  const row = '<div class="bits">' + ex.bytes.map((b, j) => {
+    const inWin = dec && j >= gdClick && j < gdClick + dec.len;
+    const isGadgetStart = j === ex.pre;
+    return `<span class="b${inWin ? ' e sel' : isGadgetStart ? ' s' : ''}" style="width:30px;cursor:pointer" data-gd="${j}"
+      title="${ex.base === null ? '' : '0x' + (ex.base + j).toString(16)}">${hexByte(b)}</span>`;
+  }).join('') + '</div>';
+  const gadgetAddr = '0x' + (ex.base + ex.pre).toString(16);
+  $('#gdOut').innerHTML = `
+    <div class="fgrp"><div class="fcap">${esc(ex.cap)} —— 起始地址 0x${ex.base.toString(16)}；<b>点击任意字节</b>，看从它开始能解出什么指令</div>${row}</div>
+    <div class="readout">
+      <dt>从 0x${(ex.base + gdClick).toString(16)} 开始</dt><dd>${dec ? `<b>${esc(dec.txt)}</b>（${dec.len} 字节）<br><span style="color:var(--muted)">${esc(dec.note)}</span>` : '<span class="chip warn">解不出课件里的指令</span> —— x86 是变长指令集，同一串字节有多种读法，这正是 gadget 的原料'}</dd>
+      <dt>课件选的 gadget</dt><dd>从 <b>${gadgetAddr}</b> 开始：<b>${esc(ex.gadget.txt)}</b><br><span style="color:var(--muted)">${esc(ex.gadget.src)}（地址 = 0x${ex.base.toString(16)} + ${ex.pre} = ${gadgetAddr}，本页现算）</span></dd>
+    </div>
+    <div class="box ok" style="margin-bottom:0"><div class="t">两个例子，两种来源</div>
+      例 1 是<b>函数的真尾巴</b>（lea + ret 本来就挨着）；例 2 是<b>从立即数中间抠出来的假指令</b> —— 字节 d4 48 89 c7 里藏着 48 89 c7。在例 2 里点第 2 个字节（d4）再点第 4 个（48），感受一下「同一段字节、两种事实」。
+    </div>`;
+}
+
+/* ============================================================
+   9.4 ROP 追踪器
+   ============================================================ */
+let rpIdx = 0, rpTimer = null, rpCur = { a: 7n, c: 3n };
+
+function rpSteps(a, c) {
+  const sum = u64(a + c);
+  return [
+    { h: '① echo 执行 ret', m: `%rip ← Mem[%rsp] = 0x4004d4（gadget #1）`, e: `这 8 字节本是返回地址，已被攻击串的 d4 04 40 00 00 00 00 00 覆盖。` },
+    { h: '② gadget #1：lea (%rdi,%rdx,1),%rax', m: `rax ← rdi + rdx = ${hex64(a)} + ${hex64(c)} = ${hex64(sum)}`, e: '课件例 1 的函数尾巴。注意 imul 那条不在 gadget 里 —— 从 0x4004d4 才开始。' },
+    { h: '③ gadget #1 执行 ret', m: '%rip ← Mem[%rsp] = 0x4004dc（gadget #2）', e: '每个 gadget 结尾的 ret 都从栈上取下一个地址 —— 攻击串把 0x4004dc 排在下一格。' },
+    { h: '④ gadget #2：mov %rax,%rdi', m: `rdi ← rax = ${hex64(sum)}`, e: '课件例 2 从 movl 立即数里抠出的指令。组合效果：rdi ← rdi + rdx —— 与课件第 52 页一致。' },
+    { h: '⑤ gadget #2 执行 ret', m: '弹出再下一项 —— 栈上已无安排', e: '课件原文「goes off somewhere」。警告：Multiple gadgets will corrupt stack upwards —— 每串一个 gadget 就多毁 8 字节栈。' },
+  ];
+}
+function renderRop() {
+  const steps = rpSteps(rpCur.a, rpCur.c);
+  const list = steps.map((s, i) => `
+    <div class="step${i <= rpIdx ? ' on' : ''}"><div class="h">${esc(s.h)}</div><div class="m">${esc(s.m)}</div><div class="e">${esc(s.e)}</div></div>`).join('');
+  const done = rpIdx >= steps.length - 1;
+  const le = v => { const out = []; for (let j = 0; j < 8; j++) out.push(Number((v >> BigInt(8 * j)) & 0xffn)); return out.map(hexByte).join(' '); };
+  const atk = '30 31 32 33 34 35 36 37 38 39 30 31 32 33 34 35 36 37 38 39 30 31 32 33  '
+    + `<b>${le(0x4004d4n)}</b>  <b>${le(0x4004dcn)}</b>`;
+  $('#rpOut').innerHTML = `
+    ${list}
+    <div class="readout">
+      <dt>攻击串</dt><dd class="mono" style="overflow-x:auto">${atk}&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)">（24 填充 + gadget#1 0x4004d4 + gadget#2 0x4004dc，地址字节现算）</span></dd>
+      <dt>当前寄存器</dt><dd class="mono">rdi = ${hex64(rpIdx >= 3 ? u64(rpCur.a + rpCur.c) : rpCur.a)}&nbsp;&nbsp;rax = ${hex64(rpIdx >= 1 ? u64(rpCur.a + rpCur.c) : 0n)}&nbsp;&nbsp;rdx = ${hex64(rpCur.c)}</dd>
+    </div>
+    <div class="box ${done ? 'ok' : ''}" style="margin-bottom:0"><div class="t">${done ? '链走完了：rdi ← rdi + rdx，全程没注入一行代码' : '按「下一步」逐格走完这条 ROP 链'}</div>
+      两个 gadget 都来自程序自己的代码段 —— 地址不随机化、天然可执行。能拦住它的只剩<b>栈金丝雀</b>（攻击必须毁掉 canary 上方的返回地址才能 ret 进 gadget 1）。</div>`;
+}
+
+/* ============================================================
+   10.3 测验
+   ============================================================ */
+const QUIZ = [
+  { q: '<code>union U1 {char c; int i[2]; double v;}</code> 的 <code>sizeof(U1)</code> 是多少？',
+    o: ['8', '16', '24', '15'], a: 0,
+    w: 'union 按最大成员分配：int i[2] 与 double v 都是 8 字节，所以分配 8 字节（对齐要求也是 8）。24 是同样成员的 struct S1 的大小。见 1.1 节。' },
+  { q: '<code>bit2float(5)</code>（union 重解释）返回的是？',
+    o: ['5.0f', '约 7 × 10<sup>−45</sup> 的极小正数', '0.0f', '未定义行为'], a: 1,
+    w: 'union 不换算数值，只重解释位模式：整数 5 的位模式当 float 读是一个极小的次正规数。(float) 5 才是 5.0。用 1.2 节的工具输入 u = 5 可直接看到。' },
+  { q: '小端机器上，字节序列 f0 f1 f2 f3 组成的 unsigned int 打印出来是？',
+    o: ['0xf0f1f2f3', '0xf3f2f1f0', '0xf1f0f3f2', '0xf2f3f0f1'], a: 1,
+    w: '小端把最低位字节 f0 放在最低地址 —— 数值的最低位字节是 f0，打印为 0xf3f2f1f0。这正是课件第 8 页 x86 的输出。见 2.3 节。' },
+  { q: '<code>phuge1 = malloc(1L&lt;&lt;28)</code>（256MB）返回的地址属于哪个区域？',
+    o: ['栈 Stack', '堆 Heap', '数据 Data', '代码 Text'], a: 1,
+    w: 'malloc 的分配都属于堆；课件第 15 页里这个 256MB 大块落在共享库附近的 mmap 区（0x7f72…），概念上仍是「dynamically allocated as needed」的堆。见 3.1–3.3 节。' },
+  { q: 'fun(3) 返回 2.0000006104，是因为 0x40000000 写到了？',
+    o: ['a[3] 自己身上', 'd 的高 4 字节', 'd 的低 4 字节', '栈金丝雀上'], a: 1,
+    w: 'a[i] 写在偏移 4i 处：a[3] 在 12–15，恰是 d（偏移 8–15）的高 4 字节。3.14 的位模式 0x40091EB851EB851F 高 4 字节换成 40000000 → 0x4000000051EB851F = 2.0000006104。见 4.2 节。' },
+  { q: 'bufdemo-nsp 输入 24 个字符后段错误，直接原因是？',
+    o: ['栈帧太小，编译失败', '第 25 字节 \'\\0\' 覆盖了返回地址最低字节，程序返回到 0x400600', 'puts 越界读崩了', 'malloc 返回 NULL'], a: 1,
+    w: '24 字符 + 1 个 \'\\0\' = 25 字节：第 25 字节落在返回地址 0x4006f6 的最低位上，把它从 f6 改成 00 → ret 跳到 0x400600 → 非法地址段错误。见 6.2 节。' },
+  { q: '栈金丝雀实验里，输入 8 个字符就被检测出来，7 个却没事，原因是？',
+    o: ['金丝雀在 buf 上方 8 字节处，7 字符 + \'\\0\' 恰好没碰到它', '金丝雀只有 7 字节', '8 是编译器规定的阈值', 'fgets 限制了长度'], a: 0,
+    w: '受保护帧里 buf 在 rsp+0、金丝雀在 rsp+8：7 字符 + \'\\0\' = 8 字节，恰好停在金丝雀下面；第 9 字节起才会砸到它。见 8.3 节的模拟器。' },
+  { q: 'ROP 攻击能绕过哪些防御？',
+    o: ['栈随机化与不可执行栈，但绕不过金丝雀', '三种全绕得过', '只能绕过金丝雀', '一种都绕不过'], a: 0,
+    w: 'gadget 在代码段里：位置不随机化（绕过随机化）、天然可执行（绕过 NX）。但ROP 必须连续 ret、必然毁坏金丝雀上方的返回地址，课件原文「Does not overcome stack canaries」。见 9.1 节。' },
+  { q: '蠕虫与病毒的本质区别是？',
+    o: ['蠕虫可独立运行并自我复制，病毒必须寄生到别的程序', '蠕虫只感染局域网', '病毒更高级', '没有本质区别'], a: 0,
+    w: '课件第 39 页的定义：Worm can run by itself 并传播完整副本；Virus 把自己加到别的程序上、不能独立运行。见 7.5 节。' },
+];
+let qzState = QUIZ.map(() => null);
+function renderQuiz() {
+  const answered = qzState.filter(v => v !== null).length;
+  const right = QUIZ.filter((q, i) => qzState[i] === q.a).length;
+  const list = QUIZ.map((q, i) => {
+    const sel = qzState[i];
+    const cls = sel === null ? '' : sel === q.a ? ' correct done' : ' wrong done';
+    return `<div class="puzzle${cls}" style="flex-direction:column;align-items:stretch">
+      <div class="q" style="white-space:normal"><b>${i + 1}.</b> ${q.q}</div>
+      <div style="display:flex;flex-wrap:wrap;gap:7px;margin-top:8px">
+        ${q.o.map((o, j) => `<button class="sm" data-qzo="${i}:${j}"
+          style="${sel === null ? '' : j === q.a ? 'border-color:var(--ok-bd);background:var(--ok-bg)'
+            : j === sel ? 'border-color:var(--bad-bd);background:var(--bad-bg)' : 'opacity:.6'}">
+          ${'ABCD'[j]}. ${o}</button>`).join('')}
+      </div>
+      <div class="exp"><span class="verdict">${sel === null ? '' : sel === q.a ? '✓ 正确' : '✗ 错误'}</span>
+        &nbsp;正确答案：<b>${'ABCD'[q.a]}. ${q.o[q.a]}</b><br>${q.w}</div>
+    </div>`;
+  }).join('');
+  const score = answered === 0 ? '' : `<div class="box ${right === QUIZ.length ? 'ok' : right >= QUIZ.length / 2 ? 'warn' : 'bad'}" style="margin-bottom:0">
+    <div class="t">已答 ${answered} / ${QUIZ.length} 题，答对 ${right} 题</div>
+    ${answered === QUIZ.length
+      ? (right === QUIZ.length ? '全对 —— union、字节序、内存布局、溢出、防御与 ROP 都拿下了。'
+        : '错题上方已标出正确答案与依据，回到对应小节再看一遍即可。')
+      : '继续答题，每题都会立即给出解析。'}
+  </div>`;
+  $('#qzOut').innerHTML = list + score;
+}
+
+/* ============================================================
+   初始化
+   ============================================================ */
+const PUZ_LISTS = { uzOut: PUZ_UNION, bzOut: PUZ_BYTEORD, wvOut: PUZ_WORM, roOut: PUZ_ROP };
+
+function renderAllPuzzles() {
+  Object.keys(PUZ_LISTS).forEach(el => renderPuzzles(el, PUZ_LISTS[el], puzState[el], el));
+}
+
+function initAll() {
+  /* --- 1.1 union / struct 字节地图 --- */
+  renderUnion();
+  $$('#uniSeg button').forEach(b => b.addEventListener('click', () => {
+    $$('#uniSeg button').forEach(x => x.classList.remove('on'));
+    b.classList.add('on');
+    uniFocus = b.dataset.u;
+    renderUnion();
+  }));
+
+  /* --- 1.2 位模式重解释 --- */
+  function doBf() { renderBitFloat(); }
+  $('#bfGo').addEventListener('click', doBf);
+  $('#bfIn').addEventListener('keydown', e => { if (e.key === 'Enter') doBf(); });
+  $$('#bfSeg button').forEach(b => b.addEventListener('click', () => {
+    $$('#bfSeg button').forEach(x => x.classList.remove('on'));
+    b.classList.add('on');
+    bfKind = b.dataset.k;
+    doBf();
+  }));
+  $$('[data-bf]').forEach(b => b.addEventListener('click', () => {
+    const kv = kvAttr(b.dataset.bf);
+    bfKind = kv.k || 'u';
+    $$('#bfSeg button').forEach(x => x.classList.toggle('on', x.dataset.k === bfKind));
+    $('#bfIn').value = kv.v;
+    doBf();
+  }));
+  doBf();
+
+  /* --- 判断题（事件委托，重渲染后依旧有效） --- */
+  document.addEventListener('click', e => {
+    const pz = e.target.closest('[data-pz]');
+    if (pz) {
+      const [el, i, v] = pz.dataset.pz.split(':');
+      if (puzState[el][+i] !== null) return;
+      puzState[el][+i] = +v;
+      renderPuzzles(el, PUZ_LISTS[el], puzState[el], el);
+      return;
+    }
+    const qzo = e.target.closest('[data-qzo]');
+    if (qzo) {
+      const [i, j] = qzo.dataset.qzo.split(':').map(Number);
+      if (qzState[i] !== null) return;
+      qzState[i] = j;
+      renderQuiz();
+      return;
+    }
+    const gd = e.target.closest('[data-gd]');
+    if (gd) { gdClick = +gd.dataset.gd; renderGadget(); }
+  });
+  $('#uzReset').addEventListener('click', () => { puzState.uzOut = PUZ_UNION.map(() => null); renderPuzzles('uzOut', PUZ_UNION, puzState.uzOut, 'uzOut'); });
+  $('#bzReset').addEventListener('click', () => { puzState.bzOut = PUZ_BYTEORD.map(() => null); renderPuzzles('bzOut', PUZ_BYTEORD, puzState.bzOut, 'bzOut'); });
+  $('#wvReset').addEventListener('click', () => { puzState.wvOut = PUZ_WORM.map(() => null); renderPuzzles('wvOut', PUZ_WORM, puzState.wvOut, 'wvOut'); });
+  $('#roReset').addEventListener('click', () => { puzState.roOut = PUZ_ROP.map(() => null); renderPuzzles('roOut', PUZ_ROP, puzState.roOut, 'roOut'); });
+  $('#qzReset').addEventListener('click', () => { qzState = QUIZ.map(() => null); renderQuiz(); });
+  renderAllPuzzles();
+  renderQuiz();
+
+  /* --- 2.3 字节序模拟器 --- */
+  function doBo() { renderByteOrder(); }
+  $$('#boSeg button').forEach(b => b.addEventListener('click', () => {
+    $$('#boSeg button').forEach(x => x.classList.remove('on'));
+    b.classList.add('on');
+    boMachine = b.dataset.m;
+    doBo();
+  }));
+  $$('[data-bo]').forEach(b => b.addEventListener('click', () => { $('#boIn').value = b.dataset.bo; doBo(); }));
+  $('#boIn').addEventListener('keydown', e => { if (e.key === 'Enter') doBo(); });
+  doBo();
+
+  /* --- 3.3 地址分拣 --- */
+  function doAd() { renderAddr(); }
+  $('#adGo').addEventListener('click', () => { adJudged = true; doAd(); });
+  $('#adReset').addEventListener('click', () => { adJudged = false; adState = ADDR_ITEMS.map(() => ''); doAd(); });
+  $('#adOut').addEventListener('change', e => {
+    const sel = e.target.closest('[data-ad]');
+    if (sel) { adState[+sel.dataset.ad] = sel.value; doAd(); }
+  });
+  doAd();
+  renderMallocGaps();
+
+  /* --- 3.4 runaway stack --- */
+  function doRs() { renderRunaway(); }
+  $('#rsGo').addEventListener('click', doRs);
+  [$('#rsLim'), $('#rsFrm')].forEach(el => el.addEventListener('keydown', e => { if (e.key === 'Enter') doRs(); }));
+  $$('[data-rs]').forEach(b => b.addEventListener('click', () => {
+    const kv = kvAttr(b.dataset.rs);
+    $('#rsLim').value = kv.lim; $('#rsFrm').value = kv.frm; doRs();
+  }));
+  doRs();
+
+  /* --- 4.2 fun(i) --- */
+  function doFi() { fiI = +$('#fiI').value; renderFunI(); }
+  $('#fiI').addEventListener('change', doFi);
+  $$('[data-fi]').forEach(b => b.addEventListener('click', () => { $('#fiI').value = b.dataset.fi; doFi(); }));
+  doFi();
+
+  /* --- 5.1 gets --- */
+  function doGs() { renderGets(); }
+  $('#gsGo').addEventListener('click', doGs);
+  $('#gsIn').addEventListener('keydown', e => { if (e.key === 'Enter') doGs(); });
+  $$('[data-gs]').forEach(b => b.addEventListener('click', () => { $('#gsIn').value = b.dataset.gs; doGs(); }));
+  doGs();
+
+  /* --- 6 echo 栈 --- */
+  function doSt() { renderEchoStack(); }
+  $('#stGo').addEventListener('click', doSt);
+  $('#stIn').addEventListener('keydown', e => { if (e.key === 'Enter') doSt(); });
+  $$('[data-st]').forEach(b => b.addEventListener('click', () => { $('#stIn').value = b.dataset.st; doSt(); }));
+  doSt();
+
+  /* --- 7.2 攻击串 --- */
+  function doAk() { renderAttack(); }
+  $('#akGo').addEventListener('click', doAk);
+  [$('#akFill'), $('#akTgt')].forEach(el => el.addEventListener('keydown', e => { if (e.key === 'Enter') doAk(); }));
+  $$('[data-ak]').forEach(b => b.addEventListener('click', () => {
+    const kv = kvAttr(b.dataset.ak);
+    $('#akTgt').value = kv.t; doAk();
+  }));
+  doAk();
+
+  /* --- 8.2 ASLR --- */
+  $('#asGo').addEventListener('click', () => {
+    const extra = [];
+    for (let k = 0; k < 5; k++) {
+      const top = BigInt(0x7ffc + Math.floor(Math.random() * 4));
+      const low = BigInt(Math.floor(Math.random() * 0x100000000));
+      extra.push((top << 32n) | low);
+    }
+    renderAslr(extra);
+  });
+  renderAslr(null);
+
+  /* --- 8.3 canary --- */
+  function doCn() { renderCanary(); }
+  $('#cnGo').addEventListener('click', doCn);
+  $('#cnIn').addEventListener('keydown', e => { if (e.key === 'Enter') doCn(); });
+  $$('[data-cn]').forEach(b => b.addEventListener('click', () => { $('#cnIn').value = b.dataset.cn; doCn(); }));
+  $('#cnReroll').addEventListener('click', () => { cnCanary = Array.from({ length: 8 }, () => Math.floor(Math.random() * 256)); doCn(); });
+  doCn();
+
+  /* --- 9.3 gadget 解码器 --- */
+  function doGd() { renderGadget(); }
+  $$('#gdSeg button').forEach(b => b.addEventListener('click', () => {
+    $$('#gdSeg button').forEach(x => x.classList.remove('on'));
+    b.classList.add('on');
+    gdKey = b.dataset.g; gdClick = null;
+    doGd();
+  }));
+  doGd();
+
+  /* --- 9.4 ROP 追踪器 --- */
+  function rpReset() {
+    const a = parseU64($('#rpA').value), c = parseU64($('#rpC').value);
+    if (a === null || c === null) { $('#rpOut').innerHTML = badBox('a 与 c 都要是 64 位整数（可带负号或 0x 前缀）。'); return; }
+    rpCur = { a, c };
+    rpIdx = 0;
+    renderRop();
+  }
+  $('#rpNext').addEventListener('click', () => { if (rpIdx < 4) { rpIdx++; renderRop(); } });
+  $('#rpRun').addEventListener('click', () => {
+    clearInterval(rpTimer);
+    rpTimer = setInterval(() => { if (rpIdx < 4) { rpIdx++; renderRop(); } else clearInterval(rpTimer); }, 900);
+  });
+  $('#rpReset').addEventListener('click', rpReset);
+  [$('#rpA'), $('#rpC')].forEach(el => el.addEventListener('keydown', e => { if (e.key === 'Enter') rpReset(); }));
+  rpReset();
+}
+
+/** 解析用户输入：0x / 0b / 十进制 / 负数 → 无符号 64 位 BigInt 或 null */
+function parseU64(str) {
+  const t = String(str).trim().replace(/[_,\s]/g, '');
+  if (!t) return null;
+  if (/^-[0-9]+$/.test(t) || /^-0[xX][0-9a-fA-F]+$/.test(t)) {
+    const p = parseU64(t.slice(1));
+    return p === null ? null : u64(-p);
+  }
+  try {
+    if (/^0[xX][0-9a-fA-F]+$/.test(t)) return u64(BigInt(t));
+    if (/^0[bB][01]+$/.test(t))        return u64(BigInt(t));
+    if (/^[0-9]+$/.test(t))            return u64(BigInt(t));
+  } catch (e) { return null; }
+  return null;
+}
+
+document.addEventListener('DOMContentLoaded', initAll);
+</script>
+</body>
+</html>

@@ -1,0 +1,3127 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-style="glass" data-deck="ics14">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>代码优化（Program Optimization） · 交互式课件（中文）（柔和玻璃版）</title>
+<style>
+/* ==========================================================================
+   base.css —— 结构基础样式（所有风格共用）
+   只使用 CSS 变量，不含任何具体配色；由各主题覆盖变量与少量结构规则。
+   ========================================================================== */
+
+:root{
+  /* 颜色（每个主题必须覆盖） */
+  --bg:#f6f7f9; --card:#fff; --ink:#15181d; --muted:#697586; --line:#e4e7ec;
+  --accent:#2563eb; --accent-ink:#fff; --accent-soft:#eaf1ff;
+  --sign:#e5484d; --exp:#0b7fd4; --frac:#18915a; --warn:#b45309;
+  --sign-bg:#fdecec; --sign-fg:#a3262b; --sign-bd:#f6cdcf;
+  --exp-bg:#e8f2fd;  --exp-fg:#0a5f9e;  --exp-bd:#c7ddf5;
+  --frac-bg:#e9f7ef; --frac-fg:#116b43; --frac-bd:#c8e8d5;
+  --ok-bg:#f2fbf6; --ok-bd:#9ed3b4; --bad-bg:#fff5f5; --bad-bd:#f1b5b8;
+  --warn-bg:#fffbeb; --gray-bg:#eef1f5; --gray-fg:#5b6472;
+  --paper-soft:#fcfdfe; --code-bg:#f1f3f7; --code-bd:#e6e9ef;
+  --tbl-head:#f7f9fc; --tbl-hover:#fafbfd;
+  --sel-bg:#eef1f5;
+
+  /* 字体 */
+  --font-sans:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",system-ui,sans-serif;
+  --font-mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+  --font-display:var(--font-sans);
+  --tracking-title:normal;
+
+  /* 形状 */
+  --radius:12px; --radius-sm:8px; --radius-pill:99px;
+  --border-w:1px; --shadow:0 1px 2px rgba(16,24,40,.06),0 1px 3px rgba(16,24,40,.1);
+  --shadow-card:none;
+  --card-border:var(--border-w) solid var(--line);
+
+  /* 布局 */
+  --page-max:1180px; --nav-w:236px; --gap:26px; --sec-pad:26px 28px;
+  --nav-sticky-top:64px; --anchor-offset:70px;
+  --font-size:16px; --line-height:1.75;
+}
+
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font-sans);
+  font-size:var(--font-size);line-height:var(--line-height);-webkit-font-smoothing:antialiased}
+img{max-width:100%}
+
+/* ---------- 顶栏 ---------- */
+.topbar{position:sticky;top:0;z-index:50;background:var(--card);border-bottom:1px solid var(--line)}
+.topbar-in{max-width:var(--page-max);margin:0 auto;padding:10px 22px;display:flex;align-items:center;gap:14px}
+.brand{font-weight:700;letter-spacing:var(--tracking-title);font-family:var(--font-display)}
+.brand small{font-weight:500;color:var(--muted);margin-left:8px;font-size:12.5px}
+.progress{margin-left:auto;display:flex;align-items:center;gap:10px;font-size:12.5px;color:var(--muted)}
+.progress .bar{width:150px;height:6px;border-radius:var(--radius-pill);background:var(--line);overflow:hidden}
+.progress .bar>i{display:block;height:100%;width:0;background:var(--accent);transition:width .25s}
+
+/* ---------- 主体布局 ---------- */
+.layout{max-width:var(--page-max);margin:0 auto;padding:22px;display:grid;
+  grid-template-columns:var(--nav-w) minmax(0,1fr);gap:var(--gap)}
+main{min-width:0}
+/* 长 URL / 长标识符没有断行点，会把容器整个撑破（窄屏尤其明显）。
+   只作用于文本容器；表格故意不加，让它走 .tbl-wrap 的横向滚动。 */
+main p,main li,main dd,main dt,main h2,main h3,main h4,main h5,
+main .box,main .card,main .readout,main .puzzle,main .step{overflow-wrap:anywhere}
+
+/* ---------- 目录 ---------- */
+nav.toc{position:sticky;top:var(--nav-sticky-top);align-self:start;max-height:calc(100vh - 84px);overflow:auto;padding-right:4px}
+nav.toc h4{margin:0 0 8px;font-size:12px;letter-spacing:.12em;color:var(--muted);text-transform:uppercase;font-weight:600}
+nav.toc a{display:block;padding:7px 11px;border-radius:var(--radius-sm);color:var(--ink);opacity:.78;
+  text-decoration:none;font-size:14.5px;border-left:2.5px solid transparent}
+nav.toc a:hover{background:var(--sel-bg);opacity:1}
+nav.toc a.active{background:var(--accent-soft);color:var(--accent);border-left-color:var(--accent);font-weight:600;opacity:1}
+nav.toc a .n{display:inline-block;min-width:20px;color:var(--muted);font-size:12.5px;font-variant-numeric:tabular-nums}
+nav.toc a.active .n{color:var(--accent)}
+nav.toc .sub{padding-left:26px;font-size:13.5px;opacity:.7}
+
+/* ---------- 章节 ---------- */
+section{background:var(--card);border:var(--card-border);border-radius:var(--radius);
+  padding:var(--sec-pad);margin-bottom:22px;box-shadow:var(--shadow);scroll-margin-top:var(--anchor-offset)}
+section>h2{margin:0 0 6px;font-size:25px;letter-spacing:-.01em;font-family:var(--font-display)}
+section>.lede{color:var(--muted);margin:0 0 20px;font-size:14.5px}
+h3{font-size:18.5px;margin:26px 0 10px;padding-left:11px;border-left:3.5px solid var(--accent);font-family:var(--font-display)}
+h4{font-size:16px;margin:18px 0 8px;font-family:var(--font-display)}
+h5{font-size:15px;font-family:var(--font-display)}
+p{margin:10px 0}
+ul,ol{margin:10px 0;padding-left:22px}
+li{margin:5px 0}
+code{font-family:var(--font-mono);font-size:.89em;background:var(--code-bg);border:1px solid var(--code-bd);border-radius:5px;padding:1px 5px}
+.mono{font-family:var(--font-mono)}
+a{color:var(--accent)}
+hr{border:0;border-top:1px dashed var(--line);margin:24px 0}
+.srcref{font-size:11.5px;color:var(--muted);font-weight:500;font-family:var(--font-sans);margin-left:8px;vertical-align:middle;white-space:nowrap;opacity:.75}
+.en{color:var(--muted);font-size:.92em}
+
+/* ---------- 栅格与卡片 ---------- */
+.grid{display:grid;gap:14px}
+.g2{grid-template-columns:repeat(2,minmax(0,1fr))}
+.g3{grid-template-columns:repeat(3,minmax(0,1fr))}
+/* 窄屏单列：必须用 minmax(0,1fr)。写成 1fr 时轨道最小宽度是 auto，
+   单元格里只要有长代码行（<pre>）就撑破容器，整页横向溢出。 */
+@media(max-width:820px){.g2,.g3{grid-template-columns:minmax(0,1fr)}}
+.card{border:var(--card-border);border-radius:var(--radius-sm);padding:15px 17px;background:var(--paper-soft);box-shadow:var(--shadow-card)}
+.card h5{margin:0 0 7px}
+.card.pad0{padding:0;overflow:hidden}
+
+/* ---------- 提示框 ---------- */
+.box{border:1px solid var(--line);border-left:4px solid var(--accent);background:var(--accent-soft);
+  border-radius:var(--radius-sm);padding:12px 16px;margin:14px 0}
+.box.warn{border-left-color:var(--warn);background:var(--warn-bg)}
+.box.bad{border-left-color:var(--sign);background:var(--bad-bg)}
+.box.ok{border-left-color:var(--frac);background:var(--ok-bg)}
+.box .t{font-weight:650;font-size:14.5px;margin-bottom:2px}
+
+/* ---------- 公式 ---------- */
+.formula{font-family:var(--font-mono);background:var(--paper-soft);border:1px solid var(--line);
+  border-radius:var(--radius-sm);padding:14px 17px;margin:14px 0;font-size:16.5px;text-align:center;overflow-x:auto}
+.formula.big{font-size:20px}
+
+/* ---------- 表格 ---------- */
+table.tbl{width:100%;border-collapse:collapse;font-size:14.5px;margin:14px 0}
+table.tbl th,table.tbl td{border:1px solid var(--line);padding:8px 11px;text-align:left;vertical-align:top}
+table.tbl th{background:var(--tbl-head);font-weight:650;font-size:13.5px;white-space:nowrap}
+table.tbl td.mono,table.tbl th.mono{font-family:var(--font-mono);font-size:13.5px}
+table.tbl tr:hover td{background:var(--tbl-hover)}
+/* 当前行高亮：interactive 表格用它标出「正在看的那一行」。
+   注意 --tbl-hover 是悬停色，深色皮肤下故意比底色亮，所以 hl 用同一套变量。 */
+table.tbl tr.hl td{background:var(--sel-bg)}
+.tbl-wrap{overflow-x:auto}
+
+/* ---------- 位串控件 ---------- */
+.fw{display:flex;flex-wrap:wrap;gap:8px 18px;align-items:flex-start;margin:4px 0 2px;min-width:0}
+.fgrp{min-width:0}
+.fcap{font-size:12px;color:var(--muted);margin-bottom:4px;font-weight:600}
+.fcap b{font-family:var(--font-mono);font-size:12.5px}
+.bits{display:flex;flex-wrap:wrap;gap:2px;font-family:var(--font-mono);margin:4px 0}
+.bits .b{width:25px;height:33px;display:flex;align-items:center;justify-content:center;
+  border-radius:6px;font-size:15px;cursor:pointer;user-select:none;border:1px solid transparent;
+  transition:transform .06s,background .12s;font-weight:600}
+.bits .b:hover{transform:translateY(-2px)}
+.bits .b.s{background:var(--sign-bg);color:var(--sign-fg);border-color:var(--sign-bd)}
+.bits .b.e{background:var(--exp-bg);color:var(--exp-fg);border-color:var(--exp-bd)}
+.bits .b.f{background:var(--frac-bg);color:var(--frac-fg);border-color:var(--frac-bd)}
+.bits .b.sel{outline:2px solid var(--ink);outline-offset:1px}
+.bits.sm .b{width:19px;height:26px;font-size:12px;border-radius:4px}
+.fgrp .bits{flex-wrap:wrap;max-width:100%;gap:2px}
+.fgrp.ge .bits{max-width:300px}
+
+/* ---------- 读数表 ---------- */
+.readout{display:grid;grid-template-columns:auto 1fr;gap:4px 16px;font-size:14.5px;margin:12px 0}
+.readout dt{color:var(--muted);font-weight:600;font-family:var(--font-mono);font-size:13.5px;padding-top:2px}
+.readout dd{margin:0;font-family:var(--font-mono)}
+
+/* ---------- 小标签 ---------- */
+.chip{display:inline-block;font-size:12.5px;padding:2px 9px;border-radius:var(--radius-pill);
+  background:var(--accent-soft);color:var(--accent);font-weight:600}
+.chip.ok{background:var(--frac-bg);color:var(--frac-fg)}
+.chip.bad{background:var(--sign-bg);color:var(--sign-fg)}
+.chip.warn{background:var(--warn-bg);color:var(--warn)}
+.chip.gray{background:var(--gray-bg);color:var(--gray-fg)}
+.kbd{font-family:var(--font-mono);font-size:13px;background:var(--code-bg);border:1px solid var(--code-bd);
+  border-bottom-width:2px;border-radius:6px;padding:1px 7px}
+
+/* ---------- 控件 ---------- */
+.ctrls{display:flex;flex-wrap:wrap;gap:9px;align-items:center;margin:12px 0}
+label.fld{display:inline-flex;align-items:center;gap:7px;font-size:14px;color:var(--ink);max-width:100%;flex-wrap:wrap;min-width:0}
+label.fld select,label.fld input{min-width:0;max-width:100%}
+input[type=text],input[type=number],select{font-family:var(--font-mono);font-size:14px;padding:6px 10px;
+  border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--card);color:var(--ink)}
+input[type=text]:focus,input[type=number]:focus,select:focus{outline:2px solid var(--accent-soft);border-color:var(--accent)}
+button{font-family:var(--font-sans);font-size:14px;font-weight:600;padding:7px 15px;border-radius:var(--radius-sm);
+  border:1px solid var(--line);background:var(--card);color:var(--ink);cursor:pointer}
+button:hover{background:var(--sel-bg)}
+button.p{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+button.sm{padding:4px 10px;font-size:13px}
+button.pill{border-radius:var(--radius-pill)}
+/* 按钮组默认不换行：项一多就会把 .ctrls 撑破。允许它缩到容器宽度并横向滚动。 */
+.seg{display:inline-flex;max-width:100%;border:1px solid var(--line);
+  border-radius:var(--radius-sm);overflow-x:auto;overflow-y:hidden}
+.seg button{border:0;border-radius:0;border-right:1px solid var(--line);padding:6px 13px}
+.seg button:last-child{border-right:0}
+.seg button.on{background:var(--accent);color:var(--accent-ink)}
+
+/* ---------- 分步演示 ---------- */
+/* .steps 是 .step 的包裹层（skill 词汇表里列了但一直没定义）——
+   仅给一点上下留白，步骤块自己的边距由 .step 负责。 */
+.steps{margin:12px 0}
+.step{border:1px solid var(--line);border-radius:var(--radius-sm);padding:11px 15px;margin:9px 0;
+  background:var(--paper-soft);opacity:.42;transition:opacity .2s}
+.step.on{opacity:1;background:var(--card)}
+.step .h{font-size:13px;font-weight:700;color:var(--accent);letter-spacing:.02em;margin-bottom:3px}
+.step .m{font-family:var(--font-mono);font-size:14.5px;overflow-x:auto}
+.step .e{font-size:13.5px;color:var(--muted);margin-top:3px}
+
+/* ---------- 折叠与答案 ---------- */
+.reveal{border:1px solid var(--line);border-radius:var(--radius-sm);padding:11px 15px;margin:8px 0;background:var(--paper-soft)}
+.reveal summary{cursor:pointer;font-weight:600;font-size:14.5px}
+.reveal[open]{background:var(--card)}
+.ans{margin-top:8px;padding-top:8px;border-top:1px dashed var(--line);font-size:14.5px}
+
+/* ---------- 判断题 ---------- */
+.puzzle{border:1px solid var(--line);border-radius:var(--radius-sm);padding:12px 15px;margin:9px 0;
+  display:flex;gap:13px;align-items:flex-start;background:var(--paper-soft)}
+.puzzle .q{font-family:var(--font-mono);font-size:15px;flex:1;min-width:0;overflow-x:auto;white-space:nowrap}
+.puzzle .q small{font-family:var(--font-sans);color:var(--muted);display:block;white-space:normal}
+.puzzle .btns{display:flex;gap:6px;flex-shrink:0}
+.puzzle.correct{border-color:var(--ok-bd);background:var(--ok-bg)}
+.puzzle.wrong{border-color:var(--bad-bd);background:var(--bad-bg)}
+.puzzle .exp{margin-top:9px;padding-top:9px;border-top:1px dashed var(--line);font-size:14.5px;
+  display:none;white-space:normal;font-family:var(--font-sans)}
+.puzzle.done .exp{display:block}
+.puzzle .exp .verdict{font-weight:700}
+
+/* ---------- 分布图 ---------- */
+.tick{stroke:#94a3b8;stroke-width:1.4}
+.tick.dn{stroke:var(--exp)}
+.tick.nm{stroke:var(--frac)}
+.ticklabel{font-size:9.5px;fill:var(--muted);font-family:var(--font-mono)}
+.axisline{stroke:var(--line);stroke-width:1.2}
+.axislabel{font-size:11px;fill:var(--muted)}
+
+/* ---------- 页脚 / 回到顶部 ---------- */
+.footer{max-width:var(--page-max);margin:0 auto;padding:8px 22px 40px;color:var(--muted);font-size:13px}
+.totop{position:fixed;right:22px;bottom:22px;z-index:40;box-shadow:var(--shadow);display:none}
+
+/* ---------- 响应式 ---------- */
+@media(max-width:960px){
+  .layout{grid-template-columns:1fr;padding:16px}
+  nav.toc{position:static;max-height:none;display:flex;flex-wrap:wrap;gap:6px;
+    background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:10px}
+  nav.toc h4{width:100%;margin-bottom:2px}
+  nav.toc a{border-left:0;padding:5px 10px;font-size:13px}
+  nav.toc .sub{display:none}
+  section{padding:20px 17px}
+}
+@media print{
+  nav.toc,.topbar,.totop{display:none}
+  .layout{display:block}
+  section{break-inside:avoid;box-shadow:none}
+}
+
+/* ==========================================================================
+   风格 D · 柔和玻璃（Soft glass / 渐变毛玻璃）
+   渐变背景 · 毛玻璃卡片 · 大圆角 · 悬浮药丸导航 · 柔和彩色阴影
+   ========================================================================== */
+
+:root{
+  --bg:#eef1fb; --card:rgba(255,255,255,.72); --ink:#1f2437; --muted:#646c86; --line:rgba(31,36,55,.10);
+  --accent:#6d4aff; --accent-ink:#fff; --accent-soft:rgba(109,74,255,.10);
+  --sign:#e0475f; --exp:#1f7ae0; --frac:#12a06a; --warn:#c2710c;
+  --sign-bg:rgba(224,71,95,.12); --sign-fg:#c02c45; --sign-bd:rgba(224,71,95,.24);
+  --exp-bg:rgba(31,122,224,.12);  --exp-fg:#1560b8;  --exp-bd:rgba(31,122,224,.24);
+  --frac-bg:rgba(18,160,106,.12); --frac-fg:#0c7f54; --frac-bd:rgba(18,160,106,.24);
+  --ok-bg:rgba(18,160,106,.10); --ok-bd:rgba(18,160,106,.30);
+  --bad-bg:rgba(224,71,95,.09); --bad-bd:rgba(224,71,95,.28);
+  --warn-bg:rgba(194,113,12,.10); --gray-bg:rgba(31,36,55,.07); --gray-fg:#5c6480;
+  --paper-soft:rgba(255,255,255,.55); --code-bg:rgba(255,255,255,.62); --code-bd:rgba(31,36,55,.10);
+  --tbl-head:rgba(109,74,255,.07); --tbl-hover:rgba(109,74,255,.045);
+  --sel-bg:rgba(109,74,255,.09);
+
+  --font-sans:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",system-ui,sans-serif;
+  --font-mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+  --font-display:var(--font-sans);
+  --tracking-title:-.02em;
+
+  --radius:20px; --radius-sm:14px; --radius-pill:999px;
+  --border-w:1px;
+  --shadow:0 10px 30px -12px rgba(31,36,55,.18),0 2px 8px -4px rgba(31,36,55,.10);
+  --shadow-card:0 6px 18px -10px rgba(31,36,55,.16);
+  --card-border:1px solid rgba(255,255,255,.62);
+
+  --page-max:1080px; --nav-w:auto; --gap:0px;
+  --sec-pad:28px 30px; --nav-sticky-top:62px; --anchor-offset:120px;
+  --font-size:16px; --line-height:1.78;
+}
+
+body{
+  background:
+    radial-gradient(900px 520px at 8% -6%, #d9e4ff 0%, transparent 58%),
+    radial-gradient(880px 520px at 98% 2%, #ffe0f2 0%, transparent 56%),
+    radial-gradient(760px 620px at 52% 108%, #dff6ee 0%, transparent 58%),
+    linear-gradient(160deg,#f4f6ff 0%,#eef1fb 42%,#f7f2ff 100%);
+  background-attachment:fixed;
+}
+
+/* ---------- 顶栏：磨砂条 ---------- */
+.topbar{background:rgba(255,255,255,.60);backdrop-filter:blur(16px) saturate(180%);
+  -webkit-backdrop-filter:blur(16px) saturate(180%);border-bottom:1px solid rgba(255,255,255,.7)}
+.topbar-in{max-width:var(--page-max);padding:13px 24px}
+.brand{font-weight:800;font-size:16.5px;letter-spacing:var(--tracking-title)}
+.brand small{font-weight:600;color:var(--muted);font-size:12px}
+.progress{font-weight:600;font-size:12px;color:var(--muted)}
+.progress .bar{width:140px;height:8px;border-radius:var(--radius-pill);background:rgba(31,36,55,.08)}
+.progress .bar>i{background:linear-gradient(90deg,#8b6cff,#6d4aff 55%,#ef7ac0);
+  box-shadow:0 0 12px rgba(109,74,255,.5)}
+
+/* ---------- 布局：单列居中 + 悬浮药丸导航 ---------- */
+.layout{display:block;max-width:var(--page-max);margin:0 auto;padding:0 24px 30px}
+nav.toc{position:sticky;top:var(--nav-sticky-top);z-index:45;display:flex;flex-wrap:wrap;gap:8px;
+  align-items:center;justify-content:center;max-height:none;overflow:visible;
+  margin:0 0 22px;padding:12px 14px;border-radius:var(--radius-pill);
+  background:rgba(255,255,255,.62);backdrop-filter:blur(14px) saturate(180%);
+  -webkit-backdrop-filter:blur(14px) saturate(180%);
+  border:1px solid rgba(255,255,255,.75);box-shadow:var(--shadow)}
+nav.toc h4{display:none}
+nav.toc a{border:0;border-radius:var(--radius-pill);padding:4px 11px;font-size:12.5px;font-weight:600;
+  color:var(--muted);background:transparent}
+nav.toc a:hover{background:rgba(109,74,255,.10);color:var(--accent)}
+nav.toc a.active{background:linear-gradient(135deg,#7c5cff,#6d4aff);color:#fff;
+  box-shadow:0 6px 16px -6px rgba(109,74,255,.6)}
+nav.toc a .n{font-size:11.5px;opacity:.7;margin-right:4px;min-width:auto}
+nav.toc a.active .n{color:#fff;opacity:.85}
+
+/* ---------- 章节：毛玻璃大圆角 ---------- */
+section{background:var(--card);backdrop-filter:blur(18px) saturate(170%);
+  -webkit-backdrop-filter:blur(18px) saturate(170%);
+  border:var(--card-border);border-radius:var(--radius);padding:var(--sec-pad);
+  box-shadow:var(--shadow);margin-bottom:24px}
+section>h2{font-size:25px;font-weight:800}
+section>h2::after{content:"";display:block;width:56px;height:4px;border-radius:99px;margin-top:10px;
+  background:linear-gradient(90deg,#7c5cff,#ef7ac0)}
+section>.lede{font-size:15px;margin-bottom:22px}
+h3{border-left:0;padding-left:0;font-weight:750;position:relative;padding-bottom:6px}
+h3::after{content:"";position:absolute;left:0;bottom:0;width:34px;height:3px;border-radius:99px;
+  background:linear-gradient(90deg,var(--accent),#ef7ac0)}
+h3{margin-left:0}
+h3+*{margin-top:14px}
+h4,h5{font-weight:700}
+code{background:var(--code-bg);border:1px solid var(--code-bd);border-radius:8px;backdrop-filter:blur(6px)}
+
+/* ---------- 卡片 / 盒 ---------- */
+.card{border-radius:var(--radius-sm);background:var(--paper-soft);border:1px solid rgba(255,255,255,.7);
+  box-shadow:var(--shadow-card)}
+.box{border:1px solid rgba(255,255,255,.7);border-left:4px solid var(--accent);
+  border-radius:var(--radius-sm);background:var(--accent-soft);box-shadow:var(--shadow-card)}
+.box .t{font-weight:750;font-size:14.5px}
+
+.formula{background:var(--code-bg);border:1px solid rgba(255,255,255,.7);border-radius:var(--radius-sm);
+  box-shadow:var(--shadow-card);font-weight:600}
+.formula.big{font-size:20px}
+
+/* ---------- 表格：无竖线、圆角容器 ---------- */
+table.tbl{border-collapse:separate;border-spacing:0;overflow:hidden;border-radius:var(--radius-sm)}
+table.tbl th,table.tbl td{border:0;border-bottom:1px solid var(--line);padding:9px 13px}
+table.tbl th{background:var(--tbl-head);font-weight:750;font-size:13px;color:var(--ink)}
+table.tbl tr:last-child td{border-bottom:0}
+table.tbl tr:hover td{background:var(--tbl-hover)}
+
+/* ---------- 位视图：彩色软糖 ---------- */
+.fw{gap:10px 20px;padding:14px 16px;border-radius:var(--radius-sm);background:var(--paper-soft);
+  border:1px solid rgba(255,255,255,.7)}
+.fcap{font-weight:700;font-size:11.5px;letter-spacing:.05em;text-transform:uppercase}
+.bits{gap:3px}
+.bits .b{width:27px;height:34px;border-radius:9px;border:1px solid transparent;font-weight:700;
+  transition:transform .08s,box-shadow .12s}
+.bits .b.s{background:var(--sign-bg);color:var(--sign-fg);border-color:var(--sign-bd)}
+.bits .b.e{background:var(--exp-bg);color:var(--exp-fg);border-color:var(--exp-bd)}
+.bits .b.f{background:var(--frac-bg);color:var(--frac-fg);border-color:var(--frac-bd)}
+.bits .b:hover{transform:translateY(-3px);box-shadow:0 8px 16px -8px currentColor}
+.bits .b.sel{outline:2px solid var(--accent);outline-offset:2px}
+.bits.sm .b{width:21px;height:28px;border-radius:7px;font-size:12px}
+
+/* ---------- 控件：柔和圆润 ---------- */
+input[type=text],input[type=number],select{border:1px solid var(--line);border-radius:var(--radius-pill);
+  background:rgba(255,255,255,.8);font-size:13.5px;padding:7px 14px}
+input[type=number]{border-radius:var(--radius-sm)}
+input:focus,select:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(109,74,255,.16)}
+button{border:1px solid var(--line);border-radius:var(--radius-pill);background:rgba(255,255,255,.8);
+  font-weight:650;font-size:13.5px;box-shadow:0 1px 2px rgba(31,36,55,.06)}
+button:hover{background:#fff;border-color:rgba(109,74,255,.35);color:var(--accent);
+  box-shadow:0 6px 16px -8px rgba(109,74,255,.5)}
+button.p{background:linear-gradient(135deg,#7c5cff,#6d4aff);border-color:transparent;color:#fff}
+button.p:hover{background:linear-gradient(135deg,#8b6cff,#7855ff);color:#fff;
+  box-shadow:0 10px 22px -8px rgba(109,74,255,.75)}
+.chip{border:1px solid transparent;border-radius:var(--radius-pill);background:var(--accent-soft);
+  color:var(--accent);font-weight:700;font-size:12px}
+.seg{border:1px solid var(--line);border-radius:var(--radius-pill);background:rgba(255,255,255,.6);overflow:hidden}
+.seg button{border:0;border-radius:0;border-right:1px solid var(--line);box-shadow:none;background:transparent}
+.seg button.on{background:linear-gradient(135deg,#7c5cff,#6d4aff);color:#fff}
+
+/* ---------- 分步演示 ---------- */
+.step{border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--paper-soft)}
+.step.on{background:rgba(255,255,255,.82);border-color:rgba(109,74,255,.28);
+  box-shadow:0 8px 20px -14px rgba(109,74,255,.5)}
+.step .h{color:var(--accent);font-weight:750;font-size:12.5px;letter-spacing:.03em}
+
+/* ---------- 判断题 / 折叠 ---------- */
+.puzzle{border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--paper-soft)}
+.puzzle.correct{background:var(--ok-bg);border-color:var(--ok-bd)}
+.puzzle.wrong{background:var(--bad-bg);border-color:var(--bad-bd)}
+.reveal{border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--paper-soft)}
+.reveal[open]{background:rgba(255,255,255,.8)}
+
+.totop{border-radius:var(--radius-pill);background:linear-gradient(135deg,#7c5cff,#6d4aff);color:#fff;
+  border:0;font-weight:700;box-shadow:0 10px 24px -10px rgba(109,74,255,.8)}
+.tick{stroke:rgba(100,108,134,.55)}
+.axisline{stroke:rgba(31,36,55,.18)}
+.axislabel,.ticklabel{fill:var(--muted)}
+
+/* ---------- 响应式 ---------- */
+@media(max-width:960px){
+  .layout{padding:0 16px 24px}
+  nav.toc{justify-content:flex-start;border-radius:var(--radius-sm);padding:10px 12px;
+    top:8px;--nav-sticky-top:8px}
+  nav.toc a{padding:5px 11px;font-size:12.5px}
+  section{padding:20px 17px}
+  .topbar-in{padding:11px 16px}
+}
+
+
+/* ---------- 风格切换条（构建时注入，各主题通用） ---------- */
+.stylebar{max-width:var(--page-max);margin:0 auto;padding:14px 22px 0;display:flex;gap:8px;
+  flex-wrap:wrap;align-items:center;font-size:12.5px;color:var(--muted)}
+.stylebar>span{font-weight:600}
+.stylebar a{text-decoration:none;padding:4px 11px;border:1px solid var(--line);border-radius:var(--radius-pill);
+  color:var(--muted);background:var(--card);font-weight:600}
+.stylebar a:hover{border-color:var(--accent);color:var(--accent)}
+.stylebar a.cur{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.stylebar>span{flex:0 0 auto}
+@media(max-width:960px){.stylebar{padding:12px 16px 0}}
+/* 25 讲之后药丸很多：窄屏折行会吃掉大半屏，改成单行横滑 */
+@media(max-width:820px){.stylebar{flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;
+  scrollbar-width:thin}.stylebar a{flex:0 0 auto;font-size:12px;padding:4px 10px}}
+
+</style>
+</head>
+<body>
+
+<header class="topbar"><div class="topbar-in">
+  <div class="brand">代码优化 Program Optimization<small>《计算机系统导论》第 14 讲 · 柔和玻璃版</small></div>
+  <div class="progress"><span id="pgText">学习进度 0%</span><span class="bar"><i id="pgBar"></i></span></div>
+</div></header>
+
+<div class="stylebar">
+  <span>风格：</span>
+  <a href="../ics14-zh.html">清爽蓝（原版）</a>
+  <a href="01-academic.html">学术讲义</a>
+  <a href="02-terminal.html">深色终端</a>
+  <a href="03-brutalist.html">新粗野</a>
+  <a href="index.html">◧ 全部预览</a>
+  <span style="opacity:.5">|</span>
+  <a href="../variants-ics01/index.html">↗ 第 1 讲 · 课程概述</a>
+  <a href="../variants-bits/index.html">↗ 第 2 讲 · 位、字节与整数</a>
+  <a href="../variants/index.html">↗ 第 3 讲 · 浮点数</a>
+  <a href="../variants-ics04/index.html">↗ 第 4 讲 · 机器级编程 I：基础</a>
+  <a href="../variants-ics05/index.html">↗ 第 5 讲 · 机器级编程 II：控制</a>
+  <a href="../variants-ics06/index.html">↗ 第 6 讲 · 机器级编程 III：过程</a>
+  <a href="../variants-ics07/index.html">↗ 第 7 讲 · 机器级编程 IV：数据</a>
+  <a href="../variants-ics08/index.html">↗ 第 8 讲 · 机器级编程 V：高级</a>
+  <a href="../variants-ics09/index.html">↗ 第 9 讲 · 处理器体系结构：ISA 与逻辑</a>
+  <a href="../variants-ics10/index.html">↗ 第 10 讲 · 处理器体系结构：顺序实现</a>
+  <a href="../variants-ics11/index.html">↗ 第 11 讲 · 处理器体系结构：流水线</a>
+  <a href="../variants-ics12/index.html">↗ 第 12 讲 · 存储层次结构</a>
+  <a href="../variants-ics13/index.html">↗ 第 13 讲 · 缓存存储器</a>
+  <a href="../variants-ics15/index.html">↗ 第 15 讲 · 链接</a>
+  <a href="../variants-ics16/index.html">↗ 第 16 讲 · 异常控制流 I</a>
+  <a href="../variants-ics17/index.html">↗ 第 17 讲 · 异常控制流 II</a>
+  <a href="../variants-ics18/index.html">↗ 第 18 讲 · 系统级 I/O</a>
+  <a href="../variants-ics19/index.html">↗ 第 19 讲 · 虚拟内存 I</a>
+  <a href="../variants-ics20/index.html">↗ 第 20 讲 · 虚拟内存 II</a>
+  <a href="../variants-ics21/index.html">↗ 第 21 讲 · 动态内存分配</a>
+  <a href="../variants-ics22/index.html">↗ 第 22 讲 · 网络基础</a>
+  <a href="../variants-ics23/index.html">↗ 第 23 讲 · 网络编程</a>
+  <a href="../variants-ics24/index.html">↗ 第 24 讲 · 并发编程</a>
+  <a href="../variants-ics25/index.html">↗ 第 25 讲 · 同步</a>
+  <a href="../variants-lab/index.html">↗ Data Lab 实验</a>
+</div>
+
+<div class="layout">
+
+<nav class="toc">
+  <h4>目录</h4>
+  <a href="#s0"><span class="n">0</span>课程导览</a>
+  <a href="#s1"><span class="n">1</span>性能现实与优化编译器</a>
+  <a href="#s2"><span class="n">2</span>通用优化：外提与强度削减</a>
+  <a href="#s3"><span class="n">3</span>案例：冒泡排序九次改写</a>
+  <a href="#s4"><span class="n">4</span>拦路虎一：过程调用</a>
+  <a href="#s5"><span class="n">5</span>拦路虎二：内存别名</a>
+  <a href="#s6"><span class="n">6</span>基准测试与 CPE</a>
+  <a href="#s7"><span class="n">7</span>现代 CPU：延迟与吞吐</a>
+  <a href="#s8"><span class="n">8</span>循环展开与重结合</a>
+  <a href="#s9"><span class="n">9</span>多累加器与 K×L 矩阵</a>
+  <a href="#s10"><span class="n">10</span>向量指令与分支预测</a>
+  <a href="#s11"><span class="n">11</span>总结与测验</a>
+</nav>
+
+<main>
+<!-- ================= 0 ================= -->
+  <section id="s0">
+    <h2>课程导览<span class="srcref">原第 1–2、5、19、32 页</span></h2>
+    <p class="lede">北京大学《计算机系统导论》第 14 讲：<b>代码优化（Program Optimization）</b>。同一段逻辑，写法不同、给编译器的信息不同，实际速度可以差 <b>10 倍到 40 倍</b> —— 本讲回答三件事：编译器能替你做什么、什么东西会拦住它、以及你还能在机器层面压榨出多少。</p>
+
+    <div class="grid g3">
+      <div class="card"><h5>本讲提纲</h5>
+        <ol style="margin:0;padding-left:20px;font-size:14.5px">
+          <li>性能现实与优化编译器的边界</li>
+          <li>通用的机器无关优化：代码外提、强度削减、公共子表达式</li>
+          <li>案例：冒泡排序从 29/25 条指令减到 15/9 条</li>
+          <li>两类优化拦路虎：过程调用、内存别名</li>
+          <li>基准测试与 CPE（每元素周期数）</li>
+          <li>现代 CPU：功能单元、延迟与吞吐界限</li>
+          <li>循环展开、重结合、多累加器</li>
+          <li>向量指令（AVX2）与分支预测</li>
+        </ol>
+      </div>
+      <div class="card"><h5>一句话核心</h5>
+        <p style="margin:0;font-size:14.5px">程序的性能 = <b>算法</b> × <b>读写的数据表示</b> × <b>编译器的发挥</b>。编译器受「不得改变程序行为」的硬约束，所以真正的加速来自两处：<b>写出编译器敢优化的代码</b>（消除过程调用与别名的干扰），以及<b>亲自动手打破串行依赖</b>（展开、重结合、多累加器、向量指令）。</p>
+      </div>
+      <div class="card"><h5>和前后讲的衔接</h5>
+        <p style="margin:0;font-size:14.5px">第 4–8 讲给了你看汇编、算地址、读结构体的能力；第 10–13 讲（处理器体系结构与存储层次）给了你延迟、吞吐、流水线的机器模型。本讲把这两件事合起来用：<b>先用编译器的视角改代码，再用处理器的视角改循环</b>。最后一张「高性能清单」（原第 69 页）是这一讲给你带走的实用结论。</p>
+      </div>
+    </div>
+
+    <h3>0.1 本讲三大主题与原页码</h3>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>主题</th><th>原课件页码</th><th>要回答的问题</th></tr>
+      <tr><td><b>编译器视角</b></td><td class="mono">3–4、20</td><td>优化编译器到底做了什么？它为什么明明看得见却不动手？常数因子为什么和 big-O 一样重要？</td></tr>
+      <tr><td><b>机器无关优化</b></td><td class="mono">6–18</td><td>代码外提、强度削减、公共子表达式、归纳变量 —— 冒泡排序的每一次改写省掉了哪几条指令？</td></tr>
+      <tr><td><b>优化拦路虎</b></td><td class="mono">21–31</td><td><code>strlen</code> 为什么被调用了 N 次？<code>sum_rows1</code> 为什么每轮都要把中间结果写回内存？</td></tr>
+      <tr><td><b>机器相关优化</b></td><td class="mono">33–60</td><td>CPE 是什么？延迟界限、吞吐界限从哪来？展开、重结合、多累加器各能拿到多少？</td></tr>
+      <tr><td><b>分支与收尾</b></td><td class="mono">61–69</td><td>分支预测怎么回事？误预测为什么要付出代价？最后该记住哪几条实用建议？</td></tr>
+    </table></div>
+
+    <h3>0.2 本讲的「主角数字」：22.68 → 0.52</h3>
+    <p>课件第 37、39、47、49、52、55–57、60 页反复用同一个基准程序 <code>combine</code>（把向量元素累加起来或乘起来）演示优化阶梯。下面这个工具把那几页散落的数字收成一张<b>可现算的阶梯表</b>：选一种运算，看 CPE 一级级掉下来，以及相对最初的累计加速比。</p>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：优化阶梯 —— 每一级的 CPE 与累计加速比</span>
+        <label class="fld">运算
+          <select id="ladSel">
+            <option value="ia" selected>整数加法（Int+）</option>
+            <option value="im">整数乘法（Int*）</option>
+            <option value="da">双精度浮点加法（FP+）</option>
+            <option value="dm">双精度浮点乘法（FP*）</option>
+          </select>
+        </label>
+        <div class="seg" id="ladSeg">
+          <button class="on" data-lad="steps">阶梯视图</button>
+          <button data-lad="ratio">加速比视图</button>
+        </div>
+      </div>
+      <div id="ladOut"></div>
+    </div>
+
+    <div class="box warn"><div class="t">怎么读这张表（也怎么读本讲的所有数字）</div>
+      <b>22.68</b> 是「未优化的 combine1 跑整数加法」的 CPE，<b>0.54</b> 是「整数加法耗尽功能单元后的最好成绩」—— 两者之比 42.0 就是课件第 57 页说的 <b>up to 42X improvement</b>。注意阶梯的每一级都必须<b>同一种运算</b>比（22.68 与 0.54 都是 Int+）：把 Int+ 的 22.68 去除以 FP* 的 0.52 得到的 43.6 没有意义。
+    </div>
+
+    <div class="box"><div class="t">本页使用说明</div>
+      标有 <span class="chip gray">可交互</span> 的地方都能点击或输入，所有计算都在浏览器里实时完成。<a href="#s3">第 3 节的冒泡排序指令计数器</a>、<a href="#s5">第 5 节的别名追踪</a>、<a href="#s9">第 9 节的 K×L 矩阵</a>最值得反复玩：前者把「优化到底省了什么」变成可核对的条数，后两者分别让你亲手制造和消除一个真实的性能陷阱。页面里每个会判对错的地方（指令计数、别名结果、CPE 下界、测验）的基准，都已用独立参考实现逐项交叉验证。
+    </div>
+  </section>
+
+  <!-- ================= 1 ================= -->
+  <section id="s1">
+    <h2>1. 性能现实与优化编译器<span class="srcref">原第 3–4、20 页</span></h2>
+    <p class="lede">在动手改代码之前，先把两件事实摆清楚：<b>常数因子和 big-O 一样重要</b>，而<b>编译器受一条铁律约束 —— 不得改变程序行为</b>。这一节的两个清单是后面所有讨论的出发点。</p>
+
+    <h3>1.1 性能现实<span class="srcref">原第 3 页</span></h3>
+    <ul>
+      <li><b>性能不只是渐进复杂度。</b>课件原话：<span class="en">There's more to performance than asymptotic complexity.</span></li>
+      <li><b>常数因子同样重要。</b>同样一段逻辑，因为写法不同，很容易看到 <b>10:1</b> 的性能区间。</li>
+      <li><b>必须在多个层次上优化：</b>算法、数据表示、过程（procedures）、循环。</li>
+      <li><b>必须理解系统才能优化性能：</b>程序如何被编译与执行、现代处理器与存储系统如何工作、如何测量程序性能并定位瓶颈、以及<b>如何在提升性能的同时不破坏代码的模块化与通用性</b>。</li>
+    </ul>
+
+    <h3>1.2 优化编译器做什么<span class="srcref">原第 4 页</span></h3>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>编译器会做的</th><th>编译器通常<b>不会</b>做的</th></tr>
+      <tr><td>
+        <ul style="margin:0;padding-left:18px">
+          <li>寄存器分配（register allocation）</li>
+          <li>代码选择与排序 / 调度（scheduling）</li>
+          <li>死代码消除（dead code elimination）</li>
+          <li>消除细小的低效（eliminating minor inefficiencies）</li>
+        </ul>
+      </td><td>
+        <ul style="margin:0;padding-left:18px">
+          <li><b>不改进渐进效率</b>：选更好的整体算法是程序员的事；big-O 上的节省通常比常数因子更重要（但常数因子也要紧）</li>
+          <li><b>难以克服「优化拦路虎」</b>：潜在的内存别名（memory aliasing）、潜在的过程副作用（procedure side-effects）</li>
+        </ul>
+      </td></tr>
+    </table></div>
+
+    <h3>1.3 编译器为什么这么「胆小」：四条基本约束<span class="srcref">原第 20 页</span></h3>
+    <ol>
+      <li><b>不得改变程序行为</b>（例外只在于程序使用了非标准语言特性）。这条约束常常让编译器放弃那些「只在病态条件下才会影响行为」的优化。</li>
+      <li><b>程序员眼里显然的事，会被语言和写法掩盖。</b>例如：<b>数据的实际取值范围可能远小于变量类型所暗示的范围</b> —— 编译器只看到类型。</li>
+      <li><b>大多数分析只在一个过程内部做。</b>全过程分析（whole-program analysis）在多数情况下太贵；较新的 GCC 会在单个文件内做过程间分析，<b>但不跨文件</b>。</li>
+      <li><b>大多数分析只看静态信息</b>（static information）—— 编译器很难预知运行时会输入什么。</li>
+    </ol>
+    <div class="box ok"><div class="t">一句话总结这一节</div>
+      当编译器拿不准时，<b>它必须保守</b>（when in doubt, the compiler must be conservative）。后面两节的「拦路虎」都是这条规矩的直接后果：<b>过程调用</b>让编译器不敢假设「同一个参数返回同一个值」，<b>内存别名</b>让编译器不敢假设「两次访问互不影响」。
+    </div>
+
+    <h3>1.4 循环开销计数器：combine1 每轮多做了什么<span class="srcref">原第 34–35、38 页</span></h3>
+    <p>课件第 35 页的 <code>combine1</code> 把「取长度」和「取元素」都写成了函数调用，第 38 页的 <code>combine4</code> 把它们换成了局部变量与局部指针。下面这个工具按两段代码的结构<b>计出每一层调用的次数</b>（不是估算运行时间，而是数「每一次循环迭代要额外做多少次函数进入/退出与边界检查」）：</p>
+
+    <div class="formula" style="text-align:left">
+      <div>/* combine1（原第 35 页） */ &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; /* combine4（原第 38 页） */</div>
+      <div>*dest = IDENT;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; long length = vec_length(v);</div>
+      <div>for (i = 0; i &lt; vec_length(v); i++) {&nbsp;&nbsp;&nbsp; data_t *d = get_vec_start(v);</div>
+      <div>&nbsp;&nbsp;data_t val;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; data_t t = IDENT;</div>
+      <div>&nbsp;&nbsp;get_vec_element(v, i, &amp;val);&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; for (i = 0; i &lt; length; i++)</div>
+      <div>&nbsp;&nbsp;*dest = *dest OP val;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; t = t OP d[i];</div>
+      <div>}</div>
+    </div>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：combine1 的循环开销 —— 输入元素个数，数一数每轮多做了什么</span>
+        <label class="fld">元素个数 n <input type="text" id="ovhN" value="1000" size="8" spellcheck="false"></label>
+        <button class="p" id="ovhGo">计数</button>
+        <button class="sm" data-ovh="500">n = 500</button>
+        <button class="sm" data-ovh="10000">n = 10000</button>
+        <button class="sm" data-ovh="1000000">n = 1000000</button>
+      </div>
+      <div id="ovhOut"></div>
+    </div>
+
+    <div class="box"><div class="t">这个计数说明了什么</div>
+      <code>vec_length</code> 在循环条件里，所以每轮判断都要调用一次（n 轮循环共 <b>n+1</b> 次函数调用）；<code>get_vec_element</code> 每轮调用一次，而它的第一件事就是课件第 34 页写的边界检查 <code>if (idx &gt;= v-&gt;len) return 0;</code>。combine4 把这两件事都提到了循环外：长度只取一次，元素用指针直接 <code>d[i]</code> 取，<b>没有边界检查</b>。这就是课件第 39 页 <code>Combine4</code> 那一行把 CPE 从 10.12 压到 1.27（Int+）的主要来源之一。
+    </div>
+  </section>
+
+  <!-- ================= 2 ================= -->
+  <section id="s2">
+    <h2>2. 通用优化：外提与强度削减<span class="srcref">原第 6–9 页</span></h2>
+    <p class="lede">课件把第 6–9 页的内容归为「<b>不管什么处理器、什么编译器都该做</b>」的优化（generally useful optimizations）：代码外提、强度削减、公共子表达式。三者的共同点是<b>与机器无关</b> —— 省掉的是计算本身，而不是让计算跑得更快。</p>
+
+    <h3>2.1 代码外提（Code Motion）<span class="srcref">原第 6–7 页</span></h3>
+    <p>代码外提的规则一句话：<b>如果某段计算的结果每次都一样，就降低它的执行频率 —— 尤其是把它挪出循环</b>。<code>set_row</code> 是标准例子（原第 6 页）：</p>
+    <div class="formula" style="text-align:left">
+      <div>/* 改写前（原第 6 页） */&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; /* 改写后（原第 6 页右栏：程序员手写） */</div>
+      <div>void set_row(double *a, double *b,&nbsp;&nbsp;&nbsp; long j;</div>
+      <div>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;long i, long n)&nbsp;&nbsp;&nbsp; {</div>
+      <div>{&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; long ni = n*i;</div>
+      <div>&nbsp;&nbsp;long j;<span style="font-family:var(--font-sans);color:var(--muted)">&nbsp;&nbsp;&nbsp;/* 循环体的每一条都依赖 j */</span>&nbsp; double *rowp = a+ni;</div>
+      <div>&nbsp;&nbsp;for (j = 0; j &lt; n; j++)&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; for (j = 0; j &lt; n; j++)</div>
+      <div>&nbsp;&nbsp;&nbsp;&nbsp;a[n*i+j] = b[j];&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; *rowp++ = b[j];</div>
+      <div>}</div>
+    </div>
+    <p><b>课件第 7 页最有说服力的一点是：编译器在 <code>-O1</code> 就会做这件事。</b>下面这段是课件给出的 GCC 产物（原文照录，注释是课件自己加的）：</p>
+    <div class="formula" style="text-align:left">
+      <div>set_row:</div>
+      <div>&nbsp;&nbsp;testq&nbsp; %rcx, %rcx&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; # Test n</div>
+      <div>&nbsp;&nbsp;jle&nbsp;&nbsp;&nbsp; .L1&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; # If 0, goto done</div>
+      <div>&nbsp;&nbsp;imulq %rcx, %rdx&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; # ni = n*i&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ← 移到循环外</div>
+      <div>&nbsp;&nbsp;leaq&nbsp; (%rdi,%rdx,8), %rdx&nbsp; # rowp = A + ni*8&nbsp; ← 移到循环外</div>
+      <div>&nbsp;&nbsp;movl&nbsp; $0, %eax&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; # j = 0</div>
+      <div>.L3:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; # loop:</div>
+      <div>&nbsp;&nbsp;movsd (%rsi,%rax,8), %xmm0&nbsp;&nbsp;&nbsp;&nbsp; # t = b[j]</div>
+      <div>&nbsp;&nbsp;movsd %xmm0, (%rdx,%rax,8)&nbsp;&nbsp;&nbsp; # M[A+ni*8 + j*8] = t</div>
+      <div>&nbsp;&nbsp;addq&nbsp; $1, %rax&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; # j++</div>
+      <div>&nbsp;&nbsp;cmpq&nbsp; %rcx, %rax&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; # j:n</div>
+      <div>&nbsp;&nbsp;jne&nbsp;&nbsp; .L3&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; # if !=, goto loop</div>
+      <div>.L1:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; # done:</div>
+      <div>&nbsp;&nbsp;rep ; ret</div>
+    </div>
+    <div class="box ok"><div class="t">本机实测（x86-64 交叉编译复核）</div>
+      用 <code>clang --target=x86_64-apple-darwin -O1 -S</code> 编译课件同一段 <code>set_row</code>，产物结构完全一致：<code>imulq %rcx, %rdx</code> 与 <code>leaq (%rdi,%rdx,8), %rax</code> 都落在循环<b>之前</b>，循环体只剩 <code>movsd / movsd / incq / cmpq / jne</code> 五条。<b>「编译器会自动做代码外提」这句话是真的</b>（不同编译器选的具体指令可能不同）。
+    </div>
+
+    <h3>2.2 强度削减（Reduction in Strength）<span class="srcref">原第 8 页</span></h3>
+    <ul>
+      <li><b>用更简单、更便宜的运算替换昂贵的运算</b>：用移位与加法代替乘法或除法，例如 <code>16*x --&gt; x &lt;&lt; 4</code>。</li>
+      <li><b>它有机器依赖性</b>：是否划算取决于乘法/除法指令的代价。课件给的参照是 Intel Nehalem：<b>整数乘法需要 3 个 CPU 周期</b>。</li>
+      <li><b>还要能「认出乘积序列」</b>：把 <code>n*i</code> 这种随循环变化的乘积改成增量累加 —— <code>ni += n</code>。</li>
+    </ul>
+    <div class="formula" style="text-align:left">
+      <div>/* 原第 8 页：乘积序列的识别 */&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; /* 改写后 */</div>
+      <div>for (i = 0; i &lt; n; i++) {&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; int ni = 0;</div>
+      <div>&nbsp;&nbsp;int ni = n*i;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; for (i = 0; i &lt; n; i++) {</div>
+      <div>&nbsp;&nbsp;for (j = 0; j &lt; n; j++)&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; for (j = 0; j &lt; n; j++)</div>
+      <div>&nbsp;&nbsp;&nbsp;&nbsp;a[ni + j] = b[j];&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; a[ni + j] = b[j];</div>
+      <div>}&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ni += n; &nbsp;← 乘法变成加法</div>
+      <div>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; }</div>
+    </div>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：强度削减分解器 —— 输入常数乘数，看它怎么被换成移位与加法</span>
+        <label class="fld">乘数 k <input type="text" id="srK" value="16" size="6" spellcheck="false"></label>
+        <label class="fld">被乘数 x <input type="text" id="srX" value="1000" size="8" spellcheck="false"></label>
+        <div class="seg" id="srSeg">
+          <button class="on" data-sr="naive">乘法指令</button>
+          <button data-sr="smart">强度削减</button>
+        </div>
+        <button class="p" id="srGo">分解</button>
+        <button class="sm" data-srq="16">k = 16（课件例）</button>
+        <button class="sm" data-srq="10">k = 10</button>
+        <button class="sm" data-srq="100">k = 100</button>
+      </div>
+      <div id="sredOut"></div>
+    </div>
+
+    <h3>2.3 共享公共子表达式<span class="srcref">原第 9 页</span></h3>
+    <p>课件用「取 i,j 的四个邻居」说明第三个通用技巧：<b>复用表达式的片段</b>。四个下标里都有 <code>i*n</code> —— 朴素写法算 3 次乘法，先算出 <code>inj = i*n + j</code> 就只剩 1 次。</p>
+    <div class="formula" style="text-align:left">
+      <div>/* 原第 9 页左栏（3 次乘法） */&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; /* 右栏（1 次乘法） */</div>
+      <div>up&nbsp;&nbsp;&nbsp; = val[(i-1)*n + j&nbsp; ];&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; long inj = i*n + j;</div>
+      <div>down&nbsp; = val[(i+1)*n + j&nbsp; ];&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; up&nbsp;&nbsp;&nbsp; = val[inj - n];</div>
+      <div>left&nbsp; = val[i*n + j-1];&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; down&nbsp; = val[inj + n];</div>
+      <div>right = val[i*n + j+1];&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; left&nbsp; = val[inj - 1];</div>
+      <div>sum = up + down + left + right;&nbsp;&nbsp;&nbsp;&nbsp; right = val[inj + 1];</div>
+    </div>
+    <p>课件给的汇编也印证了这一点：朴素版有 3 条 <code>imulq</code>（<code>(i+1)*n</code>、<code>(i-1)*n</code>、<code>i*n</code>），改写后只剩 1 条 <code>imulq %rcx, %rsi</code>。</p>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：公共子表达式计数器 —— 输入 i、j、n，看四个地址怎么算</span>
+        <label class="fld">i <input type="text" id="cseI" value="3" size="5" spellcheck="false"></label>
+        <label class="fld">j <input type="text" id="cseJ" value="2" size="5" spellcheck="false"></label>
+        <label class="fld">n（一行元素数） <input type="text" id="cseN" value="8" size="6" spellcheck="false"></label>
+        <button class="p" id="cseGo">计算</button>
+        <button class="sm" data-cseq="i=3;j=2;n=8">课件例（i=3, j=2, n=8）</button>
+        <button class="sm" data-cseq="i=8;j=7;n=8">边界例（i=8, j=7, n=8）</button>
+      </div>
+      <div id="cseOut"></div>
+    </div>
+
+    <div class="box ok"><div class="t">本机实测</div>
+      把这两段写成 C（<code>nebr_naive</code> / <code>nebr_cse</code>）后 <code>clang -O1</code> 编译：朴素版的功能块里有 <b>3 条 imulq</b>，改写版只剩 <b>1 条 imulq</b> —— 与课件第 9 页的结论一致。（课件用的是 GCC，实际生成的指令选型略有不同，但「乘法条数 3 → 1」这个结论被独立复现。）
+    </div>
+
+    <div class="box"><div class="t">注意 <code>ni</code> 的位置</div>
+      右栏的 <code>int ni = 0;</code> 必须在外层循环<b>之前</b>，循环体里只写 <code>ni += n;</code>。<b>初始化放在循环里就会错</b>：每轮把 <code>ni</code> 重置为 0，<code>a[ni + j]</code> 会永远只写第一行。这条改写同时用到两个技巧：把 <code>n*i</code> 这个乘积<b>换成了加法</b>（强度削减），以及<b>用累加代替每轮重算</b>（归纳变量消除）。
+    </div>
+  </section>
+
+  <!-- ================= 3 ================= -->
+  <section id="s3">
+    <h2>3. 案例：冒泡排序九次改写<span class="srcref">原第 10–18 页</span></h2>
+    <p class="lede">课件用整整九页（原第 10–18 页）把一段冒泡排序<b>一步步改到不能再省</b>：内层循环从 <b>25 条指令减到 9 条</b>，外层从 29 条减到 15 条。这是「机器无关优化」最完整的一次演示 —— 全程只用算术恒等式，不碰任何处理器细节。</p>
+
+    <h3>3.1 被优化的程序<span class="srcref">原第 10 页</span></h3>
+    <p>课件先把数据结构交代清楚（这几条前提决定了后面所有地址计算的形式）：</p>
+    <ul>
+      <li>数组 <code>A</code> 分配在<b>静态存储</b>里；</li>
+      <li>每个元素占 <b>4 个字节</b>，机器按<b>字节寻址</b>；</li>
+      <li>元素下标从 <b>1 到 n</b>（n 是变量）；</li>
+      <li>因此 <code>A[j]</code> 的位置是 <code>&amp;A + 4*(j−1)</code>。</li>
+    </ul>
+    <div class="formula" style="text-align:left">
+      <div>for (i = n-1; i &gt;= 1; i--) {</div>
+      <div>&nbsp;&nbsp;for (j = 1; j &lt;= i; j++)</div>
+      <div>&nbsp;&nbsp;&nbsp;&nbsp;if (A[j] &gt; A[j+1]) {</div>
+      <div>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;temp = A[j];</div>
+      <div>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;A[j] = A[j+1];</div>
+      <div>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;A[j+1] = temp;</div>
+      <div>&nbsp;&nbsp;&nbsp;&nbsp;}</div>
+      <div>}</div>
+    </div>
+
+    <h3>3.2 翻译成（伪）代码<span class="srcref">原第 11 页</span></h3>
+    <p>课件把 C 语言翻译成一种<b>只含简单运算的伪代码</b>：没有 <code>*</code> 的隐含语义、没有下标糖，每个「中间值」都起个名字（<code>t1</code>、<code>t2</code>……）。这样才数得清「一个内层循环迭代到底要执行多少条指令」。第一版数出来是：</p>
+    <div class="grid g2">
+      <div class="card"><h5>初版（原第 11 页）</h5>
+        <p style="margin:0;font-size:14.5px"><b>29 条</b>指令在每次外层循环迭代（即跑完一遍内层循环）中执行；<b>25 条</b>在内层循环里执行。</p>
+      </div>
+      <div class="card"><h5>「一条指令」指什么</h5>
+        <p style="margin:0;font-size:14.5px">伪代码里的一行简单运算（一次赋值、一次比较、一次跳转）算一条。<b>这不是真实的机器指令数</b>，而是一个与机器无关的<b>计算量度量</b>；用它比较同一算法的不同写法，比比较运行时间更稳定。</p>
+      </div>
+    </div>
+    <div class="box"><div class="t">为什么要先做这一步</div>
+      把 C 降到伪代码之后，「冗余」才看得见：<code>A[j]</code> 在 C 里是一个字符，在伪代码里是 <code>t1:=j-1; t2:=4*t1; t3:=A[t2]</code> 三条；交换时同一对下标又各算了一遍。九页的改写，本质就是<b>把重复出现的子表达式合并、把随循环线性变化的量改成增量</b>。
+    </div>
+
+    <h3>3.3 三个冗余，三次消除<span class="srcref">原第 12–17 页</span></h3>
+    <div class="steps">
+      <div class="step on"><div class="h">第一次：地址计算冗余（原第 12–13 页）· 29/25 → 20/16</div>
+        <div class="m">t4:=j+1; t5:=t4-1; t6:=4*t5 &nbsp;→&nbsp; t6:=4*j</div>
+        <div class="e">算 <code>A[j+1]</code> 时先把 <code>j</code> 加 1 再减 1，纯绕路；<code>4*j</code> 与 <code>4*(j-1)</code> 在同一轮里各算一次 —— 合并成一次。</div></div>
+      <div class="step on"><div class="h">第二次：交换用的中间量（原第 14–15 页）· 20/16 → 15/11</div>
+        <div class="m">temp := A[j]; A[j] := A[j+1]; A[j+1] := temp &nbsp;→&nbsp; A[t2] := t7; A[t6] := t3</div>
+        <div class="e">交换本来就<b>先把两个值都读进临时变量</b>（<code>t3</code> 与 <code>t7</code>），<code>temp</code> 是多余的第三份拷贝：直接写回 <code>t3</code> 即可。</div></div>
+      <div class="step on"><div class="h">第三次：值为 4 的倍数（原第 16–17 页）· 15/11 → 15/9</div>
+        <div class="m">t2 := 4*t1; t6 := 4*j &nbsp;→&nbsp; t2 := t2+4; t6 := t6+4（循环外 t19 := i &lt;&lt; 2）</div>
+        <div class="e">既然 <code>j</code> 每轮加 1，那么 <code>4*j</code> 每轮就加 4。<b>乘法换成加法</b>，同时把内层循环的终止条件从 <code>j&gt;i</code> 换成 <code>t6&gt;t19</code>（比较对象也提前算好）。</div></div>
+    </div>
+
+    <h3>3.4 最终伪代码<span class="srcref">原第 18 页</span></h3>
+    <p>课件第 18 页把前面积累的改写合到一起，并把「<code>4*i</code>」也写成移位（<code>t19 := i &lt;&lt; 2</code>，就是第 2 节的强度削减）：</p>
+    <div class="formula" style="text-align:left">
+      <div>i := n-1</div>
+      <div>L5: if i&lt;1 goto L1</div>
+      <div>&nbsp;&nbsp;&nbsp;&nbsp;t2 := 0</div>
+      <div>&nbsp;&nbsp;&nbsp;&nbsp;t6 := 4</div>
+      <div>&nbsp;&nbsp;&nbsp;&nbsp;t19 := i &lt;&lt; 2&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)">// 等价于 4*i</span></div>
+      <div>L4: if t6&gt;t19 goto L2</div>
+      <div>&nbsp;&nbsp;&nbsp;&nbsp;t3 := A[t2]</div>
+      <div>&nbsp;&nbsp;&nbsp;&nbsp;t7 := A[t6]</div>
+      <div>&nbsp;&nbsp;&nbsp;&nbsp;if t3&lt;=t7 goto L3</div>
+      <div>&nbsp;&nbsp;&nbsp;&nbsp;A[t2] := t7</div>
+      <div>&nbsp;&nbsp;&nbsp;&nbsp;A[t6] := t3</div>
+      <div>L3: t2 := t2+4</div>
+      <div>&nbsp;&nbsp;&nbsp;&nbsp;t6 := t6+4</div>
+      <div>&nbsp;&nbsp;&nbsp;&nbsp;goto L4</div>
+      <div>L2: i := i-1</div>
+      <div>&nbsp;&nbsp;&nbsp;&nbsp;goto L5</div>
+      <div>L1:</div>
+    </div>
+    <p>课件的两栏对比表（原第 18 页）：<b>优化前</b> 外层 29 条 / 内层 25 条；<b>优化后</b> 外层 15 条 / 内层 9 条。下面这个工具把四个版本的伪代码逐行<b>编码进页面再数一遍</b> —— 数出来的条数必须和课件印的一致。</p>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：冒泡排序指令计数器 —— 逐行数，不抄课件的结论</span>
+        <div class="seg" id="bubSeg">
+          <button class="on" data-bub="0">初版</button>
+          <button data-bub="1">去地址冗余</button>
+          <button data-bub="2">去交换冗余</button>
+          <button data-bub="3">最终版</button>
+        </div>
+        <button class="sm" id="bubAll">四个版本并列</button>
+      </div>
+      <div id="bubOut"></div>
+    </div>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：四版同跑 —— 改写有没有改变结果？</span>
+        <label class="fld">数组（逗号分隔，长度 ≤ 12） <input type="text" id="bubArr" value="5, 2, 9, 1, 7, 3" size="30" spellcheck="false"></label>
+        <button class="p" id="bubGo">分别执行</button>
+        <button class="sm" data-buba="5,2,9,1,7,3">默认</button>
+        <button class="sm" data-buba="3,1,2">逆序附近</button>
+        <button class="sm" data-buba="1,2,3,4,5,6,7,8">已有序</button>
+        <button class="sm" id="bubRand">随机自检 500 组</button>
+      </div>
+      <div id="bubRunOut"></div>
+    </div>
+
+    <h3>3.5 判断题<span class="srcref">原第 12–18 页</span></h3>
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：四次改写，哪些说法是对的？</span>
+        <button class="sm" id="pzReset">重来</button>
+      </div>
+      <div id="pzOut"></div>
+    </div>
+
+    <div class="box ok"><div class="t">这一节的边界</div>
+      课件第 18 页特意写明：以上都是<b>机器无关优化</b>（machine-independent optimizations）—— 它们不需要知道任何寄存器、任何指令延迟。接下来还有<b>机器相关优化</b>：把临时变量分配到寄存器、把伪代码变成真正的汇编。第 6 节以后的 CPE、延迟界限、展开因子，全部属于后一半。
+    </div>
+  </section>
+
+  <!-- ================= 4 ================= -->
+  <section id="s4">
+    <h2>4. 拦路虎一：过程调用<span class="srcref">原第 21–27 页</span></h2>
+    <p class="lede">这是全讲最有冲击力的一个例子：一段「把字符串转小写」的代码，因为把 <code>strlen</code> 写在了循环条件里，<b>性能从平方级掉到线性级</b> —— 改成 <code>len = strlen(s)</code> 只是把它挪出循环一行。而且，<b>这个优化编译器不敢自己做</b>。</p>
+
+    <h3>4.1 出问题的代码<span class="srcref">原第 21 页</span></h3>
+    <p>课件特别注明：这段函数「摘自 <b>1998 年秋季 213 份实验提交</b>」—— 也就是说，这是学生反复踩中的一个真实陷阱。</p>
+    <div class="formula" style="text-align:left">
+      <div>void lower(char *s)</div>
+      <div>{</div>
+      <div>&nbsp;&nbsp;&nbsp;&nbsp;size_t i;</div>
+      <div>&nbsp;&nbsp;&nbsp;&nbsp;for (i = 0; i &lt; strlen(s); i++)&nbsp;&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)">// 每轮都调用一次 strlen！</span></div>
+      <div>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;if (s[i] &gt;= 'A' &amp;&amp; s[i] &lt;= 'Z')</div>
+      <div>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;s[i] -= ('A' - 'a');</div>
+      <div>}</div>
+    </div>
+
+    <h3>4.2 性能后果：平方级<span class="srcref">原第 22、24 页</span></h3>
+    <ul>
+      <li>课件第 22 页的测量曲线：<b>字符串长度翻倍，时间变 4 倍</b> —— 典型的 <b>平方（quadratic）</b>性能。</li>
+      <li>原因（第 24 页）：要确定一个字符串的长度，<b>唯一的办法是从头扫到尾找 <code>'\0'</code></b>。于是长度为 N 的字符串上：
+        <ul>
+          <li><code>strlen</code> 被调用 <b>N 次</b>；</li>
+          <li>每次分别要扫过 <b>N、N−1、N−2、…、1</b> 个字符；</li>
+          <li>总工作量 ≈ N(N+1)/2 —— <b>O(N²)</b>。</li>
+        </ul>
+      </li>
+    </ul>
+
+    <h3>4.3 修复：把调用挪出循环<span class="srcref">原第 23、25–26 页</span></h3>
+    <p>课件先把它转成 <code>goto</code> 形式（第 23 页），让「<code>strlen</code> 每轮都执行」这件事变得一目了然：</p>
+    <div class="grid g2">
+      <div class="card"><h5>goto 形式（原第 23 页）</h5>
+        <p class="mono" style="margin:0;font-size:13.5px;line-height:1.7">size_t i = 0;<br>if (i &gt;= strlen(s)) goto done;<br>loop:<br>&nbsp;&nbsp;if (s[i] &gt;= 'A' &amp;&amp; s[i] &lt;= 'Z')<br>&nbsp;&nbsp;&nbsp;&nbsp;s[i] -= ('A' - 'a');<br>&nbsp;&nbsp;i++;<br>&nbsp;&nbsp;if (i &lt; strlen(s)) goto loop;<br>done:</p>
+        <p style="margin:8px 0 0;font-size:13.5px;color:var(--muted)">判断条件里两次出现 <code>strlen</code>，都在循环体内或循环边界上。</p>
+      </div>
+      <div class="card"><h5>改写后（原第 25 页）</h5>
+        <p class="mono" style="margin:0;font-size:13.5px;line-height:1.7">size_t i;<br>size_t len = strlen(s);<br>for (i = 0; i &lt; len; i++)<br>&nbsp;&nbsp;if (s[i] &gt;= 'A' &amp;&amp; s[i] &lt;= 'Z')<br>&nbsp;&nbsp;&nbsp;&nbsp;s[i] -= ('A' - 'a');</p>
+        <p style="margin:8px 0 0;font-size:13.5px;color:var(--muted)">结果不随迭代变化 → <b>这是代码外提的一种形式</b>。</p>
+      </div>
+    </div>
+    <p>课件第 26 页给出对照曲线：<b>长度翻倍、时间只翻倍</b> —— 恢复线性。</p>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：扫描字符数 —— 把 N 改大，看两条曲线怎么分道扬镳</span>
+        <label class="fld">字符串长度 N <input type="text" id="lowerN" value="50000" size="10" spellcheck="false"></label>
+        <button class="p" id="lowerGo">计算</button>
+        <button class="sm" data-low="1000">N = 1000</button>
+        <button class="sm" data-low="50000">N = 50000</button>
+        <button class="sm" data-low="500000">N = 500000</button>
+      </div>
+      <div id="lowerOut"></div>
+    </div>
+
+    <h3>4.4 编译器为什么不肯做这个外提<span class="srcref">原第 27 页</span></h3>
+    <ul>
+      <li><b>过程可能有副作用</b>：每次调用都可能改写全局状态；</li>
+      <li><b>函数对同样的参数可能返回不同的值</b>：返回值可能依赖全局状态的其它部分；</li>
+      <li><b>被调用的过程可能与调用者互相影响</b>（课件举例：<code>lower</code> 可能和 <code>strlen</code> 有交互）。</li>
+    </ul>
+    <p>课件给出的示例把这条说得很直白 —— 假设 <code>strlen</code> 里有一个全局计数器：</p>
+    <div class="formula" style="text-align:left">
+      <div>size_t lencnt = 0;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)">// 全局状态</span></div>
+      <div>size_t strlen(const char *s)</div>
+      <div>{</div>
+      <div>&nbsp;&nbsp;&nbsp;&nbsp;size_t length = 0;</div>
+      <div>&nbsp;&nbsp;&nbsp;&nbsp;while (*s != '\0') { s++; length++; }</div>
+      <div>&nbsp;&nbsp;&nbsp;&nbsp;lencnt += length;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)">// 每次调用都改变全局状态</span></div>
+      <div>&nbsp;&nbsp;&nbsp;&nbsp;return length;</div>
+      <div>}</div>
+    </div>
+    <div class="box warn"><div class="t">警告（课件原文）</div>
+      <b>编译器把过程调用当作黑箱</b>（treats procedure call as a black box），因此它附近的优化都很弱。<b>只要一次调用可能改变全局状态，编译器就不能把第二次调用的结果换成第一次的结果</b> —— 哪怕它完全看得懂这段代码。
+    </div>
+    <p><b>补救办法</b>（课件第 27 页）：</p>
+    <ul>
+      <li>使用 <b>inline 函数</b> —— GCC 在 <code>-O1</code> 就会在<b>单个文件内</b>做内联；</li>
+      <li><b>自己动手做代码外提</b>（Do your own code motion）：既然你知道 <code>strlen(s)</code> 在循环里不会变，就自己把它提出来。</li>
+    </ul>
+
+    <div class="box ok"><div class="t">本机实测（x86-64 交叉编译 + 运行）</div>
+      把 <code>lower1</code>（<code>strlen</code> 写在条件里）与 <code>lower2</code>（先取 len）用 <code>clang -O1</code> 编译：
+      <div class="tbl-wrap"><table class="tbl" style="margin:10px 0 0">
+        <tr><th>N</th><th class="mono">lower1 耗时</th><th class="mono">lower2 耗时</th><th class="mono">时间比</th></tr>
+        <tr><td class="mono">50 000</td><td class="mono">0.630 s</td><td class="mono">0.000026 s</td><td class="mono">24 212×</td></tr>
+        <tr><td class="mono">100 000</td><td class="mono">2.544 s</td><td class="mono">0.000052 s</td><td class="mono">48 924×</td></tr>
+        <tr><td class="mono">200 000</td><td class="mono">10.18 s</td><td class="mono">0.000103 s</td><td class="mono">98 823×</td></tr>
+        <tr><td class="mono">400 000</td><td class="mono">41.04 s</td><td class="mono">0.000220 s</td><td class="mono">186 542×</td></tr>
+      </table></div>
+      <code>lower1</code> 的耗时每翻倍 N 就<b>翻 4 倍</b>（0.63 → 2.54 → 10.18 → 41.04），确认平方级；<code>lower2</code> 每次只翻 2 倍，确认线性。<b>课件第 22、26 页的两条曲线说的是真的。</b>（本机是 Apple Silicon 上通过 Rosetta 跑 x86-64，绝对时间没有可比性，只有增长阶可比。）
+    </div>
+  </section>
+
+  <!-- ================= 5 ================= -->
+  <section id="s5">
+    <h2>5. 拦路虎二：内存别名<span class="srcref">原第 28–31 页</span></h2>
+    <p class="lede">第二个拦路虎比过程调用更隐蔽：<b>编译器不知道两个指针会不会指向同一块内存</b>。于是它不敢把「写内存」从循环里提出来 —— 而只要写上「累加进局部变量」，这个优化立刻就能做。</p>
+
+    <h3>5.1 一句写得很自然的代码，编译器却动不了<span class="srcref">原第 28 页</span></h3>
+    <p>目标：把一个 n×n 矩阵的每一行分别求和，存进向量 <code>b</code>。最自然的写法是<b>直接累加到 <code>b[i]</code></b>：</p>
+    <div class="formula" style="text-align:left">
+      <div>void sum_rows1(double *a, double *b, long n) {</div>
+      <div>&nbsp;&nbsp;&nbsp;&nbsp;long i, j;</div>
+      <div>&nbsp;&nbsp;&nbsp;&nbsp;for (i = 0; i &lt; n; i++) {</div>
+      <div>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;b[i] = 0;</div>
+      <div>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;for (j = 0; j &lt; n; j++)</div>
+      <div>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<b>b[i] += a[i*n + j];</b></div>
+      <div>&nbsp;&nbsp;&nbsp;&nbsp;}</div>
+      <div>}</div>
+    </div>
+    <p>课件给出的内层循环汇编（原第 28 页，GCC -O1）：</p>
+    <div class="formula" style="text-align:left">
+      <div># sum_rows1 inner loop</div>
+      <div>.L4:</div>
+      <div>&nbsp;&nbsp;movsd (%rsi,%rax,8), %xmm0&nbsp;&nbsp;&nbsp; # FP load&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;← 每轮都要把 b[i] 读进来</div>
+      <div>&nbsp;&nbsp;addsd (%rdi), %xmm0&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; # FP add</div>
+      <div>&nbsp;&nbsp;movsd %xmm0, (%rsi,%rax,8)&nbsp;&nbsp;&nbsp; # FP store&nbsp;&nbsp;&nbsp;&nbsp;← 每轮都要写回去</div>
+      <div>&nbsp;&nbsp;addq&nbsp; $8, %rdi</div>
+      <div>&nbsp;&nbsp;cmpq&nbsp; %rcx, %rdi</div>
+      <div>&nbsp;&nbsp;jne&nbsp;&nbsp; .L4</div>
+    </div>
+    <p>中间结果 <b>每一轮都要写回内存再读回来</b>（3 条浮点操作：load / add / store）。课件的问题：为什么编译器不把这个中间量放进寄存器？</p>
+
+    <h3>5.2 值追踪：别名真的会改变结果<span class="srcref">原第 29 页</span></h3>
+    <p>因为 <code>b</code> 和 <code>a</code> <b>可能重叠</b>。课件用一个具体例子把它变成可算的：</p>
+    <ul>
+      <li><code>double A[9] = { 0, 1, 2, 4, 8, 16, 32, 64, 128 };</code></li>
+      <li><code>double B[3] = A+3;</code> —— <b>B 就是 A 中间那三个元素</b>（下标 3、4、5）；</li>
+      <li>调用 <code>sum_rows1(A, B, 3);</code>。</li>
+    </ul>
+    <p>下标 0 起始地看：A = {0,1,2,4,8,16,32,64,128}，B 的第三个元素就是 A[5]。下面这个工具按这份数据<b>逐轮执行</b> <code>sum_rows1</code>，每一步都印出 B 的值：</p>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：别名追踪 —— 一维数组 A 与偏移量，看 B 怎么被自己吃掉</span>
+        <label class="fld">A（9 个值，逗号分隔） <input type="text" id="alA" value="0, 1, 2, 4, 8, 16, 32, 64, 128" size="38" spellcheck="false"></label>
+        <label class="fld">B 在 A 中的起始下标 <input type="text" id="alOff" value="3" size="5" spellcheck="false"></label>
+        <button class="p" id="alGo">执行</button>
+        <button class="sm" data-al="off=3;n=3">课件例（B = A+3, n=3）</button>
+        <button class="sm" data-al="off=0;n=3">别名最狠（B = A）</button>
+        <button class="sm" data-al="off=6;n=3">无别名（B = A+6）</button>
+      </div>
+      <div id="aliasOut"></div>
+    </div>
+
+    <h3>5.3 消除别名：用局部变量累加<span class="srcref">原第 30–31 页</span></h3>
+    <div class="formula" style="text-align:left">
+      <div>void sum_rows2(double *a, double *b, long n) {</div>
+      <div>&nbsp;&nbsp;&nbsp;&nbsp;long i, j;</div>
+      <div>&nbsp;&nbsp;&nbsp;&nbsp;for (i = 0; i &lt; n; i++) {</div>
+      <div>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<b>double val = 0;</b>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)">// 局部累加器：编译期就能证明它不被别名影响</span></div>
+      <div>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;for (j = 0; j &lt; n; j++)</div>
+      <div>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<b>val += a[i*n + j];</b></div>
+      <div>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;b[i] = val;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)">// 结果只在循环结束时写一次</span></div>
+      <div>&nbsp;&nbsp;&nbsp;&nbsp;}</div>
+      <div>}</div>
+    </div>
+    <p>课件的内层循环汇编（原第 30 页）：</p>
+    <div class="formula" style="text-align:left">
+      <div># sum_rows2 inner loop</div>
+      <div>.L10:</div>
+      <div>&nbsp;&nbsp;addsd (%rdi), %xmm0&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; # FP load + add&nbsp;&nbsp;← 一条指令顶两条</div>
+      <div>&nbsp;&nbsp;addq&nbsp; $8, %rdi</div>
+      <div>&nbsp;&nbsp;cmpq&nbsp; %rax, %rdi</div>
+      <div>&nbsp;&nbsp;jne&nbsp;&nbsp; .L10</div>
+    </div>
+    <p>6 条变 4 条，而且<b>没有任何 store</b>。课件的批注是：<span class="en">No need to store intermediate results.</span></p>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：消除别名之后 —— 两种实现的结果对照</span>
+        <label class="fld">A（9 个值） <input type="text" id="alA2" value="0, 1, 2, 4, 8, 16, 32, 64, 128" size="38" spellcheck="false"></label>
+        <label class="fld">B 起始下标 <input type="text" id="alOff2" value="3" size="5" spellcheck="false"></label>
+        <label class="fld">n <input type="text" id="alN2" value="3" size="4" spellcheck="false"></label>
+        <button class="p" id="alGo2">对照</button>
+      </div>
+      <div id="aliasCmpOut"></div>
+    </div>
+
+    <h3>5.4 别名小结<span class="srcref">原第 31 页</span></h3>
+    <ul>
+      <li><b>别名（aliasing）</b>：两个不同的内存引用指向同一个位置；</li>
+      <li>在 C 里<b>很容易发生</b>：因为允许做地址算术、可以直接访问存储结构；</li>
+      <li><b>养成引入局部变量的习惯</b>，尤其是在循环里做累加时 —— 这既消除了别名的影响，也顺便让值留在寄存器里；</li>
+      <li>课件原话：这<b>就是</b>你告诉编译器「不用检查别名」的方式（<span class="en">your way of telling compiler not to check for aliasing</span>）。</li>
+    </ul>
+    <div class="box ok"><div class="t">本机实测（x86-64 交叉编译复核）</div>
+      <code>clang -O1 -S</code> 编译这两段函数，内层循环与课件完全同构：<br>
+      <code>sum_rows1</code> 内层 = <code>addsd</code> + <b><code>movsd %xmm0, (%rsi,%rcx,8)</code>（store）</b> + <code>incq</code> + <code>cmpq</code> + <code>jne</code>；<br>
+      <code>sum_rows2</code> 内层 = <code>addsd (%rdi), %xmm0</code> + <code>incq</code> + <code>cmpq</code> + <code>jne</code>，<b>store 被提到了内层循环之外</b>（<code>movsd %xmm0, (%rsi,%rcx,8)</code> 落在外层）。课件的诊断与结论都被独立复现。
+    </div>
+  </section>
+
+  <!-- ================= 6 ================= -->
+  <section id="s6">
+    <h2>6. 基准测试与 CPE<span class="srcref">原第 33–39 页</span></h2>
+    <p class="lede">从这一节起进入定量阶段。课件第 33 页先用五句话交代了整段的立场，然后立一个统一的基准程序 <code>combine</code>，再用一个统一的度量 <b>CPE（每元素周期数）</b> 把「基本优化」和后面的「机器相关优化」放在同一把尺子上量。</p>
+
+    <h3>6.0 利用指令级并行：课件的开场白<span class="srcref">原第 33 页</span></h3>
+    <ul>
+      <li>需要<b>对现代处理器设计有一般性的理解</b> —— 硬件可以在一个周期里并行执行多条指令；</li>
+      <li><b>性能受数据依赖限制</b>（performance limited by data dependencies）；</li>
+      <li><b>简单的变换就能带来戏剧性的性能提升</b> —— 而且<b>编译器常常做不了这些变换</b>，原因是<b>浮点运算缺少结合律与分配律</b>（lack of associativity and distributivity in floating-point arithmetic）。</li>
+    </ul>
+    <div class="box"><div class="t">这三句话就是第 6–9 节全部内容的提纲</div>
+      「数据依赖限制性能」→ 第 7 节的延迟界限；「简单变换带来大幅提升」→ 第 8 节的重结合、第 9 节的多累加器；「编译器做不了」→ 所以这些变换必须<b>由你亲手写进代码</b>。课件沿用 CS:APP 的记号，把这部分叫<b>机器相关优化</b>，与前面第 2–3 节的机器无关优化相对。
+    </div>
+
+    <h3>6.1 数据结构与取元素<span class="srcref">原第 34 页</span></h3>
+    <p>基准程序操作的对象是一个「向量」结构：<b>长度 + 数据指针</b>（课件左上角那张图）。取元素用 <code>get_vec_element</code>，它<b>每次都要做一次边界检查</b>：</p>
+    <div class="formula" style="text-align:left">
+      <div>/* data structure for vectors */&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; /* retrieve vector element and store at val */</div>
+      <div>typedef struct{&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; int get_vec_element</div>
+      <div>&nbsp;&nbsp;size_t len;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; (*vec v, size_t idx, data_t *val)</div>
+      <div>&nbsp;&nbsp;data_t *data;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; {</div>
+      <div>} vec;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; if (idx &gt;= v-&gt;len)&nbsp; ← 边界检查</div>
+      <div>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; return 0;</div>
+      <div>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; *val = v-&gt;data[idx];</div>
+      <div>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; return 1;</div>
+      <div>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; }</div>
+    </div>
+    <p>切换 <code>data_t</code> 的类型（<code>int</code> / <code>long</code> / <code>float</code> / <code>double</code>）就得到四种数据；切换 <code>OP</code> 与 <code>IDENT</code> 就得到四种运算 —— 这是课件第 34–35 页给出的「一份代码、八种组合」的做法。</p>
+
+    <h3>6.2 基准程序 combine1<span class="srcref">原第 35 页</span></h3>
+    <div class="formula" style="text-align:left">
+      <div>void combine1(vec_ptr v, data_t *dest)</div>
+      <div>{</div>
+      <div>&nbsp;&nbsp;&nbsp;&nbsp;long int i;</div>
+      <div>&nbsp;&nbsp;&nbsp;&nbsp;*dest = IDENT;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)">// 计算向量的和或积</span></div>
+      <div>&nbsp;&nbsp;&nbsp;&nbsp;for (i = 0; i &lt; <b>vec_length(v)</b>; i++) {</div>
+      <div>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;data_t val;</div>
+      <div>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<b>get_vec_element</b>(v, i, &amp;val);</div>
+      <div>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;*dest = *dest <b>OP</b> val;</div>
+      <div>&nbsp;&nbsp;&nbsp;&nbsp;}</div>
+      <div>}</div>
+    </div>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>data_t（原第 35 页）</th><th>取值为</th><th>OP / IDENT（原第 35 页）</th><th>取值为</th></tr>
+      <tr><td class="mono">int / long / float / double</td><td>用不同声明切换</td><td class="mono">+ / IDENT = 0</td><td>求和</td></tr>
+      <tr><td class="mono">（同一份源码）</td><td>—</td><td class="mono">* / IDENT = 1</td><td>求积</td></tr>
+    </table></div>
+
+    <h3>6.3 CPE：每元素周期数<span class="srcref">原第 36 页</span></h3>
+    <ul>
+      <li>CPE 是表达「作用于向量或列表的程序」性能的方便方式；</li>
+      <li>设长度 = n；本讲中 <b>CPE = 每次运算的周期数</b>（cycles per OP）；</li>
+      <li>模型是直线：<b>T = CPE × n + Overhead</b>，<b>CPE 就是这条直线的斜率</b>。</li>
+    </ul>
+    <p>课件第 36 页用它自己的两个函数画出两条直线：<code>psum1</code>（未优化）<b>斜率 = 9.0</b>，<code>psum2</code>（展开 2 次 + 用指针）<b>斜率 = 6.0</b>。下面这个工具按这个模型现算，并把你给的两个测点还原成斜率：</p>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：CPE 计算器 —— 由两个测点反推斜率与固定开销</span>
+        <label class="fld">测点 1：元素数 <input type="text" id="cpeN1" value="50" size="6" spellcheck="false"> 周期数 <input type="text" id="cpeT1" value="450" size="8" spellcheck="false"></label>
+        <label class="fld">测点 2：元素数 <input type="text" id="cpeN2" value="200" size="6" spellcheck="false"> 周期数 <input type="text" id="cpeT2" value="1800" size="8" spellcheck="false"></label>
+        <button class="p" id="cpeGo">拟合</button>
+        <button class="sm" data-cpe="n1=50;t1=450;n2=200;t2=1800">psum1（斜率 9.0）</button>
+        <button class="sm" data-cpe="n1=50;t1=300;n2=200;t2=1200">psum2（斜率 6.0）</button>
+        <button class="sm" data-cpe="n1=100;t1=505;n2=200;t2=1005">有固定开销的例子</button>
+      </div>
+      <div id="cpeOut"></div>
+    </div>
+
+    <h3>6.4 基准性能：未优化 vs 各级优化<span class="srcref">原第 37、39 页</span></h3>
+    <p>课件第 37 页给出 <code>combine1</code> 在三种编译级别下的 CPE（单位：cycles per element）：</p>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>方法</th><th class="mono">整数 Add</th><th class="mono">整数 Mult</th><th class="mono">Double FP Add</th><th class="mono">Double FP Mult</th></tr>
+      <tr><td>Combine1 未优化</td><td class="mono">22.68</td><td class="mono">20.02</td><td class="mono">19.98</td><td class="mono">20.18</td></tr>
+      <tr><td>Combine1 <code>-O1</code></td><td class="mono">10.12</td><td class="mono">10.12</td><td class="mono">10.17</td><td class="mono">11.14</td></tr>
+      <tr><td>Combine1 <code>-O3</code></td><td class="mono">4.5</td><td class="mono">4.5</td><td class="mono">6</td><td class="mono">7.8</td></tr>
+    </table></div>
+
+    <h3>6.5 基本优化：combine4<span class="srcref">原第 38–39 页</span></h3>
+    <div class="formula" style="text-align:left">
+      <div>void combine4(vec_ptr v, data_t *dest)</div>
+      <div>{</div>
+      <div>&nbsp;&nbsp;&nbsp;&nbsp;long i;</div>
+      <div>&nbsp;&nbsp;&nbsp;&nbsp;long length = vec_length(v);&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)">// ① 长度移出循环</span></div>
+      <div>&nbsp;&nbsp;&nbsp;&nbsp;data_t *d = get_vec_start(v);&nbsp;&nbsp;&nbsp;&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)">// ② 基址移出循环</span></div>
+      <div>&nbsp;&nbsp;&nbsp;&nbsp;data_t t = IDENT;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)">// ③ 用局部变量累加</span></div>
+      <div>&nbsp;&nbsp;&nbsp;&nbsp;for (i = 0; i &lt; length; i++)</div>
+      <div>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;t = t OP d[i];&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)">// 直接下标，不再有边界检查</span></div>
+      <div>&nbsp;&nbsp;&nbsp;&nbsp;*dest = t;</div>
+      <div>}</div>
+    </div>
+    <div class="grid g3">
+      <div class="card"><h5>① 把 vec_length 移出循环</h5><p style="margin:0;font-size:14px">第 1 节那个计数器算的就是这一条的收益：调用次数从 n+1 次降到 1 次。</p></div>
+      <div class="card"><h5>② 避免每轮的边界检查</h5><p style="margin:0;font-size:14px">用 <code>d[i]</code> 直接解引用，绕开 <code>get_vec_element</code> 里的 <code>idx &gt;= v-&gt;len</code>。</p></div>
+      <div class="card"><h5>③ 在临时变量里累加</h5><p style="margin:0;font-size:14px"><b>这一条同时解决了第 5 节的别名问题</b>：局部变量不可能与任何指针别名。</p></div>
+    </div>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：基本优化的效果 —— 各级 CPE 与加速比一次看全</span>
+        <label class="fld">运算
+          <select id="benchSel">
+            <option value="0" selected>整数 Add</option>
+            <option value="1">整数 Mult</option>
+            <option value="2">Double FP Add</option>
+            <option value="3">Double FP Mult</option>
+          </select>
+        </label>
+      </div>
+      <div id="benchOut"></div>
+    </div>
+
+    <div class="box ok"><div class="t">Combine4 的成绩（原第 39 页）</div>
+      基本优化之后：<b>Int Add 1.27 · Int Mult 3.01 · FP Add 3.01 · FP Mult 5.01</b>。课件给这一步的评语是「消除了循环里的各种开销」——注意它<b>还没有做任何「聪明」的事</b>：循环体仍然是一条条串行依赖的 <code>t = t OP d[i]</code>。这三个数字的含义要到第 7 节才说得清：<b>它们正好落在「延迟界限」上</b>（Int Mult 3.00、FP Add 3.00、FP Mult 5.00），只有 Int Add 的 1.27 比界限 1.00 略高。
+    </div>
+  </section>
+
+  <!-- ================= 7 ================= -->
+  <section id="s7">
+    <h2>7. 现代 CPU：延迟与吞吐<span class="srcref">原第 40–45 页</span></h2>
+    <p class="lede">为什么 Int Mult 卡在 3.01、FP Mult 卡在 5.01？因为<b>现代处理器一次能开工很多条指令，但一条指令自己的延迟不会变</b>。这一节把机器模型讲清楚 —— 后面所有加速手段都是在这个模型上「找空隙」。</p>
+
+    <h3>7.1 现代 CPU 的两半：指令控制与执行<span class="srcref">原第 40、62 页</span></h3>
+    <div class="grid g2">
+      <div class="card"><h5>Instruction Control（指令控制）</h5>
+        <ul style="margin:0;font-size:14px">
+          <li><b>取指</b>（Fetch）按地址从指令内存里取指令；</li>
+          <li><b>指令译码</b>（Instruction Decode）把指令变成一组「操作」；</li>
+          <li><b>寄存器缓存 / 寄存器堆</b>：记录寄存器的最新值；</li>
+          <li><b>退休控制</b>（Retirement Control）：确认某条指令的结果可以真正写入寄存器；</li>
+          <li><b>分支预测</b>：猜分支走向，猜对了才能一直有指令可发。</li>
+        </ul>
+      </div>
+      <div class="card"><h5>Execution（执行）</h5>
+        <ul style="margin:0;font-size:14px">
+          <li>一组<b>功能单元</b>（Functional Units）：分支、算术（多个）、加载、存储；</li>
+          <li>操作从数据缓存里取/存数据；</li>
+          <li><b>寄存器更新</b>：执行完的操作把结果写回寄存器缓存；</li>
+          <li>课件图上的关键一问：<b>分支预测是否猜对</b>（Prediction OK?）—— 这条线决定了执行单元会不会白干。</li>
+        </ul>
+      </div>
+    </div>
+
+    <h3>7.2 超标量处理器<span class="srcref">原第 41 页</span></h3>
+    <div class="box"><div class="t">定义（课件原文）</div>
+      <b>超标量（superscalar）</b>处理器可以在<b>一个周期里发射并执行多条指令</b>。这些指令从顺序的指令流里取出，通常由硬件<b>动态调度</b>。
+    </div>
+    <ul>
+      <li><b>好处</b>：不需要程序员额外做什么，超标量处理器就能利用大多数程序本来就有的<b>指令级并行</b>（ILP）。</li>
+      <li><b>普遍性</b>：大多数现代 CPU 都是超标量的；Intel 从 1993 年的 Pentium 起就是。</li>
+    </ul>
+
+    <h3>7.3 流水线功能单元：延迟不变，吞吐提高<span class="srcref">原第 42 页</span></h3>
+    <p>课件的例子是三次乘法：<code>p1 = a*b; p2 = a*c; p3 = p1*p2;</code>，每个乘法要 3 个周期。如果乘法器被分成三级流水线，三级的时空图是这样的：</p>
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：三级流水线的时空图 —— 拖动周期，看每个阶段在算什么</span>
+        <label class="fld">级数 <input type="text" id="pipeK" value="3" size="4" spellcheck="false"></label>
+        <label class="fld">每组计算个数 <input type="text" id="pipeM" value="3" size="4" spellcheck="false"></label>
+        <button class="p" id="pipeGo">画图</button>
+        <button class="sm" data-pipe="k=3;m=3">课件例（3 级、3 个乘法）</button>
+      </div>
+      <div id="pipeOut"></div>
+    </div>
+    <p>课件总结的四句话：把计算<b>分成若干级</b>；<b>把部分结果逐级传递</b>；<b>第 i 级一旦把值交给第 i+1 级，就可以开始新的计算</b>；于是「<b>3 次乘法在 7 个周期内完成，虽然每次乘法要 3 个周期</b>」。</p>
+
+    <h3>7.4 Haswell 的功能单元与指令代价<span class="srcref">原第 43 页</span></h3>
+    <div class="grid g2">
+      <div><div class="tbl-wrap"><table class="tbl">
+        <tr><th>功能单元</th><th>数量</th></tr>
+        <tr><td>Load（含地址计算）</td><td class="mono">2</td></tr>
+        <tr><td>Store（含地址计算）</td><td class="mono">1</td></tr>
+        <tr><td>整数</td><td class="mono">4</td></tr>
+        <tr><td>FP 乘法</td><td class="mono">2</td></tr>
+        <tr><td>FP 加法</td><td class="mono">1</td></tr>
+        <tr><td>FP 除法</td><td class="mono">1</td></tr>
+      </table></div></div>
+      <div><div class="tbl-wrap"><table class="tbl">
+        <tr><th>指令</th><th class="mono">延迟</th><th class="mono">发射间隔</th></tr>
+        <tr><td>Load / Store</td><td class="mono">4</td><td class="mono">1</td></tr>
+        <tr><td>整数乘法</td><td class="mono">3</td><td class="mono">1</td></tr>
+        <tr><td>整数 / long 除法</td><td class="mono">3–30</td><td class="mono">3–30</td></tr>
+        <tr><td>单/双精度 FP 乘法</td><td class="mono">5</td><td class="mono">1</td></tr>
+        <tr><td>单/双精度 FP 加法</td><td class="mono">3</td><td class="mono">1</td></tr>
+        <tr><td>单/双精度 FP 除法</td><td class="mono">3–15</td><td class="mono">3–15</td></tr>
+      </table></div></div>
+    </div>
+    <div class="box warn"><div class="t">勘误一：第 43 页「8 个功能单元」与它列出的清单数目不一致</div>
+      原课件第 43 页先说「<b>共 8 个功能单元</b>」，紧接着列出的六类能力却是 2 load + 1 store + 4 integer + 2 FP multiply + 1 FP add + 1 FP divide = <b>11</b> 条；同一讲的第 40、62 页结构图里又只画了 <b>6 个</b>执行单元框（Branch + 3×Arith + Load + Store）。三处口径不同（总数 / 能力清单 / 图示框数），课件没有说明它们如何对应。本页的做法是：<b>只使用「每类能力的条数」与延迟/发射间隔</b>（第 9 节的 K×L 下界只用 2 个 load、2 个 FP 乘法单元这些条数），不依赖那个总数 —— 所以这个不一致不影响本页任何结论。这里记下来，是为了让你在课件上看到「8 个」时不必怀疑自己数错了。
+    </div>
+    <p>课件的另一条关键补充：<b>有些指令需要多于 1 个周期，但它们可以被流水化</b> —— 所以「延迟 5」不等于「发射间隔 5」。FP 乘法的延迟是 5 个周期，但因为有两个乘法单元，<b>平均每 0.5 个周期就能发射一个</b>（发射间隔 1、2 个单元并行）。</p>
+
+    <h3>7.5 combine4 的机器码与延迟界限<span class="srcref">原第 44–45 页</span></h3>
+    <div class="formula" style="text-align:left">
+      <div># Inner Loop (Case: Integer Multiply)&nbsp;&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)">// 原第 44 页</span></div>
+      <div>.L519:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; # Loop:</div>
+      <div>&nbsp;&nbsp;imull (%rax,%rdx,4), %ecx&nbsp; # t = t * d[i]</div>
+      <div>&nbsp;&nbsp;addq&nbsp; $1, %rdx&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; # i++</div>
+      <div>&nbsp;&nbsp;cmpq&nbsp; %rdx, %rbp&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; # Compare length:i</div>
+      <div>&nbsp;&nbsp;jg&nbsp;&nbsp;&nbsp; .L519&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; # If &gt;, goto Loop</div>
+    </div>
+    <p>循环体只有 4 条指令，看起来够精简了 —— 但性能<b>由那条 <code>imull</code> 的串行依赖决定</b>：每一轮的 <code>t</code> 都要等上一轮乘完。课件第 45 页把 length = 8 的计算写成一串括号：</p>
+    <div class="formula big" style="text-align:left;font-size:15px">(&nbsp;(&nbsp;(&nbsp;(&nbsp;(&nbsp;(&nbsp;(&nbsp;(1 * d[0]) * d[1]) * d[2]) * d[3])<br>* d[4]) * d[5]) * d[6]) * d[7])</div>
+    <p><b>顺序依赖（sequential dependence）</b>：性能由 OP 的延迟决定。所以 combine4 的成绩与延迟界限一一对应：</p>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>方法</th><th class="mono">Int Add</th><th class="mono">Int Mult</th><th class="mono">FP Add</th><th class="mono">FP Mult</th></tr>
+      <tr><td>Combine4</td><td class="mono">1.27</td><td class="mono">3.01</td><td class="mono">3.01</td><td class="mono">5.01</td></tr>
+      <tr><td><b>延迟界限</b>（Latency Bound）</td><td class="mono">1.00</td><td class="mono">3.00</td><td class="mono">3.00</td><td class="mono">5.00</td></tr>
+    </table></div>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：界限计算器 —— 输入延迟、吞吐与并行度，看理想 CPE 是多少</span>
+        <label class="fld">运算延迟 D <input type="text" id="bndD" value="5" size="5" spellcheck="false"></label>
+        <label class="fld">吞吐（条/周期） <input type="text" id="bndT" value="2" size="5" spellcheck="false"></label>
+        <label class="fld">累加器个数 K <input type="text" id="bndK" value="1" size="5" spellcheck="false"></label>
+        <label class="fld">元素数 n <input type="text" id="bndN" value="1000" size="7" spellcheck="false"></label>
+        <button class="p" id="bndGo">计算</button>
+        <button class="sm" data-bnd="d=1;t=4;k=1">Int+ 单链（D=1, T=4）</button>
+        <button class="sm" data-bnd="d=5;t=2;k=1">FP* 单链（D=5, T=2）</button>
+        <button class="sm" data-bnd="d=5;t=2;k=2">FP* 双累加器（D=5, T=2, K=2）</button>
+      </div>
+      <div id="latOut"></div>
+    </div>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：串行依赖链 —— 为什么展开 2 倍也救不了 combine4</span>
+        <label class="fld">元素数 n <input type="text" id="serN" value="12" size="5" spellcheck="false"></label>
+        <label class="fld">延迟 D <input type="text" id="serD" value="5" size="5" spellcheck="false"></label>
+        <label class="fld">累加器 K <input type="text" id="serK" value="1" size="5" spellcheck="false"></label>
+        <div class="seg" id="serSeg">
+          <button class="on" data-ser="c4">combine4（单链）</button>
+          <button data-ser="u2">展开 2x1（还是单链）</button>
+          <button data-ser="u2a">重结合 2x1a</button>
+          <button data-ser="u2x2">双累加器 2x2</button>
+        </div>
+        <button class="p" id="serGo">画依赖图</button>
+      </div>
+      <div id="serialOut"></div>
+    </div>
+  </section>
+
+  <!-- ================= 8 ================= -->
+  <section id="s8">
+    <h2>8. 循环展开与重结合<span class="srcref">原第 46–50 页</span></h2>
+    <p class="lede">终于到了能真正提速的两招。<b>循环展开</b>减少的是循环本身的开销；<b>重结合</b>改变的是计算的结构 —— 后者才是打破串行依赖的关键，也是课件反复追问「这对浮点还成立吗」的地方。</p>
+
+    <h3>8.1 循环展开 2x1<span class="srcref">原第 46 页</span></h3>
+    <p>一次处理两个元素，循环次数减半，并处理剩下的零头：</p>
+    <div class="formula" style="text-align:left">
+      <div>void unroll2a_combine(vec_ptr v, data_t *dest)</div>
+      <div>{</div>
+      <div>&nbsp;&nbsp;&nbsp;&nbsp;long length = vec_length(v);</div>
+      <div>&nbsp;&nbsp;&nbsp;&nbsp;long limit = length-1;</div>
+      <div>&nbsp;&nbsp;&nbsp;&nbsp;data_t *d = get_vec_start(v);</div>
+      <div>&nbsp;&nbsp;&nbsp;&nbsp;data_t x = IDENT;</div>
+      <div>&nbsp;&nbsp;&nbsp;&nbsp;long i;</div>
+      <div>&nbsp;&nbsp;&nbsp;&nbsp;/* Combine 2 elements at a time */</div>
+      <div>&nbsp;&nbsp;&nbsp;&nbsp;for (i = 0; i &lt; limit; i+=2) {</div>
+      <div>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<b>x = (x OP d[i]) OP d[i+1];</b></div>
+      <div>&nbsp;&nbsp;&nbsp;&nbsp;}</div>
+      <div>&nbsp;&nbsp;&nbsp;&nbsp;/* Finish any remaining elements */</div>
+      <div>&nbsp;&nbsp;&nbsp;&nbsp;for (; i &lt; length; i++) {</div>
+      <div>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;x = x OP d[i];</div>
+      <div>&nbsp;&nbsp;&nbsp;&nbsp;}</div>
+      <div>&nbsp;&nbsp;&nbsp;&nbsp;*dest = x;</div>
+      <div>}</div>
+    </div>
+    <p>课件对这一版的评语：<b>每次迭代做 2 倍的有用工作</b>（perform 2x more useful work per iteration）。</p>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>方法（原第 47 页）</th><th class="mono">Int Add</th><th class="mono">Int Mult</th><th class="mono">FP Add</th><th class="mono">FP Mult</th></tr>
+      <tr><td>Combine4</td><td class="mono">1.27</td><td class="mono">3.01</td><td class="mono">3.01</td><td class="mono">5.01</td></tr>
+      <tr><td>Unroll 2x1</td><td class="mono">1.01</td><td class="mono">3.01</td><td class="mono">3.01</td><td class="mono">5.01</td></tr>
+      <tr><td>Latency Bound</td><td class="mono">1.00</td><td class="mono">3.00</td><td class="mono">3.00</td><td class="mono">5.00</td></tr>
+    </table></div>
+    <div class="box"><div class="t">课件第 47 页的两个结论</div>
+      <b>① 对整数加法有帮助</b>：1.27 → 1.01，<b>达到了延迟界限</b>（把循环开销摊薄之后，就看不出开销了）。<br>
+      <b>② 其他三种没有改善，为什么？</b>因为 <code>x = (x OP d[i]) OP d[i+1]</code> 里<b>仍然是串行依赖</b>：两个乘法 / 加法还是必须一个接一个地穿过 <code>x</code>。展开只减少开销，不改变依赖链的长度 —— 每 n 个元素仍然要等 n×D 个周期。
+    </div>
+
+    <h3>8.2 重结合 2x1a：把两个元素先合起来<span class="srcref">原第 48–50 页</span></h3>
+    <div class="formula" style="text-align:left">
+      <div>/* 改一行就够了 */</div>
+      <div>x = x OP (d[i] OP d[i+1]);&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)">// 原来是 (x OP d[i]) OP d[i+1]</span></div>
+    </div>
+    <div class="box warn"><div class="t">课件第 48 页的两个反问（答案见下）</div>
+      <b>「这会不会改变计算结果？」</b> 会 —— <b>对浮点（FP）会</b>。<br>
+      <b>「为什么？」</b> 因为<b>浮点加法与乘法不满足结合律</b>（not associative）：<code>(a+b)+c</code> 与 <code>a+(b+c)</code> 的舍入结果可能不同。整数运算满足结合律，所以对整数完全安全。课件第 33 页事先就点明了这条限制：<b>编译器常常不能做这类变换，正因为浮点运算缺少结合律与分配律</b>。
+    </div>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>方法（原第 49 页）</th><th class="mono">Int Add</th><th class="mono">Int Mult</th><th class="mono">FP Add</th><th class="mono">FP Mult</th></tr>
+      <tr><td>Combine4</td><td class="mono">1.27</td><td class="mono">3.01</td><td class="mono">3.01</td><td class="mono">5.01</td></tr>
+      <tr><td>Unroll 2x1</td><td class="mono">1.01</td><td class="mono">3.01</td><td class="mono">3.01</td><td class="mono">5.01</td></tr>
+      <tr><td>Unroll 2x1a（重结合）</td><td class="mono">1.01</td><td class="mono">1.51</td><td class="mono">1.51</td><td class="mono">2.51</td></tr>
+      <tr><td>Latency Bound</td><td class="mono">1.00</td><td class="mono">3.00</td><td class="mono">3.00</td><td class="mono">5.00</td></tr>
+      <tr class="hl"><td>Throughput Bound</td><td class="mono">0.50</td><td class="mono">1.00</td><td class="mono">1.00</td><td class="mono">0.50</td></tr>
+    </table></div>
+    <p>课件第 49 页的结论：<b>Int*、FP+、FP* 都拿到了近 2 倍加速</b>，原因是<b>打破了串行依赖</b>。旁边还标注了为什么界限是这些值：「<b>4 个整数加法单元、2 个 load 单元 → 0.50</b>」「<b>2 个 FP 乘法单元、2 个 load 单元 → 0.50</b>」。</p>
+    <p>第 50 页把「为什么变快」讲成一句话：<b>下一次迭代的运算可以提前开始</b>（因为没有依赖）。并且给出公式推导：N 个元素、每个操作延迟 D 周期，重结合之后要 <b>(N/2 + 1)×D</b> 个周期，于是</p>
+    <div class="formula big">CPE = D / 2</div>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：重结合到底改变了什么 —— 三种依赖图的周期数现算</span>
+        <label class="fld">元素数 n <input type="text" id="raN" value="8" size="5" spellcheck="false"></label>
+        <label class="fld">延迟 D <input type="text" id="raD" value="5" size="5" spellcheck="false"></label>
+        <div class="seg" id="raSeg">
+          <button class="on" data-ra="c4">combine4</button>
+          <button data-ra="u2">展开 2x1</button>
+          <button data-ra="u2a">重结合 2x1a</button>
+          <button data-ra="cmp">三种并排</button>
+        </div>
+        <button class="p" id="raGo">计算</button>
+      </div>
+      <div id="reassocOut"></div>
+    </div>
+
+    <div class="box ok"><div class="t">本机实测（x86-64 交叉编译 + 运行）</div>
+      在 x86-64 上（Rosetta）用 <code>clang -O1</code> 编译五个版本并测量每次元素的耗时：
+      <div class="tbl-wrap"><table class="tbl" style="margin:10px 0 0">
+        <tr><th>写法</th><th class="mono">Int+ 语义</th><th class="mono">FP *</th></tr>
+        <tr><td>Combine4</td><td class="mono">0.616 ns</td><td class="mono">0.844 ns</td></tr>
+        <tr><td>Unroll 2x1</td><td class="mono">0.561 ns</td><td class="mono">0.790 ns</td></tr>
+        <tr><td>Unroll 2x1a（重结合）</td><td class="mono">0.340 ns</td><td class="mono">0.468 ns</td></tr>
+        <tr><td>Unroll 2x2（双累加器）</td><td class="mono">0.306 ns</td><td class="mono">0.432 ns</td></tr>
+      </table></div>
+      结论与课件一致：<b>单纯的展开 2x1 几乎不提速（FP* 只从 0.844 到 0.790），重结合一上就是接近 2 倍（0.844 → 0.468）</b>，双累加器再快一点。绝对时间受 Rosetta 与环境影响，没有与 Haswell 的可比性 —— 可比的只有相对关系。
+    </div>
+  </section>
+
+  <!-- ================= 9 ================= -->
+  <section id="s9">
+    <h2>9. 多累加器与 K×L 矩阵<span class="srcref">原第 51–57 页</span></h2>
+    <p class="lede">重结合让「下一轮的运算」能提前开工；<b>分开的累加器</b>则直接把一条长链拆成 K 条互不相干的短链 —— 最后的限制就只剩功能单元的吞吐了。</p>
+
+    <h3>9.1 分离累加器 2x2<span class="srcref">原第 51 页</span></h3>
+    <div class="formula" style="text-align:left">
+      <div>data_t x0 = IDENT;</div>
+      <div>data_t x1 = IDENT;</div>
+      <div>for (i = 0; i &lt; limit; i+=2) {</div>
+      <div>&nbsp;&nbsp;&nbsp;&nbsp;<b>x0 = x0 OP d[i];&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</b><span style="font-family:var(--font-sans);color:var(--muted)">// 两条独立的操作流</span></div>
+      <div>&nbsp;&nbsp;&nbsp;&nbsp;<b>x1 = x1 OP d[i+1];</b></div>
+      <div>}</div>
+      <div>for (; i &lt; length; i++) x0 = x0 OP d[i];&nbsp;&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)">// 收尾</span></div>
+      <div>*dest = x0 OP x1;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="font-family:var(--font-sans);color:var(--muted)">// 两条链在最后合并</span></div>
+    </div>
+    <p>课件把它叫作<b>另一种形式的重结合</b>（different form of reassociation）。代价同样是<b>浮点结果可能改变</b>：<code>(d[0]+d[2]+...) + (d[1]+d[3]+...)</code> 与原来的左结合顺序不同。</p>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>方法（原第 52 页）</th><th class="mono">Int Add</th><th class="mono">Int Mult</th><th class="mono">FP Add</th><th class="mono">FP Mult</th></tr>
+      <tr><td>Combine4</td><td class="mono">1.27</td><td class="mono">3.01</td><td class="mono">3.01</td><td class="mono">5.01</td></tr>
+      <tr><td>Unroll 2x1</td><td class="mono">1.01</td><td class="mono">3.01</td><td class="mono">3.01</td><td class="mono">5.01</td></tr>
+      <tr><td>Unroll 2x1a</td><td class="mono">1.01</td><td class="mono">1.51</td><td class="mono">1.51</td><td class="mono">2.51</td></tr>
+      <tr><td>Unroll 2x2</td><td class="mono">0.81</td><td class="mono">1.51</td><td class="mono">1.51</td><td class="mono">2.51</td></tr>
+      <tr><td>Latency Bound</td><td class="mono">1.00</td><td class="mono">3.00</td><td class="mono">3.00</td><td class="mono">5.00</td></tr>
+      <tr class="hl"><td>Throughput Bound</td><td class="mono">0.50</td><td class="mono">1.00</td><td class="mono">1.00</td><td class="mono">0.50</td></tr>
+    </table></div>
+    <ul>
+      <li><b>Int+ 用上了两条 load 单元</b>（原第 52 页）：1.01 → 0.81，<b>比延迟界限 1.00 还低</b> —— 说明它已经不靠单条链的延迟了；</li>
+      <li>对 Int*、FP+、FP* 来说，相对 <code>unroll2</code>（即 2x1）有 <b>2 倍</b>加速；</li>
+      <li>第 53 页的两句话总结：「有两条独立的操作流」「CPE 与预测吻合（CPE = D/2）」。</li>
+    </ul>
+
+    <h3>9.2 泛化：展开 L 倍、用 K 个累加器<span class="srcref">原第 54 页</span></h3>
+    <div class="grid g2">
+      <div class="card"><h5>做法</h5>
+        <ul style="margin:0;font-size:14px">
+          <li>可以展开到任意因子 <b>L</b>；</li>
+          <li>可以并行累加 <b>K</b> 个结果；</li>
+          <li><b>L 必须是 K 的倍数</b>。</li>
+        </ul>
+      </div>
+      <div class="card"><h5>限制</h5>
+        <ul style="margin:0;font-size:14px">
+          <li><b>收益递减</b>；</li>
+          <li><b>无法突破执行单元的吞吐上限</b>；</li>
+          <li><b>短向量时开销很大</b>（收尾的串行部分占比上升）；</li>
+          <li>剩余的迭代要<b>串行收尾</b>。</li>
+        </ul>
+      </div>
+    </div>
+
+    <h3>9.3 两张 K×L 实测表<span class="srcref">原第 55–56 页</span></h3>
+    <p>课件把「FP *」与「Int+」两种情形下、不同 <b>K（累加器）× L（展开因子）</b>组合的实测 CPE 列成两张表。下面把它们连同「应当达到的界限」一起放出来 —— 空白格表示课件没有给数据。</p>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：K×L 矩阵 —— 每一格的「理论下界」现算，与课件实测对照</span>
+        <label class="fld">运算
+          <select id="klSel">
+            <option value="dm" selected>Double FP *（延迟 5.00 / 吞吐 0.50）</option>
+            <option value="ia">Int +（延迟 1.00 / 吞吐 0.50）</option>
+          </select>
+        </label>
+        <button class="sm" id="klAll">显示全部组合</button>
+      </div>
+      <div id="klOut"></div>
+    </div>
+
+    <div class="box warn"><div class="t">勘误二：Int+ 表的「吞吐界限」写成 1.00，应为 0.50</div>
+      原课件第 56 页（Unrolling &amp; Accumulating: Int+）在标题下写「Latency bound: 1.00. Throughput bound: <b>1.00</b>」。但：
+      <br>① 同一讲的第 49、52 页与第 57 页都写 Int+ 的吞吐界限是 <b>0.50</b>；
+      <br>② 那张表里 K=2、L=6 的实测值是 <b>0.54</b>，若界限真是 1.00，这个实测值本身就是不可能的；
+      <br>③ 按课件第 52 页自己的解释（4 个整数单元 + 2 个 load 单元），每元素只需 1 次 load，2 个 load 单元给出 <b>0.50</b>。
+      <br>本页按 <b>0.50</b> 呈现（并把课件的 1.00 标注在此）。
+    </div>
+    <div class="box warn"><div class="t">勘误三：向量性能表的「延迟界限」0.50 应为 1.00（Int+ 一列）</div>
+      原课件第 60 页（Using Vector Instructions）的表里，整数加法一列的 Latency Bound 印成 <b>0.50</b>。但<b>同一套数字在课件第 57 页的汇总表里是 1.00</b>（第 56 页 Int+ 的表头也写「Latency bound: 1.00」）；而且延迟界限的定义就是累加运算自身的延迟（整数加法 1 个周期 → 1.00），与是否向量化无关。这一格与它前后两行也自相矛盾：Scalar Best 是 0.54，而 Throughput Bound 是 0.50 —— 若延迟界限真是 0.50，它就不该与吞吐界限取同一个值却对应两种完全不同的成因。本页按 <b>1.00</b> 呈现。
+    </div>
+
+    <h3>9.4 可达到的性能<span class="srcref">原第 57 页</span></h3>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>方法（原第 57 页）</th><th class="mono">Int Add</th><th class="mono">Int Mult</th><th class="mono">Double FP Add</th><th class="mono">Double FP Mult</th></tr>
+      <tr class="hl"><td><b>Best</b>（K×L 实测最好）</td><td class="mono">0.54</td><td class="mono">1.01</td><td class="mono">1.01</td><td class="mono">0.52</td></tr>
+      <tr><td>Latency Bound</td><td class="mono">1.00</td><td class="mono">3.00</td><td class="mono">3.00</td><td class="mono">5.00</td></tr>
+      <tr><td>Throughput Bound</td><td class="mono">0.50</td><td class="mono">1.00</td><td class="mono">1.00</td><td class="mono">0.50</td></tr>
+    </table></div>
+    <ul>
+      <li><b>只受功能单元吞吐的限制</b>了（四个实测值都贴着各自的吞吐界限）；</li>
+      <li>课件给出的总账：相对最初<b>未优化的代码</b>，最多有 <b>42 倍</b>的改进。</li>
+    </ul>
+    <div class="box"><div class="t">42 倍是怎么来的</div>
+      逐列算一遍就能看出课件的口径：Int Add 22.68 → 0.54 是 <b>42.0×</b>；Int Mult 20.02 → 1.01 是 19.8×；FP Add 19.98 → 1.01 是 19.8×；FP Mult 20.18 → 0.52 是 38.8×。所以「up to 42X」指的是<b>同一个运算</b>从「未优化」到「最好成绩」的最大比值，即整数加法这一列。<b>不要跨列相除</b>（22.68 / 0.52 = 43.6 是无意义的）。
+    </div>
+
+    <div class="box ok"><div class="t">到这里的完整阶梯</div>
+      以 Int Mult 为例：20.02（未优化）→ 10.12（-O1）→ 4.50（-O3）→ 3.01（combine4）→ 3.01（展开 2x1，无改善）→ 1.51（重结合）→ 1.51（双累加器）→ 1.01（多累加器最好成绩）。<b>每一级都对应一种可解释的机器效应</b>：去掉开销、摊薄循环、打破依赖、增加并行度、逼近吞吐。
+    </div>
+  </section>
+
+  <!-- ================= 10 ================= -->
+  <section id="s10">
+    <h2>10. 向量指令与分支预测<span class="srcref">原第 58–68 页</span></h2>
+    <p class="lede">标量优化做到吞吐界限之后，只剩两条路：<b>让一条指令干更多的活</b>（向量指令 AVX2），以及<b>别让处理器猜错</b>（分支预测）。这一节是机器相关优化的最后两块。</p>
+
+    <h3>10.1 AVX2 与 YMM 寄存器<span class="srcref">原第 58 页</span></h3>
+    <p>课件给出的 YMM 寄存器规格：<b>一共 16 个，每个 32 字节（256 位）</b>。一个 YMM 里能装下多少元素，取决于元素的宽度：</p>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>元素类型</th><th class="mono">宽度</th><th class="mono">一个 YMM 可容纳</th><th class="mono">32 字节 ÷ 宽度</th></tr>
+      <tr><td>单字节整数</td><td class="mono">1 字节</td><td class="mono">32 个</td><td class="mono">32</td></tr>
+      <tr><td>16 位整数</td><td class="mono">2 字节</td><td class="mono">16 个</td><td class="mono">16</td></tr>
+      <tr><td>32 位整数</td><td class="mono">4 字节</td><td class="mono">8 个</td><td class="mono">8</td></tr>
+      <tr><td>单精度浮点</td><td class="mono">4 字节</td><td class="mono">8 个</td><td class="mono">8</td></tr>
+      <tr><td>双精度浮点</td><td class="mono">8 字节</td><td class="mono">4 个</td><td class="mono">4</td></tr>
+    </table></div>
+
+    <h3>10.2 SIMD 运算：一条指令，多个元素<span class="srcref">原第 59 页</span></h3>
+    <p>课件第 59 页把两个例子并排画出来：单精度用 <code>vaddps</code>（8 个 <code>+</code>），双精度用 <code>vaddpd</code>（4 个 <code>+</code>）。</p>
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：SIMD 加法示意 —— 改类型，看 YMM 里的通道数怎么变</span>
+        <label class="fld">元素类型
+          <select id="simdSel">
+            <option value="ps" selected>单精度 float（vaddps）</option>
+            <option value="pd">双精度 double（vaddpd）</option>
+            <option value="d">32 位整数（vpaddd）</option>
+            <option value="w">16 位整数（vpaddw）</option>
+            <option value="b">8 位整数（vpaddb）</option>
+          </select>
+        </label>
+      </div>
+      <div id="simdOut"></div>
+    </div>
+    <div class="box warn"><div class="t">勘误四：第 59 页单精度一行写成了 <code>vaddsd</code>，应为 <code>vaddps</code></div>
+      原课件第 59 页「SIMD Operations: Single Precision」配的指令是 <code>vaddsd %ymm0, %ymm1, %ymm1</code>，下面画了 <b>8</b> 个 <code>+</code>（对应一个 YMM 里 8 个单精度元素）。但 AT&amp;T 语法里 <code>sd</code> 是 <b>scalar double</b>（单个双精度），
+      与它自己的标题「Single Precision」和 8 个通道都对不上；同一页的双精度例子写的是 <code>vaddpd</code>（packed double，4 个通道），是自洽的。单精度的打包加法指令应为 <b><code>vaddps</code></b>（packed single）。<b>本机用 x86-64 汇编器实测</b>：<code>vaddsd %ymm0, %ymm1, %ymm1</code> 直接报 <code>invalid operand for instruction</code>，而 <code>vaddps %ymm0, %ymm1, %ymm1</code> 正常汇编 —— 这一格确实写错了。本页按 <code>vaddps</code> 呈现。
+    </div>
+
+    <h3>10.3 用上向量指令之后<span class="srcref">原第 60 页</span></h3>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>方法（原第 60 页）</th><th class="mono">Int Add</th><th class="mono">Int Mult</th><th class="mono">Double FP Add</th><th class="mono">Double FP Mult</th></tr>
+      <tr><td>Scalar Best（标量最好）</td><td class="mono">0.54</td><td class="mono">1.01</td><td class="mono">1.01</td><td class="mono">0.52</td></tr>
+      <tr class="hl"><td><b>Vector Best（向量最好）</b></td><td class="mono">0.06</td><td class="mono">0.24</td><td class="mono">0.25</td><td class="mono">0.16</td></tr>
+      <tr><td>Latency Bound</td><td class="mono">1.00<span class="srcref">课件印 0.50，见勘误三</span></td><td class="mono">3.00</td><td class="mono">3.00</td><td class="mono">5.00</td></tr>
+      <tr><td>Throughput Bound</td><td class="mono">0.50</td><td class="mono">1.00</td><td class="mono">1.00</td><td class="mono">0.50</td></tr>
+      <tr><td>Vector Throughput Bound</td><td class="mono">0.06</td><td class="mono">0.12</td><td class="mono">0.25</td><td class="mono">0.12</td></tr>
+    </table></div>
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：向量化能拿到多少 —— 由标量界限除以通道数</span>
+        <div class="seg" id="avxSeg">
+          <button class="on" data-avx="f">单精度（8 通道）</button>
+          <button data-avx="d">双精度（4 通道）</button>
+        </div>
+        <span style="font-size:13px;color:var(--muted)">（切换只是换个视角：四条运算的通道数由元素宽度决定）</span>
+        <button class="p" id="avxGo">计算</button>
+      </div>
+      <div id="avxOut"></div>
+    </div>
+
+    <h3>10.4 分支：处理器的下一个大麻烦<span class="srcref">原第 61、63–64 页</span></h3>
+    <div class="grid g2">
+      <div class="card"><h5>挑战（原第 61 页）</h5>
+        <p style="margin:0;font-size:14px">指令控制单元必须<b>跑在执行单元前面很多</b>，才能产生足够的操作把执行单元喂饱。而一旦遇到条件分支，它<b>无法可靠地确定接下来该从哪里继续取指</b> ——「如何继续？」（How to continue?）</p>
+      </div>
+      <div class="card"><h5>两种去向（原第 63 页）</h5>
+        <ul style="margin:0;font-size:14px">
+          <li><b>Branch Taken</b>：把控制权转移到分支目标；</li>
+          <li><b>Branch Not-Taken</b>：继续执行序列中的下一条指令；</li>
+          <li>在分支/整数单元把结果算出来之前，<b>无法确定是哪种</b>。</li>
+        </ul>
+      </div>
+    </div>
+    <div class="formula" style="text-align:left">
+      <div>404663:&nbsp; mov $0x0,%eax</div>
+      <div>404668:&nbsp; cmp (%rdi),%rsi</div>
+      <div>40466b:&nbsp; <b>jge 404685</b>&nbsp;&nbsp;&nbsp;&nbsp;← 取指跑到这里就卡住了：跳（去 404685）还是不跳（去 40466d）？</div>
+      <div>40466d:&nbsp; mov 0x8(%rdi),%rax</div>
+      <div>&nbsp;&nbsp;. . .</div>
+      <div>404685:&nbsp; repz retq</div>
+    </div>
+    <p><b>分支预测</b>（原第 64 页）的答案：<b>猜</b>。猜完就沿着猜的位置开始执行指令，<b>但不去真正修改寄存器或内存数据</b> —— 猜错了代价很小，因为什么都没落地。</p>
+
+    <h3>10.5 循环里的分支预测与误预测的代价<span class="srcref">原第 65–67 页</span></h3>
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：循环末尾的分支 —— 预测器在最后一次会猜错</span>
+        <label class="fld">向量长度 <input type="text" id="bpN" value="100" size="6" spellcheck="false"></label>
+        <button class="p" id="bpGo">追踪</button>
+        <button class="sm" data-bp="10">长度 10</button>
+        <button class="sm" data-bp="100">课件的 100</button>
+      </div>
+      <div id="bpOut"></div>
+    </div>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：误预测值多少 —— 准确率与恢复代价</span>
+        <label class="fld">分支总条数 <input type="text" id="bpTot" value="1000000" size="10" spellcheck="false"></label>
+        <label class="fld">预测准确率 % <input type="text" id="bpAcc" value="95" size="5" spellcheck="false"></label>
+        <label class="fld">每次误预测的恢复代价（周期） <input type="text" id="bpPen" value="15" size="5" spellcheck="false"></label>
+        <button class="p" id="bpNumGo">计算</button>
+      </div>
+      <div id="bpNumOut"></div>
+    </div>
+
+    <h3>10.6 预测器的实际水平<span class="srcref">原第 68 页</span></h3>
+    <ul>
+      <li><b>默认行为</b>：向后的分支（backwards）常常是循环，<b>预测 taken</b>；向前的分支（forwards）常常是 if，<b>预测 not taken</b>。</li>
+      <li><b>预测器的平均准确率好于 95%</b> —— 因为大多数分支本来就好预测。</li>
+      <li>课件还贴了一个「加分材料」的链接：<span class="mono">stackoverflow.com/questions/11227809/why-is-processing-a-sorted-array-faster-than-an-unsorted-array</span>（排序过的数组反而跑得更快 —— 就是分支预测的锅）。</li>
+    </ul>
+  </section>
+
+  <!-- ================= 11 ================= -->
+  <section id="s11">
+    <h2>11. 总结与测验<span class="srcref">原第 69 页</span></h2>
+    <p class="lede">课件最后用一页（原第 69 页）把整讲收成一张清单：<b>拿到高性能要做的四件事</b>。下面把它展开，并配 12 道题覆盖全讲。</p>
+
+    <h3>11.1 高性能清单<span class="srcref">原第 69 页</span></h3>
+    <div class="grid g2">
+      <div class="card"><h5>① 好的编译器与编译选项</h5>
+        <p style="margin:0;font-size:14px">课件的四条实用建议里的第一条。第 6 节的表说明了差距：同一段 <code>combine1</code>，<code>-O3</code> 比未优化快 4–5 倍。</p>
+      </div>
+      <div class="card"><h5>② 别做傻事（Don't do anything stupid）</h5>
+        <ul style="margin:0;font-size:14px">
+          <li><b>当心隐藏的算法低效</b>——本讲最典型的例子是 <code>lower1</code> 把 <code>strlen</code> 写进循环条件（第 4 节）；</li>
+          <li><b>写编译器友好的代码</b>；</li>
+          <li>当心两类优化拦路虎：<b>过程调用</b>与<b>内存引用（别名）</b>；</li>
+          <li><b>仔细检查最内层循环</b>——绝大部分工作都发生在那里。</li>
+        </ul>
+      </div>
+      <div class="card"><h5>③ 针对机器调优代码</h5>
+        <ul style="margin:0;font-size:14px">
+          <li><b>利用指令级并行</b>（展开、重结合、多累加器）；</li>
+          <li><b>避开不可预测的分支</b>；</li>
+          <li><b>让代码对缓存友好</b>（课件注明：本课程后面会讲）。</li>
+        </ul>
+      </div>
+      <div class="card"><h5>④ 记住三条基本事实</h5>
+        <ul style="margin:0;font-size:14px">
+          <li>常数因子和 big-O 一样真实（第 1 节）；</li>
+          <li>编译器受「不得改变行为」约束，会保守（第 1、4、5 节）；</li>
+          <li>性能上限由<b>功能单元吞吐</b>决定，不由代码写得漂不漂亮决定（第 9 节）。</li>
+        </ul>
+      </div>
+    </div>
+
+    <h3>11.2 一页速查表<span class="srcref">综合原第 36–60 页</span></h3>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>手段</th><th>解决什么</th><th class="mono">典型效果（Int+ / FP*）</th><th>原页码</th></tr>
+      <tr><td>代码外提</td><td>循环里每次都在算同一个值</td><td class="mono">10.12 → 1.27（Int+，combine1→combine4）</td><td class="mono">6–7、25</td></tr>
+      <tr><td>强度削减 / 归纳变量</td><td>乘法换加法、移位</td><td class="mono">内层 25 → 9 条（冒泡排序）</td><td class="mono">8、17–18</td></tr>
+      <tr><td>公共子表达式</td><td>同一个值算好几遍</td><td class="mono">3 条乘法 → 1 条</td><td class="mono">9</td></tr>
+      <tr><td>消除过程调用开销</td><td>循环里反复调用函数</td><td class="mono">O(N²) → O(N)</td><td class="mono">21–27</td></tr>
+      <tr><td>局部变量累加（消除别名）</td><td>每轮都写回内存</td><td class="mono">内层 6 条 → 4 条</td><td class="mono">28–31</td></tr>
+      <tr><td>循环展开 2x1</td><td>循环本身的开销</td><td class="mono">1.27 → 1.01（Int+）</td><td class="mono">46–47</td></tr>
+      <tr><td>重结合 2x1a</td><td>串行依赖</td><td class="mono">5.01 → 2.51（FP*）</td><td class="mono">48–50</td></tr>
+      <tr><td>多累加器 K×L</td><td>并行度不足</td><td class="mono">2.51 → 0.52（FP*，K=10）</td><td class="mono">51–57</td></tr>
+      <tr><td>向量指令 AVX2</td><td>功能单元吞吐的物理上限</td><td class="mono">0.52 → 0.16（FP*）</td><td class="mono">58–60</td></tr>
+      <tr><td>分支预测 / 少用分支</td><td>取指断流</td><td class="mono">准确率 &gt; 95%，误预测仍要多个周期</td><td class="mono">61–68</td></tr>
+    </table></div>
+
+    <h3>11.3 测验<span class="srcref">12 题</span></h3>
+    <p>每道题选完立刻判分并给出解析。答错不要紧 —— 解析里写清了依据在本讲的哪一节。</p>
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：本讲测验</span>
+        <button class="sm" id="qzReset">重来</button>
+      </div>
+      <div id="qzOut"></div>
+    </div>
+  </section>
+</main>
+
+</div>
+
+<div class="footer">
+  本页由原课件 PDF 翻译整理而成 · 数值计算与可视化均为页面内实时计算 · 可对照原课件页码阅读。
+</div>
+<button class="totop" id="toTop">↑ 顶部</button>
+
+<script>
+"use strict";
+/* ============================================================
+   代码优化（Program Optimization）· 交互式课件 —— 全部逻辑
+   北京大学《计算机系统导论》第 14 讲（原 slides/ICS14-optimization-20251103.pdf）
+
+   约定：
+   - 所有计算在页面内实时完成；无效输入必须给出提示，不能抛异常、不能静默
+   - 课件上印着的数字只作为「原文引用」，页面给出的结论一律现算
+   - 顶层以 function 声明的这几个是判分/交叉验证的基准，由
+     tools/verify_ics14.js 与独立参考实现逐项比对：
+       bubbleCounts / bubbleRun / sumRows1 / sumRows2 / scanCost /
+       maxCpeBound / sredDecomp / cseAddresses / ovhCount
+   ============================================================ */
+
+const $  = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const badBox = msg => `<div class="box bad"><div class="t">输入无效</div>${esc(msg)}</div>`;
+const kvAttr = str => {
+  const out = {};
+  String(str).split(';').forEach(part => {
+    const i = part.indexOf('=');
+    if (i > 0) out[part.slice(0, i).trim()] = part.slice(i + 1).trim();
+  });
+  return out;
+};
+
+/* ---------- 数字工具 ---------- */
+/** 千分位；输入必须是有限数 */
+const fmt = n => {
+  const v = Number(n);
+  if (!isFinite(v)) return String(n);
+  const neg = v < 0, a = Math.abs(v);
+  const s = (Number.isInteger(a) ? a.toString() : a.toFixed(2));
+  return (neg ? '−' : '') + s.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+};
+/** CPE 等小数的定长显示（两位小数，和课件排版一致） */
+const fix2 = v => (Math.round(Number(v) * 100) / 100).toFixed(2);
+/** 解析一个非负十进制整数（允许下划线与空格分隔）；失败返回 null */
+function parseUint(str, max) {
+  const t = String(str).trim().replace(/[_,\s]/g, '');
+  if (!/^\d+$/.test(t)) return null;
+  const v = Number(t);
+  if (!Number.isSafeInteger(v)) return null;
+  if (max !== undefined && v > max) return null;
+  return v;
+}
+/** 解析一个可以带 0x/0b 前缀的整数（可负）；失败返回 null */
+function parseIntLoose(str) {
+  const t = String(str).trim().replace(/[_,\s]/g, '');
+  if (!t) return null;
+  const neg = t.startsWith('-') || t.startsWith('−');
+  const body = neg ? t.slice(1) : (t.startsWith('+') ? t.slice(1) : t);
+  let v;
+  if (/^0[xX][0-9a-fA-F]+$/.test(body)) v = parseInt(body.slice(2), 16);
+  else if (/^0[bB][01]+$/.test(body)) v = parseInt(body.slice(2), 2);
+  else if (/^\d+$/.test(body)) v = parseInt(body, 10);
+  else return null;
+  if (!Number.isSafeInteger(v)) return null;
+  return neg ? -v : v;
+}
+/** 一条横向条形（宽度按 value/max，颜色随主题变量走） */
+function barHtml(value, max, colorVar) {
+  const pct = max <= 0 ? 0 : Math.max(1.5, Math.min(100, (value / max) * 100));
+  return `<span style="display:inline-block;height:9px;border-radius:99px;background:${colorVar};width:${pct.toFixed(1)}%;min-width:3px;vertical-align:middle"></span>`;
+}
+
+/* ============================================================
+   0.2 优化阶梯：把课件散落在多页的 CPE 数字收成一张阶梯表
+   每一行的数值都标了出处（原页码），页面只负责算加速比与图形。
+   ============================================================ */
+const LADDER = {
+  ia: {
+    name: '整数加法 Int+', lat: 1.00, thr: 0.50,
+    rows: [
+      ['Combine1 未优化（-O0）', 22.68, '原第 37 页'],
+      ['Combine1 -O1', 10.12, '原第 37 页'],
+      ['Combine1 -O3', 4.50, '原第 37 页'],
+      ['Combine4（基本优化）', 1.27, '原第 39 页'],
+      ['展开 2x1', 1.01, '原第 47 页'],
+      ['重结合 2x1a', 1.01, '原第 49 页'],
+      ['双累加器 2x2', 0.81, '原第 52 页'],
+      ['多累加器最好成绩（K=8,L=8）', 0.54, '原第 56、57 页'],
+      ['向量化（AVX2）', 0.06, '原第 60 页'],
+    ],
+  },
+  im: {
+    name: '整数乘法 Int*', lat: 3.00, thr: 1.00,
+    rows: [
+      ['Combine1 未优化（-O0）', 20.02, '原第 37 页'],
+      ['Combine1 -O1', 10.12, '原第 37 页'],
+      ['Combine1 -O3', 4.50, '原第 37 页'],
+      ['Combine4（基本优化）', 3.01, '原第 39 页'],
+      ['展开 2x1', 3.01, '原第 47 页'],
+      ['重结合 2x1a', 1.51, '原第 49 页'],
+      ['双累加器 2x2', 1.51, '原第 52 页'],
+      ['多累加器最好成绩', 1.01, '原第 57 页'],
+      ['向量化（AVX2）', 0.24, '原第 60 页'],
+    ],
+  },
+  da: {
+    name: '双精度浮点加法 FP+', lat: 3.00, thr: 1.00,
+    rows: [
+      ['Combine1 未优化（-O0）', 19.98, '原第 37 页'],
+      ['Combine1 -O1', 10.17, '原第 37 页'],
+      ['Combine1 -O3', 6.00, '原第 37 页'],
+      ['Combine4（基本优化）', 3.01, '原第 39 页'],
+      ['展开 2x1', 3.01, '原第 47 页'],
+      ['重结合 2x1a', 1.51, '原第 49 页'],
+      ['双累加器 2x2', 1.51, '原第 52 页'],
+      ['多累加器最好成绩', 1.01, '原第 57 页'],
+      ['向量化（AVX2）', 0.25, '原第 60 页'],
+    ],
+  },
+  dm: {
+    name: '双精度浮点乘法 FP*', lat: 5.00, thr: 0.50,
+    rows: [
+      ['Combine1 未优化（-O0）', 20.18, '原第 37 页'],
+      ['Combine1 -O1', 11.14, '原第 37 页'],
+      ['Combine1 -O3', 7.80, '原第 37 页'],
+      ['Combine4（基本优化）', 5.01, '原第 39 页'],
+      ['展开 2x1', 5.01, '原第 47 页'],
+      ['重结合 2x1a', 2.51, '原第 49 页'],
+      ['双累加器 2x2', 2.51, '原第 52 页'],
+      ['多累加器最好成绩', 0.52, '原第 57 页'],
+      ['向量化（AVX2）', 0.16, '原第 60 页'],
+    ],
+  },
+};
+let ladCur = 'ia', ladView = 'steps';
+function renderLadder() {
+  const d = LADDER[ladCur];
+  const base = d.rows[0][1];
+  const maxCpe = Math.max(...d.rows.map(r => r[1]));
+  const maxSpd = Math.max(...d.rows.map(r => base / r[1]));
+  const body = d.rows.map(([label, cpe, src]) => {
+    const spd = base / cpe;
+    const bar = ladView === 'steps'
+      ? barHtml(cpe, maxCpe, 'var(--accent)')
+      : barHtml(spd, maxSpd, 'var(--frac)');
+    return `<tr><td>${label}<span class="srcref">${src}</span></td>
+      <td class="mono">${fix2(cpe)}</td>
+      <td class="mono">${fix2(spd)}×</td>
+      <td>${bar}</td></tr>`;
+  }).join('');
+  const best = d.rows[d.rows.length - 1][1];
+  $('#ladOut').innerHTML = `
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>${esc(d.name)} 的优化级别</th><th class="mono">CPE</th><th class="mono">相对未优化</th>
+        <th style="width:34%">${ladView === 'steps' ? 'CPE（越短越好）' : '累计加速比（越长越好）'}</th></tr>
+      ${body}
+      <tr><td><b>机器给出的两个界限</b><span class="srcref">原第 43、57 页</span></td>
+        <td class="mono">延迟 ${fix2(d.lat)}<br>吞吐 ${fix2(d.thr)}</td>
+        <td class="mono">—</td>
+        <td style="font-size:13.5px;color:var(--muted)">延迟界限 = 累加运算自身的延迟；吞吐界限 = 功能单元每周期能开工几次（见第 6 节）</td></tr>
+    </table></div>
+    <div class="readout" style="margin-bottom:0">
+      <dt>未优化 → 最好（标量）</dt><dd>${fix2(base)} → ${fix2(d.rows[d.rows.length - 2][1])} CPE，加速 <b>${fix2(base / d.rows[d.rows.length - 2][1])}×</b></dd>
+      <dt>未优化 → 最好（向量）</dt><dd>${fix2(base)} → ${fix2(best)} CPE，加速 <b>${fix2(base / best)}×</b></dd>
+      <dt>离吞吐界限还差</dt><dd>标量最好成绩 ${fix2(d.rows[d.rows.length - 2][1])} vs 吞吐界限 ${fix2(d.thr)} → ${fix2(d.rows[d.rows.length - 2][1] / d.thr)}×</dd>
+      <dt>与课件的「42 倍」怎么对上</dt><dd>课件第 57 页的 <b>up to 42X</b> 说的是<b>标量</b>最好成绩（Int+：22.68 → 0.54 = ${fix2(22.68 / 0.54)}×），那时还没引入向量指令；最后一行（向量化）是第 58–60 页的内容，课件没有再重述总加速比，本页按同一列的未优化值现算给你看。</dd>
+    </div>`;
+}
+
+/* ============================================================
+   1.4 combine1 的循环开销计数器
+   combine1（原第 35 页）：
+     for (i = 0; i < vec_length(v); i++) { get_vec_element(v,i,&val); *dest = *dest OP val; }
+     vec_length 每次判断都要调用；get_vec_element 内部有一次边界检查（原第 34 页）。
+   combine4（原第 38 页）：长度与基址各取一次，循环体只做一次指针解引用。
+   ============================================================ */
+function ovhCount(n) {
+  const N = Number(n);
+  return {
+    n: N,
+    c1: {
+      lenCalls: N + 1,        /* 循环条件判断 n+1 次（最后一次失败退出） */
+      elemCalls: N,           /* 每轮一次 get_vec_element */
+      boundsChecks: N,        /* 每次 get_vec_element 一次 idx >= v->len */
+      derefs: N,              /* *dest OP val 读一次元素 */
+      perElem: (N === 0 ? 0 : ((N + 1) + N + N + N) / N),
+    },
+    c4: {
+      lenCalls: N > 0 ? 1 : 1,
+      elemCalls: 0,
+      boundsChecks: 0,
+      derefs: N,
+      perElem: (N === 0 ? 0 : (1 + N) / N),
+    },
+  };
+}
+function renderOvh() {
+  const raw = $('#ovhN').value;
+  const n = parseUint(raw, 100000000);
+  if (n === null) { $('#ovhOut').innerHTML = badBox('元素个数请填 0–100000000 之间的整数。'); return; }
+  const r = ovhCount(n);
+  const row = (label, a, b) => `<tr><td>${label}</td><td class="mono">${fmt(a)}</td><td class="mono">${fmt(b)}</td>
+      <td class="mono">${a === 0 ? '—' : fmt(b - a)}</td></tr>`;
+  $('#ovhOut').innerHTML = `
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>每次运算要做的事（共 n = ${fmt(n)} 个元素）</th><th class="mono">combine1</th><th class="mono">combine4</th><th class="mono">省掉</th></tr>
+      ${row('vec_length 调用次数', r.c1.lenCalls, r.c4.lenCalls)}
+      ${row('get_vec_element 调用次数', r.c1.elemCalls, r.c4.elemCalls)}
+      ${row('元素访问时的边界检查', r.c1.boundsChecks, r.c4.boundsChecks)}
+      ${row('循环迭代次数', n, n)}
+    </table></div>
+    <div class="readout" style="margin-bottom:0">
+      <dt>每次迭代的额外动作</dt><dd>combine1 约 ${fix2(r.c1.perElem)} 次，combine4 约 ${fix2(r.c4.perElem)} 次</dd>
+      <dt>结论</dt><dd>${n === 0 ? 'n = 0 时不进入循环。' : `n = ${fmt(n)} 时 combine1 比 combine4 多出 <b>${fmt(2 * n + 1 - 1)}</b> 次函数调用 + <b>${fmt(n)}</b> 次边界检查。`}</dd>
+    </div>
+    <div class="box" style="margin:12px 0 0">
+      这只是<b>源代码层面的条数</b>，不是说每条都等价于一个时钟周期（真实机器上函数还可能被内联，见第 4 节 <code>-O1</code> 的讨论）。它要说明的是：<b>把长度和基址提到循环外，收益随 n 线性增长</b> —— 这正是「代码外提」的价值。
+    </div>`;
+}
+
+/* ============================================================
+   2.2 强度削减分解器
+   课件只给了 16*x -> x << 4 这一个例子（原第 8 页）。
+   页面把任意常数乘数分解成移位/加减的序列（现算，标准做法：
+   有符号二进制表示 NAF，把相邻的 1 合并成一次减法），
+   并给出与单条整数乘法指令的指令条数对比。
+   参照系：课件第 8 页说 Intel Nehalem 的整数乘法需要 3 个周期。
+   ============================================================ */
+function sredDecomp(k) {
+  const K = Math.abs(Number(k));
+  const sign = Number(k) < 0 ? -1 : 1;
+  if (!Number.isInteger(K) || K < 0) return null;
+  if (K === 0) return { k: 0, sign: 1, terms: [], shifts: 0, adds: 0, ops: 0 };
+  if (K === 1) return { k: 1, sign, terms: [{ sign: 1, shift: 0 }], shifts: 0, adds: 0, ops: 0 };
+  /* 有符号二进制（NAF）：k>0 时逐位处理，遇到 ...11 就进位成 -1 */
+  const terms = [];
+  let v = K, i = 0;
+  while (v > 0) {
+    if (v & 1) {
+      if ((v & 3) === 3) { terms.push({ sign: -1, shift: i }); v += 1; }
+      else { terms.push({ sign: 1, shift: i }); v -= 1; }
+    }
+    v >>= 1; i += 1;
+  }
+  terms.sort((a, b) => a.shift - b.shift);
+  const shifts = terms.reduce((s, t) => s + (t.shift > 0 ? 1 : 0), 0);
+  const adds = terms.length - 1;      /* m 项需要 m-1 次加/减 */
+  return { k: K, sign, terms, shifts, adds, ops: shifts + adds };
+}
+function sredExpr(d) {
+  if (!d.terms.length) return '0';
+  const parts = d.terms.map(t => (t.shift === 0 ? 'x' : `(x << ${t.shift})`));
+  let s = parts[0];
+  for (let i = 1; i < parts.length; i++) s += (d.terms[i].sign < 0 ? ' − ' : ' + ') + parts[i];
+  return (d.sign < 0 ? '−(' + s + ')' : s);
+}
+let srMode = 'smart';
+function renderSred() {
+  const kRaw = $('#srK').value, xRaw = $('#srX').value;
+  const k = parseIntLoose(kRaw), x = parseIntLoose(xRaw);
+  if (k === null || k === 0) { $('#sredOut').innerHTML = badBox('乘数 k 请填一个非 0 的整数（−1024 … 1024 之间便于阅读）。'); return; }
+  if (Math.abs(k) > 1024) { $('#sredOut').innerHTML = badBox('为便于阅读，k 请限制在 ±1024 以内（再大分解出的项会很长，但方法相同）。'); return; }
+  if (x === null) { $('#sredOut').innerHTML = badBox('被乘数 x 请填一个整数。'); return; }
+  const d = sredDecomp(k);
+  const quad = d.terms.filter(t => t.shift === 1).length;   /* x<<1 = x+x */
+  const naive = { ops: 1, cycles: 3, instr: 'imulq（整数乘法，1 条指令）' };
+  const smart = { ops: d.ops, cycles: d.ops, instr: d.ops === 0 ? '不需要任何指令（k = ±1）' : `${d.shifts} 条 shl + ${d.adds} 条 add/sub` };
+  const isPow2 = d.terms.length === 1 && d.sign > 0;
+  $('#sredOut').innerHTML = `
+    <div class="formula" style="text-align:left;margin-top:12px">
+      <div>${fmt(k)} * x&nbsp;&nbsp;=&nbsp;&nbsp;<b>${esc(sredExpr(d))}</b></div>
+    </div>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>写法</th><th>指令</th><th class="mono">指令条数</th><th class="mono">周期估算</th></tr>
+      <tr style="${srMode === 'naive' ? 'background:var(--accent-soft)' : ''}">
+        <td>直接用乘法</td><td class="mono">x * ${fmt(k)}</td><td class="mono">1</td><td class="mono">3（Nehalem，原第 8 页）</td></tr>
+      <tr style="${srMode === 'smart' ? 'background:var(--accent-soft)' : ''}">
+        <td>强度削减</td><td class="mono">${esc(sredExpr(d))}</td><td class="mono">${smart.ops}</td><td class="mono">${smart.ops}</td></tr>
+    </table></div>
+    <div class="readout" style="margin-bottom:0">
+      <dt>x = ${fmt(x)} 时的值</dt><dd>乘法：${fmt(k * x)} ｜ 分解式：${fmt(k * x)}（相等）</dd>
+      <dt>是否划算</dt><dd>${isPow2
+        ? `k = ${fmt(k)} 是 2 的幂 → 只需 <b>1 条 shl</b>，比乘法省 2 个周期。`
+        : (smart.ops <= 2
+          ? `分解出 ${smart.ops} 条指令，与乘法相当或更省。`
+          : `分解出 ${smart.ops} 条指令，<b>比一条乘法还多</b> —— 强度削减是否划算取决于机器的乘法代价，这正是课件说的「与方法不机器相关、是否划算与机器相关」。`)}</dd>
+    </div>`;
+}
+
+/* ============================================================
+   2.3 公共子表达式计数器（原第 9 页）
+   ============================================================ */
+function cseAddresses(i, j, n) {
+  const inj = i * n + j;
+  return {
+    inj,
+    naiveMult: 3,                       /* i*n, (i-1)*n, (i+1)*n */
+    cseMult: 1,                         /* 只有 i*n */
+    up: { idx: (i - 1) * n + j, via: inj - n },
+    down: { idx: (i + 1) * n + j, via: inj + n },
+    left: { idx: i * n + j - 1, via: inj - 1 },
+    right: { idx: i * n + j + 1, via: inj + 1 },
+  };
+}
+function renderCse() {
+  const i = parseIntLoose($('#cseI').value), j = parseIntLoose($('#cseJ').value), n = parseIntLoose($('#cseN').value);
+  if (i === null || j === null || n === null) { $('#cseOut').innerHTML = badBox('i、j、n 都请填整数。'); return; }
+  if (n < 1 || n > 4096) { $('#cseOut').innerHTML = badBox('n 请填 1–4096 之间的整数。'); return; }
+  if (i < 0 || j < 0 || i > 4095 || j > 4095) { $('#cseOut').innerHTML = badBox('i、j 请填 0 以上的整数（本工具按 0 起始下标算，课件用的是 1 起始下标）。'); return; }
+  const a = cseAddresses(i, j, n);
+  const e8 = v => `${fmt(v)}（字节偏移 ${fmt(v * 8)}）`;
+  const chk = (idx, expect) => idx === expect ? '一致' : `<b style="color:var(--sign)">不一致</b>`;
+  $('#cseOut').innerHTML = `
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>邻居</th><th>朴素写法下标</th><th>朴素值</th><th>改写写法下标</th><th>改写值</th><th>校验</th></tr>
+      <tr><td>up</td><td class="mono">(i−1)*n + j</td><td class="mono">${e8(a.up.idx)}</td><td class="mono">inj − n</td><td class="mono">${e8(a.up.via)}</td><td>${chk(a.up.idx, a.up.via)}</td></tr>
+      <tr><td>down</td><td class="mono">(i+1)*n + j</td><td class="mono">${e8(a.down.idx)}</td><td class="mono">inj + n</td><td class="mono">${e8(a.down.via)}</td><td>${chk(a.down.idx, a.down.via)}</td></tr>
+      <tr><td>left</td><td class="mono">i*n + j−1</td><td class="mono">${e8(a.left.idx)}</td><td class="mono">inj − 1</td><td class="mono">${e8(a.left.via)}</td><td>${chk(a.left.idx, a.left.via)}</td></tr>
+      <tr><td>right</td><td class="mono">i*n + j+1</td><td class="mono">${e8(a.right.idx)}</td><td class="mono">inj + 1</td><td class="mono">${e8(a.right.via)}</td><td>${chk(a.right.idx, a.right.via)}</td></tr>
+    </table></div>
+    <div class="readout" style="margin-bottom:0">
+      <dt>inj = i*n + j</dt><dd class="mono">${fmt(a.inj)}（字节偏移 ${fmt(a.inj * 8)}，元素类型按课件用的 <code>long</code>，8 字节）</dd>
+      <dt>乘法次数</dt><dd>朴素写法 <b>${a.naiveMult}</b> 次（<code>i*n</code>、<code>(i−1)*n</code>、<code>(i+1)*n</code>），改写后 <b>${a.cseMult}</b> 次（<code>i*n</code> 只算一次，其余都靠 <code>±n</code> 与 <code>±1</code> 得到）</dd>
+      <dt>注意</dt><dd>i = 0 或 j = 0 时 up / left 会算出负数下标 —— 这是课件把它写作「取邻居」时的隐含前提（i、j 不在边界上）。工具照实算出，不做保护。</dd>
+    </div>`;
+}
+
+/* ============================================================
+   3 冒泡排序：四个版本的伪代码
+   每个版本都把指令逐行编码；条数 = 数组长度（现算，不抄课件）。
+     inner：内层循环体（含入口的比较与末尾的 goto）
+     pre  ：每次外层迭代在进入内层循环之前执行的指令
+     post ：内层循环结束后、外层循环回到 L5 之前执行的指令
+   ============================================================ */
+const BUB = [
+  {
+    name: '初版', src: '原第 11 页', claim: [29, 25],
+    pre: ['L5: if i<1 goto L1', 'j := 1'],
+    inner: [
+      'L4: if j>i goto L2',
+      't1 := j-1', 't2 := 4*t1', 't3 := A[t2]',
+      't4 := j+1', 't5 := t4-1', 't6 := 4*t5', 't7 := A[t6]',
+      'if t3<=t7 goto L3',
+      't8 := j-1', 't9 := 4*t8', 'temp := A[t9]',
+      't10 := j+1', 't11 := t10-1', 't12 := 4*t11', 't13 := A[t12]',
+      't14 := j-1', 't15 := 4*t14', 'A[t15] := t13',
+      't16 := j+1', 't17 := t16-1', 't18 := 4*t17', 'A[t18] := temp',
+      'L3: j := j+1', 'goto L4',
+    ],
+    post: ['L2: i := i-1', 'goto L5'],
+  },
+  {
+    name: '去掉地址计算冗余', src: '原第 13 页', claim: [20, 16],
+    pre: ['L5: if i<1 goto L1', 'j := 1'],
+    inner: [
+      'L4: if j>i goto L2',
+      't1 := j-1', 't2 := 4*t1', 't3 := A[t2]',
+      't6 := 4*j', 't7 := A[t6]',
+      'if t3<=t7 goto L3',
+      't8 := j-1', 't9 := 4*t8', 'temp := A[t9]',
+      't12 := 4*j', 't13 := A[t12]',
+      'A[t9] := t13', 'A[t12] := temp',
+      'L3: j := j+1', 'goto L4',
+    ],
+    post: ['L2: i := i-1', 'goto L5'],
+  },
+  {
+    name: '再去掉交换的中间量', src: '原第 15 页', claim: [15, 11],
+    pre: ['L5: if i<1 goto L1', 'j := 1'],
+    inner: [
+      'L4: if j>i goto L2',
+      't1 := j-1', 't2 := 4*t1', 't3 := A[t2]',
+      't6 := 4*j', 't7 := A[t6]',
+      'if t3<=t7 goto L3',
+      'A[t2] := t7', 'A[t6] := t3',
+      'L3: j := j+1', 'goto L4',
+    ],
+    post: ['L2: i := i-1', 'goto L5'],
+  },
+  {
+    name: '最终版（增量替换乘法）', src: '原第 17–18 页', claim: [15, 9],
+    pre: ['L5: if i<1 goto L1', 't2 := 0', 't6 := 4', 't19 := i << 2'],
+    inner: [
+      'L4: if t6>t19 goto L2',
+      't3 := A[t2]', 't7 := A[t6]',
+      'if t3<=t7 goto L3',
+      'A[t2] := t7', 'A[t6] := t3',
+      'L3: t2 := t2+4', 't6 := t6+4', 'goto L4',
+    ],
+    post: ['L2: i := i-1', 'goto L5'],
+  },
+];
+/** 现算四个版本的指令条数：内层 = inner 的行数，外层 = pre + inner + post */
+function bubbleCounts(vi) {
+  const v = BUB[vi];
+  const inner = v.inner.length;
+  const outer = v.pre.length + inner + v.post.length;
+  return { inner, outer, claimInner: v.claim[1], claimOuter: v.claim[0] };
+}
+
+/* --- 3.4 四个版本的可执行转写（按伪代码逐句写；内存按字节偏移寻址） --- */
+function bubMem(arr, n) {
+  /* 用 Int32Array 表示按字节寻址的数组 A：下标 1..n 对应字节偏移 4*(j-1)。
+     末尾多留 4 字节，允许读 A[n+1]（与课件的下标 1..n 一致）。 */
+  const m = new Int32Array((n + 2) * 4 / 4 + 4);
+  for (let k = 1; k <= n; k++) m[k - 1] = arr[k - 1];
+  return m;
+}
+const mget = (m, off) => m[off >> 2];
+const mset = (m, off, v) => { m[off >> 2] = v; };
+function bubOut(m, n) { const a = []; for (let k = 1; k <= n; k++) a.push(mget(m, 4 * (k - 1))); return a; }
+
+function bubbleRun(vi, arrIn) {
+  const n = arrIn.length;
+  const A = bubMem(arrIn, n);
+  let stats = { compares: 0, swaps: 0, inner: 0, outer: 0 };
+  if (vi === 0) {
+    let i = n - 1;
+    while (true) {
+      if (i < 1) break;
+      stats.outer++;
+      let j = 1;
+      while (true) {
+        if (j > i) break;
+        stats.inner++;
+        const t1 = j - 1, t2 = 4 * t1, t3 = mget(A, t2);
+        const t4 = j + 1, t5 = t4 - 1, t6 = 4 * t5, t7 = mget(A, t6);
+        stats.compares++;
+        if (t3 <= t7) { j = j + 1; continue; }
+        const t8 = j - 1, t9 = 4 * t8, temp = mget(A, t9);
+        const t10 = j + 1, t11 = t10 - 1, t12 = 4 * t11, t13 = mget(A, t12);
+        const t14 = j - 1, t15 = 4 * t14;
+        mset(A, t15, t13);
+        const t16 = j + 1, t17 = t16 - 1, t18 = 4 * t17;
+        mset(A, t18, temp);
+        stats.swaps++; j = j + 1;
+      }
+      i = i - 1;
+    }
+  } else if (vi === 1) {
+    let i = n - 1;
+    while (true) {
+      if (i < 1) break;
+      stats.outer++;
+      let j = 1;
+      while (true) {
+        if (j > i) break;
+        stats.inner++;
+        const t1 = j - 1, t2 = 4 * t1, t3 = mget(A, t2);
+        const t6 = 4 * j, t7 = mget(A, t6);
+        stats.compares++;
+        if (t3 <= t7) { j = j + 1; continue; }
+        const t8 = j - 1, t9 = 4 * t8, temp = mget(A, t9);
+        const t12 = 4 * j, t13 = mget(A, t12);
+        mset(A, t9, t13); mset(A, t12, temp);
+        stats.swaps++; j = j + 1;
+      }
+      i = i - 1;
+    }
+  } else if (vi === 2) {
+    let i = n - 1;
+    while (true) {
+      if (i < 1) break;
+      stats.outer++;
+      let j = 1;
+      while (true) {
+        if (j > i) break;
+        stats.inner++;
+        const t1 = j - 1, t2 = 4 * t1, t3 = mget(A, t2);
+        const t6 = 4 * j, t7 = mget(A, t6);
+        stats.compares++;
+        if (t3 <= t7) { j = j + 1; continue; }
+        mset(A, t2, t7); mset(A, t6, t3);
+        stats.swaps++; j = j + 1;
+      }
+      i = i - 1;
+    }
+  } else {
+    let i = n - 1;
+    while (true) {
+      if (i < 1) break;
+      stats.outer++;
+      let t2 = 0, t6 = 4;
+      const t19 = i * 4;
+      while (true) {
+        if (t6 > t19) break;
+        stats.inner++;
+        const t3 = mget(A, t2), t7 = mget(A, t6);
+        stats.compares++;
+        if (t3 > t7) { mset(A, t2, t7); mset(A, t6, t3); stats.swaps++; }
+        t2 = t2 + 4; t6 = t6 + 4;
+      }
+      i = i - 1;
+    }
+  }
+  return { array: bubOut(A, n), stats };
+}
+
+let bubCur = 0, bubAll = false;
+function renderBubble() {
+  const pick = bubAll ? [0, 1, 2, 3] : [bubCur];
+  const blocks = pick.map(vi => {
+    const v = BUB[vi], c = bubbleCounts(vi);
+    const ok = c.inner === c.claimInner && c.outer === c.claimOuter;
+    const rows = v.pre.map(x => `<div style="opacity:.72">${esc(x)}</div>`).join('')
+      + v.inner.map((x, k) => `<div><span style="display:inline-block;width:34px;color:var(--muted);font-size:12px">${k + 1}</span>${esc(x)}</div>`).join('')
+      + v.post.map(x => `<div style="opacity:.72">${esc(x)}</div>`).join('');
+    return `<div class="card" style="margin-bottom:12px">
+      <h5>${esc(v.name)}<span class="srcref">${esc(v.src)}</span></h5>
+      <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:flex-start">
+        <div class="formula" style="flex:1;min-width:260px;text-align:left;margin:0;font-size:13px;line-height:1.6;max-height:360px;overflow:auto">${rows}</div>
+        <div style="min-width:190px">
+          <div class="readout" style="margin:0">
+            <dt>内层条数</dt><dd>${c.inner}${ok ? ' <span class="chip ok">与课件一致</span>' : ` <span class="chip bad">课件写 ${c.claimInner}</span>`}</dd>
+            <dt>外层条数</dt><dd>${c.outer}${ok ? ' <span class="chip ok">与课件一致</span>' : ` <span class="chip bad">课件写 ${c.claimOuter}</span>`}</dd>
+            <dt>比初版省</dt><dd>${BUB[0].inner.length - c.inner} 条（内层）</dd>
+          </div>
+          <p style="font-size:13px;color:var(--muted);margin:8px 0 0">浅色的几行是外层循环里内层循环之外的部分（进入内层循环前 ${v.pre.length} 条、回到 L5 的 ${v.post.length} 条），所以外层条数 = ${v.pre.length} + ${c.inner} + ${v.post.length} = ${c.outer}。</p>
+        </div>
+      </div></div>`;
+  }).join('');
+  $('#bubOut').innerHTML = blocks + `
+    <div class="box ok" style="margin-bottom:0"><div class="t">四个版本的内层条数：25 → 16 → 11 → 9</div>
+      这组条数是页面<b>逐行数出来的</b>（每条伪代码算一行），不是从课件抄的；它与课件第 11、13、15、18 页印的 25 / 16 / 11 / 9 完全一致。从 25 减到 9 的账目是：删掉 <b>15 条地址计算</b>（初版把 <code>4*(j−1)</code>、<code>4*j</code>、<code>4*(j+1)</code> 反复重算，还绕了 <code>t4:=j+1; t5:=t4-1</code> 这样的弯路）、删掉 <b>1 条多余的临时变量 <code>temp</code></b>、删掉 1 条 <code>j := j+1</code>，同时新增 <b>2 条增量</b>（<code>t2 := t2+4</code>、<code>t6 := t6+4</code>）：25 − 18 + 2 = 9。
+    </div>`;
+}
+
+function renderBubRun() {
+  const raw = $('#bubArr').value;
+  const parts = raw.split(/[,，\s]+/).filter(s => s.length);
+  const arr = [];
+  for (const p of parts) {
+    const v = parseIntLoose(p);
+    if (v === null) { $('#bubRunOut').innerHTML = badBox(`「${p}」不是整数。`); return; }
+    arr.push(v);
+  }
+  if (arr.length < 2 || arr.length > 12) { $('#bubRunOut').innerHTML = badBox('请给 2–12 个整数（四版对照用的小数组）。'); return; }
+  const res = [0, 1, 2, 3].map(vi => bubbleRun(vi, arr));
+  const sameArr = res.every(r => r.array.join(',') === res[0].array.join(','));
+  const sameStats = res.every(r => r.stats.compares === res[0].stats.compares && r.stats.swaps === res[0].stats.swaps);
+  const ref = arr.slice().sort((a, b) => a - b);
+  const correct = res[0].array.join(',') === ref.join(',');
+  $('#bubRunOut').innerHTML = `
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>版本</th><th>执行结果</th><th class="mono">比较次数</th><th class="mono">交换次数</th><th class="mono">内层迭代</th></tr>
+      ${res.map((r, k) => `<tr><td>${esc(BUB[k].name)}</td><td class="mono">[${r.array.join(', ')}]</td>
+        <td class="mono">${fmt(r.stats.compares)}</td><td class="mono">${fmt(r.stats.swaps)}</td><td class="mono">${fmt(r.stats.inner)}</td></tr>`).join('')}
+    </table></div>
+    <div class="readout" style="margin-bottom:0">
+      <dt>四版是否一致</dt><dd>${sameArr ? '<span class="chip ok">结果完全一致</span>' : '<span class="chip bad">不一致</span>'}
+        ${sameStats ? '<span class="chip ok">比较/交换次数也一致</span>' : '<span class="chip bad">计数不一致</span>'}</dd>
+      <dt>是否真的排好序</dt><dd>${correct ? `<span class="chip ok">与库排序一致</span> [${ref.join(', ')}]` : '<span class="chip bad">与库排序不一致</span>'}</dd>
+      <dt>理论比较次数</dt><dd class="mono">n(n−1)/2 = ${fmt(arr.length * (arr.length - 1) / 2)}（四版都跑满内层循环，所以比较次数固定）</dd>
+    </div>`;
+}
+function bubSelfCheck() {
+  /* 可复现伪随机：mulberry32 */
+  let s = 20251103;
+  const rnd = () => { s |= 0; s = (s + 0x6D2B79F5) | 0; let t = Math.imul(s ^ (s >>> 15), 1 | s);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+  let bad = 0, first = '';
+  for (let k = 0; k < 500; k++) {
+    const n = 2 + Math.floor(rnd() * 7);
+    const a = Array.from({ length: n }, () => Math.floor(rnd() * 21) - 10);
+    const r = [0, 1, 2, 3].map(vi => bubbleRun(vi, a));
+    const ref = a.slice().sort((x, y) => x - y).join(',');
+    for (let vi = 0; vi < 4; vi++) {
+      if (r[vi].array.join(',') !== ref) { bad++; if (!first) first = `[${a.join(',')}] → 版本${vi + 1} 给出 [${r[vi].array.join(',')}]，应为 [${ref}]`; }
+      if (vi > 0 && (r[vi].stats.compares !== r[0].stats.compares || r[vi].stats.swaps !== r[0].stats.swaps)) {
+        bad++; if (!first) first = `[${a.join(',')}] → 版本${vi + 1} 的比较/交换次数与版本 1 不同`;
+      }
+    }
+  }
+  $('#bubRunOut').innerHTML = `<div class="box ${bad === 0 ? 'ok' : 'bad'}" style="margin-bottom:0">
+    <div class="t">500 组随机数组（长度 2–8，取值 −10…10）的四版对照</div>
+    ${bad === 0
+      ? '四个版本给出的数组、比较次数、交换次数<b>全部一致</b>，且与库排序结果相同 —— 这三次改写确实没有改变程序行为。'
+      : `${bad} 项不一致，第一个反例：${esc(first)}`}
+  </div>`;
+}
+
+/* --- 3.5 判断题 --- */
+const PUZ_BUB = [
+  { q: 't2 := 4*t1 &nbsp;→&nbsp; t2 := t2+4', s: '把乘法换成加法', a: 1,
+    w: '这就是<b>强度削减 + 归纳变量消除</b>：j 每轮加 1，则 4*j 每轮加 4。最终版（原第 18 页）把它做到底，内层循环里一条乘法都不剩。' },
+  { q: '去掉 t4:=j+1; t5:=t4-1 之后，t6 := 4*j 与原来的 4*t5 含义相同', s: '合并重复的地址计算', a: 1,
+    w: '<code>t5 = (j+1)−1 = j</code>，所以两条写法等价，但少了一条减法。这是原第 12–13 页「Redundancy Removed」做的事 —— 属于<b>公共子表达式消除</b>，不是强度削减。' },
+  { q: '最终版（原第 18 页）内层循环里还有一条乘法指令', s: '数一数 9 条指令', a: 0,
+    w: '最终版内层 9 条是：<code>if t6&gt;t19 goto L2</code>、<code>t3:=A[t2]</code>、<code>t7:=A[t6]</code>、<code>if t3&lt;=t7 goto L3</code>、<code>A[t2]:=t7</code>、<code>A[t6]:=t3</code>、<code>t2:=t2+4</code>、<code>t6:=t6+4</code>、<code>goto L4</code>。没有乘法 —— 唯一的乘法 <code>4*i</code> 被写成外层循环入口处的 <code>t19 := i &lt;&lt; 2</code>。' },
+  { q: '这九页的改写之所以成立，是因为它们都假设 A 的元素是 4 字节', s: '地址计算 4*(j-1) 的来源', a: 1,
+    w: '<code>4*(j−1)</code> 里那个 4 正是元素宽度（原第 10 页：每个元素占 4 字节）。如果元素换成 8 字节，全部「+4」的增量都要变成「+8」—— 这正是方法<b>与数据表示相关</b>的地方，但它仍然是机器无关的（只依赖数据布局，不依赖处理器）。' },
+];
+let pzState = PUZ_BUB.map(() => null);
+function renderPuzzles() {
+  const list = PUZ_BUB.map((p, i) => {
+    const sel = pzState[i];
+    const cls = sel === null ? '' : sel === p.a ? ' correct done' : ' wrong done';
+    return `<div class="puzzle${cls}" style="flex-direction:column;align-items:stretch">
+      <div class="q" style="white-space:normal"><b>${i + 1}.</b> ${p.q}<small>${p.s}</small></div>
+      <div class="btns" style="margin-top:8px">
+        <button class="sm" data-pz="${i}:1">真</button>
+        <button class="sm" data-pz="${i}:0">假</button>
+      </div>
+      <div class="exp"><span class="verdict">${sel === null ? '' : sel === p.a ? '✓ 正确' : '✗ 错误'}</span>
+        &nbsp;答案：<b>${p.a ? '真' : '假'}</b><br>${p.w}</div>
+    </div>`;
+  }).join('');
+  const answered = pzState.filter(v => v !== null).length;
+  const right = PUZ_BUB.filter((p, i) => pzState[i] === p.a).length;
+  $('#pzOut').innerHTML = list + (answered === 0 ? '' :
+    `<div class="box ${right === PUZ_BUB.length ? 'ok' : 'warn'}" style="margin-bottom:0"><div class="t">已答 ${answered} / ${PUZ_BUB.length}，答对 ${right}</div>
+      每题点一下立刻判定，解析里都写了它在课件哪一页。</div>`);
+}
+
+/* ============================================================
+   4.3 lower：扫描字符数
+   lower1：for (i = 0; i < strlen(s); i++) —— 第 i 轮判断要重新扫一遍
+           剩下的 N−i 个字符（原第 24 页：N、N−1、…、1）
+   lower2：先取 len，只扫 N 个字符
+   ============================================================ */
+function scanCost(N) {
+  const n = Number(N);
+  const quad = n * (n + 1) / 2;        /* N + (N−1) + … + 1 */
+  const calls1 = n + 1;                /* 循环条件判断 n+1 次 */
+  return { n, lower1: { calls: calls1, chars: quad }, lower2: { calls: 1, chars: n }, ratio: n === 0 ? 1 : quad / Math.max(1, n) };
+}
+function renderLower() {
+  const n = parseUint($('#lowerN').value, 2000000);
+  if (n === null) { $('#lowerOut').innerHTML = badBox('字符串长度 N 请填 0–2000000 之间的整数。'); return; }
+  const c = scanCost(n);
+  const W = 520, H = 210, padL = 54, padB = 26, padT = 10, padR = 8;
+  const xmax = Math.max(n, 1);
+  const ymax = Math.max(c.lower1.chars, 1);
+  const X = k => padL + (k / xmax) * (W - padL - padR);
+  const Y = v => H - padB - (v / ymax) * (H - padB - padT);
+  const pts1 = [], pts2 = [];
+  for (let k = 0; k <= 60; k++) {
+    const nn = Math.round(xmax * k / 60);
+    pts1.push(`${X(nn).toFixed(1)},${Y(nn * (nn + 1) / 2).toFixed(1)}`);
+    pts2.push(`${X(nn).toFixed(1)},${Y(nn).toFixed(1)}`);
+  }
+  const ylab = v => Y(v).toFixed(1);
+  $('#lowerOut').innerHTML = `
+    <svg viewBox="0 0 ${W} ${H}" style="width:100%;max-width:${W}px;height:auto" font-family="var(--font-sans)">
+      <line class="axisline" x1="${padL}" y1="${H - padB}" x2="${W - padR}" y2="${H - padB}"/>
+      <line class="axisline" x1="${padL}" y1="${padT}" x2="${padL}" y2="${H - padB}"/>
+      <text class="axislabel" x="${padL - 6}" y="${ylab(0)}" text-anchor="end">0</text>
+      <text class="axislabel" x="${padL - 6}" y="${ylab(ymax / 2)}" text-anchor="end">${fmt(Math.round(ymax / 2))}</text>
+      <text class="axislabel" x="${padL - 6}" y="${ylab(ymax)}" text-anchor="end">${fmt(ymax)}</text>
+      <text class="axislabel" x="${W - padR}" y="${H - 8}" text-anchor="end">字符串长度 N = ${fmt(n)}</text>
+      <text class="axislabel" x="${padL}" y="${padT + 4}">扫描字符总数</text>
+      <polyline fill="none" stroke="var(--sign)" stroke-width="2.2" points="${pts1.join(' ')}"/>
+      <polyline fill="none" stroke="var(--frac)" stroke-width="2.2" points="${pts2.join(' ')}"/>
+      <text class="axislabel" x="${X(xmax * 0.42)}" y="${Y(ymax * 0.82)}" fill="var(--sign)">lower1（O(N²)）</text>
+      <text class="axislabel" x="${X(xmax * 0.62)}" y="${ylab(n) - 6}" fill="var(--frac)">lower2（O(N)）</text>
+    </svg>
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>N = ${fmt(n)}</th><th class="mono">strlen 调用次数</th><th class="mono">扫描字符总数</th><th class="mono">增长阶</th></tr>
+      <tr><td><code>lower1</code>（原第 21 页）</td><td class="mono">${fmt(c.lower1.calls)}</td><td class="mono">${fmt(c.lower1.chars)}</td><td class="mono">N(N+1)/2 = O(N²)</td></tr>
+      <tr><td><code>lower2</code>（原第 25 页）</td><td class="mono">${fmt(c.lower2.calls)}</td><td class="mono">${fmt(c.lower2.chars)}</td><td class="mono">O(N)</td></tr>
+    </table></div>
+    <div class="readout" style="margin-bottom:0">
+      <dt>工作量之比</dt><dd>lower1 : lower2 = <b>${fmt(c.ratio)} : 1</b>${n > 0 ? `（N 再翻一倍，这个比值大约也翻一倍）` : ''}</dd>
+      <dt>把 N 折半会怎样</dt><dd>lower1 的工作量变成约 1/4（${fmt(Math.round(n / 2 * (n / 2 + 1) / 2))}），lower2 变成约 1/2（${fmt(Math.round(n / 2))}）</dd>
+    </div>`;
+}
+
+/* ============================================================
+   5 内存别名：sum_rows1 / sum_rows2
+   A 是一维数组（视为 n×n 矩阵按行存放），B 从 A 的第 off 个元素开始（B = A+off）。
+   sum_rows1：b[i] += a[i*n+j]，每轮都把中间结果写回 b[i]。
+   sum_rows2：局部 val 累加，循环结束才写 b[i]。
+   两者都会受别名影响，但影响方式不同 —— 页面把两者的结果都算出来。
+   ============================================================ */
+function sumRows1(A0, off, n) {
+  const A = A0.slice();
+  const frames = [];
+  const view = () => { const b = []; for (let k = 0; k < n; k++) b.push(A[off + k]); return b; };
+  frames.push({ tag: 'init', B: view() });
+  for (let i = 0; i < n; i++) {
+    A[off + i] = 0;
+    frames.push({ tag: `b[${i}] = 0`, B: view() });
+    for (let j = 0; j < n; j++) {
+      A[off + i] += A[i * n + j];
+      frames.push({ tag: `b[${i}] += a[${i}*n+${j}]`, B: view() });
+    }
+  }
+  return { A, frames };
+}
+function sumRows2(A0, off, n) {
+  const A = A0.slice();
+  const frames = [];
+  const view = () => { const b = []; for (let k = 0; k < n; k++) b.push(A[off + k]); return b; };
+  frames.push({ tag: 'init', B: view() });
+  for (let i = 0; i < n; i++) {
+    let val = 0;
+    for (let j = 0; j < n; j++) val += A[i * n + j];
+    A[off + i] = val;
+    frames.push({ tag: `b[${i}] = ${val}`, B: view() });
+  }
+  return { A, frames };
+}
+function parseArr(str, want) {
+  const parts = String(str).split(/[,，\s]+/).filter(s => s.length);
+  const out = [];
+  for (const p of parts) {
+    const v = parseIntLoose(p);
+    if (v === null) return null;
+    out.push(v);
+  }
+  if (want !== undefined && out.length !== want) return null;
+  return out;
+}
+function renderAlias() {
+  const A = parseArr($('#alA').value);
+  const off = parseUint($('#alOff').value, 64);
+  if (A === null) { $('#aliasOut').innerHTML = badBox('A 请填逗号分隔的整数。'); return; }
+  if (A.length < 2 || A.length > 16) { $('#aliasOut').innerHTML = badBox('A 请填 2–16 个整数。'); return; }
+  if (off === null) { $('#aliasOut').innerHTML = badBox('B 的起始下标请填 0 以上的整数。'); return; }
+  const n = 3;
+  if (off + n > A.length) { $('#aliasOut').innerHTML = badBox(`B 从 A[${off}] 起要放 ${n} 个元素，超出 A（长度 ${A.length}）—— 课件例子里 A 有 9 个元素、B = A+3。`); return; }
+  const r1 = sumRows1(A, off, n);
+  const aView = () => '[' + r1.A.map((v, k) => (k >= off && k < off + n) ? `<b>${v}</b>` : String(v)).join(', ') + ']';
+  const rows = r1.frames.map((f, k) => `<tr${k === r1.frames.length - 1 ? ' class="hl"' : ''}><td class="mono">${k}</td>
+      <td class="mono">${esc(f.tag)}</td><td class="mono">[${f.B.join(', ')}]</td>
+      <td class="mono">${aView()}</td></tr>`).join('');
+  $('#aliasOut').innerHTML = `
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>#</th><th>这一步做了什么</th><th>B 的值</th><th>A 的值（B 只是 A 的一段）</th></tr>
+      ${rows}
+    </table></div>
+    <div class="readout" style="margin-bottom:0">
+      <dt>最终 B</dt><dd class="mono">[${r1.frames[r1.frames.length - 1].B.join(', ')}]</dd>
+      <dt>B 的位置</dt><dd class="mono">B = A + ${off} → 对应 A[${off} … ${off + n - 1}]</dd>
+      <dt>看点</dt><dd>${off < n ? 'B 与它要累加的行<b>有重叠</b>：第 i 行的求和会读到前几行刚写出去的结果，<b>每写一次 b[i] 都会改变后面几行的输入</b>。' : 'B 与矩阵行没有重叠（无别名），此时 sum_rows1 与「先算完再写」的写法结果相同。'}</dd>
+    </div>`;
+}
+function renderAliasCmp() {
+  const A = parseArr($('#alA2').value);
+  const off = parseUint($('#alOff2').value, 64);
+  const n = parseUint($('#alN2').value, 8);
+  if (A === null) { $('#aliasCmpOut').innerHTML = badBox('A 请填逗号分隔的整数。'); return; }
+  if (off === null || n === null || n < 1) { $('#aliasCmpOut').innerHTML = badBox('B 起始下标请填 0 以上的整数，n 请填 1–8。'); return; }
+  if (A.length < n * n || off + n > A.length) {
+    $('#aliasCmpOut').innerHTML = badBox(`需要 A 至少有 ${n * n} 个元素（n×n 矩阵），且 B 的 ${n} 个元素要落在 A 内：请让 A 长度 ≥ ${Math.max(n * n, off + n)}。`);
+    return;
+  }
+  const r1 = sumRows1(A, off, n), r2 = sumRows2(A, off, n);
+  const b1 = r1.frames[r1.frames.length - 1].B, b2 = r2.frames[r2.frames.length - 1].B;
+  /* 无别名的参考答案：把 B 放到 A 之外，行和不受写入影响 */
+  const noAlias = [];
+  for (let i = 0; i < n; i++) { let s = 0; for (let j = 0; j < n; j++) s += A[i * n + j]; noAlias.push(s); }
+  const same12 = b1.join(',') === b2.join(',');
+  const sameRef = b2.join(',') === noAlias.join(',');
+  $('#aliasCmpOut').innerHTML = `
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>写法</th><th class="mono">B 的最终值</th><th>值是怎么来的</th></tr>
+      <tr><td><code>sum_rows1</code><span class="srcref">原第 28 页</span></td><td class="mono">[${b1.join(', ')}]</td>
+        <td>每一轮都把 <code>b[i]</code> 写回内存 —— 写出去的中间值又会成为后续读数的输入</td></tr>
+      <tr><td><code>sum_rows2</code><span class="srcref">原第 30 页</span></td><td class="mono">[${b2.join(', ')}]</td>
+        <td>用局部 <code>val</code> 累加，只在每行结束时写一次 <code>b[i]</code> —— 写回的次数从 n×n 降到 n</td></tr>
+      <tr><td><b>假定无别名</b><span class="srcref">参考答案</span></td><td class="mono">[${noAlias.join(', ')}]</td>
+        <td>每行按 A 的<b>原始值</b>求和（把 B 挪到 A 之外时的结果）</td></tr>
+    </table></div>
+    <div class="readout" style="margin-bottom:0">
+      <dt>两种写法是否相同</dt><dd>${same12 ? '<span class="chip ok">相同</span>（本例中别名没有影响到差值）' : '<span class="chip warn">不同</span> —— 减小的写回次数改变了别名的影响方式'}</dd>
+      <dt>是否等于无别名答案</dt><dd>${sameRef ? '<span class="chip ok">相同</span>' : '<span class="chip warn">不同</span> —— 只要 B 落在 A 的行数据上，结果就依赖写回时机'}</dd>
+      <dt>写回次数</dt><dd class="mono">sum_rows1 = ${fmt(n * n + n)} 次（n 次清零 + n×n 次累加写回）｜sum_rows2 = ${fmt(n)} 次</dd>
+    </div>
+    <div class="box warn" style="margin:12px 0 0"><div class="t">这里要分清楚两件事</div>
+      <b>(1) 编译器的顾虑</b>（原第 28 页）：只要 <code>b</code> 可能与 <code>a</code> 重叠，编译器就<b>不敢</b>把 <code>b[i]</code> 的中间值放进寄存器 —— 于是每轮都要 load/add/store。<br>
+      <b>(2) 程序员的正确性责任</b>：<code>sum_rows2</code> 解决了 (1)，但<b>它并不消除别名本身</b>。如果调用者真的传进重叠的 <code>a</code> 与 <code>b</code>，两个函数的答案都可能与「无别名」的期望不同 —— 课件第 29 页追踪 <code>sum_rows1</code> 就是想说明：<b>重叠时的行为是可观察的</b>，所以编译器不能擅自重排。
+    </div>`;
+}
+
+/* ============================================================
+   6.3 CPE 计算器（原第 36 页）
+   T = CPE * n + Overhead，CPE 是斜率。
+   两个测点 (n1,T1)、(n2,T2) 反推斜率与截距。
+   ============================================================ */
+function cpeFit(n1, t1, n2, t2) {
+  if (n1 === n2) return null;
+  const cpe = (t2 - t1) / (n2 - n1);
+  const overhead = t1 - cpe * n1;
+  return { cpe, overhead, n1, t1, n2, t2 };
+}
+function renderCpe() {
+  const n1 = parseUint($('#cpeN1').value, 100000000), t1 = parseUint($('#cpeT1').value, 100000000000);
+  const n2 = parseUint($('#cpeN2').value, 100000000), t2 = parseUint($('#cpeT2').value, 100000000000);
+  if (n1 === null || t1 === null || n2 === null || t2 === null) { $('#cpeOut').innerHTML = badBox('四个格子都请填非负整数（元素数、周期数）。'); return; }
+  if (n1 === n2) { $('#cpeOut').innerHTML = badBox('两个测点的元素数不能相同 —— 同一竖直线上两点连不出斜率。'); return; }
+  const f = cpeFit(n1, t1, n2, t2);
+  const W = 520, H = 220, padL = 56, padB = 28, padT = 12, padR = 10;
+  const xmax = Math.max(n1, n2) * 1.25, ymax = Math.max(t1, t2) * 1.15;
+  const X = k => padL + (k / xmax) * (W - padL - padR);
+  const Y = v => H - padB - (v / ymax) * (H - padB - padT);
+  const line = (cpe, ov) => {
+    const x0 = 0, x1 = xmax;
+    return `<line x1="${X(x0).toFixed(1)}" y1="${Y(ov).toFixed(1)}" x2="${X(x1).toFixed(1)}" y2="${Y(cpe * x1 + ov).toFixed(1)}" stroke="var(--line)" stroke-width="1.6" stroke-dasharray="5 4"/>`;
+  };
+  $('#cpeOut').innerHTML = `
+    <svg viewBox="0 0 ${W} ${H}" style="width:100%;max-width:${W}px;height:auto" font-family="var(--font-sans)">
+      <line class="axisline" x1="${padL}" y1="${H - padB}" x2="${W - padR}" y2="${H - padB}"/>
+      <line class="axisline" x1="${padL}" y1="${padT}" x2="${padL}" y2="${H - padB}"/>
+      <text class="axislabel" x="${padL - 6}" y="${H - padB + 4}" text-anchor="end">0</text>
+      <text class="axislabel" x="${padL - 6}" y="${Y(ymax) + 10}" text-anchor="end">${fmt(Math.round(ymax))}</text>
+      <text class="axislabel" x="${W - padR}" y="${H - 8}" text-anchor="end">元素数 n →  ${fmt(Math.round(xmax))}</text>
+      ${line(9, 0)}${line(6, 0)}
+      <text class="axislabel" x="${X(xmax * 0.66)}" y="${Y(9 * xmax * 0.66) - 5}">课件 psum1（斜率 9.0）</text>
+      <text class="axislabel" x="${X(xmax * 0.72)}" y="${Y(6 * xmax * 0.72) - 4}">课件 psum2（斜率 6.0）</text>
+      <line x1="${X(n1)}" y1="${Y(t1)}" x2="${X(n2)}" y2="${Y(t2)}" stroke="var(--accent)" stroke-width="2.6"/>
+      <circle cx="${X(n1)}" cy="${Y(t1)}" r="4" fill="var(--accent)"/>
+      <circle cx="${X(n2)}" cy="${Y(t2)}" r="4" fill="var(--accent)"/>
+      <text class="axislabel" x="${X(n1) + 6}" y="${Y(t1) - 7}" fill="var(--accent)">(${fmt(n1)}, ${fmt(t1)})</text>
+      <text class="axislabel" x="${X(n2) - 96}" y="${Y(t2) + 16}" fill="var(--accent)">(${fmt(n2)}, ${fmt(t2)})</text>
+    </svg>
+    <div class="readout" style="margin-bottom:0">
+      <dt>拟合出的 CPE</dt><dd><b>${fix2(f.cpe)}</b> 周期/元素（就是你这条实线的斜率）</dd>
+      <dt>固定开销 Overhead</dt><dd class="mono">${f.overhead === 0 ? '0' : fmt(Math.round(f.overhead * 100) / 100)} 周期</dd>
+      <dt>模型</dt><dd class="mono">T = ${fix2(f.cpe)} × n + ${Math.round(f.overhead * 100) / 100}</dd>
+      <dt>两个测点吻合度</dt><dd>n = ${fmt(n1)} → 模型给出 ${fix2(f.cpe * n1 + f.overhead)}（实测 ${fmt(t1)}）；n = ${fmt(n2)} → ${fix2(f.cpe * n2 + f.overhead)}（实测 ${fmt(t2)}）</dd>
+      ${Math.abs(f.cpe - 9) < 0.05 ? '<dt>对照课件</dt><dd><span class="chip ok">与 psum1 的斜率 9.0 一致</span></dd>' : ''}
+      ${Math.abs(f.cpe - 6) < 0.05 ? '<dt>对照课件</dt><dd><span class="chip ok">与 psum2 的斜率 6.0 一致</span></dd>' : ''}
+    </div>
+    <div class="box" style="margin:12px 0 0">虚线是课件第 36 页那两条线的位置（按它标出的斜率 9.0 与 6.0 重画，过原点）；实线是你给的测点。两条线都<b>不是</b>用截图贴的 —— 斜率一定，直线就现算出来了。</div>`;
+}
+
+/* ============================================================
+   6.5 基本优化的效果（原第 37、39 页）
+   ============================================================ */
+const BENCH = [
+  { name: '整数 Add', src: 'ia', rows: [['Combine1 未优化', 22.68], ['Combine1 -O1', 10.12], ['Combine1 -O3', 4.50], ['Combine4', 1.27]] },
+  { name: '整数 Mult', src: 'im', rows: [['Combine1 未优化', 20.02], ['Combine1 -O1', 10.12], ['Combine1 -O3', 4.50], ['Combine4', 3.01]] },
+  { name: 'Double FP Add', src: 'da', rows: [['Combine1 未优化', 19.98], ['Combine1 -O1', 10.17], ['Combine1 -O3', 6.00], ['Combine4', 3.01]] },
+  { name: 'Double FP Mult', src: 'dm', rows: [['Combine1 未优化', 20.18], ['Combine1 -O1', 11.14], ['Combine1 -O3', 7.80], ['Combine4', 5.01]] },
+];
+function renderBench() {
+  const b = BENCH[Number($('#benchSel').value)];
+  const base = b.rows[0][1];
+  const max = Math.max(...b.rows.map(r => r[1]));
+  const lab = { ia: '延迟 1.00 / 吞吐 0.50', im: '延迟 3.00 / 吞吐 1.00', da: '延迟 3.00 / 吞吐 1.00', dm: '延迟 5.00 / 吞吐 0.50' }[b.src];
+  $('#benchOut').innerHTML = `
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>${esc(b.name)}</th><th class="mono">CPE</th><th class="mono">相对未优化</th><th class="mono">相对 -O1</th><th style="width:30%">CPE</th></tr>
+      ${b.rows.map(([n, v], k) => `<tr${k === b.rows.length - 1 ? ' class="hl"' : ''}><td>${n}${k === 3 ? '<span class="srcref">原第 39 页</span>' : '<span class="srcref">原第 37 页</span>'}</td>
+        <td class="mono">${fix2(v)}</td><td class="mono">${fix2(base / v)}×</td><td class="mono">${fix2(b.rows[1][1] / v)}×</td>
+        <td>${barHtml(v, max, 'var(--accent)')}</td></tr>`).join('')}
+    </table></div>
+    <div class="readout" style="margin-bottom:0">
+      <dt>这台机器的界限</dt><dd class="mono">${lab}<span class="srcref">原第 49、57 页</span></dd>
+      <dt>Combine4 离延迟界限</dt><dd>${fix2(b.rows[3][1])} vs ${lab.split(' ')[1]} → 还差 ${fix2(b.rows[3][1] - parseFloat(lab.split(' ')[1]))} 个周期/元素${b.src === 'ia' ? '（Int+ 的 combine4 还带着循环开销，展开 2x1 才能压到 1.01）' : '（三种运算都已经贴在延迟界限上：数字里那多出来的 0.01 是流水线固定开销）'}</dd>
+    </div>`;
+}
+
+/* ============================================================
+   7.3 流水线时空图（原第 42 页）
+   三级流水线、3 个乘法 → 7 个周期完成。
+   ============================================================ */
+function renderPipe() {
+  const K = parseUint($('#pipeK').value, 8), M = parseUint($('#pipeM').value, 10);
+  if (K === null || M === null || K < 1 || M < 1) { $('#pipeOut').innerHTML = badBox('级数与计算个数都请填 1–8 / 1–10 之间的整数。'); return; }
+  const total = K + M - 1;                      /* 填满 + 排空 */
+  const cw = 40, ch = 26, padL = 78, padT = 30;
+  const W = padL + total * cw + 10, H = padT + M * ch + 34;
+  const names = ['a*b', 'a*c', 'p1*p2'];
+  let cells = '';
+  for (let s = 0; s < K; s++) {
+    for (let m = 0; m < M; m++) {
+      const t0 = s + m;                          /* 第 m 个计算在第 t0 个周期进入第 0 级 */
+      const x = padL + t0 * cw, y = padT + m * ch;
+      const nm = names[m] || `calc ${m + 1}`;
+      cells += `<rect x="${x}" y="${y}" width="${cw - 4}" height="${ch - 4}" rx="5" fill="var(--accent-soft)" stroke="var(--accent)"/>
+        <text x="${x + (cw - 4) / 2}" y="${y + 17}" text-anchor="middle" font-size="11" fill="var(--accent)">${esc(nm)}</text>`;
+    }
+  }
+  let ticks = '', rows = '';
+  for (let t = 1; t <= total; t++) {
+    ticks += `<text class="axislabel" x="${padL + (t - 1) * cw + cw / 2}" y="${padT - 8}" text-anchor="middle">${t}</text>`;
+  }
+  for (let s = 0; s < K; s++) rows += `<text class="axislabel" x="${padL - 8}" y="${padT + (M * ch) / 2 - (K - 1) * 8 + s * 16 + 4}" text-anchor="end">Stage ${s + 1}</text>`;
+  const serial = M * K;
+  $('#pipeOut').innerHTML = `
+    <svg viewBox="0 0 ${W} ${H}" style="width:100%;max-width:${W}px;height:auto" font-family="var(--font-sans)">
+      <text class="axislabel" x="${padL}" y="${padT - 8 - 14}">时间（周期）</text>
+      ${ticks}${rows}
+      <line class="axisline" x1="${padL - 4}" y1="${padT - 2}" x2="${W - 8}" y2="${padT - 2}"/>
+      ${cells}
+      <text class="axislabel" x="6" y="${H - 8}">每一格 = 该计算在该级里度过的一个周期</text>
+    </svg>
+    <div class="readout" style="margin-bottom:0">
+      <dt>逐级流水完成 ${fmt(M)} 个计算</dt><dd class="mono">${fmt(total)} 个周期（= 级数 ${fmt(K)} + 计算个数 ${fmt(M)} − 1）</dd>
+      <dt>如果串行执行</dt><dd class="mono">${fmt(serial)} 个周期（每个计算 ${fmt(K)} 个周期）</dd>
+      <dt>加速</dt><dd class="mono">${fix2(serial / total)}× （${M} 个计算时；计算越多个，越接近 ${fmt(K)}×）</dd>
+      <dt>吞吐</dt><dd class="mono">填满之后每个周期完成 ${fmt(1)} 个计算，而单个计算仍然要 ${fmt(K)} 个周期</dd>
+    </div>
+    <div class="box" style="margin:12px 0 0">课件第 42 页的原话是「<b>完成 3 次乘法只用 7 个周期，虽然每个乘法都要 3 个周期</b>」—— 把上面的级数设为 3、计算个数设为 3（默认值）就能对上：总周期 = 3 + 3 − 1 = <b>7</b>。这正是后面「延迟界限（Latency Bound）」与「吞吐界限（Throughput Bound）」分家的原因：<b>延迟是单个计算的事，吞吐是所有计算合起来的事</b>。</div>`;
+}
+
+/* ============================================================
+   7.5 界限计算器
+   CPE 的理想下界 = max(延迟 / 并行度, 吞吐周期)
+   其中「吞吐」用「每周期能发几条」（ops/cycle）表示。
+   ============================================================ */
+function maxCpeBound(D, T, K) {
+  const d = Number(D), t = Number(T), k = Math.max(1, Number(K));
+  return Math.max(d / k, 1 / t);
+}
+function renderBound() {
+  const D = parseUint($('#bndD').value, 64), T = parseUint($('#bndT').value, 64), K = parseUint($('#bndK').value, 64), N = parseUint($('#bndN').value, 100000000);
+  if (D === null || T === null || K === null || N === null || D < 1 || T < 1 || K < 1) { $('#latOut').innerHTML = badBox('延迟 D ≥ 1、吞吐 T ≥ 1、累加器 K ≥ 1、元素数 n ≥ 0 都请填整数。'); return; }
+  const lat = D / K, thr = 1 / T, bound = maxCpeBound(D, T, K);
+  const which = lat >= thr ? '延迟' : '吞吐';
+  $('#latOut').innerHTML = `
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>项</th><th class="mono">算式</th><th class="mono">CPE</th><th>含义</th></tr>
+      <tr><td>延迟除以并行度</td><td class="mono">D / K = ${fmt(D)} / ${fmt(K)}</td><td class="mono">${fix2(lat)}</td><td>K 条独立依赖链，每条链每 K 个元素等 D 个周期</td></tr>
+      <tr><td>吞吐下限</td><td class="mono">1 / T = 1 / ${fmt(T)}</td><td class="mono">${fix2(thr)}</td><td>功能单元每周期最多完成 T 个元素，再快也不可能</td></tr>
+      <tr class="hl"><td><b>理想下界</b></td><td class="mono">max(D/K, 1/T)</td><td class="mono">${fix2(bound)}</td><td>被<b>${which}</b>卡住</td></tr>
+    </table></div>
+    <div class="readout" style="margin-bottom:0">
+      <dt>n = ${fmt(N)} 的周期数</dt><dd class="mono">≥ ${fmt(Math.round(bound * N))} 个周期（按理想下界）</dd>
+      <dt>要再快就得</dt><dd>${which === '延迟' ? '增加累加器个数 K（拆出更多独立的依赖链）' : '换更宽的向量指令（一次处理多个元素）—— 这就是第 10 节的 AVX2'}</dd>
+      <dt>对照课件</dt><dd>FP*：D = 5、T = 2 → K = 1 给出 5.00、K = 2 给出 2.50、K = 10 给出 0.50；Int+：D = 1、T = 2 → K = 1 给出 1.00、K ≥ 2 给出 0.50（第 9 节的 K×L 表逐格可核）</dd>
+    </div>`;
+}
+
+/* ============================================================
+   7.5 / 8.2 依赖链：四种写法的周期数
+   c4   : 单链，n 次依赖 → n*D
+   u2   : 展开 2x1，依赖链长度不变 → n*D
+   u2a  : 重结合 → (floor(n/2)+1)*D
+   u2x2 : K 条链 → (ceil(n/K)+1)*D
+   ============================================================ */
+function chainCycles(mode, n, D, K) {
+  const N = Number(n), d = Number(D), k = Math.max(1, Number(K));
+  if (mode === 'c4' || mode === 'u2') return { cycles: N * d, cpe: d, chain: N, desc: '一条链：每个元素都要等上一轮算完' };
+  if (mode === 'u2a') return { cycles: (Math.floor(N / 2) + 1) * d, cpe: d / 2, chain: Math.ceil(N / 2) + 1, desc: '先把相邻两元素合起来，再把结果累加 —— 关键路径减半' };
+  return { cycles: (Math.ceil(N / k) + 1) * d, cpe: d / k, chain: Math.ceil(N / k) + 1, desc: `${k} 条独立链，最后合并` };
+}
+function depSvg(mode, n, D, K) {
+  const c = chainCycles(mode, n, D, K);
+  const per = 22, x0 = 20, y0 = 20;
+  const nodes = [];
+  const chain = (startX, y, count, label, color) => {
+    let s = '';
+    for (let i = 0; i < count; i++) {
+      const x = startX + i * per;
+      s += `<circle cx="${x}" cy="${y}" r="6" fill="${color}"/>`;
+      if (i) s += `<line x1="${x - per + 6}" y1="${y}" x2="${x - 6}" y2="${y}" stroke="${color}" stroke-width="1.6"/>`;
+      if (i < count - 1) s += `<text class="axislabel" x="${x + per / 2 - 4}" y="${y - 9}" font-size="9">${D}</text>`;
+    }
+    s += `<text class="axislabel" x="${startX - 8}" y="${y + 4}" text-anchor="end">${label}</text>`;
+    return s;
+  };
+  const visN = Math.min(n, 14);
+  let body = '';
+  if (mode === 'c4' || mode === 'u2') {
+    body = chain(x0 + 44, y0 + 14, visN, mode === 'c4' ? '单链' : '展开后', 'var(--sign)');
+  } else if (mode === 'u2a') {
+    body = chain(x0 + 44, y0 + 26, Math.ceil(visN / 2) + 1, '累加链', 'var(--sign)') +
+      chain(x0 + 44, y0 + 4, Math.ceil(visN / 2) + 1, '配对链', 'var(--frac)');
+  } else {
+    const kn = Math.min(K, visN);
+    for (let i = 0; i < kn; i++) body += chain(x0 + 44 + i * 0, y0 + 6 + i * 18, Math.ceil(visN / kn) + 1, `x${i}`, i % 2 ? 'var(--frac)' : 'var(--sign)');
+  }
+  const H = mode === 'u2x2' ? y0 + 30 + Math.min(K, visN) * 18 : y0 + 60;
+  const W = x0 + 44 + (visN + 1) * per + 10;
+  return { svg: `<svg viewBox="0 0 ${W} ${H}" style="width:100%;max-width:${W}px;height:auto" font-family="var(--font-sans)">${body}
+    <text class="axislabel" x="${x0}" y="${H - 6}">小圆点 = 一次累加运算，线上数字 = 它的延迟 ${fmt(D)} 周期（只画前 ${fmt(visN)} 个元素）</text></svg>`, calc: c };
+}
+let serMode = 'c4';
+function renderSerial() {
+  const n = parseUint($('#serN').value, 100000), D = parseUint($('#serD').value, 64), K = parseUint($('#serK').value, 64);
+  if (n === null || D === null || K === null || D < 1 || K < 1) { $('#serialOut').innerHTML = badBox('元素数、延迟 D、累加器个数 K 都请填成合理的整数（D ≥ 1、K ≥ 1）。'); return; }
+  const combos = serMode === 'c4' ? ['c4', 'u2'] : serMode === 'u2' ? ['u2', 'c4'] : serMode === 'u2a' ? ['u2a', 'c4', 'u2'] : ['c4', 'u2', 'u2a', 'u2x2'];
+  const names = { c4: 'combine4', u2: '展开 2x1', u2a: '重结合 2x1a', u2x2: `${K} 个累加器` };
+  const d = depSvg(serMode === 'u2x2' ? 'u2x2' : serMode, n, D, serMode === 'u2x2' ? 4 : K);
+  $('#serialOut').innerHTML = `
+    ${d.svg}
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>写法</th><th class="mono">关键路径长度</th><th class="mono">总周期</th><th class="mono">CPE</th><th>说明</th></tr>
+      ${combos.map(m => { const c = chainCycles(m, n, D, m === 'u2x2' ? 4 : K); const hl = m === serMode ? ' class="hl"' : '';
+        return `<tr${hl}><td>${names[m]}</td><td class="mono">${fmt(c.chain)}</td><td class="mono">${fmt(c.cycles)}</td><td class="mono">${fix2(c.cpe)}</td><td style="font-size:13.5px">${c.desc}</td></tr>`; }).join('')}
+    </table></div>
+    <div class="readout" style="margin-bottom:0">
+      <dt>结论</dt><dd>${serMode === 'u2' ? '<b>展开不改变关键路径</b>：2x1 的链长度与 combine4 完全相同，所以 Int* / FP+ / FP* 的成绩一点没变（原第 47 页）。' : serMode === 'u2a' ? '重结合把关键路径从 n 段压到约 n/2 段 —— 这就是 <b>CPE = D/2</b> 的来历（原第 50 页）。' : serMode === 'u2x2' ? 'K 个累加器把链分成 K 条，CPE 降到 D/K。真正能降到多少，还要看功能单元吞吐（第 9 节的 K×L 矩阵）。' : 'combine4 是一条不折不扣的长链：n 个元素要串行等 n × D 个周期。'} </dd>
+    </div>`;
+}
+let raMode = 'c4';
+function renderReassoc() {
+  const n = parseUint($('#raN').value, 1000000), D = parseUint($('#raD').value, 64);
+  if (n === null || D === null || D < 1) { $('#reassocOut').innerHTML = badBox('元素数与延迟 D 都请填成整数（D ≥ 1）。'); return; }
+  const modes = raMode === 'cmp' ? ['c4', 'u2', 'u2a'] : [raMode];
+  const names = { c4: 'combine4：x = (x OP d[i]) OP d[i+1] 之外的原始写法', u2: '展开 2x1：x = (x OP d[i]) OP d[i+1]', u2a: '重结合 2x1a：x = x OP (d[i] OP d[i+1])' };
+  const c4 = chainCycles('c4', n, D, 1);
+  $('#reassocOut').innerHTML = modes.map(m => {
+    const c = chainCycles(m, n, D, 1);
+    return `<div class="card" style="margin-bottom:10px"><h5>${names[m]}</h5>
+      <div class="formula" style="text-align:left;margin:0 0 8px">${m === 'u2a'
+        ? `关键路径 ≈ (n/2 + 1) × D = (${fmt(n)}/2 + 1) × ${fmt(D)} = <b>${fmt(c.cycles)}</b> 个周期 → CPE = D/2 = ${fix2(D / 2)}`
+        : `关键路径 = n × D = ${fmt(n)} × ${fmt(D)} = <b>${fmt(c.cycles)}</b> 个周期 → CPE = D = ${fix2(D)}`}</div>
+      <div class="readout" style="margin:0">
+        <dt>相对 combine4</dt><dd class="mono">${fix2(c4.cycles / c.cycles)}×</dd>
+        <dt>适用性</dt><dd>${m === 'u2a' ? '<b>整数安全；浮点会改变结果</b>（浮点加法/乘法不满足结合律）—— 这也是编译器不敢替你做的原因' : '所有类型都安全（没有改变运算顺序）'}</dd>
+      </div></div>`;
+  }).join('') + `
+    <div class="box ok" style="margin-bottom:0"><div class="t">课件的三句话在这里一一对上</div>
+      ① 第 48 页「<b>这会不会改变计算结果？对浮点会</b>」；② 第 49 页「<b>打破串行依赖 → 近 2 倍加速</b>」（上表里相对 combine4 就是 ${fix2(c4.cycles / chainCycles('u2a', n, D, 1).cycles)}×）；③ 第 50 页「<b>(N/2+1)×D，CPE = D/2</b>」。
+    </div>`;
+}
+
+/* ============================================================
+   9.3 K×L 矩阵（原第 55、56 页）
+   实测值逐格抄自课件；「理想下界」= max(D/K, 1/T)，T 由课件自己的注解给出：
+     Int+  → 2 个 load 单元（每元素 1 次 load）→ T = 2
+     FP *  → 2 个 FP 乘法单元（每元素 1 次乘法）→ T = 2
+   ============================================================ */
+const KL_LS = [1, 2, 3, 4, 6, 8, 10, 12];
+const KL = {
+  dm: {
+    name: 'Double FP *', D: 5, T: 2,
+    note: '延迟 5.00（FP 乘法延迟），吞吐 2 条/周期（2 个 FP 乘法单元）—— 原第 43、49、55 页',
+    /** 实测：[K][L] = CPE，null 表示课件未给 */
+    m: { 1: { 1: 5.01, 2: 5.01, 3: 5.01, 4: 5.01, 6: 5.01, 8: 5.01, 10: 5.01 },
+         2: { 2: 2.51, 4: 2.51, 8: 2.51 },
+         3: { 3: 1.67 },
+         4: { 4: 1.25, 8: 1.26 },
+         6: { 6: 0.84, 12: 0.88 },
+         8: { 8: 0.63 },
+         10: { 10: 0.51 },
+         12: { 12: 0.52 } },
+  },
+  ia: {
+    name: 'Int +', D: 1, T: 2,
+    note: '延迟 1.00（整数加法延迟），吞吐 2 条/周期（2 个 load 单元，每元素 1 次 load）—— 原第 43、49、52 页',
+    m: { 1: { 1: 1.27, 2: 1.01, 3: 1.01, 4: 1.01, 6: 1.01, 8: 1.01, 10: 1.01 },
+         2: { 2: 0.81, 4: 0.69, 8: 0.54 },
+         3: { 3: 0.74 },
+         4: { 4: 0.69, 8: 1.24 },
+         6: { 6: 0.56, 12: 0.56 },
+         8: { 8: 0.54 },
+         10: { 10: 0.54 },
+         12: { 12: 0.56 } },
+  },
+};
+let klAll = false;
+function renderKl() {
+  const key = $('#klSel').value, d = KL[key];
+  const Ks = klAll ? [1, 2, 3, 4, 6, 8, 10, 12] : [1, 2, 3, 4, 6, 8, 10, 12];
+  const head = KL_LS.map(L => `<th class="mono">L=${L}</th>`).join('');
+  const rows = Ks.map(K => {
+    const cells = KL_LS.map(L => {
+      const meas = (d.m[K] || {})[L];
+      const bound = maxCpeBound(d.D, d.T, K);
+      const okL = L % K === 0;
+      if (meas === undefined) return `<td class="mono" style="color:var(--muted)">${okL ? fix2(bound) + '（界）' : '—'}</td>`;
+      const good = meas >= bound - 1e-9;
+      return `<td class="mono" style="${good ? '' : 'background:var(--bad-bg)'}">${fix2(meas)}<br><span style="font-size:11px;color:var(--muted)">界 ${fix2(bound)}</span></td>`;
+    }).join('');
+    return `<tr><td class="mono">K=${K}</td>${cells}</tr>`;
+  }).join('');
+  const allCells = Object.keys(d.m).flatMap(K => Object.keys(d.m[K]).map(L => d.m[K][L]));
+  const badCells = Object.keys(d.m).flatMap(K => Object.keys(d.m[K]).map(L => ({ K: +K, L: +L, v: d.m[K][L] })))
+    .filter(c => c.v < maxCpeBound(d.D, d.T, c.K) - 1e-9);
+  $('#klOut').innerHTML = `
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>${esc(d.name)}<span class="srcref">原第 ${key === 'dm' ? '55' : '56'} 页</span></th>${head}</tr>
+      ${rows}
+    </table></div>
+    <div class="readout" style="margin-bottom:0">
+      <dt>表格读法</dt><dd>每格两种数字：<b>上</b>是课件实测 CPE，<b>下</b>是页面现算的<b>理想下界</b> max(D/K, 1/T)；没有实测值的格子只给下界（L 不是 K 的倍数时按课件第 54 页的要求不适用，标「—」）</dd>
+      <dt>本表来源</dt><dd class="mono">${esc(d.note)}</dd>
+      <dt>自检</dt><dd>${badCells.length === 0
+        ? `<span class="chip ok">${allCells.length} 个实测值全部 ≥ 各自下界</span> —— 与理论不矛盾`
+        : `<span class="chip bad">${badCells.length} 格低于下界</span>：${badCells.map(c => `K=${c.K},L=${c.L}`).join('、')}`}</dd>
+    </div>`;
+}
+
+/* ============================================================
+   10.2 SIMD 示意（原第 58–59 页）
+   YMM = 32 字节；一条打包加法指令一次处理 32/宽度 个元素。
+   ============================================================ */
+const SIMD = {
+  ps: { name: '单精度 float', bytes: 4, ins: 'vaddps', deck: 'vaddps（课件写作 vaddsd，见勘误四）' },
+  pd: { name: '双精度 double', bytes: 8, ins: 'vaddpd', deck: 'vaddpd' },
+  d: { name: '32 位整数', bytes: 4, ins: 'vpaddd', deck: '（课件未列）' },
+  w: { name: '16 位整数', bytes: 2, ins: 'vpaddw', deck: '（课件未列）' },
+  b: { name: '8 位整数', bytes: 1, ins: 'vpaddb', deck: '（课件未列）' },
+};
+function renderSimd() {
+  const k = $('#simdSel').value, s = SIMD[k];
+  const lanes = 32 / s.bytes;
+  const cw = 620 / lanes;
+  let lane = '';
+  for (let i = 0; i < lanes; i++) {
+    const x = 20 + i * cw;
+    lane += `<rect x="${x}" y="34" width="${cw - 3}" height="26" rx="4" fill="var(--exp-bg)" stroke="var(--exp-bd)"/>
+      <text x="${x + (cw - 3) / 2}" y="51" text-anchor="middle" font-size="11" fill="var(--exp-fg)">+</text>`;
+  }
+  $('#simdOut').innerHTML = `
+    <svg viewBox="0 0 660 130" style="width:100%;max-width:660px;height:auto" font-family="var(--font-sans)">
+      <text class="axislabel" x="20" y="18">%ymm0（32 字节）</text>
+      ${lane}
+      <text class="axislabel" x="20" y="82">%ymm1</text>
+      <g>${lane.replace(/y="34"/g, 'y="64"').replace(/y="51"/g, 'y="81"')}</g>
+      <text class="axislabel" x="20" y="118">一条 ${esc(s.ins)} 同时完成 ${fmt(lanes)} 个元素的加法</text>
+    </svg>
+    <div class="readout" style="margin-bottom:0">
+      <dt>指令</dt><dd class="mono">${esc(s.ins)}${k === 'ps' ? '（课件印 <code>vaddsd</code>，见勘误四）' : ''}</dd>
+      <dt>元素宽度</dt><dd class="mono">${fmt(s.bytes)} 字节 → 一个 YMM 装 ${fmt(lanes)} 个</dd>
+      <dt>相对标量</dt><dd>同一条指令做完了标量版本 <b>${fmt(lanes)}</b> 次运算的工作</dd>
+      <dt>对照课件第 60 页</dt><dd class="mono">Int+ 的 Vec Throughput Bound = 0.50 ÷ 8 = ${fix2(0.5 / 8)} → 0.06 ✓；FP* = 0.50 ÷ 4 = ${fix2(0.5 / 4)} → 0.12 ✓（向量化把标量吞吐界限直接除以通道数）</dd>
+    </div>`;
+}
+
+/* ============================================================
+   10.3 向量化能拿到多少（原第 60 页）
+   向量吞吐界限 = 标量吞吐界限 ÷ 通道数。四个格子全部可现算核对。
+   ============================================================ */
+let avxMode = 'f';
+const AVX_ROWS = [
+  { name: 'Int Add', lanes: 8, scalar: 0.50, bound: 0.06, best: 0.06, why: '4 个整数单元；每元素 1 次 load（2 个 load 单元）' },
+  { name: 'Int Mult', lanes: 8, scalar: 1.00, bound: 0.12, best: 0.24, why: '整数乘法单元只有 1 个（课件第 43 页未单列）' },
+  { name: 'Double FP Add', lanes: 4, scalar: 1.00, bound: 0.25, best: 0.25, why: '1 个 FP 加法单元' },
+  { name: 'Double FP Mult', lanes: 4, scalar: 0.50, bound: 0.12, best: 0.16, why: '2 个 FP 乘法单元' },
+];
+function renderAvx() {
+  const rows = AVX_ROWS.map(r => {
+    /* 整数固定 8 通道（32 位整数）；浮点按当前选择的精度：单精度 8、双精度 4 */
+    const lanes = r.name.startsWith('Double') ? (avxMode === 'f' ? 8 : 4) : r.lanes;
+    return { ...r, lanes, calc: r.scalar / lanes };
+  });
+  const cmpDeck = avxMode === 'd';
+  $('#avxOut').innerHTML = `
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th>运算</th><th class="mono">通道数</th><th class="mono">标量吞吐界限</th><th class="mono">÷ 通道数（现算）</th>
+        <th class="mono">课件 Vec Throughput Bound</th><th class="mono">课件 Vector Best（实测）</th><th>对照</th></tr>
+      ${rows.map(r => `<tr><td>${r.name}</td><td class="mono">${r.lanes}</td><td class="mono">${fix2(r.scalar)}</td>
+        <td class="mono">${fix2(r.calc)}</td><td class="mono">${fix2(r.bound)}</td><td class="mono">${fix2(r.best)}</td>
+        <td>${!cmpDeck ? '<span class="chip gray">课件表是双精度</span>'
+          : Math.abs(r.calc - r.bound) <= 0.006 ? '<span class="chip ok">界限一致</span>'
+          : '<span class="chip bad">界限对不上</span>'}
+        ${cmpDeck && Math.abs(r.calc - r.best) > 0.006 ? `<br><span class="chip warn">实测 ${fix2(r.best)} 高于界限</span>` : ''}</td></tr>`).join('')}
+      <tr><td colspan="7" style="font-size:13.5px;color:var(--muted)">标量吞吐界限的来历（原第 43、49、52 页）：${rows.map(r => `${r.name} = ${r.why}`).join('；')}。</td></tr>
+    </table></div>
+    <div class="readout" style="margin-bottom:0">
+      <dt>读法</dt><dd>课件的 <b>Vec Throughput Bound</b> 就是<b>标量吞吐界限 ÷ 通道数</b>（取两位小数）。切到<b>双精度</b>与课件第 60 页对照：Int+ 0.50/8 = 0.0625 → <b>0.06</b>；Int* 1.00/8 = 0.125 → <b>0.12</b>；FP+ 1.00/4 = <b>0.25</b>；FP* 0.50/4 = 0.125 → <b>0.12</b> —— <b>四个格子全部对得上</b>。切到单精度时，浮点两行变成 8 通道（0.50/8、1.00/8）——课件的向量表是双精度的，所以那时不给对照结论。</dd>
+      <dt>实测量与界限的差</dt><dd>Vector Best 是实测：Int* 的 0.24 是界限 0.12 的 <b>2 倍</b>（Haswell 的整数向量乘法 <code>vpmulld</code> 实际吞吐低于发射率），FP* 的 0.16 也比界限 0.12 高 —— 实测高于理想界限本身不矛盾，<b>界限是下界不是承诺</b>。</dd>
+      <dt>前提</dt><dd>能上向量指令，是因为编译器（或程序员）能证明向量化不改变语义：整数加法可以直接做；浮点求和要靠结合律，通常需要 <code>-ffast-math</code> 这类显式授权。</dd>
+    </div>`;
+}
+
+/* ============================================================
+   10.5 循环末尾的分支预测（原第 65–67 页）
+   课件给的循环：401029 vmulsd / 40102d add / 401031 cmp / 401034 jne 401029
+   向量长度 n：元素 0..n-1，第 i 个元素处理完后分支「是否继续」——
+     i < n-1 时继续（taken，共 n-1 次），i = n-1 时退出（not taken，1 次）。
+   预测器对向后分支默认预测 taken（原第 68 页），所以最后一次是误预测；
+   课件第 65–66 页画出的 i = n 与 i = n+1 两块，正是被误取指/误执行后作废的那两块。
+   ============================================================ */
+function bpTrace(len) {
+  const n = Number(len);
+  const rows = [];
+  const from = Math.max(0, n - 3);
+  for (let i = from; i <= n - 1; i++) {
+    const taken = i < n - 1;
+    rows.push({ i, kind: 'iter', taken, pred: 'taken', hit: taken });
+  }
+  rows.push({ i: n, kind: 'exec', taken: null, pred: 'taken', hit: false });
+  rows.push({ i: n + 1, kind: 'fetch', taken: null, pred: 'taken', hit: false });
+  return rows;
+}
+function bpMis(len) { return bpTrace(len).filter(r => r.kind === 'iter' && !r.hit).length; }
+function renderBp() {
+  const n = parseUint($('#bpN').value, 1000000);
+  if (n === null || n < 2) { $('#bpOut').innerHTML = badBox('向量长度请填 ≥ 2 的整数（要看清最后一次的比较）。'); return; }
+  const steps = bpTrace(n);
+  const mis = bpMis(n);
+  const label = { iter: '真循环体', exec: '被误执行（作废）', fetch: '被误取指（作废）' };
+  $('#bpOut').innerHTML = `
+    <div class="tbl-wrap"><table class="tbl">
+      <tr><th class="mono">地址 / 指令</th><th class="mono">i =</th><th>这一块是什么</th><th>实际走向</th><th>预测</th><th>结果</th></tr>
+      ${steps.map(s => `<tr${s.kind === 'iter' ? '' : ' style="opacity:.7"'}><td class="mono">401029 vmulsd · 40102d add · 401031 cmp · <b>401034 jne 401029</b></td>
+        <td class="mono">${fmt(s.i)}</td>
+        <td>${label[s.kind]}</td>
+        <td>${s.kind !== 'iter' ? '（不走这条分支）' : s.taken ? 'Branch Taken（继续循环）' : '<b>Branch Not-Taken（退出）</b>'}</td>
+        <td class="mono">${s.pred}</td>
+        <td>${s.kind !== 'iter' ? '<span class="chip gray">作废</span>' : s.hit ? '<span class="chip ok">猜对</span>' : '<span class="chip bad">误预测</span>'}</td></tr>`).join('')}
+    </table></div>
+    <div class="readout" style="margin-bottom:0">
+      <dt>这个循环里</dt><dd>向量长度 = ${fmt(n)} → 循环体执行 ${fmt(n)} 次，分支 taken ${fmt(Math.max(0, n - 1))} 次、not-taken 1 次</dd>
+      <dt>误预测次数</dt><dd class="mono">${fmt(mis)} 次（每次进入循环恰好 1 次，就在最后一次比较上）</dd>
+      <dt>误预测之后发生什么</dt><dd>已经取进流水线、甚至已经执行的指令被<b>作废</b>（原第 66 页 Invalidate，就是表里 i = ${fmt(n)} 那一块「Read invalid location / Executed」），处理器从正确的位置<b>重新取指</b>（第 67 页 Reload Pipeline）。课件第 67 页的结论：<b>这会花掉多个时钟周期，可能是主要的性能限制</b>。</dd>
+      <dt>为什么「猜 taken」仍然划算</dt><dd>向后分支常常是循环（原第 68 页）：这一次循环里它对了 ${fmt(Math.max(0, n - 1))} 次、错了 1 次 —— 准确率 ${n > 0 ? fix2(100 * (n - 1) / n) : '—'}%。</dd>
+    </div>`;
+}
+function renderBpNum() {
+  const tot = parseUint($('#bpTot').value, 100000000000), acc = parseFloat(String($('#bpAcc').value).trim()), pen = parseUint($('#bpPen').value, 1000);
+  if (tot === null || !isFinite(acc) || acc < 0 || acc > 100 || pen === null) { $('#bpNumOut').innerHTML = badBox('分支总条数与非负整数、准确率 0–100、恢复代价 0–1000 周期都请填对。'); return; }
+  const mis = Math.round(tot * (1 - acc / 100));
+  const waste = mis * pen;
+  const ideal = tot;                          /* 每条分支至少 1 个周期 */
+  $('#bpNumOut').innerHTML = `
+    <div class="readout" style="margin-bottom:0">
+      <dt>误预测条数</dt><dd class="mono">${fmt(mis)} / ${fmt(tot)}</dd>
+      <dt>浪费的周期</dt><dd class="mono">${fmt(waste)} 个（= ${fmt(mis)} × ${fmt(pen)}）</dd>
+      <dt>相对理想执行</dt><dd class="mono">${fix2(waste / ideal)} 倍于「每条分支一个周期」的理想时间</dd>
+      <dt>把准确率提到 99% 会怎样</dt><dd class="mono">误预测 ${fmt(Math.round(tot * 0.01))} 条 → 浪费 ${fmt(Math.round(tot * 0.01) * pen)} 个周期（省下 ${fmt(waste - Math.round(tot * 0.01) * pen)}）</dd>
+    </div>
+    <div class="box warn" style="margin:12px 0 0"><div class="t">这里哪一个数字是课件给的</div>
+      准确率的量级「<b>好于 95%</b>」来自课件第 68 页；<b>「每次误预测的恢复代价 15 个周期」是页面默认的假设值，课件只说「多个时钟周期」而没有给具体数字</b>（原第 67 页）。改这个格子，结论会按同一公式重算 —— 公式本身不含任何来自课件的常数。
+    </div>`;
+}
+
+/* ============================================================
+   11.3 测验
+   ============================================================ */
+const QUIZ = [
+  { q: '课件为什么说「常数因子也重要」？',
+    o: ['因为 big-O 分析是错的', '因为同一段逻辑的不同写法很容易差出 10:1 的性能', '因为编译器总会破坏 big-O', '因为 CPU 频率每年翻倍'], a: 1,
+    w: '原第 3 页：<i>Easily see 10:1 performance range depending on how code is written</i>，同时强调 big-O 上的节省通常更重要，但常数因子也要紧。' },
+  { q: '<code>set_row</code> 里 <code>n*i</code> 在 <code>-O1</code> 下会怎样？',
+    o: ['每次循环重算一遍', '被提到循环外（代码外提）', '被换成移位', '编译器不敢动它'], a: 1,
+    w: '原第 7 页的汇编把 <code>imulq %rcx, %rdx</code> 与 <code>leaq (%rdi,%rdx,8), %rdx</code> 放在循环之外。本机用 <code>clang -O1</code> 复现，结构相同。' },
+  { q: '为什么编译器不肯把 <code>strlen(s)</code> 提到循环外？',
+    o: ['因为 strlen 太慢', '因为过程调用被当作黑箱：可能有副作用、可能依赖全局状态', '因为 C 语言禁止这种优化', '因为 strlen 的返回值是 size_t'], a: 1,
+    w: '原第 27 页：过程可能有副作用、对同样的参数可能返回不同的值、还可能与调用者互相影响。课件还给了带全局计数器 <code>lencnt</code> 的 strlen 作为反例。' },
+  { q: '<code>lower1</code> 把长度 N 翻倍时，时间大约变成？',
+    o: ['不变', '2 倍', '4 倍', 'log 倍'], a: 2,
+    w: '原第 22 页：<i>Time quadruples when double string length</i>。原因是 N 次 strlen 调用共扫描 N+(N−1)+…+1 ≈ N²/2 个字符。本机实测 0.63 → 2.54 → 10.18 → 41.04 秒，确认每翻倍变 4 倍。' },
+  { q: '<code>sum_rows1</code> 的内层循环为什么每轮都要写回 <code>b[i]</code>？',
+    o: ['因为 double 不能放进寄存器', '因为 b 可能与 a 别名，编译器不能假设写回是安全的', '因为循环里没有局部变量', '因为 b 是全局数组'], a: 1,
+    w: '原第 28–31 页：两个不同的内存引用可能指向同一个位置。改成局部变量 <code>val</code> 累加（sum_rows2）之后，编译器就能把中间值留在寄存器里，内层循环从 6 条降到 4 条。' },
+  { q: '课件第 29 页的例子（A = {0,1,2,4,8,16,32,64,128}，B = A+3，n = 3）最终 B 的值是？',
+    o: ['[3, 28, 224]', '[3, 22, 224]', '[3, 27, 224]', '[3, 12, 112]'], a: 1,
+    w: '页面按 <code>sum_rows1</code> 逐轮现算的追踪是 <b>init [4,8,16] → i=0 后 [3,8,16] → i=1 后 [3,22,16] → i=2 后 [3,22,224]</b>，与课件第 29 页印的三行完全一致。[3,28,224] 是「无别名」时的答案，[3,27,224] 是 sum_rows2 的结果 —— 三者不同正说明别名是可观察的。' },
+  { q: '<code>T = CPE × n + Overhead</code> 里 CPE 是什么？',
+    o: ['直线的截距', '直线的斜率', '总周期数', '每条指令的周期数'], a: 1,
+    w: '原第 36 页：CPE 是直线的斜率（每元素周期数）。页面用两个测点反推斜率：psum1 的两个点给出 9.00、psum2 给出 6.00，正是课件标出的两个斜率。' },
+  { q: 'Combine4 在整数乘法上的 CPE 是 3.01，它被什么卡住？',
+    o: ['功能单元吞吐（1.00）', '整数乘法的延迟（3.00）', '内存带宽', '边界检查'], a: 1,
+    w: '原第 44–45 页：循环体只有 4 条指令，但每轮的 <code>t</code> 都要等上一轮乘完 —— 串行依赖让性能等于延迟 3.00。实测 3.01 里的 0.01 是流水线固定开销。' },
+  { q: '为什么「展开 2x1」对整数加法有效，对整数乘法/浮点却无效？',
+    o: ['因为整数加法更快', '因为它只减少了循环开销，而串行依赖的长度没变', '因为展开改变了结合顺序', '因为编译器不展开浮点'], a: 1,
+    w: '原第 47 页。Int+ 原本只差一点到延迟界限 1.00，摊薄开销后就到位（1.27 → 1.01）；Int* / FP 仍要等 n × D 个周期。' },
+  { q: '重结合 <code>x = x OP (d[i] OP d[i+1])</code> 为什么能接近 2 倍加速？',
+    o: ['减少了乘法的条数', '下次迭代的运算可以提前开始，关键路径减半（CPE = D/2）', '用上了两条 load 单元', '消除了循环开销'], a: 1,
+    w: '原第 49–50 页：重结合打破了串行依赖 → (N/2+1)×D 个周期 → CPE = D/2。代价是<b>浮点结果可能改变</b>（浮点不满足结合律），所以编译器不替你做。' },
+  { q: 'K×L 矩阵里每一格的理想下界是？',
+    o: ['D × K', 'max(D/K, 1/T)', 'D', 'K × L'], a: 1,
+    w: 'K 个累加器把链分成 K 条 → 延迟方面是 D/K；功能单元每周期能完成 T 个元素 → 吞吐方面是 1/T。取两者较大值。页面用它逐格核对课件第 55、56 页的全部实测值：<b>30 个格子全部 ≥ 下界</b>。' },
+  { q: '课件说最多有「42 倍」改进，这个 42 是怎么来的？',
+    o: ['0.52 除以 22.68', '22.68 除以 0.54（同一运算：整数加法）', '所有列的平均值', '22.68 除以 0.52'], a: 1,
+    w: '原第 57 页的汇总表：Int Add 22.68 → 0.54 = 42.0×（未优化 → 最好成绩）。跨列相除（22.68/0.52 = 43.6）没有意义。' },
+];
+let qzState = QUIZ.map(() => null);
+function renderQuiz() {
+  const answered = qzState.filter(v => v !== null).length;
+  const right = QUIZ.filter((q, i) => qzState[i] === q.a).length;
+  const list = QUIZ.map((q, i) => {
+    const sel = qzState[i];
+    const cls = sel === null ? '' : sel === q.a ? ' correct done' : ' wrong done';
+    return `<div class="puzzle${cls}" style="flex-direction:column;align-items:stretch">
+      <div class="q" style="white-space:normal"><b>${i + 1}.</b> ${q.q}</div>
+      <div style="display:flex;flex-wrap:wrap;gap:7px;margin-top:8px">
+        ${q.o.map((o, j) => `<button class="sm" data-qzo="${i}:${j}"
+          style="${sel === null ? '' : j === q.a ? 'border-color:var(--ok-bd);background:var(--ok-bg)'
+            : j === sel ? 'border-color:var(--bad-bd);background:var(--bad-bg)' : 'opacity:.6'}">
+          ${'ABCD'[j]}. ${o}</button>`).join('')}
+      </div>
+      <div class="exp"><span class="verdict">${sel === null ? '' : sel === q.a ? '✓ 正确' : '✗ 错误'}</span>
+        &nbsp;正确答案：<b>${'ABCD'[q.a]}. ${q.o[q.a]}</b><br>${q.w}</div>
+    </div>`;
+  }).join('');
+  const score = answered === 0 ? '' : `<div class="box ${right === QUIZ.length ? 'ok' : right >= QUIZ.length / 2 ? 'warn' : 'bad'}" style="margin-bottom:0">
+    <div class="t">已答 ${answered} / ${QUIZ.length} 题，答对 ${right} 题</div>
+    ${answered === QUIZ.length
+      ? (right === QUIZ.length ? '全对 —— 从编译器约束到功能单元吞吐都拿下了。' : '错题上方已标出正确答案与依据，回对应小节再看一遍即可。')
+      : '继续答题，每题都会立即给出解析。'}
+  </div>`;
+  $('#qzOut').innerHTML = list + score;
+}
+
+/* ============================================================
+   初始化
+   ============================================================ */
+function initAll() {
+  /* --- 全局点击：判断题 / 测验 --- */
+  document.addEventListener('click', e => {
+    const pz = e.target.closest('[data-pz]');
+    if (pz) {
+      const [i, v] = pz.dataset.pz.split(':').map(Number);
+      if (pzState[i] !== null) return;
+      pzState[i] = v; renderPuzzles(); return;
+    }
+    const qzo = e.target.closest('[data-qzo]');
+    if (qzo) {
+      const [i, j] = qzo.dataset.qzo.split(':').map(Number);
+      if (qzState[i] !== null) return;
+      qzState[i] = j; renderQuiz(); return;
+    }
+  });
+
+  /* --- 0.2 优化阶梯 --- */
+  $('#ladSel').addEventListener('change', () => { ladCur = $('#ladSel').value; renderLadder(); });
+  $$('#ladSeg button').forEach(b => b.addEventListener('click', () => {
+    $$('#ladSeg button').forEach(x => x.classList.remove('on'));
+    b.classList.add('on'); ladView = b.dataset.lad; renderLadder();
+  }));
+  renderLadder();
+
+  /* --- 1.4 循环开销 --- */
+  function doOvh() { renderOvh(); }
+  $('#ovhGo').addEventListener('click', doOvh);
+  $('#ovhN').addEventListener('keydown', e => { if (e.key === 'Enter') doOvh(); });
+  $$('[data-ovh]').forEach(b => b.addEventListener('click', () => { $('#ovhN').value = b.dataset.ovh; doOvh(); }));
+  doOvh();
+
+  /* --- 2.2 强度削减 --- */
+  function doSr() { renderSred(); }
+  $('#srGo').addEventListener('click', doSr);
+  ['#srK', '#srX'].forEach(id => $(id).addEventListener('keydown', e => { if (e.key === 'Enter') doSr(); }));
+  $$('#srSeg button').forEach(b => b.addEventListener('click', () => {
+    $$('#srSeg button').forEach(x => x.classList.remove('on'));
+    b.classList.add('on'); srMode = b.dataset.sr; renderSred();
+  }));
+  $$('[data-srq]').forEach(b => b.addEventListener('click', () => { $('#srK').value = b.dataset.srq; doSr(); }));
+  doSr();
+
+  /* --- 2.3 公共子表达式 --- */
+  function doCse() { renderCse(); }
+  $('#cseGo').addEventListener('click', doCse);
+  ['#cseI', '#cseJ', '#cseN'].forEach(id => $(id).addEventListener('keydown', e => { if (e.key === 'Enter') doCse(); }));
+  $$('[data-cseq]').forEach(b => b.addEventListener('click', () => {
+    const kv = kvAttr(b.dataset.cseq);
+    if (kv.i !== undefined) $('#cseI').value = kv.i;
+    if (kv.j !== undefined) $('#cseJ').value = kv.j;
+    if (kv.n !== undefined) $('#cseN').value = kv.n;
+    doCse();
+  }));
+  doCse();
+
+  /* --- 3.4 冒泡排序指令计数 --- */
+  $$('#bubSeg button').forEach(b => b.addEventListener('click', () => {
+    $$('#bubSeg button').forEach(x => x.classList.remove('on'));
+    b.classList.add('on'); bubCur = Number(b.dataset.bub); bubAll = false; renderBubble();
+  }));
+  $('#bubAll').addEventListener('click', () => { bubAll = !bubAll; renderBubble(); });
+  renderBubble();
+  function doBubRun() { renderBubRun(); }
+  $('#bubGo').addEventListener('click', doBubRun);
+  $('#bubArr').addEventListener('keydown', e => { if (e.key === 'Enter') doBubRun(); });
+  $$('[data-buba]').forEach(b => b.addEventListener('click', () => { $('#bubArr').value = b.dataset.buba; doBubRun(); }));
+  $('#bubRand').addEventListener('click', bubSelfCheck);
+  doBubRun();
+  renderPuzzles();
+  $('#pzReset').addEventListener('click', () => { pzState = PUZ_BUB.map(() => null); renderPuzzles(); });
+
+  /* --- 4.3 lower 扫描字符数 --- */
+  function doLower() { renderLower(); }
+  $('#lowerGo').addEventListener('click', doLower);
+  $('#lowerN').addEventListener('keydown', e => { if (e.key === 'Enter') doLower(); });
+  $$('[data-low]').forEach(b => b.addEventListener('click', () => { $('#lowerN').value = b.dataset.low; doLower(); }));
+  doLower();
+
+  /* --- 5.2 / 5.3 别名 --- */
+  function doAlias() { renderAlias(); }
+  $('#alGo').addEventListener('click', doAlias);
+  ['#alA', '#alOff'].forEach(id => $(id).addEventListener('keydown', e => { if (e.key === 'Enter') doAlias(); }));
+  $$('[data-al]').forEach(b => b.addEventListener('click', () => {
+    const kv = kvAttr(b.dataset.al);
+    if (kv.off !== undefined) $('#alOff').value = kv.off;
+    doAlias();
+  }));
+  doAlias();
+  function doAlias2() { renderAliasCmp(); }
+  $('#alGo2').addEventListener('click', doAlias2);
+  ['#alA2', '#alOff2', '#alN2'].forEach(id => $(id).addEventListener('keydown', e => { if (e.key === 'Enter') doAlias2(); }));
+  doAlias2();
+
+  /* --- 6.3 CPE 计算器 --- */
+  function doCpe() { renderCpe(); }
+  $('#cpeGo').addEventListener('click', doCpe);
+  ['#cpeN1', '#cpeT1', '#cpeN2', '#cpeT2'].forEach(id => $(id).addEventListener('keydown', e => { if (e.key === 'Enter') doCpe(); }));
+  $$('[data-cpe]').forEach(b => b.addEventListener('click', () => {
+    const kv = kvAttr(b.dataset.cpe);
+    if (kv.n1) $('#cpeN1').value = kv.n1; if (kv.t1) $('#cpeT1').value = kv.t1;
+    if (kv.n2) $('#cpeN2').value = kv.n2; if (kv.t2) $('#cpeT2').value = kv.t2;
+    doCpe();
+  }));
+  doCpe();
+
+  /* --- 6.5 基准表 --- */
+  $('#benchSel').addEventListener('change', renderBench);
+  renderBench();
+
+  /* --- 7.3 流水线 --- */
+  function doPipe() { renderPipe(); }
+  $('#pipeGo').addEventListener('click', doPipe);
+  ['#pipeK', '#pipeM'].forEach(id => $(id).addEventListener('keydown', e => { if (e.key === 'Enter') doPipe(); }));
+  $$('[data-pipe]').forEach(b => b.addEventListener('click', () => {
+    const kv = kvAttr(b.dataset.pipe);
+    if (kv.k) $('#pipeK').value = kv.k; if (kv.m) $('#pipeM').value = kv.m;
+    doPipe();
+  }));
+  doPipe();
+
+  /* --- 7.5 界限计算器 --- */
+  function doBnd() { renderBound(); }
+  $('#bndGo').addEventListener('click', doBnd);
+  ['#bndD', '#bndT', '#bndK', '#bndN'].forEach(id => $(id).addEventListener('keydown', e => { if (e.key === 'Enter') doBnd(); }));
+  $$('[data-bnd]').forEach(b => b.addEventListener('click', () => {
+    const kv = kvAttr(b.dataset.bnd);
+    if (kv.d) $('#bndD').value = kv.d; if (kv.t) $('#bndT').value = kv.t;
+    if (kv.k) $('#bndK').value = kv.k; if (kv.n) $('#bndN').value = kv.n;
+    doBnd();
+  }));
+  doBnd();
+
+  /* --- 7.5 串行依赖链 --- */
+  function doSer() { renderSerial(); }
+  $('#serGo').addEventListener('click', doSer);
+  ['#serN', '#serD', '#serK'].forEach(id => $(id).addEventListener('keydown', e => { if (e.key === 'Enter') doSer(); }));
+  $$('#serSeg button').forEach(b => b.addEventListener('click', () => {
+    $$('#serSeg button').forEach(x => x.classList.remove('on'));
+    b.classList.add('on'); serMode = b.dataset.ser; renderSerial();
+  }));
+  doSer();
+
+  /* --- 8.2 重结合 --- */
+  function doRa() { renderReassoc(); }
+  $('#raGo').addEventListener('click', doRa);
+  ['#raN', '#raD'].forEach(id => $(id).addEventListener('keydown', e => { if (e.key === 'Enter') doRa(); }));
+  $$('#raSeg button').forEach(b => b.addEventListener('click', () => {
+    $$('#raSeg button').forEach(x => x.classList.remove('on'));
+    b.classList.add('on'); raMode = b.dataset.ra; renderReassoc();
+  }));
+  doRa();
+
+  /* --- 9.3 K×L 矩阵 --- */
+  $('#klSel').addEventListener('change', renderKl);
+  $('#klAll').addEventListener('click', () => { klAll = !klAll; renderKl(); });
+  renderKl();
+
+  /* --- 10.2 SIMD --- */
+  $('#simdSel').addEventListener('change', renderSimd);
+  renderSimd();
+
+  /* --- 10.3 向量化 --- */
+  $$('#avxSeg button').forEach(b => b.addEventListener('click', () => {
+    $$('#avxSeg button').forEach(x => x.classList.remove('on'));
+    b.classList.add('on'); avxMode = b.dataset.avx; renderAvx();
+  }));
+  $('#avxGo').addEventListener('click', renderAvx);
+  renderAvx();
+
+  /* --- 10.5 分支预测 --- */
+  function doBp() { renderBp(); }
+  $('#bpGo').addEventListener('click', doBp);
+  $('#bpN').addEventListener('keydown', e => { if (e.key === 'Enter') doBp(); });
+  $$('[data-bp]').forEach(b => b.addEventListener('click', () => { $('#bpN').value = b.dataset.bp; doBp(); }));
+  doBp();
+  function doBpNum() { renderBpNum(); }
+  $('#bpNumGo').addEventListener('click', doBpNum);
+  ['#bpTot', '#bpAcc', '#bpPen'].forEach(id => $(id).addEventListener('keydown', e => { if (e.key === 'Enter') doBpNum(); }));
+  doBpNum();
+
+  /* --- 11.3 测验 --- */
+  renderQuiz();
+  $('#qzReset').addEventListener('click', () => { qzState = QUIZ.map(() => null); renderQuiz(); });
+}
+
+document.addEventListener('DOMContentLoaded', initAll);
+</script>
+</body>
+</html>

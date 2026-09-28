@@ -1,0 +1,2307 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-style="brutalist" data-deck="ics09">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>处理器体系结构：ISA 与逻辑设计 · 交互式课件（中文）（新粗野版）</title>
+<style>
+/* ==========================================================================
+   base.css —— 结构基础样式（所有风格共用）
+   只使用 CSS 变量，不含任何具体配色；由各主题覆盖变量与少量结构规则。
+   ========================================================================== */
+
+:root{
+  /* 颜色（每个主题必须覆盖） */
+  --bg:#f6f7f9; --card:#fff; --ink:#15181d; --muted:#697586; --line:#e4e7ec;
+  --accent:#2563eb; --accent-ink:#fff; --accent-soft:#eaf1ff;
+  --sign:#e5484d; --exp:#0b7fd4; --frac:#18915a; --warn:#b45309;
+  --sign-bg:#fdecec; --sign-fg:#a3262b; --sign-bd:#f6cdcf;
+  --exp-bg:#e8f2fd;  --exp-fg:#0a5f9e;  --exp-bd:#c7ddf5;
+  --frac-bg:#e9f7ef; --frac-fg:#116b43; --frac-bd:#c8e8d5;
+  --ok-bg:#f2fbf6; --ok-bd:#9ed3b4; --bad-bg:#fff5f5; --bad-bd:#f1b5b8;
+  --warn-bg:#fffbeb; --gray-bg:#eef1f5; --gray-fg:#5b6472;
+  --paper-soft:#fcfdfe; --code-bg:#f1f3f7; --code-bd:#e6e9ef;
+  --tbl-head:#f7f9fc; --tbl-hover:#fafbfd;
+  --sel-bg:#eef1f5;
+
+  /* 字体 */
+  --font-sans:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",system-ui,sans-serif;
+  --font-mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+  --font-display:var(--font-sans);
+  --tracking-title:normal;
+
+  /* 形状 */
+  --radius:12px; --radius-sm:8px; --radius-pill:99px;
+  --border-w:1px; --shadow:0 1px 2px rgba(16,24,40,.06),0 1px 3px rgba(16,24,40,.1);
+  --shadow-card:none;
+  --card-border:var(--border-w) solid var(--line);
+
+  /* 布局 */
+  --page-max:1180px; --nav-w:236px; --gap:26px; --sec-pad:26px 28px;
+  --nav-sticky-top:64px; --anchor-offset:70px;
+  --font-size:16px; --line-height:1.75;
+}
+
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font-sans);
+  font-size:var(--font-size);line-height:var(--line-height);-webkit-font-smoothing:antialiased}
+img{max-width:100%}
+
+/* ---------- 顶栏 ---------- */
+.topbar{position:sticky;top:0;z-index:50;background:var(--card);border-bottom:1px solid var(--line)}
+.topbar-in{max-width:var(--page-max);margin:0 auto;padding:10px 22px;display:flex;align-items:center;gap:14px}
+.brand{font-weight:700;letter-spacing:var(--tracking-title);font-family:var(--font-display)}
+.brand small{font-weight:500;color:var(--muted);margin-left:8px;font-size:12.5px}
+.progress{margin-left:auto;display:flex;align-items:center;gap:10px;font-size:12.5px;color:var(--muted)}
+.progress .bar{width:150px;height:6px;border-radius:var(--radius-pill);background:var(--line);overflow:hidden}
+.progress .bar>i{display:block;height:100%;width:0;background:var(--accent);transition:width .25s}
+
+/* ---------- 主体布局 ---------- */
+.layout{max-width:var(--page-max);margin:0 auto;padding:22px;display:grid;
+  grid-template-columns:var(--nav-w) minmax(0,1fr);gap:var(--gap)}
+main{min-width:0}
+/* 长 URL / 长标识符没有断行点，会把容器整个撑破（窄屏尤其明显）。
+   只作用于文本容器；表格故意不加，让它走 .tbl-wrap 的横向滚动。 */
+main p,main li,main dd,main dt,main h2,main h3,main h4,main h5,
+main .box,main .card,main .readout,main .puzzle,main .step{overflow-wrap:anywhere}
+
+/* ---------- 目录 ---------- */
+nav.toc{position:sticky;top:var(--nav-sticky-top);align-self:start;max-height:calc(100vh - 84px);overflow:auto;padding-right:4px}
+nav.toc h4{margin:0 0 8px;font-size:12px;letter-spacing:.12em;color:var(--muted);text-transform:uppercase;font-weight:600}
+nav.toc a{display:block;padding:7px 11px;border-radius:var(--radius-sm);color:var(--ink);opacity:.78;
+  text-decoration:none;font-size:14.5px;border-left:2.5px solid transparent}
+nav.toc a:hover{background:var(--sel-bg);opacity:1}
+nav.toc a.active{background:var(--accent-soft);color:var(--accent);border-left-color:var(--accent);font-weight:600;opacity:1}
+nav.toc a .n{display:inline-block;min-width:20px;color:var(--muted);font-size:12.5px;font-variant-numeric:tabular-nums}
+nav.toc a.active .n{color:var(--accent)}
+nav.toc .sub{padding-left:26px;font-size:13.5px;opacity:.7}
+
+/* ---------- 章节 ---------- */
+section{background:var(--card);border:var(--card-border);border-radius:var(--radius);
+  padding:var(--sec-pad);margin-bottom:22px;box-shadow:var(--shadow);scroll-margin-top:var(--anchor-offset)}
+section>h2{margin:0 0 6px;font-size:25px;letter-spacing:-.01em;font-family:var(--font-display)}
+section>.lede{color:var(--muted);margin:0 0 20px;font-size:14.5px}
+h3{font-size:18.5px;margin:26px 0 10px;padding-left:11px;border-left:3.5px solid var(--accent);font-family:var(--font-display)}
+h4{font-size:16px;margin:18px 0 8px;font-family:var(--font-display)}
+h5{font-size:15px;font-family:var(--font-display)}
+p{margin:10px 0}
+ul,ol{margin:10px 0;padding-left:22px}
+li{margin:5px 0}
+code{font-family:var(--font-mono);font-size:.89em;background:var(--code-bg);border:1px solid var(--code-bd);border-radius:5px;padding:1px 5px}
+.mono{font-family:var(--font-mono)}
+a{color:var(--accent)}
+hr{border:0;border-top:1px dashed var(--line);margin:24px 0}
+.srcref{font-size:11.5px;color:var(--muted);font-weight:500;font-family:var(--font-sans);margin-left:8px;vertical-align:middle;white-space:nowrap;opacity:.75}
+.en{color:var(--muted);font-size:.92em}
+
+/* ---------- 栅格与卡片 ---------- */
+.grid{display:grid;gap:14px}
+.g2{grid-template-columns:repeat(2,minmax(0,1fr))}
+.g3{grid-template-columns:repeat(3,minmax(0,1fr))}
+/* 窄屏单列：必须用 minmax(0,1fr)。写成 1fr 时轨道最小宽度是 auto，
+   单元格里只要有长代码行（<pre>）就撑破容器，整页横向溢出。 */
+@media(max-width:820px){.g2,.g3{grid-template-columns:minmax(0,1fr)}}
+.card{border:var(--card-border);border-radius:var(--radius-sm);padding:15px 17px;background:var(--paper-soft);box-shadow:var(--shadow-card)}
+.card h5{margin:0 0 7px}
+.card.pad0{padding:0;overflow:hidden}
+
+/* ---------- 提示框 ---------- */
+.box{border:1px solid var(--line);border-left:4px solid var(--accent);background:var(--accent-soft);
+  border-radius:var(--radius-sm);padding:12px 16px;margin:14px 0}
+.box.warn{border-left-color:var(--warn);background:var(--warn-bg)}
+.box.bad{border-left-color:var(--sign);background:var(--bad-bg)}
+.box.ok{border-left-color:var(--frac);background:var(--ok-bg)}
+.box .t{font-weight:650;font-size:14.5px;margin-bottom:2px}
+
+/* ---------- 公式 ---------- */
+.formula{font-family:var(--font-mono);background:var(--paper-soft);border:1px solid var(--line);
+  border-radius:var(--radius-sm);padding:14px 17px;margin:14px 0;font-size:16.5px;text-align:center;overflow-x:auto}
+.formula.big{font-size:20px}
+
+/* ---------- 表格 ---------- */
+table.tbl{width:100%;border-collapse:collapse;font-size:14.5px;margin:14px 0}
+table.tbl th,table.tbl td{border:1px solid var(--line);padding:8px 11px;text-align:left;vertical-align:top}
+table.tbl th{background:var(--tbl-head);font-weight:650;font-size:13.5px;white-space:nowrap}
+table.tbl td.mono,table.tbl th.mono{font-family:var(--font-mono);font-size:13.5px}
+table.tbl tr:hover td{background:var(--tbl-hover)}
+/* 当前行高亮：interactive 表格用它标出「正在看的那一行」。
+   注意 --tbl-hover 是悬停色，深色皮肤下故意比底色亮，所以 hl 用同一套变量。 */
+table.tbl tr.hl td{background:var(--sel-bg)}
+.tbl-wrap{overflow-x:auto}
+
+/* ---------- 位串控件 ---------- */
+.fw{display:flex;flex-wrap:wrap;gap:8px 18px;align-items:flex-start;margin:4px 0 2px;min-width:0}
+.fgrp{min-width:0}
+.fcap{font-size:12px;color:var(--muted);margin-bottom:4px;font-weight:600}
+.fcap b{font-family:var(--font-mono);font-size:12.5px}
+.bits{display:flex;flex-wrap:wrap;gap:2px;font-family:var(--font-mono);margin:4px 0}
+.bits .b{width:25px;height:33px;display:flex;align-items:center;justify-content:center;
+  border-radius:6px;font-size:15px;cursor:pointer;user-select:none;border:1px solid transparent;
+  transition:transform .06s,background .12s;font-weight:600}
+.bits .b:hover{transform:translateY(-2px)}
+.bits .b.s{background:var(--sign-bg);color:var(--sign-fg);border-color:var(--sign-bd)}
+.bits .b.e{background:var(--exp-bg);color:var(--exp-fg);border-color:var(--exp-bd)}
+.bits .b.f{background:var(--frac-bg);color:var(--frac-fg);border-color:var(--frac-bd)}
+.bits .b.sel{outline:2px solid var(--ink);outline-offset:1px}
+.bits.sm .b{width:19px;height:26px;font-size:12px;border-radius:4px}
+.fgrp .bits{flex-wrap:wrap;max-width:100%;gap:2px}
+.fgrp.ge .bits{max-width:300px}
+
+/* ---------- 读数表 ---------- */
+.readout{display:grid;grid-template-columns:auto 1fr;gap:4px 16px;font-size:14.5px;margin:12px 0}
+.readout dt{color:var(--muted);font-weight:600;font-family:var(--font-mono);font-size:13.5px;padding-top:2px}
+.readout dd{margin:0;font-family:var(--font-mono)}
+
+/* ---------- 小标签 ---------- */
+.chip{display:inline-block;font-size:12.5px;padding:2px 9px;border-radius:var(--radius-pill);
+  background:var(--accent-soft);color:var(--accent);font-weight:600}
+.chip.ok{background:var(--frac-bg);color:var(--frac-fg)}
+.chip.bad{background:var(--sign-bg);color:var(--sign-fg)}
+.chip.warn{background:var(--warn-bg);color:var(--warn)}
+.chip.gray{background:var(--gray-bg);color:var(--gray-fg)}
+.kbd{font-family:var(--font-mono);font-size:13px;background:var(--code-bg);border:1px solid var(--code-bd);
+  border-bottom-width:2px;border-radius:6px;padding:1px 7px}
+
+/* ---------- 控件 ---------- */
+.ctrls{display:flex;flex-wrap:wrap;gap:9px;align-items:center;margin:12px 0}
+label.fld{display:inline-flex;align-items:center;gap:7px;font-size:14px;color:var(--ink);max-width:100%;flex-wrap:wrap;min-width:0}
+label.fld select,label.fld input{min-width:0;max-width:100%}
+input[type=text],input[type=number],select{font-family:var(--font-mono);font-size:14px;padding:6px 10px;
+  border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--card);color:var(--ink)}
+input[type=text]:focus,input[type=number]:focus,select:focus{outline:2px solid var(--accent-soft);border-color:var(--accent)}
+button{font-family:var(--font-sans);font-size:14px;font-weight:600;padding:7px 15px;border-radius:var(--radius-sm);
+  border:1px solid var(--line);background:var(--card);color:var(--ink);cursor:pointer}
+button:hover{background:var(--sel-bg)}
+button.p{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+button.sm{padding:4px 10px;font-size:13px}
+button.pill{border-radius:var(--radius-pill)}
+/* 按钮组默认不换行：项一多就会把 .ctrls 撑破。允许它缩到容器宽度并横向滚动。 */
+.seg{display:inline-flex;max-width:100%;border:1px solid var(--line);
+  border-radius:var(--radius-sm);overflow-x:auto;overflow-y:hidden}
+.seg button{border:0;border-radius:0;border-right:1px solid var(--line);padding:6px 13px}
+.seg button:last-child{border-right:0}
+.seg button.on{background:var(--accent);color:var(--accent-ink)}
+
+/* ---------- 分步演示 ---------- */
+/* .steps 是 .step 的包裹层（skill 词汇表里列了但一直没定义）——
+   仅给一点上下留白，步骤块自己的边距由 .step 负责。 */
+.steps{margin:12px 0}
+.step{border:1px solid var(--line);border-radius:var(--radius-sm);padding:11px 15px;margin:9px 0;
+  background:var(--paper-soft);opacity:.42;transition:opacity .2s}
+.step.on{opacity:1;background:var(--card)}
+.step .h{font-size:13px;font-weight:700;color:var(--accent);letter-spacing:.02em;margin-bottom:3px}
+.step .m{font-family:var(--font-mono);font-size:14.5px;overflow-x:auto}
+.step .e{font-size:13.5px;color:var(--muted);margin-top:3px}
+
+/* ---------- 折叠与答案 ---------- */
+.reveal{border:1px solid var(--line);border-radius:var(--radius-sm);padding:11px 15px;margin:8px 0;background:var(--paper-soft)}
+.reveal summary{cursor:pointer;font-weight:600;font-size:14.5px}
+.reveal[open]{background:var(--card)}
+.ans{margin-top:8px;padding-top:8px;border-top:1px dashed var(--line);font-size:14.5px}
+
+/* ---------- 判断题 ---------- */
+.puzzle{border:1px solid var(--line);border-radius:var(--radius-sm);padding:12px 15px;margin:9px 0;
+  display:flex;gap:13px;align-items:flex-start;background:var(--paper-soft)}
+.puzzle .q{font-family:var(--font-mono);font-size:15px;flex:1;min-width:0;overflow-x:auto;white-space:nowrap}
+.puzzle .q small{font-family:var(--font-sans);color:var(--muted);display:block;white-space:normal}
+.puzzle .btns{display:flex;gap:6px;flex-shrink:0}
+.puzzle.correct{border-color:var(--ok-bd);background:var(--ok-bg)}
+.puzzle.wrong{border-color:var(--bad-bd);background:var(--bad-bg)}
+.puzzle .exp{margin-top:9px;padding-top:9px;border-top:1px dashed var(--line);font-size:14.5px;
+  display:none;white-space:normal;font-family:var(--font-sans)}
+.puzzle.done .exp{display:block}
+.puzzle .exp .verdict{font-weight:700}
+
+/* ---------- 分布图 ---------- */
+.tick{stroke:#94a3b8;stroke-width:1.4}
+.tick.dn{stroke:var(--exp)}
+.tick.nm{stroke:var(--frac)}
+.ticklabel{font-size:9.5px;fill:var(--muted);font-family:var(--font-mono)}
+.axisline{stroke:var(--line);stroke-width:1.2}
+.axislabel{font-size:11px;fill:var(--muted)}
+
+/* ---------- 页脚 / 回到顶部 ---------- */
+.footer{max-width:var(--page-max);margin:0 auto;padding:8px 22px 40px;color:var(--muted);font-size:13px}
+.totop{position:fixed;right:22px;bottom:22px;z-index:40;box-shadow:var(--shadow);display:none}
+
+/* ---------- 响应式 ---------- */
+@media(max-width:960px){
+  .layout{grid-template-columns:1fr;padding:16px}
+  nav.toc{position:static;max-height:none;display:flex;flex-wrap:wrap;gap:6px;
+    background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:10px}
+  nav.toc h4{width:100%;margin-bottom:2px}
+  nav.toc a{border-left:0;padding:5px 10px;font-size:13px}
+  nav.toc .sub{display:none}
+  section{padding:20px 17px}
+}
+@media print{
+  nav.toc,.topbar,.totop{display:none}
+  .layout{display:block}
+  section{break-inside:avoid;box-shadow:none}
+}
+
+/* ==========================================================================
+   风格 C · 新粗野主义（Neo-brutalism）
+   厚黑描边 · 硬投影 · 高饱和色块 · 顶部大字报 + 药丸导航
+   ========================================================================== */
+
+:root{
+  --bg:#fdf3d7; --card:#fffdf5; --ink:#111111; --muted:#5b564a; --line:#111111;
+  --accent:#ff3d68; --accent-ink:#fff; --accent-soft:#ffe3ea;
+  --sign:#e01b24; --exp:#0b6fd4; --frac:#0f9d58; --warn:#c2410c;
+  --sign-bg:#ffdfe0; --sign-fg:#b3141c; --sign-bd:#111;
+  --exp-bg:#dcecff;  --exp-fg:#0a5aa8;  --exp-bd:#111;
+  --frac-bg:#dcf7e5; --frac-fg:#0b7a45; --frac-bd:#111;
+  --ok-bg:#e3fbe9; --ok-bd:#111; --bad-bg:#ffe6e6; --bad-bd:#111;
+  --warn-bg:#fff0d6; --gray-bg:#efe9d8; --gray-fg:#4a463c;
+  --paper-soft:#fffdf5; --code-bg:#fff8e1; --code-bd:#111;
+  --tbl-head:#ffe9a8; --tbl-hover:#fffbe8;
+  --sel-bg:#ffe9a8;
+
+  --font-sans:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",system-ui,sans-serif;
+  --font-mono:ui-monospace,"SF Mono",Menlo,Consolas,"Liberation Mono",monospace;
+  --font-display:var(--font-sans);
+  --tracking-title:-.02em;
+
+  --radius:4px; --radius-sm:4px; --radius-pill:99px;
+  --border-w:2px;
+  --shadow:5px 5px 0 var(--line); --shadow-card:4px 4px 0 var(--line);
+  --card-border:2px solid var(--line);
+
+  --page-max:1200px; --nav-w:auto; --gap:0px;
+  --sec-pad:24px 26px; --nav-sticky-top:0px; --anchor-offset:150px;
+  --font-size:16px; --line-height:1.72;
+}
+
+body{background:
+  repeating-linear-gradient(45deg, rgba(17,17,17,.028) 0 12px, transparent 12px 24px),
+  var(--bg)}
+
+/* ---------- 顶栏：大字报（不吸顶，避免与吸顶药丸导航重叠） ---------- */
+.topbar{position:static;background:var(--accent);border-bottom:3px solid var(--line);color:#fff}
+.topbar-in{padding:12px 22px;max-width:var(--page-max)}
+.brand{font-weight:900;font-size:22px;letter-spacing:var(--tracking-title);
+  text-transform:none;text-shadow:2px 2px 0 rgba(17,17,17,.55)}
+.brand small{color:#fff;opacity:.9;font-weight:700;font-size:12px;letter-spacing:.02em}
+.progress{color:#fff;font-weight:700;font-size:12.5px}
+.progress .bar{width:150px;height:12px;border-radius:0;background:#fff;border:2px solid var(--line);overflow:hidden}
+.progress .bar>i{background:repeating-linear-gradient(45deg,#111 0 6px,#ffd93d 6px 12px)}
+
+/* ---------- 导航：横排药丸，吸顶 ---------- */
+.layout{display:block;max-width:var(--page-max);padding:0 22px 26px}
+nav.toc{position:sticky;top:0;z-index:45;display:flex;flex-wrap:wrap;gap:6px;align-items:center;
+  max-height:none;overflow:visible;padding:10px 0;margin:0 0 18px;
+  background:var(--bg);border-bottom:3px solid var(--line)}
+nav.toc h4{width:100%;margin:0 0 2px;font-size:11px;letter-spacing:.16em;color:var(--muted)}
+nav.toc a{border:2px solid var(--line);border-radius:var(--radius-pill);background:var(--card);
+  padding:4px 11px;font-size:12px;font-weight:700;border-left-width:2px;white-space:nowrap;
+  box-shadow:2px 2px 0 var(--line)}
+nav.toc a:hover{background:var(--sel-bg);transform:translate(1px,1px);box-shadow:1px 1px 0 var(--line)}
+nav.toc a.active{background:var(--ink);color:#ffd93d;box-shadow:1px 1px 0 var(--line)}
+nav.toc a .n{color:inherit;opacity:.6;font-weight:800;min-width:auto;margin-right:5px}
+nav.toc .sub{display:none}
+
+/* ---------- 章节：粗框卡片 ---------- */
+section{box-shadow:var(--shadow);margin-bottom:26px;background:var(--card)}
+section>h2{font-size:27px;font-weight:900;display:inline-block;background:var(--ink);color:#ffd93d;
+  padding:3px 14px;margin:0 0 12px;border-radius:2px}
+section>h2 .srcref{color:#ffd93d;opacity:.65}
+section>.lede{font-weight:600;color:var(--muted);margin-bottom:18px}
+h3{font-size:19px;font-weight:900;border-left:0;padding:0 0 0 14px;position:relative;margin-top:28px}
+h3::before{content:"";position:absolute;left:0;top:.28em;width:8px;height:.95em;background:var(--accent);
+  border:2px solid var(--line)}
+h4,h5{font-weight:800}
+code{background:var(--code-bg);border:2px solid var(--line);border-radius:3px;font-weight:600}
+
+/* ---------- 卡片 / 盒：硬投影 + 位移 hover ---------- */
+.card{box-shadow:var(--shadow-card);border-radius:var(--radius);transition:transform .08s,box-shadow .08s}
+.card:hover{transform:translate(2px,2px);box-shadow:2px 2px 0 var(--line)}
+.box{border:2px solid var(--line);border-left-width:8px;border-radius:var(--radius);background:var(--accent-soft);
+  box-shadow:var(--shadow-card)}
+.box.warn{background:var(--warn-bg)}
+.box.bad{background:var(--bad-bg)}
+.box.ok{background:var(--ok-bg)}
+.box .t{font-weight:900;font-size:15px}
+
+.formula{background:#fff;border:2px solid var(--line);border-radius:var(--radius);font-weight:700;
+  box-shadow:var(--shadow-card)}
+.formula.big{font-size:21px}
+
+/* ---------- 表格：粗网格 ---------- */
+table.tbl th,table.tbl td{border:2px solid var(--line);padding:8px 12px}
+table.tbl th{background:var(--tbl-head);font-weight:900;font-size:13px}
+table.tbl tbody tr:nth-child(even) td{background:#fffdf0}
+table.tbl tr:hover td{background:var(--tbl-hover)}
+
+/* ---------- 位视图：色块方格 ---------- */
+.fw{gap:10px 20px;padding:14px;border:2px dashed var(--line);border-radius:var(--radius);background:#fff}
+.fcap{font-weight:800;font-size:11.5px;letter-spacing:.06em;text-transform:uppercase}
+.bits{gap:3px}
+.bits .b{width:26px;height:32px;border-radius:3px;border:2px solid var(--line);font-weight:900}
+.bits .b.s{background:var(--sign-bg);color:var(--sign-fg)}
+.bits .b.e{background:var(--exp-bg);color:var(--exp-fg)}
+.bits .b.f{background:var(--frac-bg);color:var(--frac-fg)}
+.bits .b:hover{transform:translate(1px,1px)}
+.bits .b.sel{outline:3px solid var(--accent);outline-offset:0}
+.bits.sm .b{width:20px;height:26px;font-size:11.5px}
+
+.readout dt{color:var(--muted);font-weight:800}
+
+/* ---------- 控件：可按的实体按钮 ---------- */
+input[type=text],input[type=number],select{border:2px solid var(--line);border-radius:var(--radius);
+  background:#fff;font-weight:700}
+input:focus,select:focus{outline:none;box-shadow:3px 3px 0 var(--line)}
+button{border:2px solid var(--line);border-radius:var(--radius);font-weight:800;background:#fff;
+  box-shadow:3px 3px 0 var(--line);transition:transform .08s,box-shadow .08s}
+button:hover{background:var(--sel-bg);transform:translate(1px,1px);box-shadow:2px 2px 0 var(--line)}
+button.p{background:var(--accent);color:#fff}
+button.p:hover{background:#ff2456}
+button:active{transform:translate(3px,3px);box-shadow:0 0 0 var(--line)}
+.chip{border:2px solid var(--line);border-radius:var(--radius-pill);background:#fff;color:var(--ink);
+  font-weight:800;font-size:12px}
+.chip.ok{background:var(--frac-bg);color:var(--frac-fg)}
+.chip.bad{background:var(--sign-bg);color:var(--sign-fg)}
+.chip.warn{background:var(--warn-bg);color:var(--warn)}
+.chip.gray{background:var(--gray-bg)}
+.seg{border:2px solid var(--line);border-radius:var(--radius);box-shadow:3px 3px 0 var(--line)}
+.seg button{border-right:2px solid var(--line);box-shadow:none;border:0;border-radius:0}
+.seg button:hover{transform:none}
+.seg button.on{background:var(--ink);color:#ffd93d}
+
+/* ---------- 分步演示 ---------- */
+.step{border:2px solid var(--line);border-radius:var(--radius);background:#fff;box-shadow:3px 3px 0 var(--line)}
+.step.on{background:#fffdf5}
+.step .h{color:var(--accent);font-weight:900;font-size:13px;letter-spacing:.02em}
+.step .m{font-weight:600}
+.step .e{color:var(--muted)}
+
+/* ---------- 判断题 ---------- */
+.puzzle{border:2px solid var(--line);border-radius:var(--radius);background:#fff}
+.puzzle.correct{background:var(--ok-bg)}
+.puzzle.wrong{background:var(--bad-bg)}
+.puzzle .q{font-weight:700}
+.reveal{border:2px solid var(--line);border-radius:var(--radius);background:#fff;
+  box-shadow:3px 3px 0 var(--line)}
+.reveal[open]{background:#fffdf5}
+
+.totop{border:2px solid var(--line);box-shadow:4px 4px 0 var(--line);background:#ffd93d;font-weight:900}
+.tick{stroke:#7a6f52}
+.tick.nm{stroke:var(--frac)}
+.tick.dn{stroke:var(--exp)}
+.axisline{stroke:var(--line)}
+
+/* ---------- 响应式 ---------- */
+@media(max-width:960px){
+  .topbar-in{padding:10px 16px}
+  .brand{font-size:18px}
+  .layout{padding:0 16px 20px}
+  nav.toc{gap:6px;padding:10px 0}
+  nav.toc a{padding:4px 10px;font-size:12px}
+  section{padding:20px 16px}
+  section>h2{font-size:22px}
+  .progress .bar{width:90px}
+}
+
+
+/* ---------- 风格切换条（构建时注入，各主题通用） ---------- */
+.stylebar{max-width:var(--page-max);margin:0 auto;padding:14px 22px 0;display:flex;gap:8px;
+  flex-wrap:wrap;align-items:center;font-size:12.5px;color:var(--muted)}
+.stylebar>span{font-weight:600}
+.stylebar a{text-decoration:none;padding:4px 11px;border:1px solid var(--line);border-radius:var(--radius-pill);
+  color:var(--muted);background:var(--card);font-weight:600}
+.stylebar a:hover{border-color:var(--accent);color:var(--accent)}
+.stylebar a.cur{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.stylebar>span{flex:0 0 auto}
+@media(max-width:960px){.stylebar{padding:12px 16px 0}}
+/* 25 讲之后药丸很多：窄屏折行会吃掉大半屏，改成单行横滑 */
+@media(max-width:820px){.stylebar{flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;
+  scrollbar-width:thin}.stylebar a{flex:0 0 auto;font-size:12px;padding:4px 10px}}
+
+</style>
+</head>
+<body>
+
+<header class="topbar"><div class="topbar-in">
+  <div class="brand">处理器体系结构 ISA &amp; Logic Design<small>《计算机系统导论》第 9 讲 · 新粗野版</small></div>
+  <div class="progress"><span id="pgText">学习进度 0%</span><span class="bar"><i id="pgBar"></i></span></div>
+</div></header>
+
+<div class="stylebar">
+  <span>风格：</span>
+  <a href="../ics09-zh.html">清爽蓝（原版）</a>
+  <a href="01-academic.html">学术讲义</a>
+  <a href="02-terminal.html">深色终端</a>
+  <a href="04-glass.html">柔和玻璃</a>
+  <a href="index.html">◧ 全部预览</a>
+  <span style="opacity:.5">|</span>
+  <a href="../variants-ics01/index.html">↗ 第 1 讲 · 课程概述</a>
+  <a href="../variants-bits/index.html">↗ 第 2 讲 · 位、字节与整数</a>
+  <a href="../variants/index.html">↗ 第 3 讲 · 浮点数</a>
+  <a href="../variants-ics04/index.html">↗ 第 4 讲 · 机器级编程 I：基础</a>
+  <a href="../variants-ics05/index.html">↗ 第 5 讲 · 机器级编程 II：控制</a>
+  <a href="../variants-ics06/index.html">↗ 第 6 讲 · 机器级编程 III：过程</a>
+  <a href="../variants-ics07/index.html">↗ 第 7 讲 · 机器级编程 IV：数据</a>
+  <a href="../variants-ics08/index.html">↗ 第 8 讲 · 机器级编程 V：高级</a>
+  <a href="../variants-ics10/index.html">↗ 第 10 讲 · 处理器体系结构：顺序实现</a>
+  <a href="../variants-ics11/index.html">↗ 第 11 讲 · 处理器体系结构：流水线</a>
+  <a href="../variants-ics12/index.html">↗ 第 12 讲 · 存储层次结构</a>
+  <a href="../variants-ics13/index.html">↗ 第 13 讲 · 缓存存储器</a>
+  <a href="../variants-ics14/index.html">↗ 第 14 讲 · 代码优化</a>
+  <a href="../variants-ics15/index.html">↗ 第 15 讲 · 链接</a>
+  <a href="../variants-ics16/index.html">↗ 第 16 讲 · 异常控制流 I</a>
+  <a href="../variants-ics17/index.html">↗ 第 17 讲 · 异常控制流 II</a>
+  <a href="../variants-ics18/index.html">↗ 第 18 讲 · 系统级 I/O</a>
+  <a href="../variants-ics19/index.html">↗ 第 19 讲 · 虚拟内存 I</a>
+  <a href="../variants-ics20/index.html">↗ 第 20 讲 · 虚拟内存 II</a>
+  <a href="../variants-ics21/index.html">↗ 第 21 讲 · 动态内存分配</a>
+  <a href="../variants-ics22/index.html">↗ 第 22 讲 · 网络基础</a>
+  <a href="../variants-ics23/index.html">↗ 第 23 讲 · 网络编程</a>
+  <a href="../variants-ics24/index.html">↗ 第 24 讲 · 并发编程</a>
+  <a href="../variants-ics25/index.html">↗ 第 25 讲 · 同步</a>
+  <a href="../variants-lab/index.html">↗ Data Lab 实验</a>
+</div>
+
+<div class="layout">
+
+<nav class="toc">
+  <h4>目录</h4>
+  <a href="#s0"><span class="n">0</span>课程导览</a>
+  <a href="#s1"><span class="n">1</span>ISA：契约</a>
+  <a href="#s2"><span class="n">2</span>程序员可见状态</a>
+  <a href="#s3"><span class="n">3</span>Y86-64 指令集</a>
+  <a href="#s4"><span class="n">4</span>指令编码</a>
+  <a href="#s5"><span class="n">5</span>程序与解释器</a>
+  <a href="#s6"><span class="n">6</span>门与组合电路</a>
+  <a href="#s7"><span class="n">7</span>ALU 与条件码</a>
+  <a href="#s8"><span class="n">8</span>时钟与存储</a>
+  <a href="#s9"><span class="n">9</span>总结与测验</a>
+</nav>
+
+<main>
+<!-- ================= 0 ================= -->
+<section id="s0">
+  <h2>课程导览<span class="srcref">原第 1–3 页</span></h2>
+  <p class="lede">北京大学《计算机系统导论》第 9 讲：处理器体系结构 I —— 指令集体系结构与逻辑设计。前几讲我们一直把 CPU 当作「会执行 x86-64 指令的黑盒」；这一讲打开它：<b>先定义一套完整的指令集（ISA），再看逻辑电路为兑现这套合同准备了哪些积木。</b></p>
+
+  <div class="grid g3">
+    <div class="card"><h5>本讲三部分</h5>
+      <ol style="margin:0;padding-left:20px;font-size:14.5px">
+        <li>指令集体系结构（ISA）：Y86-64</li>
+        <li>指令编码与程序示例</li>
+        <li>逻辑设计：门、组合电路、ALU、时钟</li>
+      </ol>
+    </div>
+    <div class="card"><h5>一句话核心</h5>
+      <p style="margin:0;font-size:14.5px">ISA 是<b>软件与硬件之间的契约</b>：上面的人只需要知道「每条指令改哪些状态、怎么编码成字节」，下面的人负责用电路兑现。契约不变，实现随便换。</p>
+    </div>
+    <div class="card"><h5>和上一讲的衔接</h5>
+      <p style="margin:0;font-size:14.5px">第 5 讲在 x86-64 汇编层面看了<b>控制流</b>。这一讲退后一步：定义教学指令集 <b>Y86-64</b> 并理解它的逻辑积木 —— 下一讲就用这些积木搭出顺序实现。</p>
+    </div>
+  </div>
+
+  <h3>0.1 三个主题与原页码</h3>
+  <div class="tbl-wrap"><table class="tbl">
+    <tr><th>主题</th><th>原课件页码</th><th>要回答的问题</th></tr>
+    <tr><td><b>ISA 与抽象层</b></td><td class="mono">2–3、36</td><td>「指令集体系结构」到底约定了什么？为什么它是编译器作者和 CPU 设计者共同签署的合同</td></tr>
+    <tr><td><b>Y86-64 状态与指令集</b></td><td class="mono">4–11</td><td>程序员可见的状态有哪几块？12 条指令怎么编码成字节</td></tr>
+    <tr><td><b>指令编码与程序示例</b></td><td class="mono">10–31</td><td>一条指令占 1–10 字节，怎么从第一个字节算出长度；一个完整程序怎么编码、怎么跑</td></tr>
+    <tr><td><b>RISC 与 CISC</b></td><td class="mono">32–36</td><td>教学 ISA 和真实 ISA（MIPS、x86-64）在哲学上差在哪</td></tr>
+    <tr><td><b>逻辑设计</b></td><td class="mono">38–53</td><td>门、组合电路、ALU、时钟寄存器与内存是怎么定义的</td></tr>
+  </table></div>
+  <p style="font-size:13.5px;color:var(--muted)">页码为讲义页码；Part B（逻辑设计）的内容与 Part A 交错出现，此处按主题归组，细节以页内 <span class="srcref">标注</span> 为准。</p>
+
+  <div class="box"><div class="t">本页使用说明</div>
+    标有 <span class="chip">可交互</span> 的地方都能点击或输入，所有计算都在浏览器里实时完成。最值得反复玩的是 <a href="#s4">第 4 节的指令编码器 / 解码器</a> 和 <a href="#s5">第 5 节的 Y86-64 汇编器 + 解释器</a> —— 它们把课件里十几页的静态表格变成了可以自己出题的工具。
+  </div>
+</section>
+
+<!-- ================= 1 ================= -->
+<section id="s1">
+  <h2>1. ISA：软件与硬件之间的契约<span class="srcref">原第 2–3、36 页</span></h2>
+  <p class="lede">指令集体系结构（Instruction Set Architecture，ISA）是一层<b>抽象</b>：它规定「指令会修改哪些处理器状态、指令如何编码成字节」，却<b>不说</b>这些指令由什么电路实现。</p>
+
+  <h3>1.1 抽象的层次</h3>
+  <p>课件用一张分层图给 ISA 定位 —— 每往下一层，就多藏起一层细节：</p>
+  <div class="tbl-wrap"><table class="tbl">
+    <tr><th>层次</th><th>谁在这一层工作</th><th>这一层看得见 / 藏住了什么</th></tr>
+    <tr><td><b>应用程序</b></td><td>普通程序员</td><td>怎么用高级语言写程序；完全看不见下面的机器</td></tr>
+    <tr><td><b>编译器 / 操作系统</b></td><td>工具链作者</td><td>把 C 翻译成指令序列、管理内存与进程；看见 ISA 的<b>上层表面</b></td></tr>
+    <tr><td><b>ISA</b></td><td class="mono">← 本讲上半场</td><td><b>契约本身</b>：状态 + 指令 + 编码</td></tr>
+    <tr><td><b>处理器实现（微体系结构）</b></td><td>CPU 设计者</td><td>用什么数据通路、几个阶段执行这些指令（下一讲的 SEQ 就是一种实现）</td></tr>
+    <tr><td><b>逻辑电路</b></td><td>电路设计者</td><td>用什么门与晶体管搭出数据通路（本讲下半场）</td></tr>
+  </table></div>
+
+  <div class="box pad0" style="padding:16px 18px">
+    <div class="ctrls">
+      <span style="font-weight:650;font-size:14.5px">交互：点击抽象层，看它向上暴露什么、向下藏什么</span>
+      <div class="seg" id="isaSeg">
+        <button data-l="app">应用程序</button>
+        <button data-l="compiler">编译器 / OS</button>
+        <button class="on" data-l="isa">ISA</button>
+        <button data-l="uarch">处理器实现</button>
+        <button data-l="circuit">逻辑电路</button>
+      </div>
+    </div>
+    <div id="isaOut"></div>
+  </div>
+
+  <h3>1.2 为什么还要造一个 Y86-64</h3>
+  <p>x86-64 是真实世界的 ISA：为了四十多年的向后兼容，它堆了<b>变长指令、上百种寻址方式、几百条指令</b>。直接拿它讲实现，一页表格都画不下。课件于是定义了教学版指令集 <b>Y86-64</b> —— 状态更少、指令更少、编码更规整，但保留 x86-64 的<b>全部骨架</b>：</p>
+  <div class="tbl-wrap"><table class="tbl">
+    <tr><th></th><th>x86-64（真实）</th><th>Y86-64（教学）</th></tr>
+    <tr><td>指令条数</td><td>几百条，还在增加</td><td><b>12 条</b>（含条件变体共 25 种汇编形式）</td></tr>
+    <tr><td>指令长度</td><td>1–15 字节</td><td><b>1–10 字节</b>，从第一个字节就能算出长度</td></tr>
+    <tr><td>程序寄存器</td><td>16 个通用整数寄存器</td><td><b>15 个</b>（省去 <code>%r15</code>，腾出 <code>0xF</code> 表示「无寄存器」）</td></tr>
+    <tr><td>条件码</td><td>ZF、SF、OF、CF、AF、PF…</td><td><b>ZF、SF、OF</b> 三个（与第 2、5 讲同一套）</td></tr>
+    <tr><td>寄存器编号</td><td class="mono">%rax=0 … %r15=F</td><td><b>与 x86-64 完全一致</b>（<code>%rax</code>=0 … <code>%r14</code>=E）</td></tr>
+  </table></div>
+
+  <div class="box ok"><div class="t">同一份契约，多种实现</div>
+    ISA 合同不变，实现可以随便换：同一份 x86-64 指令集，Intel 与 AMD 各有自己的微体系结构，性能天差地别，但跑同一个二进制结果相同。下一讲要造的 <b>SEQ</b> 是 Y86-64 的一种实现 —— 每个时钟周期走完一条指令；再往后还能把它改造成流水线，指令集一字不改。
+  </div>
+
+  <div class="box"><div class="t">本讲的两半</div>
+    <b>上半场（第 2–5 节）</b>站在 ISA 之上：定义 Y86-64 的状态、指令与编码 —— 这是「合同文本」，第 5 节的解释器是上半场的总结。<b>下半场（第 6–8 节）</b>站在 ISA 之下：用逻辑门和时钟寄存器把合同需要的积木一块块造出来 —— 下一讲的 SEQ 就用这些积木兑现整份合同。
+  </div>
+</section>
+
+<!-- ================= 2 ================= -->
+<section id="s2">
+  <h2>2. 程序员可见状态<span class="srcref">原第 4、10 页</span></h2>
+  <p class="lede">「程序员可见状态」是 ISA 合同的第一条款：程序里所有能被指令直接读写的存储单元。Y86-64 把它列成四块 —— <b>程序寄存器、条件码、程序状态、程序计数器</b>，外加内存。</p>
+
+  <h3>2.1 四块状态</h3>
+  <div class="tbl-wrap"><table class="tbl">
+    <tr><th>状态块</th><th>内容</th><th>谁在用</th></tr>
+    <tr><td><b>RF · 程序寄存器</b></td><td><b>15 个</b> 64 位寄存器：<code>%rax</code> … <code>%r14</code>（省去 <code>%r15</code>）</td><td>所有数据运算的落点</td></tr>
+    <tr><td><b>CC · 条件码</b></td><td>三个单比特：<code>ZF</code>（零）、<code>SF</code>（负）、<code>OF</code>（有符号溢出）</td><td>只由算术 / 逻辑类指令设置，<code>cmovXX</code> / <code>jXX</code> 读它</td></tr>
+    <tr><td><b>Stat · 程序状态</b></td><td>正常（AOK）或异常（HLT 停机 / ADR 坏地址 / INS 坏指令）</td><td>指示处理器要不要继续跑</td></tr>
+    <tr><td><b>PC · 程序计数器</b></td><td>当前（即将执行）指令的地址</td><td>硬件据此取指</td></tr>
+    <tr><td><b>内存</b></td><td>按字节编址的存储阵列，字按<b>小端</b>存放</td><td>既放代码也放数据（冯·诺依曼结构）</td></tr>
+  </table></div>
+
+  <h3>2.2 寄存器编码：4 位 ID<span class="srcref">原第 10 页</span></h3>
+  <p>指令里每个寄存器只占 <b>4 位</b>，编号与 x86-64 完全相同：<code>%rax</code>=0 一路排到 <code>%r14</code>=E。关键是 <b><code>0xF</code> 表示「无寄存器」（no register）</b> —— 这个保留值在指令编码里反复出现：</p>
+  <div class="tbl-wrap"><table class="tbl">
+    <tr><th>ID</th><th>0</th><th>1</th><th>2</th><th>3</th><th>4</th><th>5</th><th>6</th><th>7</th></tr>
+    <tr><td class="mono">寄存器</td><td class="mono">%rax</td><td class="mono">%rcx</td><td class="mono">%rdx</td><td class="mono">%rbx</td><td class="mono">%rsp</td><td class="mono">%rbp</td><td class="mono">%rsi</td><td class="mono">%rdi</td></tr>
+    <tr><th>ID</th><th>8</th><th>9</th><th>A</th><th>B</th><th>C</th><th>D</th><th>E</th><th>F</th></tr>
+    <tr><td class="mono">寄存器</td><td class="mono">%r8</td><td class="mono">%r9</td><td class="mono">%r10</td><td class="mono">%r11</td><td class="mono">%r12</td><td class="mono">%r13</td><td class="mono">%r14</td><td class="mono"><b>无寄存器</b></td></tr>
+  </table></div>
+  <ul>
+    <li><code>irmovq V, rB</code> 没有源寄存器 → rA 字段填 <code>F</code>；</li>
+    <li><code>pushq rA</code> / <code>popq rA</code> 只有一个寄存器 → 另一个字段填 <code>F</code>；</li>
+    <li><code>jXX Dest</code>、<code>call Dest</code>、<code>ret</code> 干脆<b>没有寄存器字节</b>。</li>
+  </ul>
+
+  <div class="box pad0" style="padding:16px 18px">
+    <div class="ctrls">
+      <span style="font-weight:650;font-size:14.5px">交互：Y86-64 状态总览（切换寄存器 / 状态块，看编号与用途）</span>
+      <div class="seg" id="stSeg">
+        <button class="on" data-r="reg0">%rax</button>
+        <button data-r="reg4">%rsp</button>
+        <button data-r="reg7">%rdi</button>
+        <button data-r="reg14">%r14</button>
+        <button data-r="cc">CC</button>
+        <button data-r="stat">Stat</button>
+        <button data-r="pc">PC</button>
+      </div>
+    </div>
+    <div id="stOut"></div>
+  </div>
+
+  <div class="box warn"><div class="t">为什么偏偏省掉 %r15</div>
+    16 个寄存器本来 4 位就能编满 0–15。但 Y86-64 需要<b>一个编码来表示「这个字段没有寄存器」</b>（irmovq、pushq、popq 都要占位）。于是让 <code>0xF</code> 专职「空位」，寄存器只编到 <code>%r14</code> —— 牺牲 1 个寄存器，换来编码里的一个万能「空位」。这个 <code>F</code> 在下一讲的 SEQ 硬件里还有大用：译码阶段见到它就<b>什么都不读、什么都不写</b>。
+  </div>
+</section>
+
+<!-- ================= 3 ================= -->
+<section id="s3">
+  <h2>3. Y86-64 指令集<span class="srcref">原第 5–9、12、15–17、21 页</span></h2>
+  <p class="lede">Y86-64 一共只有 <b>12 条指令</b>（加上条件变体共 25 种汇编形式）。每条指令在编码里由一个 4 位 <b>icode</b>（instruction code）标识 —— 这张表是本讲其余部分的「字典」，后面编码、解码、汇编全靠它。</p>
+
+  <h3>3.1 指令总表<span class="srcref">原第 5–9、12、21 页</span></h3>
+  <p>下表由页面从指令定义<b>现算</b>：字节数、字段布局都是推出来的，不是抄的。点顶部按钮可以按类过滤。</p>
+
+  <div class="box pad0" style="padding:16px 18px">
+    <div class="ctrls">
+      <span style="font-weight:650;font-size:14.5px">交互：指令总表（按类过滤）</span>
+      <div class="seg" id="itSeg">
+        <button class="on" data-c="all">全部</button>
+        <button data-c="move">传送</button>
+        <button data-c="op">算术逻辑</button>
+        <button data-c="jump">跳转</button>
+        <button data-c="proc">栈与过程</button>
+        <button data-c="misc">停机/占位</button>
+      </div>
+    </div>
+    <div id="itOut"></div>
+  </div>
+
+  <h3>3.2 条件变体：cmovXX 与 jXX 共用同一套 ifun<span class="srcref">原第 15–17 页</span></h3>
+  <p><code>cmovXX</code>（icode 2）与 <code>jXX</code>（icode 7）的条件由同一位 4 位 <b>ifun</b>（function code）指定 —— 而且这套条件<b>与第 5 讲的 setX / jX 判据一字不差</b>：<code>le</code> 就是 <code>(SF^OF) | ZF</code>，<code>g</code> 就是 <code>~(SF^OF) &amp; ~ZF</code>。fn=0 是特例：<code>rrmovq rA, rB</code>（无条件传送）其实就是 <code>cmovXX</code> 的 fn=0，<code>jmp</code> 就是 <code>jXX</code> 的 fn=0。</p>
+
+  <div class="box pad0" style="padding:16px 18px">
+    <div class="ctrls">
+      <span style="font-weight:650;font-size:14.5px">交互：点一个条件，看它的判据</span>
+      <div class="seg" id="csSeg">
+        <button class="on" data-f="0">0 · rrmovq / jmp</button>
+        <button data-f="1">1 · le</button>
+        <button data-f="2">2 · l</button>
+        <button data-f="3">3 · e</button>
+        <button data-f="4">4 · ne</button>
+        <button data-f="5">5 · ge</button>
+        <button data-f="6">6 · g</button>
+      </div>
+    </div>
+    <div id="csOut"></div>
+  </div>
+
+  <h3>3.3 从第一个字节就能算出指令长度<span class="srcref">原第 11 页</span></h3>
+  <p>x86-64 的一条指令可能 1–15 字节，且长度要解析完前缀才知道。Y86-64 把长度直接写进 icode：<b>拿到第一个字节，长度立即可知</b> —— 这是下一讲 SEQ 取指阶段能「一口气取满最长指令」的关键。</p>
+  <div class="tbl-wrap"><table class="tbl">
+    <tr><th>长度</th><th>指令</th><th>为什么</th></tr>
+    <tr><td class="mono">1 字节</td><td class="mono">halt · nop · ret</td><td>只有 icode:ifun 一个字节，不带寄存器、不带常数</td></tr>
+    <tr><td class="mono">2 字节</td><td class="mono">rrmovq/cmovXX · OPq · pushq · popq</td><td>icode:ifun + rA:rB，没有常数</td></tr>
+    <tr><td class="mono">9 字节</td><td class="mono">rmmovq · mrmovq · jXX · call</td><td>icode:ifun + rA:rB + 8 字节常数 D / Dest</td></tr>
+    <tr><td class="mono">10 字节</td><td class="mono">irmovq</td><td>icode:ifun + rA(F):rB + 8 字节立即数 V</td></tr>
+  </table></div>
+
+  <div class="box pad0" style="padding:16px 18px">
+    <div class="ctrls">
+      <span style="font-weight:650;font-size:14.5px">交互：首字节 → 长度与字段布局</span>
+      <label class="fld">首字节 <input type="text" id="fbIn" value="30" size="6" spellcheck="false"></label>
+      <button class="p" id="fbGo">分析</button>
+      <button class="sm" data-fb="30">30</button>
+      <button class="sm" data-fb="60">60</button>
+      <button class="sm" data-fb="74">74</button>
+      <button class="sm" data-fb="90">90</button>
+      <button class="sm" data-fb="ff">ff（非法）</button>
+    </div>
+    <div id="fbOut"></div>
+  </div>
+
+  <div class="box"><div class="t">与 x86-64 相同的地方</div>
+    寄存器编号与 x86-64 完全一致（第 2 节已见）；条件码也是同一套 <code>ZF/SF/OF</code>、同一套判据公式。所以第 5 讲里 <code>setg / jle / cmovg</code> 的全部结论<b>原封不动搬进 Y86-64</b> —— 变的只是编码方式和指令条数。
+  </div>
+</section>
+
+<!-- ================= 4 ================= -->
+<section id="s4">
+  <h2>4. 指令编码：从汇编到字节<span class="srcref">原第 10–11、13–14 页</span></h2>
+  <p class="lede">每条指令 = 一小段字节。<b>首字节 = icode（高 4 位）+ ifun（低 4 位）</b>；带寄存器的指令再加一个「寄存器字节」= <b>rA（高 4 位）+ rB（低 4 位）</b>；带常数的指令再加 <b>8 字节小端</b>的 V 或 D。</p>
+
+  <h3>4.1 字节布局<span class="srcref">原第 10–11、13–14 页</span></h3>
+  <div class="formula">icode:ifun&nbsp;&nbsp;[rA:rB]&nbsp;&nbsp;[V / D · 8 字节小端]</div>
+  <p>课件第 11 页的例子：<code>addq rA, rB</code> 编码为 <b>6 0 rA rB</b> —— icode=6、ifun=0（addq），两个寄存器挤在一个字节里。下面是三条常用指令的完整编码（页面现算）：</p>
+  <div class="tbl-wrap"><table class="tbl">
+    <tr><th>汇编</th><th>首字节</th><th>寄存器字节</th><th>常数（小端 8 字节）</th><th>合计</th></tr>
+    <tr><td class="mono">addq %rbx, %rsi</td><td class="mono">60</td><td class="mono">36 <span style="color:var(--muted)">（rA=3(%rbx), rB=6(%rsi)）</span></td><td>—</td><td class="mono"><b>2 字节</b></td></tr>
+    <tr><td class="mono">irmovq $15, %rbx</td><td class="mono">30</td><td class="mono">F3 <span style="color:var(--muted)">（rA=F, rB=3(%rbx)）</span></td><td class="mono">0F 00 00 00 00 00 00 00</td><td class="mono"><b>10 字节</b></td></tr>
+    <tr><td class="mono">rmmovq %rsp, 8(%rbx)</td><td class="mono">40</td><td class="mono">45 <span style="color:var(--muted)">（rA=4(%rsp), rB=5(%rbx)）</span></td><td class="mono">08 00 00 00 00 00 00 00</td><td class="mono"><b>9 字节</b></td></tr>
+  </table></div>
+
+  <div class="box pad0" style="padding:16px 18px">
+    <div class="ctrls">
+      <span style="font-weight:650;font-size:14.5px">交互：指令编码器（选指令 → 现算字节）</span>
+      <label class="fld">指令
+        <select id="enI">
+          <option value="0.0">halt</option>
+          <option value="1.0">nop</option>
+          <option value="2.0">rrmovq rA, rB</option>
+          <option value="2.1">cmovle rA, rB</option>
+          <option value="2.2">cmovl rA, rB</option>
+          <option value="2.3">cmove rA, rB</option>
+          <option value="2.4">cmovne rA, rB</option>
+          <option value="2.5">cmovge rA, rB</option>
+          <option value="2.6">cmovg rA, rB</option>
+          <option value="3.0">irmovq V, rB</option>
+          <option value="4.0">rmmovq rA, D(rB)</option>
+          <option value="5.0">mrmovq D(rB), rA</option>
+          <option value="6.0">addq rA, rB</option>
+          <option value="6.1">subq rA, rB</option>
+          <option value="6.2">andq rA, rB</option>
+          <option value="6.3">xorq rA, rB</option>
+          <option value="7.0">jmp Dest</option>
+          <option value="7.1">jle Dest</option>
+          <option value="7.2">jl Dest</option>
+          <option value="7.3">je Dest</option>
+          <option value="7.4">jne Dest</option>
+          <option value="7.5">jge Dest</option>
+          <option value="7.6">jg Dest</option>
+          <option value="8.0">call Dest</option>
+          <option value="9.0">ret</option>
+          <option value="10.0">pushq rA</option>
+          <option value="11.0">popq rA</option>
+        </select>
+      </label>
+      <label class="fld">rA <select id="enA"></select></label>
+      <label class="fld">rB <select id="enB"></select></label>
+      <label class="fld">V / D <input type="text" id="enV" value="15" size="12" spellcheck="false"></label>
+      <button class="p" id="enGo">编码</button>
+      <button class="sm" data-en="i=6.0;a=3;b=6;v=">课件例：addq %rbx,%rsi</button>
+      <button class="sm" data-en="i=3.0;a=15;b=3;v=15">irmovq $15,%rbx</button>
+      <button class="sm" data-en="i=4.0;a=4;b=5;v=8">rmmovq %rsp,8(%rbx)</button>
+    </div>
+    <div id="enOut"></div>
+  </div>
+
+  <div class="box pad0" style="padding:16px 18px">
+    <div class="ctrls">
+      <span style="font-weight:650;font-size:14.5px">交互：字节解码器（输入十六进制字节 → 反推出指令）</span>
+      <label class="fld">字节 <input type="text" id="deIn" value="30 f3 0f 00 00 00 00 00 00 00" size="30" spellcheck="false"></label>
+      <button class="p" id="deGo">解码</button>
+      <button class="sm" data-de="60 36">60 36</button>
+      <button class="sm" data-de="40 45 08 00 00 00 00 00 00">40 45 08…</button>
+      <button class="sm" data-de="a0 0f">a0 0f</button>
+      <button class="sm" data-de="ff 00">ff 00（非法 icode）</button>
+    </div>
+    <div id="deOut"></div>
+  </div>
+
+  <div class="box ok"><div class="t">编码器与解码器互为逆运算</div>
+    本页的编码器把汇编变字节，解码器把字节变汇编。<b>两者互相验证</b>：任意一条合法指令，先编码再解码必须还原原文；解码时遇到非法 icode、缺字节、错位的寄存器号都会给出红色提示而不是崩溃。这一对工具的对应关系已用程序做了大规模交叉验证（见页脚）。
+  </div>
+
+  <div class="box warn"><div class="t">常数是小端，别忘了</div>
+    V 与 D 都按<b>小端</b>（little-endian）写入：低字节在低地址。<code>irmovq $15, %rbx</code> 的常数在内存里是 <code>0F 00 00 00 00 00 00 00</code> —— 第 2 讲讲过的字节序在这里正式派上用场。第 5 节的汇编器与解释器读写常数都按小端处理，页面内现算。
+  </div>
+</section>
+
+<!-- ================= 5 ================= -->
+<section id="s5">
+  <h2>5. Y86-64 程序：汇编、编码、执行<span class="srcref">原第 18–20、23–36 页</span></h2>
+  <p class="lede">把指令表拼起来就是一个完整的程序。这一节做两件事：<b>把一段 Y86-64 汇编程序编码成字节序列</b>（带上地址），再把编码结果<b>喂给一个页面内的 Y86-64 解释器</b>单步执行 —— 下一讲的 SEQ 硬件做的正是同样的事情，只是用电路。</p>
+
+  <h3>5.1 示例程序：数组求和</h3>
+  <p>下面的程序数出一个数组的和：用 <code>andq %r10,%r10</code> 测试元素个数、<code>je</code> 跳出循环，循环体内 <code>mrmovq</code> 取元素、<code>addq</code> 累加。这是课件第 26 页代码生成示例的同款写法（循环测试 + 取数 + 累加）。<b>本页示例的初值是为教学构造的</b>（数组 <code>0x11, 0x22, 0x33</code>，答案 <code>0x66</code> 可心算）—— 但编码与执行全部由页面现算。</p>
+
+  <div class="box pad0" style="padding:16px 18px">
+    <div class="ctrls">
+      <span style="font-weight:650;font-size:14.5px">交互：Y86-64 汇编器（多行汇编 → 地址 + 字节）</span>
+      <label class="fld">起始地址 <input type="text" id="peBase" value="0x100" size="9" spellcheck="false"></label>
+      <button class="p" id="peGo">汇编</button>
+      <button class="sm" id="peDemo">课件式示例（求和）</button>
+      <button class="sm" id="peClear">清空</button>
+    </div>
+    <label class="fld" style="display:block"><textarea id="peIn" rows="14" style="width:100%;font-size:13.5px;line-height:1.6" spellcheck="false"></textarea></label>
+    <div id="peOut"></div>
+  </div>
+
+  <h3>5.2 页面内的 Y86-64 解释器</h3>
+  <p>「汇编」之后按 <b>载入并运行</b>，编码出的字节就成了内存里的程序：程序从 <code>0x100</code> 开始，数据数组放在 <code>0x200</code>，栈从 <code>0x300</code> 向下长。解释器每一步：<b>取指 → 译码 → 执行 → 更新状态</b>，并把每步的 PC、寄存器变化、条件码、Stat 都记录下来。<b>它不是靠 if-else 抄表格，而是严格按 ISA 语义现算的</b> —— 所以你在这里看到的每一步，就是下一讲 SEQ 硬件将要走的每一步。</p>
+
+  <div class="box pad0" style="padding:16px 18px">
+    <div class="ctrls">
+      <span style="font-weight:650;font-size:14.5px">交互：Y86-64 解释器（单步 / 运行到底）</span>
+      <button class="p" id="yrGo">载入并运行到底</button>
+      <button class="sm" id="yrNext">单步</button>
+      <button class="sm" id="yrReset">重置</button>
+    </div>
+    <div id="yrOut"></div>
+  </div>
+
+  <div class="box ok"><div class="t">为什么这个解释器可信</div>
+    它与 4.1 的编码器共用同一套指令定义（一个数据源，两份渲染）；执行语义与下一讲的 SEQ 阶段表逐条对应；页面加载时还会做<b>自检</b>：把示例程序跑一遍，断言最后 <code>%rax = 0x66</code>、<code>Stat = HLT</code>。所有 64 位算术用 BigInt 按「模 2<sup>64</sup>」现算，条件码公式与第 2、5 讲完全一致。
+  </div>
+
+  <div class="box"><div class="t">栈是怎么转起来的</div>
+    示例程序最后是一条 <code>ret</code>：它弹出栈顶的返回地址跳过去。模拟器在载入时把「程序结束后的 <code>halt</code> 地址」压在栈底（<code>0x300</code> 处 8 字节小端），初始 <code>%rsp = 0x300</code> —— 于是 <code>ret</code> 精确跳到 <code>halt</code>，Stat 变成 <b>HLT</b>，处理器安心停机。第 5 讲讲过的 call/ret 约定，在 Y86-64 里一条不少。
+  </div>
+
+  <h3>5.3 一点视角：RISC 与 CISC<span class="srcref">原第 32–36 页</span></h3>
+  <p>Y86-64 学的是 <b>RISC</b> 的规整，x86-64 长成了 <b>CISC</b> 的模样。课件用 MIPS（最经典的 RISC）对照了两种哲学：</p>
+  <div class="tbl-wrap"><table class="tbl">
+    <tr><th></th><th>RISC（MIPS）</th><th>CISC（x86-64）</th></tr>
+    <tr><td>指令长度</td><td><b>定长</b>（MIPS 全部 4 字节）</td><td>变长（1–15 字节）</td></tr>
+    <tr><td>寄存器个数</td><td>32 个（<code>$0</code>…<code>$31</code>）</td><td>16 个通用整数寄存器</td></tr>
+    <tr><td>访存指令</td><td><b>只有 load / store 能碰内存</b></td><td>算术指令大多也能带内存操作数</td></tr>
+    <tr><td>指令功能</td><td>一条指令做一件事</td><td>一条指令能做很多事（带字符串、重复前缀…）</td></tr>
+    <tr><td>编译器负担</td><td>重（多条简单指令拼复杂操作）</td><td>轻（一条复杂指令顶一段）</td></tr>
+  </table></div>
+  <div class="box"><div class="t">约定俗成的分工</div>
+    RISC 的寄存器还按用途分组：<code>$t0–$t9</code> 是<b>临时寄存器</b>（caller-save，被调过程可以随便覆盖），<code>$s0–$s7</code> 是<b>保留寄存器</b>（callee-save，用了必须恢复），<code>$sp</code> 是栈指针、<code>$ra</code> 存返回地址 —— 这套约定正是第 6 讲「过程调用」要讲的管理规则在 RISC 上的样子。
+  </div>
+</section>
+
+<!-- ================= 6 ================= -->
+<section id="s6">
+  <h2>6. 逻辑设计：门与组合电路<span class="srcref">原第 38–47 页</span></h2>
+  <p class="lede">下半场开始。<b>逻辑门（gate）</b>是硬件世界的原子：与、或、非。把它们连起来、不带任何反馈，就得到<b>组合电路（combinational circuit）</b> —— 输出永远是输入的函数，输入一变，输出跟着变，没有任何记忆。</p>
+
+  <h3>6.1 门：真值表现算<span class="srcref">原第 39–41 页</span></h3>
+  <p>一个 <code>n</code> 输入的门由 <code>2<sup>n</sup></code> 行真值表完全定义。下面拨动输入，看每种门的输出 —— 真值表也一并现算、当前输入组合所在行高亮：</p>
+
+  <div class="box pad0" style="padding:16px 18px">
+    <div class="ctrls">
+      <span style="font-weight:650;font-size:14.5px">交互：拨动输入，看门与真值表</span>
+      <div class="seg" id="gtSeg">
+        <button class="on" data-g="AND">AND</button>
+        <button data-g="OR">OR</button>
+        <button data-g="XOR">XOR</button>
+        <button data-g="NAND">NAND</button>
+        <button data-g="NOR">NOR</button>
+      </div>
+      <button class="sm" id="gtA">A = 0</button>
+      <button class="sm" id="gtB">B = 0</button>
+    </div>
+    <div id="gtOut"></div>
+  </div>
+
+  <h3>6.2 位级多路选择器（MUX）<span class="srcref">原第 43–45 页</span></h3>
+  <p>多路选择器（multiplexer，MUX）根据选择信号 <code>s</code> 决定输出接哪一路输入，是组合电路里最重要的构件。位级 2 选 1 的定义只有一行 HCL：</p>
+  <div class="formula">out = s ? b : a&nbsp;&nbsp;<span style="font-family:var(--font-sans);font-size:14px;color:var(--muted)">—— s 为 1 选 b，s 为 0 选 a</span></div>
+
+  <div class="box pad0" style="padding:16px 18px">
+    <div class="ctrls">
+      <span style="font-weight:650;font-size:14.5px">交互：位级 2 选 1 MUX（拨 a / b / s）</span>
+      <button class="sm" id="mxA">a = 0</button>
+      <button class="sm" id="mxB">b = 0</button>
+      <button class="sm" id="mxS">s = 0</button>
+    </div>
+    <div id="mxOut"></div>
+  </div>
+
+  <h3>6.3 字级逻辑：64 位一起算<span class="srcref">原第 46–47 页</span></h3>
+  <p>把 64 个门并排，一次就能对整个字运算。Y86-64 的字长是 64 位，所以字级组合电路一次处理 8 字节。两个最基本的字级构件：</p>
+  <ul>
+    <li><b>字相等比较器</b>：<code>eq = (A == B)</code> —— 64 个 XOR 加一个 64 输入 NOR，输出 1 位；</li>
+    <li><b>字级 MUX</b>：<code>out = s ? B : A</code> —— 64 个位级 MUX 并排，共享同一个 <code>s</code>。下一讲 SEQ 里寄存器文件的「写哪个」、ALU 的「算哪种」全靠它。</li>
+  </ul>
+
+  <div class="box pad0" style="padding:16px 18px">
+    <div class="ctrls">
+      <span style="font-weight:650;font-size:14.5px">交互：8 位字相等 + 字级 MUX</span>
+      <label class="fld">A <input type="text" id="wmA" value="0x5a" size="10" spellcheck="false"></label>
+      <label class="fld">B <input type="text" id="wmB" value="0x5a" size="10" spellcheck="false"></label>
+      <button class="sm" id="wmS">s = 0</button>
+      <button class="p" id="wmGo">计算</button>
+      <button class="sm" data-wm="a=0xff;b=0xff">A=B</button>
+      <button class="sm" data-wm="a=0xff;b=0x00">A≠B</button>
+    </div>
+    <div id="wmOut"></div>
+  </div>
+
+  <div class="box warn"><div class="t">组合电路里不能有环</div>
+    组合电路的输出必须是输入的「纯函数」—— 一旦把输出绕回输入，电路就拥有了记忆，时序也随之失控。<b>记忆必须显式地放进时钟寄存器</b>（第 8 节）。这条规则是下一讲 SEQ 数据通路能画成「组合块 + 时钟寄存器交替」的前提。
+  </div>
+</section>
+
+<!-- ================= 7 ================= -->
+<section id="s7">
+  <h2>7. ALU 与条件码：指令与电路的握手点<span class="srcref">原第 22、48 页</span></h2>
+  <p class="lede">算术逻辑单元（ALU）是处理器里真正的「计算器」。Y86-64 的 ALU 只做四种运算 —— <b>add、sub、and、xor</b>，而这四种运算的编号 0–3，<b>正好就是 <code>OPq</code> 指令编码里的 ifun</b>：ISA 与硬件在这里直接握手。</p>
+
+  <h3>7.1 一条 OPq 在 ALU 里发生什么</h3>
+  <div class="formula">valE = valB OP valA&nbsp;&nbsp;<span style="font-family:var(--font-sans);font-size:14px;color:var(--muted)">—— 注意操作数顺序：目的寄存器 rB 在左</span></div>
+  <p>ALU 算完，还要顺手产出三个条件码（setCC）—— 规则与第 2、5 讲逐字相同：</p>
+  <div class="tbl-wrap"><table class="tbl">
+    <tr><th>条件码</th><th>何时置 1</th><th>说人话</th></tr>
+    <tr><td class="mono">ZF</td><td>结果（按 64 位）为 0</td><td>结果正好是零</td></tr>
+    <tr><td class="mono">SF</td><td>结果的最高位是 1</td><td>按有符号解释是负数</td></tr>
+    <tr><td class="mono">OF</td><td>add：两个同号数相加得反号；sub：两个异号数相减得与<b>减数</b>同号的数</td><td>有符号溢出</td></tr>
+  </table></div>
+  <p style="font-size:14.5px;color:var(--muted)">and / xor 一律把 OF 清 0 —— 逻辑运算不会「溢出」。这套公式与第 5 讲 <code>addq/subq</code> 的标志位规则完全一致，Y86-64 没有引入任何新东西。</p>
+
+  <div class="box pad0" style="padding:16px 18px">
+    <div class="ctrls">
+      <span style="font-weight:650;font-size:14.5px">交互：64 位 ALU + setCC 模拟器</span>
+      <label class="fld">valA <input type="text" id="alA" value="0x7fffffffffffffff" size="20" spellcheck="false"></label>
+      <label class="fld">valB <input type="text" id="alB" value="1" size="20" spellcheck="false"></label>
+      <label class="fld">OP
+        <select id="alOp">
+          <option value="0" selected>addq</option>
+          <option value="1">subq</option>
+          <option value="2">andq</option>
+          <option value="3">xorq</option>
+        </select>
+      </label>
+      <button class="p" id="alGo">计算</button>
+      <button class="sm" data-al="a=0x7fffffffffffffff;b=1;o=0">TMax+1（溢出）</button>
+      <button class="sm" data-al="a=0;b=0;o=3">xorq 清零</button>
+      <button class="sm" data-al="a=1;b=0;o=1">0−1（借位翻绕）</button>
+    </div>
+    <div id="alOut"></div>
+  </div>
+
+  <div class="box ok"><div class="t">ifun 直接当控制信号</div>
+    <code>OPq</code> 编码里的 fn 字段（0–3）从指令内存里取出来后<b>原封不动接到 ALU 的控制端</b>：编码即控制。这是 Y86-64 编码设计的漂亮之处 —— 下一讲的 SEQ 数据通路里你会看到这根线真的存在。
+  </div>
+
+  <div class="box"><div class="t">CMOV 与 JXX 在这里分岔</div>
+    条件传送与条件跳转读的都是同一组条件码，判据公式与第 5 讲的表格一模一样（<code>le = (SF^OF)|ZF</code> 等）。差别只在于失败时的动作：<code>cmovXX</code> 失败就<b>不写回</b>（照常执行下一条），<code>jXX</code> 失败就<b>选 valP</b>（顺序下一条）而不是 valC。
+  </div>
+</section>
+
+<!-- ================= 8 ================= -->
+<section id="s8">
+  <h2>8. 时钟与存储：让电路拥有记忆<span class="srcref">原第 49–53、58–64 页</span></h2>
+  <p class="lede">组合电路没有记忆。要记住 PC、寄存器、条件码，需要<b>时钟寄存器（clocked register）</b>：输入叫 D，输出叫 Q，<b>只在时钟上升沿把 D 载入 Q</b>，其余时间 Q 纹丝不动。</p>
+
+  <h3>8.1 时钟寄存器：一个边沿，一次载入<span class="srcref">原第 49–51 页</span></h3>
+  <div class="formula">每个时钟上升沿：Q ← D&nbsp;&nbsp;<span style="font-family:var(--font-sans);font-size:14px;color:var(--muted)">—— 边沿之间无论 D 怎么变，Q 都保持</span></div>
+  <p>下面的演示把这个动作拆成两步：先「写输入」（改 D，此时 Q 不动），再「来一个时钟沿」（Q 变成 D）。SEQ 的 PC、CC、Stat 和寄存器文件都是这样的时钟寄存器 —— <b>整条指令的状态更新都发生在同一个时钟沿</b>。</p>
+
+  <div class="box pad0" style="padding:16px 18px">
+    <div class="ctrls">
+      <span style="font-weight:650;font-size:14.5px">交互：时钟寄存器（改输入 → 打时钟沿）</span>
+      <label class="fld">新 D 值 <input type="text" id="ckIn" value="0x1234" size="12" spellcheck="false"></label>
+      <button class="p" id="ckSet">写输入 D</button>
+      <button class="p" id="ckTick">时钟沿 ↑</button>
+      <button class="sm" id="ckReset">复位</button>
+    </div>
+    <div id="ckOut"></div>
+  </div>
+
+  <h3>8.2 内存：按地址读，按边沿写<span class="srcref">原第 52–53、58–64 页</span></h3>
+  <p>内存是<b>按字节编址</b>的存储阵列：读是组合的（地址一给，数据就出来，不占时钟沿），写是时序的（地址、数据、写信号在时钟沿一起生效）。写一个 8 字节的字，按<b>小端</b>落进 8 个连续字节：</p>
+
+  <div class="box pad0" style="padding:16px 18px">
+    <div class="ctrls">
+      <span style="font-weight:650;font-size:14.5px">交互：内存读写（8 字节一个字，小端）</span>
+      <label class="fld">地址 <input type="text" id="mrA" value="0x200" size="10" spellcheck="false"></label>
+      <label class="fld">写入值 <input type="text" id="mrV" value="0x1122334455667788" size="20" spellcheck="false"></label>
+      <button class="p" id="mrWr">写入（时钟沿）</button>
+      <button class="sm" id="mrRd">读回</button>
+      <button class="sm" id="mrDump">查看 0x200–0x207</button>
+    </div>
+    <div id="mrOut"></div>
+  </div>
+
+  <div class="box warn"><div class="t">为什么需要时钟：延迟的世界</div>
+    真实电路里信号传播需要时间：一个 64 位加法器的延迟可能是几百皮秒。时钟周期必须<b>长于数据通路上最慢的路径</b>，否则边沿到来时组合逻辑还没算完，寄存器就会锁进错误中间值。下一讲的 SEQ 每个时钟周期走完一条指令 —— 时钟周期由「最慢那条指令的最长路径」决定，这就是顺序实现慢的原因，也是流水线（第 11 讲）要解决的问题。
+  </div>
+</section>
+
+<!-- ================= 9 ================= -->
+<section id="s9">
+  <h2>9. 总结与测验<span class="srcref">原第 37、56 页</span></h2>
+  <p class="lede">把本讲的合同条款与积木清单各收一句，然后做一遍测验 —— 题目全部来自本讲的表格与交互组件。</p>
+
+  <h3>9.1 一张表收束本讲</h3>
+  <div class="tbl-wrap"><table class="tbl">
+    <tr><th>主题</th><th>一句话带走</th></tr>
+    <tr><td><b>ISA</b></td><td>软件与硬件的契约：规定状态与指令语义、指令的字节编码，不规定电路怎么搭</td></tr>
+    <tr><td><b>Y86-64 状态</b></td><td>15 个寄存器 + ZF/SF/OF + Stat + PC，外加小端字节编址内存</td></tr>
+    <tr><td><b>指令与编码</b></td><td>12 条指令、25 种形式；首字节 = icode:ifun，长度 1–10 字节当场可算</td></tr>
+    <tr><td><b>逻辑积木</b></td><td>组合电路（门 / MUX / ALU）负责算，时钟寄存器负责记，边沿统一更新</td></tr>
+    <tr><td><b>下一步</b></td><td>下一讲：用这些积木搭出 SEQ —— 每个时钟周期兑现一条指令</td></tr>
+  </table></div>
+
+  <h3>9.2 测验</h3>
+  <p>每道题选完立刻判分并给出解析。答错不要紧 —— 解析里写清了依据在本讲的哪一节。</p>
+  <div class="box pad0" style="padding:16px 18px">
+    <div class="ctrls">
+      <span style="font-weight:650;font-size:14.5px">交互：本讲测验</span>
+      <button class="sm" id="qzReset">重来</button>
+    </div>
+    <div id="qzOut"></div>
+  </div>
+</section>
+</main>
+
+</div>
+
+<div class="footer">
+  本页由原课件 PDF 翻译整理而成 · 数值计算与可视化均为页面内实时计算 · 可对照原课件页码阅读。
+</div>
+<button class="totop" id="toTop">↑ 顶部</button>
+
+<script>
+"use strict";
+/* ============================================================
+   处理器体系结构：ISA 与逻辑设计 · 交互式课件 —— 全部逻辑
+   约定：
+   - 所有计算在页面内实时完成；无效输入必须给出提示而不是抛错。
+   - 64 位运算一律用 BigInt（模 2^64），绝不用 Number。
+   - 指令定义（icode/ifun/长度/字段）只有一份，编码器、
+     解码器、汇编器、解释器全部共用 —— 互为验证。
+   ============================================================ */
+
+const $  = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+const MASK64 = (1n << 64n) - 1n;
+const SIGN64 = 1n << 63n;
+const u64  = v => BigInt.asUintN(64, BigInt(v));
+const s64  = v => BigInt.asIntN(64, u64(v));
+const hexB = b => Number(b & 0xff).toString(16).toUpperCase().padStart(2, '0');
+const hexQ = v => '0x' + u64(v).toString(16).toUpperCase().padStart(16, '0');
+const hexT = v => '0x' + u64(v).toString(16).toUpperCase();
+const decS = v => s64(v).toLocaleString('en-US');
+
+const badBox = msg => `<div class="box bad"><div class="t">输入无效</div>${esc(msg)}</div>`;
+
+/** 解析整数：0x… / 0b… / 十进制 / 负数 → BigInt（不截断）| null */
+function parseIntArg(str) {
+  const t = String(str).trim().replace(/[_,\s]/g, '');
+  if (!t) return null;
+  const neg = t.startsWith('-');
+  const body = neg ? t.slice(1) : t;
+  let m;
+  if ((m = body.match(/^0[xX]([0-9a-fA-F]+)$/))) {
+    if (!m[1].length) return null;
+    const v = BigInt('0x' + m[1]);
+    return neg ? -v : v;
+  }
+  if ((m = body.match(/^0[bB]([01]+)$/))) {
+    if (!m[1].length) return null;
+    const v = BigInt('0b' + m[1]);
+    return neg ? -v : v;
+  }
+  if ((m = body.match(/^([0-9]+)$/))) {
+    const v = BigInt(m[1]);
+    return neg ? -v : v;
+  }
+  return null;
+}
+/** 解析 0–255 字节；也接受 0x… 形式。返回 Number（字节永远在安全整数范围内） */
+function parseByte(str) {
+  const v = parseIntArg(str);
+  if (v === null || v < 0n || v > 255n) return null;
+  return Number(v);
+}
+/** 把 data-* 里的 "k=v;k=v" 解析成对象 */
+function kvAttr(str) {
+  const out = {};
+  String(str).split(';').forEach(part => {
+    const i = part.indexOf('=');
+    if (i > 0) out[part.slice(0, i).trim()] = part.slice(i + 1).trim();
+  });
+  return out;
+}
+
+/* ============================================================
+   Y86-64 指令定义 —— 单一事实来源
+   ============================================================ */
+const Y86_REGS = [
+  ['%rax', 0], ['%rcx', 1], ['%rdx', 2], ['%rbx', 3],
+  ['%rsp', 4], ['%rbp', 5], ['%rsi', 6], ['%rdi', 7],
+  ['%r8', 8], ['%r9', 9], ['%r10', 10], ['%r11', 11],
+  ['%r12', 12], ['%r13', 13], ['%r14', 14], ['F（无寄存器）', 15],
+];
+function regName(id) {
+  const r = Y86_REGS.find(x => x[1] === id);
+  return r ? r[0] : '?';
+}
+/* icode → 定义。len：指令总字节数；reg：有寄存器字节；cnst：有 8 字节常数 */
+const Y86_INS = {
+  0:  { name: 'halt',   cls: 'misc', len: 1,  reg: false, cnst: false, ifun: ['halt'] },
+  1:  { name: 'nop',    cls: 'misc', len: 1,  reg: false, cnst: false, ifun: ['nop'] },
+  2:  { name: 'cmovXX', cls: 'move', len: 2,  reg: true,  cnst: false,
+        ifun: ['rrmovq', 'cmovle', 'cmovl', 'cmove', 'cmovne', 'cmovge', 'cmovg'] },
+  3:  { name: 'irmovq', cls: 'move', len: 10, reg: true,  cnst: true,  ifun: ['irmovq'] },
+  4:  { name: 'rmmovq', cls: 'move', len: 9,  reg: true,  cnst: true,  ifun: ['rmmovq'] },
+  5:  { name: 'mrmovq', cls: 'move', len: 9,  reg: true,  cnst: true,  ifun: ['mrmovq'] },
+  6:  { name: 'OPq',    cls: 'op',   len: 2,  reg: true,  cnst: false,
+        ifun: ['addq', 'subq', 'andq', 'xorq'] },
+  7:  { name: 'jXX',    cls: 'jump', len: 9,  reg: false, cnst: true,
+        ifun: ['jmp', 'jle', 'jl', 'je', 'jne', 'jge', 'jg'] },
+  8:  { name: 'call',   cls: 'proc', len: 9,  reg: false, cnst: true,  ifun: ['call'] },
+  9:  { name: 'ret',    cls: 'proc', len: 1,  reg: false, cnst: false, ifun: ['ret'] },
+  10: { name: 'pushq',  cls: 'proc', len: 2,  reg: true,  cnst: false, ifun: ['pushq'] },
+  11: { name: 'popq',   cls: 'proc', len: 2,  reg: true,  cnst: false, ifun: ['popq'] },
+};
+const CLS_NAME = { all: '全部', move: '传送', op: '算术逻辑', jump: '跳转', proc: '栈与过程', misc: '停机/占位' };
+/* icode 的汇编字段顺序说明（供总表渲染） */
+const ICODE_FIELDS = {
+  0: 'icode:ifun',
+  1: 'icode:ifun',
+  2: 'icode:ifun · rA:rB',
+  3: 'icode:ifun · rA:rB · V',
+  4: 'icode:ifun · rA:rB · D',
+  5: 'icode:ifun · rA:rB · D',
+  6: 'icode:ifun · rA:rB',
+  7: 'icode:ifun · Dest',
+  8: 'icode:ifun · Dest',
+  9: 'icode:ifun',
+  10: 'icode:ifun · rA:F',
+  11: 'icode:ifun · rA:F',
+};
+
+const STAT_INFO = {
+  1: ['AOK', '正常操作，继续执行下一条指令'],
+  2: ['HLT', '遇到 halt 指令，处理器停机'],
+  3: ['ADR', '访存地址非法（取指或读写越过合法范围）'],
+  4: ['INS', '非法指令（icode 不在指令表里）'],
+};
+
+/* ---------- 条件码与条件判据（与第 2、5 讲同一套公式） ---------- */
+/** fn: 0 add / 1 sub / 2 and / 3 xor —— 直接就是 ALU 控制信号 */
+function aluOp64(fn, a, b) {
+  a = u64(a); b = u64(b);
+  let res, of = 0, note = '';
+  if (fn === 0) {
+    res = u64(a + b);
+    const sa = a >> SIGN64 ? 1 : 0, sb = b >> SIGN64 ? 1 : 0, sr = res >> SIGN64 ? 1 : 0;
+    of = (sa === sb && sr !== sa) ? 1 : 0;
+    note = of ? '两个同号数相加得到反号 —— 有符号溢出' : '没有出现「同号相加得反号」';
+  } else if (fn === 1) {
+    res = u64(a - b);
+    const sa = a >> SIGN64 ? 1 : 0, sb = b >> SIGN64 ? 1 : 0, sr = res >> SIGN64 ? 1 : 0;
+    of = (sa !== sb && sr !== sa) ? 1 : 0;
+    note = of ? '两个异号数相减，结果却与减数同号 —— 有符号溢出' : '没有有符号溢出';
+  } else {
+    res = fn === 2 ? u64(a & b) : u64(a ^ b);
+    of = 0;
+    note = '逻辑运算一律把 OF 清 0';
+  }
+  return { res, zf: res === 0n ? 1 : 0, sf: Number(res >> 63n), of, note };
+}
+/** cmovXX / jXX 共用的条件判据（fn 0–6） */
+const COND_EXPR = [
+  ['rrmovq / jmp', '1', '无条件：总是成立'],
+  ['le', '(SF^OF) | ZF', '有符号 ≤'],
+  ['l', 'SF ^ OF', '有符号 <'],
+  ['e', 'ZF', '相等（结果为零）'],
+  ['ne', '~ZF', '不等（结果非零）'],
+  ['ge', '~(SF^OF)', '有符号 ≥'],
+  ['g', '~(SF^OF) & ~ZF', '有符号 >'],
+];
+function condByFn(fn, cc) {
+  const { zf, sf, of } = cc;
+  switch (fn) {
+    case 0: return true;
+    case 1: return ((sf ^ of) | zf) === 1;
+    case 2: return (sf ^ of) === 1;
+    case 3: return zf === 1;
+    case 4: return zf !== 1;
+    case 5: return !((sf ^ of) === 1);
+    case 6: return !((sf ^ of) === 1) && zf !== 1;
+    default: return false;
+  }
+}
+
+/* ---------- 编码 / 解码 ---------- */
+function encQuad(v) {
+  const b = [];
+  let x = u64(v);
+  for (let i = 0; i < 8; i++) { b.push(Number(x & 0xffn)); x >>= 8n; }
+  return b;                       /* 小端：低字节在前 */
+}
+function decQuad(bytes) {
+  let x = 0n;
+  for (let i = 7; i >= 0; i--) x = (x << 8n) | BigInt(bytes[i] || 0);
+  return u64(x);
+}
+/** 编码一条指令。val 为 BigInt；返回 {ok, bytes, err} */
+function y86Encode(icode, ifun, rA, rB, val) {
+  const def = Y86_INS[icode];
+  if (!def) return { ok: false, err: `非法 icode ${icode}（合法范围 0–11）` };
+  if (ifun == null || ifun < 0 || ifun >= def.ifun.length)
+    return { ok: false, err: `ifun ${ifun} 超界：${def.name} 只有 ${def.ifun.length} 个取值` };
+  if (def.reg && (rA == null || rB == null))
+    return { ok: false, err: '这条指令需要 rA / rB 两个寄存器号（0–15）' };
+  const bytes = [(icode << 4) | ifun];
+  if (def.reg) bytes.push(((rA & 15) << 4) | (rB & 15));
+  if (def.cnst) encQuad(val).forEach(b => bytes.push(b));
+  return { ok: true, bytes, len: bytes.length };
+}
+/** 解码字节序列 → 指令结构。返回 {ok, ...} 或 {ok:false, err, first} */
+function y86Decode(bytes) {
+  if (!bytes || !bytes.length) return { ok: false, err: '没有字节可解码' };
+  const first = bytes[0];
+  const icode = first >> 4, ifun = first & 15;
+  const def = Y86_INS[icode];
+  if (!def) return { ok: false, err: `非法 icode ${icode}（首字节 0x${hexB(first)}）—— Stat 会置成 INS`, first };
+  if (ifun >= def.ifun.length)
+    return { ok: false, err: `非法 ifun ${ifun}：${def.name} 只有 fn=0…${def.ifun.length - 1}`, first };
+  if (bytes.length < def.len)
+    return { ok: false, err: `字节不够：${def.name} 需要 ${def.len} 字节，只给了 ${bytes.length} 字节`, first };
+  let rA = null, rB = null, val = null;
+  if (def.reg) { rA = (bytes[1] >> 4) & 15; rB = bytes[1] & 15; }
+  if (def.cnst) val = decQuad(bytes.slice(def.reg ? 2 : 1));
+  return { ok: true, icode, ifun, def, rA, rB, val, len: def.len, first };
+}
+/** 由解码结果还原汇编文本 */
+function y86Text(ins) {
+  const { icode, ifun, def, rA, rB, val } = ins;
+  const name = def.ifun[ifun];
+  switch (icode) {
+    case 0: case 1: case 9:
+      return name;
+    case 2:
+      return `${name} ${regName(rA)}, ${regName(rB)}`;
+    case 3:
+      return `${name} $${s64(val)}, ${regName(rB)}`;
+    case 4:
+      return `${name} ${regName(rA)}, ${s64(val)}(${regName(rB)})`;
+    case 5:
+      return `${name} ${s64(val)}(${regName(rB)}), ${regName(rA)}`;
+    case 6:
+      return `${name} ${regName(rA)}, ${regName(rB)}`;
+    case 7: case 8:
+      return `${name} ${hexT(val)}`;
+    case 10: case 11:
+      return `${name} ${regName(rA)}`;
+    default:
+      return name;
+  }
+}
+/** 字节序列 → "AA BB …" */
+const bytesHex = bytes => bytes.map(hexB).join(' ');
+
+/* ============================================================
+   汇编器：多行 Y86-64 汇编 → 地址 + 字节
+   ============================================================ */
+const DEMO_ASM =
+`    # 求数组 0x11 0x22 0x33 的和 → %rax
+    irmovq $8, %r8        # 常量 8：元素宽度
+    irmovq $0x200, %r9    # 数组首地址
+    irmovq $3, %r10       # 元素个数 len
+    xorq %rax, %rax       # sum = 0
+loop:
+    andq %r10, %r10       # 测试 len（置 CC）
+    je done               # len == 0 → 结束
+    mrmovq (%r9), %r11    # val = *arr
+    addq %r11, %rax       # sum += val
+    irmovq $8, %r11
+    addq %r11, %r9        # arr++
+    irmovq $1, %r11
+    subq %r11, %r10       # len--
+    jmp loop
+done:
+    ret`;
+
+function asmParseOperand(token) {
+  /* 寄存器 */
+  const rl = token.toLowerCase();
+  const reg = Y86_REGS.find(x => x[0].toLowerCase() === rl);
+  if (reg) return { kind: 'reg', id: reg[1] };
+  /* 立即数 $imm / imm / 0x… */
+  let t = token;
+  if (t.startsWith('$')) t = t.slice(1);
+  const v = parseIntArg(t);
+  if (v !== null) return { kind: 'imm', val: v };
+  return { kind: 'label', name: token };
+}
+
+function asmY86(src, base) {
+  const lines = String(src).split('\n');
+  const items = [];                       /* {addr, mnem, ifun, ops, raw} */
+  const labels = {};                      /* name → addr */
+  let addr = base;
+  const errors = [];
+  /* 第一遍：拆行、记标签、算长度 */
+  lines.forEach((rawLine, idx) => {
+    let line = rawLine.replace(/#.*$/, '').trim();
+    while (true) {
+      const m = line.match(/^([A-Za-z_.$][\w.$]*)\s*:\s*/);
+      if (!m) break;
+      labels[m[1]] = addr;
+      line = line.slice(m[0].length).trim();
+    }
+    if (!line) return;
+    const parts = line.split(/\s+/);
+    const mnem = parts[0].toLowerCase();
+    const rest = parts.slice(1).join(' ');
+    let ops = [];
+    if (rest) ops = rest.split(',').map(s => s.trim());
+    /* 找 opcode */
+    let found = null;
+    for (const [ic, def] of Object.entries(Y86_INS)) {
+      const fi = def.ifun.findIndex(n => n.toLowerCase() === mnem);
+      if (fi >= 0) { found = { icode: +ic, ifun: fi, def }; break; }
+    }
+    if (!found) { errors.push(`第 ${idx + 1} 行：不认识的指令「${esc(parts[0])}」`); return; }
+    items.push({ addr, mnem, ...found, ops, raw: rawLine.trim(), line: idx + 1 });
+    addr += BigInt(found.def.len);
+  });
+  if (errors.length) return { ok: false, errors };
+
+  /* 第二遍：编码 */
+  const chunks = [];
+  for (const it of items) {
+    const d = it.def;
+    let rA = 15, rB = 15, val = 0n;
+    try {
+      if (it.icode === 3) {                        /* irmovq V, rB */
+        if (it.ops.length !== 2) throw 'irmovq 需要「V, rB」两个操作数';
+        const v = asmParseOperand(it.ops[0]);
+        const r = asmParseOperand(it.ops[1]);
+        if (v.kind === 'reg') throw 'irmovq 的第一个操作数应是立即数（$…）';
+        if (v.kind === 'label') { if (labels[v.name] === undefined) throw `未定义的标签「${esc(v.name)}」`; val = BigInt(labels[v.name]); }
+        else val = v.val;
+        if (r.kind !== 'reg') throw 'irmovq 的第二个操作数应是寄存器';
+        rB = r.id;
+      } else if (it.icode === 4) {                 /* rmmovq rA, D(rB) */
+        if (it.ops.length !== 2) throw 'rmmovq 需要「rA, D(rB)」两个操作数';
+        const r = asmParseOperand(it.ops[0]);
+        const m = String(it.ops[1]).match(/^(.*)\((.+)\)\s*$/);
+        if (r.kind !== 'reg') throw 'rmmovq 的第一个操作数应是寄存器';
+        if (!m) throw 'rmmovq 的第二个操作数应是 D(rB) 形式';
+        rA = r.id;
+        const dr = asmParseOperand(m[2].trim());
+        if (dr.kind !== 'reg') throw 'D(rB) 里的 rB 应是寄存器';
+        rB = dr.id;
+        const dt = m[1].trim();
+        if (dt) { const dv = parseIntArg(dt); if (dv === null) throw `位移 D 无法解析：${esc(dt)}`; val = dv; }
+      } else if (it.icode === 5) {                 /* mrmovq D(rB), rA */
+        if (it.ops.length !== 2) throw 'mrmovq 需要「D(rB), rA」两个操作数';
+        const m = String(it.ops[0]).match(/^(.*)\((.+)\)\s*$/);
+        if (!m) throw 'mrmovq 的第一个操作数应是 D(rB) 形式';
+        const dr = asmParseOperand(m[2].trim());
+        if (dr.kind !== 'reg') throw 'D(rB) 里的 rB 应是寄存器';
+        rB = dr.id;
+        const dt = m[1].trim();
+        if (dt) { const dv = parseIntArg(dt); if (dv === null) throw `位移 D 无法解析：${esc(dt)}`; val = dv; }
+        const r = asmParseOperand(it.ops[1]);
+        if (r.kind !== 'reg') throw 'mrmovq 的第二个操作数应是寄存器';
+        rA = r.id;
+      } else if (it.icode === 2 || it.icode === 6) {  /* rA, rB */
+        if (it.ops.length !== 2) throw `${d.ifun[it.ifun]} 需要「rA, rB」两个寄存器`;
+        const a = asmParseOperand(it.ops[0]), b = asmParseOperand(it.ops[1]);
+        if (a.kind !== 'reg' || b.kind !== 'reg') throw '两个操作数都必须是寄存器';
+        rA = a.id; rB = b.id;
+      } else if (it.icode === 7 || it.icode === 8) {  /* Dest */
+        if (it.ops.length !== 1) throw `${d.ifun[it.ifun]} 需要一个目标（标签或地址）`;
+        const t = asmParseOperand(it.ops[0]);
+        if (t.kind === 'reg') throw `${d.ifun[it.ifun]} 的目标应是标签或地址`;
+        if (t.kind === 'label') { if (labels[t.name] === undefined) throw `未定义的标签「${esc(t.name)}」`; val = BigInt(labels[t.name]); }
+        else val = t.val;
+      } else if (it.icode === 10 || it.icode === 11) { /* rA */
+        if (it.ops.length !== 1) throw `${d.ifun[it.ifun]} 需要一个寄存器`;
+        const a = asmParseOperand(it.ops[0]);
+        if (a.kind !== 'reg') throw `${d.ifun[it.ifun]} 的操作数应是寄存器`;
+        rA = a.id;
+      } else {                                      /* halt / nop / ret：无操作数 */
+        if (it.ops.length) throw `${d.ifun[it.ifun]} 不带操作数`;
+      }
+    } catch (e) {
+      errors.push(`第 ${it.line} 行：${typeof e === 'string' ? e : esc(String(e && e.message || e))}`);
+      continue;
+    }
+    const enc = y86Encode(it.icode, it.ifun, rA, rB, val);
+    if (!enc.ok) { errors.push(`第 ${it.line} 行：${esc(enc.err)}`); continue; }
+    chunks.push({ addr: it.addr, text: y86Text(y86Decode(enc.bytes)), bytes: enc.bytes });
+  }
+  if (errors.length) return { ok: false, errors };
+  return { ok: true, chunks, labels, total: chunks.reduce((s, c) => s + c.bytes.length, 0) };
+}
+
+/* ============================================================
+   Y86-64 解释器
+   mem: Map<addr, byte>；状态：regs[15]、cc、stat、pc
+   ============================================================ */
+function newMachine() {
+  return {
+    regs: Array.from({ length: 15 }, () => 0n),
+    cc: { zf: 1, sf: 0, of: 0 },
+    stat: 1,
+    pc: 0n,
+    halted: false,
+  };
+}
+function memGet(mem, addr) { return BigInt(mem.get(Number(addr)) || 0); }
+function memSet(mem, addr, b) { mem.set(Number(u64(addr) & MASK64), Number(b & 0xffn)); }
+function memGetQuad(mem, addr) {
+  let x = 0n;
+  for (let i = 7; i >= 0; i--) x = (x << 8n) | memGet(mem, u64(addr) + BigInt(i));
+  return u64(x);
+}
+function memSetQuad(mem, addr, v) {
+  let x = u64(v);
+  for (let i = 0; i < 8; i++) { memSet(mem, u64(addr) + BigInt(i), x & 0xffn); x >>= 8n; }
+}
+/** 从内存取一条指令（取指阶段）；返回 { ins, bytes } */
+function fetchInstr(mem, pc) {
+  const bytes = [];
+  for (let i = 0; i < 10; i++) bytes.push(Number(memGet(mem, u64(pc) + BigInt(i))));
+  return { ins: y86Decode(bytes), bytes };
+}
+/** 执行一条已解码指令；返回 {ok, steps:[{k,v}...], err}。会就地修改 m。 */
+function execInstr(m, ins, mem) {
+  const rec = [];
+  const push = (k, v) => rec.push([k, v]);
+  const { icode, ifun, def, rA, rB, val } = ins;
+  const R = m.regs;
+  const readReg = id => (id == null || id >= 15) ? 0n : u64(R[id]);
+  const writeReg = (id, v) => { if (id != null && id < 15) R[id] = u64(v); };
+
+  switch (icode) {
+    case 0: {                                   /* halt */
+      m.stat = 2; m.halted = true;
+      push('Stat', 'AOK → <b>HLT</b>：停机');
+      return { ok: true, rec, pcNext: null };
+    }
+    case 1:                                     /* nop */
+      return { ok: true, rec, pcNext: u64(m.pc + BigInt(def.len)) };
+    case 2: {                                   /* rrmovq / cmovXX */
+      const cond = condByFn(ifun, m.cc);
+      push('Cnd', `fn=${ifun}（${def.ifun[ifun]}）→ ${cond ? '成立' : '不成立'}`);
+      if (cond) {
+        const v = readReg(rA);
+        writeReg(rB, v);
+        push('写回', `${regName(rB)} ← ${regName(rA)} = ${hexT(v)}`);
+      } else {
+        push('写回', `条件不成立，${regName(rB)} 保持 ${hexT(readReg(rB))}`);
+      }
+      return { ok: true, rec, pcNext: u64(m.pc + BigInt(def.len)) };
+    }
+    case 3: {                                   /* irmovq */
+      writeReg(rB, val);
+      push('执行', `valE = 0 + ${hexT(val)}`);
+      push('写回', `${regName(rB)} ← ${hexT(val)}`);
+      return { ok: true, rec, pcNext: u64(m.pc + BigInt(def.len)) };
+    }
+    case 4: {                                   /* rmmovq */
+      const valA = readReg(rA), valB = readReg(rB);
+      const valE = u64(valB + s64(val));
+      push('译码', `valA = ${regName(rA)} = ${hexT(valA)}，valB = ${regName(rB)} = ${hexT(valB)}`);
+      push('执行', `valE = valB + D = ${hexT(valB)} + ${s64(val)} = ${hexT(valE)}`);
+      memSetQuad(mem, valE, valA);
+      push('访存', `M[${hexT(valE)}] ← ${hexT(valA)}（8 字节小端）`);
+      return { ok: true, rec, pcNext: u64(m.pc + BigInt(def.len)) };
+    }
+    case 5: {                                   /* mrmovq */
+      const valB = readReg(rB);
+      const valE = u64(valB + s64(val));
+      const valM = memGetQuad(mem, valE);
+      push('译码', `valB = ${regName(rB)} = ${hexT(valB)}`);
+      push('执行', `valE = valB + D = ${hexT(valB)} + ${s64(val)} = ${hexT(valE)}`);
+      push('访存', `valM = M[${hexT(valE)}] = ${hexT(valM)}`);
+      writeReg(rA, valM);
+      push('写回', `${regName(rA)} ← ${hexT(valM)}`);
+      return { ok: true, rec, pcNext: u64(m.pc + BigInt(def.len)) };
+    }
+    case 6: {                                   /* OPq */
+      const valA = readReg(rA), valB = readReg(rB);
+      const al = aluOp64(ifun, valA, valB);
+      m.cc = { zf: al.zf, sf: al.sf, of: al.of };
+      writeReg(rB, al.res);
+      push('译码', `valA = ${regName(rA)} = ${hexT(valA)}，valB = ${regName(rB)} = ${hexT(valB)}`);
+      push('执行', `valE = valB ${['+', '−', '&', '^'][ifun]} valA = ${hexT(al.res)}　→ ZF=${al.zf} SF=${al.sf} OF=${al.of}`);
+      push('写回', `${regName(rB)} ← ${hexT(al.res)}`);
+      return { ok: true, rec, pcNext: u64(m.pc + BigInt(def.len)) };
+    }
+    case 7: {                                   /* jXX */
+      const cond = condByFn(ifun, m.cc);
+      push('执行', `Cnd = ${cond ? '1（成立）' : '0（不成立）'}`);
+      push('更新 PC', cond ? `PC ← valC = ${hexT(val)}（跳转）` : `PC ← valP（顺序下一条）`);
+      return { ok: true, rec, pcNext: cond ? u64(val) : u64(m.pc + BigInt(def.len)) };
+    }
+    case 8: {                                   /* call */
+      const valB = readReg(4);
+      const valE = u64(valB - 8n);
+      memSetQuad(mem, valE, u64(m.pc + BigInt(def.len)));
+      writeReg(4, valE);
+      push('执行', `valE = %rsp − 8 = ${hexT(valE)}`);
+      push('访存', `M[${hexT(valE)}] ← 返回地址 ${hexT(u64(m.pc + BigInt(def.len)))}`);
+      push('更新 PC', `PC ← valC = ${hexT(val)}`);
+      return { ok: true, rec, pcNext: u64(val) };
+    }
+    case 9: {                                   /* ret */
+      const valA = readReg(4);
+      const valE = u64(valA + 8n);
+      const valM = memGetQuad(mem, valA);
+      writeReg(4, valE);
+      push('译码', `valA = %rsp = ${hexT(valA)}`);
+      push('访存', `valM = M[${hexT(valA)}] = ${hexT(valM)}（返回地址）`);
+      push('更新 PC', `PC ← valM = ${hexT(valM)}，%rsp ← ${hexT(valE)}`);
+      return { ok: true, rec, pcNext: u64(valM) };
+    }
+    case 10: {                                  /* pushq */
+      const valA = readReg(rA), valB = readReg(4);
+      const valE = u64(valB - 8n);
+      memSetQuad(mem, valE, valA);
+      writeReg(4, valE);
+      push('译码', `valA = ${regName(rA)} = ${hexT(valA)}，valB = %rsp = ${hexT(valB)}`);
+      push('执行', `valE = %rsp − 8 = ${hexT(valE)}`);
+      push('访存', `M[${hexT(valE)}] ← ${hexT(valA)}`);
+      push('写回', `%rsp ← ${hexT(valE)}`);
+      return { ok: true, rec, pcNext: u64(m.pc + BigInt(def.len)) };
+    }
+    case 11: {                                  /* popq */
+      const valB = readReg(4);
+      const valA = valB;                        /* popq 里 valA 与 valB 都读 %rsp */
+      const valM = memGetQuad(mem, valA);
+      const valE = u64(valB + 8n);
+      writeReg(rA, valM);
+      writeReg(4, valE);
+      push('译码', `valA = valB = %rsp = ${hexT(valB)}`);
+      push('访存', `valM = M[${hexT(valA)}] = ${hexT(valM)}`);
+      push('写回', `${regName(rA)} ← ${hexT(valM)}，%rsp ← ${hexT(valE)}`);
+      return { ok: true, rec, pcNext: u64(m.pc + BigInt(def.len)) };
+    }
+    default:
+      m.stat = 4; m.halted = true;
+      push('Stat', 'AOK → <b>INS</b>：非法指令');
+      return { ok: false, rec, pcNext: null, err: `非法 icode ${icode}` };
+  }
+}
+
+/* ============================================================
+   1.1 ISA 抽象层
+   ============================================================ */
+const LAYERS = {
+  app: ['应用程序', '普通程序员用高级语言写程序。', '向下藏住了：编译成了什么指令、数据放在哪个寄存器、内存里长什么样。程序只跟「语言的语义」打交道。'],
+  compiler: ['编译器 / 操作系统', '编译器把 C 翻译成指令序列；操作系统管理内存与进程。', '向下藏住了：这些指令由什么电路执行、每个周期发生什么。它们只依赖 ISA 合同的<b>上层表面</b>：指令语义与编码。'],
+  isa: ['ISA（本讲上半场）', '契约本身：程序员可见状态 + 指令集 + 编码。', '向下藏住了：一切实现细节。同一份 ISA，SEQ 能跑、流水线能跑、乱序处理器也能跑 —— 软件完全察觉不到差别。'],
+  uarch: ['处理器实现（微体系结构）', 'CPU 设计者的地盘：数据通路、阶段划分、时序。', '向下藏住了：门电路怎么连、晶体管多大。同一份微体系结构可以用不同工艺实现。'],
+  circuit: ['逻辑电路（本讲下半场）', '门、组合电路、时钟寄存器、内存。', '再往下就是物理器件与版图 —— 电气工程师的领域。本讲到门为止。'],
+};
+function renderIsa(key) {
+  const [t, who, hides] = LAYERS[key];
+  return `
+  <div class="readout" style="margin-top:0">
+    <dt>这一层</dt><dd><b>${t}</b></dd>
+    <dt>谁在这</dt><dd style="font-family:var(--font-sans)">${who}</dd>
+    <dt>藏住了什么</dt><dd style="font-family:var(--font-sans)">${hides}</dd>
+  </div>
+  <div class="box ok" style="margin-bottom:0"><div class="t">为什么这很重要</div>
+    抽象让<b>分工</b>成为可能：编译器作者不需要懂电路，电路工程师不需要懂 C。双方各自盯着同一份 ISA 合同即可。x86-64 的合同四十年没换过 —— 今天的 CPU 与 1990 年的 CPU 电路毫无相似之处，却仍能跑同一个二进制。
+  </div>`;
+}
+
+/* ============================================================
+   2. 状态总览
+   ============================================================ */
+const ST_INFO = {
+  reg0: ['%rax', '0', '返回值默认放在这里；示例程序里当累加器 sum'],
+  reg4: ['%rsp', '4', '栈指针。pushq/popq/call/ret 都围绕它工作'],
+  reg7: ['%rdi', '7', 'x86-64 调用约定里的第 1 个参数寄存器（Y86-64 不强制，但编号相同）'],
+  reg14: ['%r14', 'E（14）', 'Y86-64 编号最大的寄存器 —— 再往上就是 0xF「无寄存器」'],
+  cc: ['CC · 条件码', '—', '三个单比特：<code>ZF</code>（结果为零）、<code>SF</code>（结果为负）、<code>OF</code>（有符号溢出）。只由 OPq 设置（第 7 节），cmovXX / jXX 读它（fn 判据见第 3.2 节）'],
+  stat: ['Stat · 程序状态', '—', '四种取值：<code>AOK</code> 正常、<code>HLT</code> 停机、<code>ADR</code> 坏地址、<code>INS</code> 坏指令。示例程序最后一条 halt 就会把 Stat 变成 HLT'],
+  pc: ['PC · 程序计数器', '—', '存当前（即将执行）指令的地址。每条指令执行完，PC 更新为 valP / valC / valM —— 下一讲会看到这三种来源'],
+};
+function renderState(key) {
+  const [name, id, why] = ST_INFO[key];
+  return `
+  <div class="readout" style="margin-top:0">
+    <dt>状态块</dt><dd><b>${esc(name)}</b></dd>
+    ${id !== '—' ? `<dt>4 位 ID</dt><dd><b style="color:var(--accent)">${id}</b>（编码里占 4 位，见 2.2 节的表）</dd>` : ''}
+    <dt>说明</dt><dd style="font-family:var(--font-sans)">${why}</dd>
+  </div>
+  <div class="box" style="margin-bottom:0"><div class="t">对照第 5 讲</div>
+    寄存器编号与 x86-64 完全一致，条件码也是同一套 —— 所以第 4、5 讲的所有汇编知识在 Y86-64 上原样成立，只是指令换了个更简单的名字和编码。
+  </div>`;
+}
+
+/* ============================================================
+   3.1 指令总表（按类过滤）
+   ============================================================ */
+let insCls = 'all';
+function renderInsTbl() {
+  const rows = [];
+  for (const [ic, def] of Object.entries(Y86_INS)) {
+    if (insCls !== 'all' && def.cls !== insCls) continue;
+    const forms = def.ifun.map(n =>
+      `<code>${esc(n)}${def.reg ? ' rA, rB' : (def.cnst ? (ic === '3' ? ' V, rB' : (ic === '4' ? ' rA, D(rB)' : (ic === '5' ? ' D(rB), rA' : (ic === '10' || ic === '11' ? ' rA' : ' Dest')))) : '')}</code>`
+    ).join('、');
+    rows.push(`<tr>
+      <td class="mono"><b>${Number(ic).toString(16).toUpperCase().padStart(2, '0') === '0' ? '0' : Number(ic).toString(16).toUpperCase()}</b></td>
+      <td class="mono">${esc(def.name)}</td>
+      <td style="font-family:var(--font-sans)">${forms}</td>
+      <td class="mono">${def.ifun.length}</td>
+      <td class="mono"><b>${def.len}</b></td>
+      <td class="mono" style="font-size:12.5px">${esc(ICODE_FIELDS[ic])}</td>
+    </tr>`);
+  }
+  return `
+  <div class="tbl-wrap"><table class="tbl">
+    <tr><th>icode</th><th>名字</th><th>汇编形式</th><th>变体数</th><th>字节数</th><th>字段布局</th></tr>
+    ${rows.join('')}
+  </table></div>
+  <div class="box" style="margin-bottom:0"><div class="t">怎么读这张表</div>
+    <b>icode</b> 就是首字节的高 4 位（十六进制一眼可见）；<b>字节数</b>由字段布局推出来：<code>icode:ifun</code> 占 1 字节，<code>rA:rB</code> 占 1 字节，<code>V / D / Dest</code> 占 8 字节。全部 12 行加起来恰好 25 种汇编形式。
+  </div>`;
+}
+
+/* ============================================================
+   3.2 条件判据
+   ============================================================ */
+function renderCond(fn) {
+  const [name, expr, meaning] = COND_EXPR[fn];
+  const isJmp = fn === 0;
+  return `
+  <div class="readout" style="margin-top:0">
+    <dt>fn = ${fn}</dt><dd><b>${esc(name)}</b></dd>
+    <dt>判据</dt><dd>${esc(expr)}</dd>
+    <dt>含义</dt><dd style="font-family:var(--font-sans)">${meaning}</dd>
+    <dt>用作跳转</dt><dd class="mono">${isJmp ? 'jmp Dest' : 'j' + name + ' Dest'}</dd>
+    <dt>用作传送</dt><dd class="mono">${isJmp ? 'rrmovq rA, rB' : 'cmov' + name + ' rA, rB'}</dd>
+  </div>
+  <div class="box ${isJmp ? '' : 'ok'}" style="margin-bottom:0"><div class="t">${isJmp ? 'fn = 0 是个特例' : '和第 5 讲一字不差'}</div>
+    ${isJmp
+      ? 'fn = 0 时条件「恒成立」：<code>cmovXX</code> 退化为 <code>rrmovq</code>（无条件传送），<code>jXX</code> 退化为 <code>jmp</code>。同一套编码，两种善用。'
+      : `这套判据与第 5 讲的 setX / jX 表逐字相同：<code>${esc(expr)}</code>。区别只在动作：<code>cmov</code> 不成立就不写回，<code>j</code> 不成立就取顺序下一条。`}
+  </div>`;
+}
+
+/* ============================================================
+   3.3 首字节 → 长度
+   ============================================================ */
+function renderFirstByte(b) {
+  const icode = b >> 4, ifun = b & 15;
+  const def = Y86_INS[icode];
+  const head = `
+  <div class="readout" style="margin-top:0">
+    <dt>首字节</dt><dd class="mono"><b>0x${hexB(b)}</b> = icode <b>${icode}</b> · ifun <b>${ifun}</b></dd>`;
+  if (!def) return head + `<dt>结论</dt><dd><b style="color:var(--sign)">非法 icode</b> —— 不在指令表里，真机执行会置 Stat = INS（第 2 节的四种状态之一）</dd></div>`;
+  if (ifun >= def.ifun.length) return head + `<dt>结论</dt><dd>icode 合法（${esc(def.name)}），但 <b>ifun ${ifun} 超界</b> —— 该指令只有 fn=0…${def.ifun.length - 1}</dd></div>`;
+  return head + `
+    <dt>指令</dt><dd class="mono">${esc(def.ifun[Math.min(ifun, def.ifun.length - 1)])}（${esc(def.name)} 类）</dd>
+    <dt>字段</dt><dd class="mono" style="font-size:13px">${esc(ICODE_FIELDS[icode])}</dd>
+    <dt>长度</dt><dd><b>${def.len} 字节</b>${def.reg ? ' = icode:ifun(1) + rA:rB(1)' : ' = icode:ifun(1)'}${def.cnst ? ' + 常数(8)' : ''}</dd>
+  </div>
+  <div class="box ok" style="margin-bottom:0"><div class="t">这就是「从第一个字节算长度」</div>
+    没有前缀、没有 ModRM —— 高 4 位查表即得长度。下一讲的取指阶段因此可以<b>一次读满 10 字节</b>，再按长度切出下一条指令的起点。
+  </div>`;
+}
+
+/* ============================================================
+   4.1 编码器 / 4.2 解码器
+   ============================================================ */
+function renderEncode(icode, ifun, rA, rB, val) {
+  const enc = y86Encode(icode, ifun, rA, rB, val);
+  if (!enc.ok) return badBox(enc.err);
+  const def = Y86_INS[icode];
+  const bytes = enc.bytes;
+  const cells = bytes.map((b, i) => `<span class="b ${i === 0 ? 'e' : (def.reg && i === 1 ? 'f' : 's')}" style="cursor:default" title="${i === 0 ? 'icode:ifun' : def.reg && i === 1 ? 'rA:rB' : '常数（小端）'}">${hexB(b)}</span>`).join('');
+  return `
+  <div class="readout" style="margin-top:0">
+    <dt>汇编</dt><dd class="mono"><b>${esc(y86Text(y86Decode(bytes)))}</b></dd>
+    <dt>字节数</dt><dd><b>${bytes.length}</b> 字节</dd>
+  </div>
+  <div class="fcap">编码结果（每一格的底色对应它的字段）</div>
+  <div class="bits sm" style="margin:6px 0 10px">${cells}</div>
+  <div class="tbl-wrap"><table class="tbl">
+    <tr><th>字段</th><th>取值</th><th>说明</th></tr>
+    <tr><td class="mono">icode:ifun</td><td class="mono">0x${hexB(bytes[0])}</td><td>icode=${icode}（高 4 位）· ifun=${ifun}（${esc(def.ifun[ifun])}）</td></tr>
+    ${def.reg ? `<tr><td class="mono">rA:rB</td><td class="mono">0x${hexB(bytes[1])}</td><td>rA=${rA === 15 ? 'F' : rA}（${esc(regName(rA))}）· rB=${rB === 15 ? 'F' : rB}（${esc(regName(rB))}）</td></tr>` : ''}
+    ${def.cnst ? `<tr><td class="mono">${icode === 4 || icode === 5 ? 'D（位移）' : icode === 7 || icode === 8 ? 'Dest（目标地址）' : 'V（立即数）'}</td>
+      <td class="mono">${bytesHex(bytes.slice(def.reg ? 2 : 1))}</td>
+      <td>${hexT(val)} = ${decS(val)}　<span style="color:var(--muted);font-family:var(--font-sans)">8 字节小端：低字节在低地址</span></td></tr>` : ''}
+  </table></div>
+  <div class="box ok" style="margin-bottom:0"><div class="t">自检</div>
+    把这串字节喂给下面的<b>解码器</b>应当还原出同一行汇编 —— 页面加载时已对全部 25 种形式 × 寄存器组合做过批量往返验证。
+  </div>`;
+}
+function renderDecode(bytes) {
+  const ins = y86Decode(bytes);
+  if (!ins.ok) {
+    return `<div class="box bad" style="margin-bottom:0"><div class="t">解码失败</div>${esc(ins.err)}
+      ${ins.first != null ? `<br>首字节 0x${hexB(ins.first)}：icode = ${ins.first >> 4}，ifun = ${ins.first & 15}。` : ''}</div>`;
+  }
+  const { icode, ifun, def, rA, rB, val, len } = ins;
+  const rest = bytes.slice(len);
+  return `
+  <div class="readout" style="margin-top:0">
+    <dt>汇编</dt><dd class="mono"><b>${esc(y86Text(ins))}</b></dd>
+    <dt>长度</dt><dd><b>${len}</b> 字节${rest.length ? `　<span style="font-family:var(--font-sans);color:var(--muted)">（后面还有 ${rest.length} 字节，属于下一条指令）</span>` : ''}</dd>
+  </div>
+  <div class="tbl-wrap"><table class="tbl">
+    <tr><th>字段</th><th>值</th><th>解释</th></tr>
+    <tr><td class="mono">icode</td><td class="mono">${icode}</td><td>${esc(def.name)}</td></tr>
+    <tr><td class="mono">ifun</td><td class="mono">${ifun}</td><td>${esc(def.ifun[ifun])}${def.ifun.length > 1 ? '（条件见 3.2 节）' : ''}</td></tr>
+    ${def.reg ? `<tr><td class="mono">rA</td><td class="mono">${rA === 15 ? 'F' : rA}</td><td>${rA === 15 ? '无寄存器 —— 占位' : esc(regName(rA))}</td></tr>
+    <tr><td class="mono">rB</td><td class="mono">${rB === 15 ? 'F' : rB}</td><td>${rB === 15 ? '无寄存器 —— 占位' : esc(regName(rB))}</td></tr>` : ''}
+    ${def.cnst ? `<tr><td class="mono">常数</td><td class="mono">${hexT(val)}</td><td>${decS(val)}　<span style="font-family:var(--font-sans);color:var(--muted)">8 字节小端还原</span></td></tr>` : ''}
+  </table></div>
+  <div class="box ok" style="margin-bottom:0"><div class="t">验证</div>
+    把这条指令再编码回去，得到的字节应与输入的前 ${len} 字节完全一致 —— 编码器与解码器互为逆运算（页面加载时已批量验证）。
+  </div>`;
+}
+function parseHexBytes(str) {
+  const t = String(str).replace(/0[xX]/g, ' ').replace(/[,\s]+/g, ' ').trim();
+  if (!t) return null;
+  const out = [];
+  for (const tok of t.split(' ')) {
+    if (!/^[0-9a-fA-F]{1,2}$/.test(tok)) return null;
+    out.push(parseInt(tok, 16));
+  }
+  return out;
+}
+
+/* ============================================================
+   5. 汇编器 + 解释器
+   ============================================================ */
+const PROG_BASE = 0x100n, DATA_BASE = 0x200n, STACK_TOP = 0x300n;
+const DEMO_DATA = [0x11n, 0x22n, 0x33n];
+
+function renderAsm(res, base) {
+  if (!res.ok) {
+    return `<div class="box bad"><div class="t">汇编失败（${res.errors.length} 处）</div>
+      <ul style="margin:6px 0 0;padding-left:20px">${res.errors.map(e => `<li>${e}</li>`).join('')}</ul></div>
+      <div class="box" style="margin-bottom:0">支持的写法：<code>irmovq $0x200, %r9</code>、<code>mrmovq (%r9), %r11</code>、<code>rmmovq %rax, 8(%rbx)</code>、<code>jne loop</code>、标签 <code>loop:</code>、注释 <code># …</code>。</div>`;
+  }
+  let addr = base, cur = base;
+  const rows = res.chunks.map(c => {
+    cur = c.addr + BigInt(c.bytes.length);
+    return `<tr><td class="mono">${hexT(c.addr)}</td><td class="mono" style="font-size:13px">${bytesHex(c.bytes)}</td><td class="mono">${esc(c.text)}</td></tr>`;
+  }).join('');
+  const haltAddr = base + BigInt(res.total);
+  return `
+  <div class="readout" style="margin-top:0">
+    <dt>起始地址</dt><dd>${hexT(base)}</dd>
+    <dt>总字节数</dt><dd><b>${res.total}</b> 字节 → 程序结束于 ${hexT(haltAddr)}（<code>halt</code> 将放在这里）</dd>
+    <dt>标签</dt><dd>${Object.entries(res.labels).map(([n, a]) => `<code>${esc(n)} = ${hexT(BigInt(a))}</code>`).join('　') || '—'}</dd>
+  </div>
+  <div class="tbl-wrap"><table class="tbl">
+    <tr><th>地址</th><th>字节（小端常数按字节展开）</th><th>汇编</th></tr>${rows}
+  </table></div>
+  <div class="box ok" style="margin-bottom:0"><div class="t">载入布局</div>
+    代码从 <code>${hexT(base)}</code> 开始；数组 <code>${bytesHex2(DEMO_DATA.map(v => { const b = encQuad(v); return b[0]; }))}…</code> 放在 <code>${hexT(DATA_BASE)}</code>；栈底 <code>${hexT(STACK_TOP)}</code> 预先放好返回地址 <code>${hexT(haltAddr)}</code>，<code>%rsp = ${hexT(STACK_TOP)}</code>。点下面「载入并运行」或「单步」开始执行。
+  </div>`;
+}
+function bytesHex2(arr) { return arr.map(v => hexB(v)).join(' '); }
+
+let yrState = null;      /* { mem, mach, log:[], done } */
+function yrLoad(src) {
+  const base = parseIntArg($('#peBase') ? $('#peBase').value : '0x100');
+  if (base === null || base < 0n || base > 0xffffffffn) return { err: '起始地址非法' };
+  const res = asmY86(src, base);
+  if (!res.ok) return { err: null, res };
+  const mem = new Map();
+  for (const c of res.chunks) c.bytes.forEach((b, i) => memSet(mem, c.addr + BigInt(i), BigInt(b)));
+  DEMO_DATA.forEach((v, i) => memSetQuad(mem, DATA_BASE + BigInt(8 * i), v));
+  const haltAddr = base + BigInt(res.total);
+  memSet(mem, haltAddr, 0n);                 /* halt = 00 */
+  memSetQuad(mem, STACK_TOP, haltAddr);      /* 返回地址压在栈底 */
+  const mach = newMachine();
+  mach.pc = base;
+  mach.regs[4] = STACK_TOP;                  /* %rsp = 0x300 */
+  yrState = { mem, mach, log: [], haltAddr };
+  return { ok: true };
+}
+function yrStep() {
+  if (!yrState) return { ok: false };
+  const m = yrState.mach;
+  if (m.stat !== 1) return { ok: false, stat: m.stat };
+  const ins = fetchInstr(yrState.mem, m.pc);
+  if (!ins.ok) {
+    m.stat = ins.err && /icode/.test(ins.err) ? 4 : (m.stat === 1 ? 3 : m.stat);
+    if (m.stat === 1) m.stat = 4;
+    m.halted = true;
+    yrState.log.push({ pc: m.pc, ins: null, err: ins.err, rec: [] });
+    return { ok: true };
+  }
+  const r = execInstr(m, ins, yrState.mem);
+  yrState.log.push({ pc: m.pc, ins, rec: r.rec, changes: snapshotRegs(m), cc: { ...m.cc } });
+  if (r.pcNext === null) { /* halt / INS */ }
+  else m.pc = r.pcNext;
+  return { ok: true };
+}
+function snapshotRegs(m) {
+  const out = {};
+  m.regs.forEach((v, i) => { out[i] = v; });
+  return out;
+}
+function renderYr() {
+  if (!yrState) {
+    return `<div class="box" style="margin-bottom:0">先在上面点「汇编」，再点「载入并运行到底」或「单步」。解释器每一步都会显示取指、译码、执行、访存、写回的完整过程。</div>`;
+  }
+  const m = yrState.mach;
+  const rows = yrState.log.map((s, i) => {
+    if (!s.ins) {
+      return `<div class="step on"><div class="h">第 ${i + 1} 步 · 出错</div><div class="m">${hexT(s.pc)}</div><div class="e">${esc(s.err || '')}</div></div>`;
+    }
+    const recHtml = s.rec.length
+      ? `<div class="e">${s.rec.map(([k, v]) => `<div><b style="color:var(--accent)">${k}</b>：${v}</div>`).join('')}</div>`
+      : '';
+    return `<div class="step on">
+      <div class="h">第 ${i + 1} 步 · PC = ${hexT(s.pc)}</div>
+      <div class="m">${esc(y86Text(s.ins))}　<span style="color:var(--muted)">// ${bytesHex(yrState.log[i].ins.bytes || [])}</span></div>
+      ${recHtml}
+    </div>`;
+  }).join('');
+  const regsHtml = m.regs.map((v, i) => `<span class="chip ${v ? '' : 'gray'}" style="font-family:var(--font-mono)">${esc(regName(i))}=${hexT(v)}</span>`).join(' ');
+  const st = STAT_INFO[m.stat];
+  const okTail = m.stat !== 1
+    ? `<div class="box ${m.stat === 2 ? 'ok' : 'bad'}" style="margin-bottom:0"><div class="t">程序结束：Stat = ${st[0]}</div>${esc(st[1])}
+        ${m.stat === 2 ? `　最终 <code>%rax = ${hexT(m.regs[0])}</code>${m.regs[0] === 0x66n ? ' —— 与心算一致（0x11+0x22+0x33 = 0x66）✓' : ''}` : ''}</div>`
+    : `<div class="box" style="margin-bottom:0">已执行 ${yrState.log.length} 步。继续「单步」或「运行到底」。</div>`;
+  return `
+  <div class="readout" style="margin-top:0">
+    <dt>PC</dt><dd>${hexT(m.pc)}${m.halted ? '　（已停机）' : ''}</dd>
+    <dt>CC</dt><dd>ZF=${m.cc.zf} SF=${m.cc.sf} OF=${m.cc.of}</dd>
+    <dt>Stat</dt><dd><b>${st[0]}</b>　<span style="font-family:var(--font-sans);color:var(--muted)">${esc(st[1])}</span></dd>
+    <dt>寄存器</dt><dd style="font-size:12.5px;line-height:2">${regsHtml}</dd>
+  </div>
+  <div class="fcap">执行轨迹（每步展开取指 → 译码 → 执行 → 访存 → 写回）</div>
+  ${rows || '<div class="box" style="margin-bottom:0">还没有执行任何一步。</div>'}
+  ${okTail}`;
+}
+
+/* ============================================================
+   6.1 门 / 6.2 位级 MUX / 6.3 字级
+   ============================================================ */
+const GATES = {
+  AND:  { f: (a, b) => a & b, expr: 'A · B',  note: '两个输入都是 1 才输出 1' },
+  OR:   { f: (a, b) => a | b, expr: 'A + B',  note: '任一输入是 1 就输出 1' },
+  XOR:  { f: (a, b) => a ^ b, expr: 'A ⊕ B',  note: '两个输入不同才输出 1 —— 比较器的原料' },
+  NAND: { f: (a, b) => 1 - (a & b), expr: '~(A · B)', note: 'AND 取反 —— 功能完备，理论上整个 CPU 都能用它搭' },
+  NOR:  { f: (a, b) => 1 - (a | b), expr: '~(A + B)', note: 'OR 取反 —— 同样功能完备' },
+};
+let gtA = 0, gtB = 0, gtGate = 'AND';
+function renderGate() {
+  const g = GATES[gtGate];
+  const rows = [[0, 0], [0, 1], [1, 0], [1, 1]].map(([a, b]) =>
+    `<tr class="${a === gtA && b === gtB ? 'hl' : ''}"><td class="mono">${a}</td><td class="mono">${b}</td><td class="mono"><b>${g.f(a, b)}</b></td></tr>`).join('');
+  return `
+  <div class="readout" style="margin-top:0">
+    <dt>门</dt><dd><b>${gtGate}</b>　<span style="font-family:var(--font-sans);color:var(--muted)">${esc(g.note)}</span></dd>
+    <dt>输入</dt><dd>A = <b>${gtA}</b>　B = <b>${gtB}</b></dd>
+    <dt>输出</dt><dd>${g.expr} = <b style="color:var(--accent)">${g.f(gtA, gtB)}</b></dd>
+  </div>
+  <div class="tbl-wrap"><table class="tbl">
+    <tr><th>A</th><th>B</th><th>out</th></tr>${rows}
+  </table></div>
+  <div class="box" style="margin-bottom:0"><div class="t">门是「无记忆」的</div>
+    输出一变，输入一定跟着变 —— 不存在「上一刻是什么」。<b>记住任何东西都需要下一节的时钟寄存器</b>。
+  </div>`;
+}
+let mxA = 0, mxB = 1, mxS = 0;
+function renderMux() {
+  const out = mxS ? mxB : mxA;
+  return `
+  <div class="readout" style="margin-top:0">
+    <dt>输入</dt><dd>a = <b>${mxA}</b>　b = <b>${mxB}</b>　s = <b>${mxS}</b></dd>
+    <dt>HCL</dt><dd class="mono">out = s ? b : a</dd>
+    <dt>输出</dt><dd>out = <b style="color:var(--accent)">${out}</b>　<span style="font-family:var(--font-sans);color:var(--muted)">（s = ${mxS}，选了 ${mxS ? 'b' : 'a'}）</span></dd>
+  </div>
+  <div class="tbl-wrap"><table class="tbl">
+    <tr><th>s</th><th>out</th></tr>
+    <tr class="${mxS === 0 ? 'hl' : ''}"><td class="mono">0</td><td class="mono">a = ${mxA}</td></tr>
+    <tr class="${mxS === 1 ? 'hl' : ''}"><td class="mono">1</td><td class="mono">b = ${mxB}</td></tr>
+  </table></div>
+  <div class="box" style="margin-bottom:0"><div class="t">MUX 是 SEQ 的「路标」</div>
+    下一讲的数据通路里，到处都是这种选择器：ALU 的两个输入各接一个 MUX（选寄存器还是常数）、写回口接一个 MUX（选 ALU 结果还是内存数据）。拨上面的 s，就是在替处理器做决定。
+  </div>`;
+}
+let wmS = 0;
+function renderWordMux(a, b) {
+  const A = u64(a), B = u64(b);
+  const eq = A === B ? 1 : 0;
+  const out = wmS ? B : A;
+  const xor = u64(A ^ B);
+  return `
+  <div class="readout" style="margin-top:0">
+    <dt>A</dt><dd>${hexQ(A)}　<span style="font-family:var(--font-sans);color:var(--muted)">二进制 ${u64(A).toString(2).padStart(8, '0')}</span></dd>
+    <dt>B</dt><dd>${hexQ(B)}　<span style="font-family:var(--font-sans);color:var(--muted)">二进制 ${u64(B).toString(2).padStart(8, '0')}</span></dd>
+    <dt>相等？</dt><dd>eq = <b style="color:${eq ? 'var(--frac)' : 'var(--sign)'}">${eq}</b>　<span style="font-family:var(--font-sans);color:var(--muted)">（64 位 XOR = ${hexT(xor)}，全 0 才相等 —— 这就是「64 个 XOR + 一个 NOR」的电路在替你算）</span></dd>
+    <dt>字级 MUX</dt><dd>s = ${wmS} → out = <b>${hexT(out)}</b>（选了 ${wmS ? 'B' : 'A'}）</dd>
+  </div>
+  <div class="box" style="margin-bottom:0"><div class="t">位级并联 = 字级</div>
+    字级电路没有任何新原理：把位级的门 / MUX 并排 64 份、共享同一根控制线即可。<b>宽度的代价只是面积</b>，不是新的设计思想。
+  </div>`;
+}
+
+/* ============================================================
+   7. ALU + setCC
+   ============================================================ */
+function renderAlu(a, b, fn) {
+  const al = aluOp64(fn, a, b);
+  const opName = ['addq', 'subq', 'andq', 'xorq'][fn];
+  const lamp = (n, v, why) => `<span class="chip ${v ? 'ok' : 'gray'}" style="font-family:var(--font-mono)" title="${esc(why)}">${n} = ${v}</span>`;
+  const why = {
+    zf: al.res === 0n ? '结果为 0' : '结果非 0',
+    sf: al.sf ? '结果的最高位是 1 → 按有符号解释是负数' : '结果的最高位是 0 → 非负',
+    of: al.note,
+  };
+  return `
+  <div class="readout" style="margin-top:0">
+    <dt>运算</dt><dd class="mono">valE = valB ${['+', '−', '&', '^'][fn]} valA（${esc(opName)}，fn = ${fn} 直接当 ALU 控制信号）</dd>
+    <dt>valA</dt><dd>${hexQ(a)}　<span style="font-family:var(--font-sans);color:var(--muted)">有符号 ${decS(a)}</span></dd>
+    <dt>valB</dt><dd>${hexQ(b)}　<span style="font-family:var(--font-sans);color:var(--muted)">有符号 ${decS(b)}</span></dd>
+    <dt>valE</dt><dd><b>${hexQ(al.res)}</b>　<span style="font-family:var(--font-sans);color:var(--muted)">有符号 ${decS(al.res)}</span></dd>
+    <dt>setCC</dt><dd>${lamp('ZF', al.zf, why.zf)} ${lamp('SF', al.sf, why.sf)} ${lamp('OF', al.of, why.of)}</dd>
+  </div>
+  <div class="tbl-wrap"><table class="tbl">
+    <tr><th>条件码</th><th>值</th><th>为什么</th></tr>
+    <tr class="${al.zf ? 'hl' : ''}"><td class="mono">ZF</td><td class="mono">${al.zf}</td><td>${esc(why.zf)}</td></tr>
+    <tr class="${al.sf ? 'hl' : ''}"><td class="mono">SF</td><td class="mono">${al.sf}</td><td>${esc(why.sf)}</td></tr>
+    <tr class="${al.of ? 'hl' : ''}"><td class="mono">OF</td><td class="mono">${al.of}</td><td>${esc(al.note)}</td></tr>
+  </table></div>
+  <div class="box ok" style="margin-bottom:0"><div class="t">与第 5 讲逐字一致</div>
+    这三个灯的判据公式与第 5 讲 <code>addq/subq</code> 的标志位完全相同 —— <b>同一套语义，两种载体</b>：第 5 讲是 x86-64 硬件在做，这里是 Y86-64 的 ALU 在做（页面用 BigInt 按模 2<sup>64</sup> 现算）。
+  </div>`;
+}
+
+/* ============================================================
+   8.1 时钟寄存器 / 8.2 内存
+   ============================================================ */
+let ckD = 0n, ckQ = 0n, ckEvents = [];
+function renderClk() {
+  const ev = ckEvents.map(e => `<div class="step on"><div class="h">${esc(e.t)}</div><div class="m">${esc(e.m)}</div><div class="e">${esc(e.e)}</div></div>`).join('');
+  return `
+  <div class="readout" style="margin-top:0">
+    <dt>D（输入）</dt><dd>${hexQ(ckD)}</dd>
+    <dt>Q（输出）</dt><dd><b>${hexQ(ckQ)}</b></dd>
+    <dt>状态</dt><dd>${ckD === ckQ ? 'Q 与 D 一致（刚被打过沿或复位）' : '<b>Q 落后于 D</b> —— 等待下一个时钟上升沿'}</dd>
+  </div>
+  <div class="fcap">事件记录</div>
+  ${ev || '<div class="box" style="margin-bottom:0">先「写输入 D」再「时钟沿 ↑」，观察 Q 只在边沿变化。</div>'}
+  <div class="box ok" style="margin-bottom:0"><div class="t">这就是 SEQ 的心跳</div>
+    PC、CC、Stat、寄存器文件都是这样的寄存器。<b>一条指令执行中产生的所有中间值都停在组合电路里</b>，直到边沿到来才一起锁进状态 —— 所以「指令要么整个生效，要么完全没生效」。
+  </div>`;
+}
+const mrMem = new Map();
+function renderMem(title, lines, tail) {
+  return `
+  <div class="readout" style="margin-top:0">
+    <dt>${esc(title)}</dt><dd>${lines}</dd>
+  </div>
+  <div class="fcap">0x200–0x207 的 8 个字节（小端视角）</div>
+  <div class="tbl-wrap"><table class="tbl">
+    <tr><th>地址</th>${Array.from({ length: 8 }, (_, i) => `<th class="mono">${hexT(0x200n + BigInt(i))}</th>`).join('')}</tr>
+    <tr><td class="mono">字节</td>${Array.from({ length: 8 }, (_, i) => `<td class="mono">${hexB(mrMem.get(0x200 + i) || 0)}</td>`).join('')}</tr>
+  </table></div>
+  ${tail}`;
+}
+
+/* ============================================================
+   9. 测验
+   ============================================================ */
+const QUIZ = [
+  { q: 'Y86-64 有多少个程序寄存器？', o: ['16 个', '15 个（省去 %r15）', '14 个', '32 个'], a: 1,
+    w: '省去 %r15，让 0xF 专职表示「无寄存器」。见 2.2 节。' },
+  { q: '编码里 0xF 作为寄存器字段表示什么？', o: ['%r15', '栈指针', '无寄存器（占位）', '非法编码，必报错'], a: 2,
+    w: 'F 是「空位」：irmovq 的 rA、pushq/popq 的另一个字段都填 F。见 2.2 节。' },
+  { q: 'OPq 的 ifun = 0 对应哪种运算？', o: ['subq', 'addq', 'andq', 'xorq'], a: 1,
+    w: 'add=0、sub=1、and=2、xor=3 —— 这组编号直接当 ALU 控制信号。见 7.1 节。' },
+  { q: 'halt 指令占几个字节？', o: ['1 字节', '2 字节', '9 字节', '10 字节'], a: 0,
+    w: 'halt/nop/ret 只有 icode:ifun 一个字节。见 3.3 节的长度表。' },
+  { q: 'irmovq V, rB 的编码里 rA 字段填什么？', o: ['0（%rax）', '4（%rsp）', 'F（无寄存器）', '不填，指令只有 9 字节'], a: 2,
+    w: 'irmovq 没有源寄存器，rA = F，总长 10 字节。见 2.2、4.1 节。' },
+  { q: 'cmovXX 与 jXX 判断条件时读哪几个状态位？', o: ['ZF 和 CF', 'ZF、SF、OF', '只有 SF', 'PC 和 Stat'], a: 1,
+    w: 'Y86-64 只有三个条件码，判据公式与第 5 讲完全一致（如 le = (SF^OF)|ZF）。见 3.2、7 节。' },
+  { q: '为什么组合电路里不能有反馈环？', o: ['会烧坏芯片', '输出必须是输入的纯函数，记忆必须显式放进时钟寄存器', '会让 ALU 变慢', '没有这个限制'], a: 1,
+    w: '组合 = 无记忆。把输出绕回输入就有了记忆和时序问题，这与第 8 节的时钟寄存器分工冲突。见 6 节警告框。' },
+  { q: '时钟寄存器什么时候把 D 载入 Q？', o: ['每个时钟周期都持续载入', '只在时钟上升沿', '在 D 变化的瞬间', '在写使能为 0 时'], a: 1,
+    w: '边沿之间无论 D 怎么变，Q 都保持 —— 这让「整条指令的状态更新」发生在同一瞬间。见 8.1 节。' },
+  { q: 'irmovq $15, %rbx 的 8 字节常数在内存里的第一个字节是什么？', o: ['0F', 'F0', '00', '15'], a: 0,
+    w: '小端存放：低字节在前，所以是 0F 00 00 00 00 00 00 00。见 4.1 节与第 2 讲的字节序。' },
+  { q: 'RISC 风格（如 MIPS）最典型的一条设计原则是？', o: ['指令越长越好', '只有 load / store 能访问内存，算术指令只在寄存器之间运算', '变长指令编码', '条件码越多越好'], a: 1,
+    w: 'load/store 架构 + 定长指令 + 大量寄存器是 RISC 的标志；x86-64 的算术指令大多也能带内存操作数。见 5.3 节。' },
+];
+let qzState = QUIZ.map(() => null);
+function renderQuiz() {
+  const answered = qzState.filter(v => v !== null).length;
+  const right = QUIZ.filter((q, i) => qzState[i] === q.a).length;
+  const list = QUIZ.map((q, i) => {
+    const sel = qzState[i];
+    const cls = sel === null ? '' : sel === q.a ? ' correct done' : ' wrong done';
+    return `<div class="puzzle${cls}" style="flex-direction:column;align-items:stretch">
+      <div class="q" style="white-space:normal"><b>${i + 1}.</b> ${esc(q.q)}</div>
+      <div style="display:flex;flex-wrap:wrap;gap:7px;margin-top:8px">
+        ${q.o.map((o, j) => `<button class="sm" data-qzo="${i}:${j}"
+          style="${sel === null ? '' : j === q.a ? 'border-color:var(--ok-bd);background:var(--ok-bg)'
+            : j === sel ? 'border-color:var(--bad-bd);background:var(--bad-bg)' : 'opacity:.6'}">
+          ${'ABCD'[j]}. ${esc(o)}</button>`).join('')}
+      </div>
+      <div class="exp"><span class="verdict">${sel === null ? '' : sel === q.a ? '✓ 正确' : '✗ 错误'}</span>
+        &nbsp;正确答案：<b>${'ABCD'[q.a]}. ${esc(q.o[q.a])}</b><br>${esc(q.w)}</div>
+    </div>`;
+  }).join('');
+  const score = answered === 0 ? '' : `<div class="box ${right === QUIZ.length ? 'ok' : right >= QUIZ.length / 2 ? 'warn' : 'bad'}" style="margin-bottom:0">
+    <div class="t">已答 ${answered} / ${QUIZ.length} 题，答对 ${right} 题</div>
+    ${answered === QUIZ.length
+      ? (right === QUIZ.length ? '全对 —— ISA、编码、逻辑积木都拿下了。' : '错题上方已标出正确答案与依据，回到对应小节再看一遍即可。')
+      : '继续答题，每题都会立即给出解析。'}
+  </div>`;
+  return list + score;
+}
+
+/* ============================================================
+   自检：编码/解码往返 + 示例程序执行
+   ============================================================ */
+let SELFTEST = '';
+function runSelfTest() {
+  const probs = [];
+  let cases = 0;
+  /* 1) 全部 icode × ifun × 寄存器组合的编码/解码往返 */
+  for (const [ic, def] of Object.entries(Y86_INS)) {
+    const icode = +ic;
+    for (let ifun = 0; ifun < def.ifun.length; ifun++) {
+      for (const ra of [0, 4, 7, 15]) {
+        for (const rb of [1, 15]) {
+          const val = 0x1122334455667788n;
+          const enc = y86Encode(icode, ifun, ra, rb, val);
+          if (!enc.ok) { probs.push(`encode ${def.name}: ${enc.err}`); continue; }
+          cases++;
+          const dec = y86Decode(enc.bytes);
+          if (!dec.ok) { probs.push(`decode ${def.name}: ${dec.err}`); continue; }
+          if (dec.icode !== icode || dec.ifun !== ifun) probs.push(`${def.name}: icode/ifun 往返不一致`);
+          if (def.reg && (dec.rA !== ra || dec.rB !== rb)) probs.push(`${def.name}: 寄存器往返不一致`);
+          if (def.cnst && dec.val !== val) probs.push(`${def.name}: 常数往返不一致`);
+          if (enc.bytes.length !== def.len) probs.push(`${def.name}: 长度 ${enc.bytes.length} ≠ ${def.len}`);
+        }
+      }
+    }
+  }
+  /* 2) 解码非法 icode 必须报错而不是崩溃 */
+  if (y86Decode([0xff]).ok) probs.push('icode=15 应当报非法');
+  if (y86Decode([0x61]).ok) probs.push('OPq ifun=4 应当报超界');   /* fn 只有 0–3 */
+  /* 3) 示例程序：载入 + 运行到底 */
+  const savePe = (typeof $('#peIn') !== 'undefined' && $('#peIn')) ? $('#peIn').value : null;
+  const yrBackup = yrState;
+  yrState = null;
+  yrLoad(DEMO_ASM);
+  if (!yrState) probs.push('示例程序汇编失败');
+  else {
+    for (let i = 0; i < 500 && yrState.mach.stat === 1; i++) yrStep();
+    const m = yrState.mach;
+    if (m.stat !== 2) probs.push(`示例程序最终 Stat=${m.stat}，应为 2（HLT）`);
+    if (m.regs[0] !== 0x66n) probs.push(`示例程序最终 %rax=${hexT(m.regs[0])}，应为 0x66`);
+    cases++;
+  }
+  yrState = yrBackup;
+  if (savePe !== null && $('#peIn')) $('#peIn').value = savePe;
+  SELFTEST = probs.length
+    ? `✗ 自检失败 ${probs.length} 项：${probs.slice(0, 3).join('；')}（共 ${cases} 例）`
+    : `✓ 自检通过：${cases} 例编码/解码往返 + 示例程序执行，全部一致`;
+  return probs.length === 0;
+}
+
+/* ============================================================
+   初始化
+   ============================================================ */
+function initAll() {
+  /* --- 1.1 ISA 抽象层 --- */
+  function doIsa(k) {
+    $$('#isaSeg button').forEach(b => b.classList.toggle('on', b.dataset.l === k));
+    $('#isaOut').innerHTML = renderIsa(k);
+  }
+  $$('#isaSeg button').forEach(b => b.addEventListener('click', () => doIsa(b.dataset.l)));
+  doIsa('isa');
+
+  /* --- 2 状态总览 --- */
+  function doSt(k) {
+    $$('#stSeg button').forEach(b => b.classList.toggle('on', b.dataset.r === k));
+    $('#stOut').innerHTML = renderState(k);
+  }
+  $$('#stSeg button').forEach(b => b.addEventListener('click', () => doSt(b.dataset.r)));
+  doSt('reg0');
+
+  /* --- 3.1 指令总表 --- */
+  function doIt(c) {
+    insCls = c;
+    $$('#itSeg button').forEach(b => b.classList.toggle('on', b.dataset.c === c));
+    $('#itOut').innerHTML = renderInsTbl();
+  }
+  $$('#itSeg button').forEach(b => b.addEventListener('click', () => doIt(b.dataset.c)));
+  doIt('all');
+
+  /* --- 3.2 条件判据 --- */
+  function doCs(f) {
+    $$('#csSeg button').forEach(b => b.classList.toggle('on', b.dataset.f === f));
+    $('#csOut').innerHTML = renderCond(+f);
+  }
+  $$('#csSeg button').forEach(b => b.addEventListener('click', () => doCs(b.dataset.f)));
+  doCs('0');
+
+  /* --- 3.3 首字节 --- */
+  const fbIn = $('#fbIn');
+  function doFb() {
+    const b = parseByte(fbIn.value);
+    if (b === null) { $('#fbOut').innerHTML = badBox('请输入 0–255 的字节（如 30、60、ff）。'); return; }
+    $('#fbOut').innerHTML = renderFirstByte(b);
+  }
+  $('#fbGo').addEventListener('click', doFb);
+  fbIn.addEventListener('keydown', e => { if (e.key === 'Enter') doFb(); });
+  $$('[data-fb]').forEach(b => b.addEventListener('click', () => { fbIn.value = b.dataset.fb; doFb(); }));
+  doFb();
+
+  /* --- 4.1 编码器 --- */
+  const enI = $('#enI'), enA = $('#enA'), enB = $('#enB'), enV = $('#enV');
+  /* 寄存器下拉：0–14 用名字，15 用 F */
+  const regOpts = sel => Y86_REGS.map(([n, id]) =>
+    `<option value="${id}" ${id === sel ? 'selected' : ''}>${id === 15 ? 'F（无寄存器）' : n}</option>`).join('');
+  function fillRegSelects() {
+    const def = Y86_INS[Number(enI.value.split('.')[0])];
+    const curA = enA.value, curB = enB.value;
+    enA.innerHTML = regOpts(curA !== undefined ? Number(curA) : 15);
+    enB.innerHTML = regOpts(curB !== undefined ? Number(curB) : 15);
+    if (!def.reg) { enA.closest('.fld').style.opacity = '.45'; enB.closest('.fld').style.opacity = '.45'; }
+    else { enA.closest('.fld').style.opacity = ''; enB.closest('.fld').style.opacity = ''; }
+    if (!def.cnst) enV.closest('.fld').style.opacity = '.45';
+    else enV.closest('.fld').style.opacity = '';
+  }
+  function doEn() {
+    const [ic, fn] = enI.value.split('.').map(Number);
+    const rA = Number(enA.value), rB = Number(enB.value);
+    const v = parseIntArg(enV.value);
+    if (Y86_INS[ic].cnst && v === null) { $('#enOut').innerHTML = badBox('V / D 要是一个整数（支持 0x… 与负数）。'); return; }
+    $('#enOut').innerHTML = renderEncode(ic, fn, rA, rB, v === null ? 0n : v);
+  }
+  enI.addEventListener('change', () => { fillRegSelects(); doEn(); });
+  [enA, enB].forEach(el => el.addEventListener('change', doEn));
+  enV.addEventListener('keydown', e => { if (e.key === 'Enter') doEn(); });
+  $('#enGo').addEventListener('click', doEn);
+  $$('[data-en]').forEach(b => b.addEventListener('click', () => {
+    const kv = kvAttr(b.dataset.en);
+    enI.value = kv.i;
+    fillRegSelects();
+    enA.value = kv.a === '15' ? '15' : kv.a;
+    enB.value = kv.b === '15' ? '15' : kv.b;
+    enV.value = kv.v || '';
+    doEn();
+  }));
+  fillRegSelects();
+  doEn();
+
+  /* --- 4.2 解码器 --- */
+  const deIn = $('#deIn');
+  function doDe() {
+    const bytes = parseHexBytes(deIn.value);
+    if (bytes === null) { $('#deOut').innerHTML = badBox('请输入十六进制字节，用空格分隔，例如 30 f3 0f 00 …。'); return; }
+    $('#deOut').innerHTML = renderDecode(bytes);
+  }
+  $('#deGo').addEventListener('click', doDe);
+  deIn.addEventListener('keydown', e => { if (e.key === 'Enter') doDe(); });
+  $$('[data-de]').forEach(b => b.addEventListener('click', () => { deIn.value = b.dataset.de; doDe(); }));
+  doDe();
+
+  /* --- 5.1 汇编器 --- */
+  const peIn = $('#peIn'), peBase = $('#peBase');
+  $('#peDemo').addEventListener('click', () => { peIn.value = DEMO_ASM; doPe(); });
+  $('#peClear').addEventListener('click', () => { peIn.value = ''; $('#peOut').innerHTML = ''; });
+  function doPe() {
+    const base = parseIntArg(peBase.value);
+    if (base === null || base < 0n) { $('#peOut').innerHTML = badBox('起始地址要是一个非负整数（如 0x100）。'); return; }
+    const res = asmY86(peIn.value, base);
+    $('#peOut').innerHTML = renderAsm(res, base);
+  }
+  $('#peGo').addEventListener('click', doPe);
+  peBase.addEventListener('keydown', e => { if (e.key === 'Enter') doPe(); });
+  peIn.value = DEMO_ASM;
+  doPe();
+
+  /* --- 5.2 解释器 --- */
+  function doYrRender() { $('#yrOut').innerHTML = renderYr(); }
+  $('#yrGo').addEventListener('click', () => {
+    const r = yrLoad(peIn.value);
+    if (r.err) { $('#yrOut').innerHTML = badBox(r.err); return; }
+    if (!r.ok) { $('#yrOut').innerHTML = renderAsm(r.res, parseIntArg(peBase.value) || 0n); return; }
+    for (let i = 0; i < 2000 && yrState.mach.stat === 1; i++) yrStep();
+    doYrRender();
+  });
+  $('#yrNext').addEventListener('click', () => {
+    if (!yrState) { const r = yrLoad(peIn.value); if (r.err) { $('#yrOut').innerHTML = badBox(r.err); return; } }
+    yrStep();
+    doYrRender();
+  });
+  $('#yrReset').addEventListener('click', () => { yrState = null; doYrRender(); });
+  doYrRender();
+
+  /* --- 6.1 门 --- */
+  function doGt() {
+    $('#gtA').textContent = `A = ${gtA}`;
+    $('#gtB').textContent = `B = ${gtB}`;
+    $$('#gtSeg button').forEach(b => b.classList.toggle('on', b.dataset.g === gtGate));
+    $('#gtOut').innerHTML = renderGate();
+  }
+  $$('#gtSeg button').forEach(b => b.addEventListener('click', () => { gtGate = b.dataset.g; doGt(); }));
+  $('#gtA').addEventListener('click', () => { gtA = 1 - gtA; doGt(); });
+  $('#gtB').addEventListener('click', () => { gtB = 1 - gtB; doGt(); });
+  doGt();
+
+  /* --- 6.2 位级 MUX --- */
+  function doMx() {
+    $('#mxA').textContent = `a = ${mxA}`;
+    $('#mxB').textContent = `b = ${mxB}`;
+    $('#mxS').textContent = `s = ${mxS}`;
+    $('#mxOut').innerHTML = renderMux();
+  }
+  $('#mxA').addEventListener('click', () => { mxA = 1 - mxA; doMx(); });
+  $('#mxB').addEventListener('click', () => { mxB = 1 - mxB; doMx(); });
+  $('#mxS').addEventListener('click', () => { mxS = 1 - mxS; doMx(); });
+  doMx();
+
+  /* --- 6.3 字级 --- */
+  const wmA = $('#wmA'), wmB = $('#wmB');
+  function doWm() {
+    const a = parseIntArg(wmA.value), b = parseIntArg(wmB.value);
+    if (a === null || b === null) { $('#wmOut').innerHTML = badBox('A 与 B 都要是整数（支持 0x…）。'); return; }
+    $('#wmOut').innerHTML = renderWordMux(a, b);
+  }
+  $('#wmGo').addEventListener('click', doWm);
+  [wmA, wmB].forEach(el => el.addEventListener('keydown', e => { if (e.key === 'Enter') doWm(); }));
+  $('#wmS').addEventListener('click', () => { wmS = 1 - wmS; doWm(); });
+  $$('[data-wm]').forEach(b => b.addEventListener('click', () => {
+    const kv = kvAttr(b.dataset.wm);
+    if (kv.a !== undefined) wmA.value = kv.a;
+    if (kv.b !== undefined) wmB.value = kv.b;
+    doWm();
+  }));
+  doWm();
+
+  /* --- 7 ALU --- */
+  const alA = $('#alA'), alB = $('#alB'), alOp = $('#alOp');
+  function doAl() {
+    const a = parseIntArg(alA.value), b = parseIntArg(alB.value);
+    if (a === null || b === null) { $('#alOut').innerHTML = badBox('valA 与 valB 都要是 64 位整数（支持 0x… 与负数）。'); return; }
+    $('#alOut').innerHTML = renderAlu(u64(a), u64(b), Number(alOp.value));
+  }
+  $('#alGo').addEventListener('click', doAl);
+  [alA, alB].forEach(el => el.addEventListener('keydown', e => { if (e.key === 'Enter') doAl(); }));
+  alOp.addEventListener('change', doAl);
+  $$('[data-al]').forEach(b => b.addEventListener('click', () => {
+    const kv = kvAttr(b.dataset.al);
+    alA.value = kv.a; alB.value = kv.b; alOp.value = kv.o; doAl();
+  }));
+  doAl();
+
+  /* --- 8.1 时钟寄存器 --- */
+  const ckIn = $('#ckIn');
+  function doCk() { $('#ckOut').innerHTML = renderClk(); }
+  $('#ckSet').addEventListener('click', () => {
+    const v = parseIntArg(ckIn.value);
+    if (v === null) { ckEvents.unshift({ t: '写输入', m: '（输入非法）', e: 'D 保持不变 —— 请输入 64 位整数（支持 0x…）。' }); doCk(); return; }
+    ckD = u64(v);
+    ckEvents.unshift({ t: '写输入 D', m: `D ← ${hexQ(ckD)}`, e: '此刻 Q 纹丝不动 —— 输入变了，输出不变，这就是「没有边沿就没有写入」' });
+    doCk();
+  });
+  $('#ckTick').addEventListener('click', () => {
+    const old = ckQ;
+    ckQ = ckD;
+    ckEvents.unshift({ t: '时钟沿 ↑', m: `Q ← D：${hexQ(old)} → ${hexQ(ckQ)}`, e: '上升沿把输入锁进输出 —— 全部状态寄存器在这一瞬间统一更新' });
+    doCk();
+  });
+  $('#ckReset').addEventListener('click', () => { ckD = 0n; ckQ = 0n; ckEvents = []; doCk(); });
+  doCk();
+
+  /* --- 8.2 内存 --- */
+  const mrA = $('#mrA'), mrV = $('#mrV');
+  function doMr(title, lines, tail) { $('#mrOut').innerHTML = renderMem(title, lines, tail); }
+  $('#mrWr').addEventListener('click', () => {
+    const a = parseIntArg(mrA.value), v = parseIntArg(mrV.value);
+    if (a === null || v === null) { doMr('输入无效', '<b style="color:var(--sign)">地址与写入值都要是整数（支持 0x…）</b>', ''); return; }
+    memSetQuad(mrMem, a, v);
+    doMr('写入完成', `M[${hexT(u64(a))}] ← ${hexT(u64(v))}（8 字节小端写入，发生在时钟沿）`, '');
+  });
+  $('#mrRd').addEventListener('click', () => {
+    const a = parseIntArg(mrA.value);
+    if (a === null) { doMr('输入无效', '<b style="color:var(--sign)">地址要是一个整数（支持 0x…）</b>', ''); return; }
+    const v = memGetQuad(mrMem, a);
+    doMr('读出（组合，不占时钟沿）', `M[${hexT(u64(a))}] = ${hexT(v)}${v === 0n ? '　<span style="font-family:var(--font-sans);color:var(--muted)">（从未写过 → 全 0）</span>' : ''}`, '');
+  });
+  $('#mrDump').addEventListener('click', () => {
+    doMr('内存窗口', '下面是 0x200–0x207 的当前内容', '');
+  });
+  doMr('就绪', '「写入」在时钟沿把 8 个字节按小端放进内存；「读回」随时可做。', '');
+
+  /* --- 9 测验 --- */
+  function doQz() {
+    $('#qzOut').innerHTML = renderQuiz();
+    $$('[data-qzo]').forEach(b => b.addEventListener('click', () => {
+      const [i, j] = b.dataset.qzo.split(':').map(Number);
+      if (qzState[i] !== null) return;
+      qzState[i] = j; doQz();
+    }));
+  }
+  $('#qzReset').addEventListener('click', () => { qzState = QUIZ.map(() => null); doQz(); });
+  doQz();
+
+  /* --- 自检（结果在页脚与解释器区显示） --- */
+  runSelfTest();
+}
+
+document.addEventListener('DOMContentLoaded', initAll);
+</script>
+</body>
+</html>

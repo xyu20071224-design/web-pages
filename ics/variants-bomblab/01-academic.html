@@ -1,0 +1,1128 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-style="academic" data-deck="bomblab">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bomb Lab 实验 · 交互式拆弹手册（中文）（学术讲义版）</title>
+<style>
+/* ==========================================================================
+   base.css —— 结构基础样式（所有风格共用）
+   只使用 CSS 变量，不含任何具体配色；由各主题覆盖变量与少量结构规则。
+   ========================================================================== */
+
+:root{
+  /* 颜色（每个主题必须覆盖） */
+  --bg:#f6f7f9; --card:#fff; --ink:#15181d; --muted:#697586; --line:#e4e7ec;
+  --accent:#2563eb; --accent-ink:#fff; --accent-soft:#eaf1ff;
+  --sign:#e5484d; --exp:#0b7fd4; --frac:#18915a; --warn:#b45309;
+  --sign-bg:#fdecec; --sign-fg:#a3262b; --sign-bd:#f6cdcf;
+  --exp-bg:#e8f2fd;  --exp-fg:#0a5f9e;  --exp-bd:#c7ddf5;
+  --frac-bg:#e9f7ef; --frac-fg:#116b43; --frac-bd:#c8e8d5;
+  --ok-bg:#f2fbf6; --ok-bd:#9ed3b4; --bad-bg:#fff5f5; --bad-bd:#f1b5b8;
+  --warn-bg:#fffbeb; --gray-bg:#eef1f5; --gray-fg:#5b6472;
+  --paper-soft:#fcfdfe; --code-bg:#f1f3f7; --code-bd:#e6e9ef;
+  --tbl-head:#f7f9fc; --tbl-hover:#fafbfd;
+  --sel-bg:#eef1f5;
+
+  /* 字体 */
+  --font-sans:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",system-ui,sans-serif;
+  --font-mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+  --font-display:var(--font-sans);
+  --tracking-title:normal;
+
+  /* 形状 */
+  --radius:12px; --radius-sm:8px; --radius-pill:99px;
+  --border-w:1px; --shadow:0 1px 2px rgba(16,24,40,.06),0 1px 3px rgba(16,24,40,.1);
+  --shadow-card:none;
+  --card-border:var(--border-w) solid var(--line);
+
+  /* 布局 */
+  --page-max:1180px; --nav-w:236px; --gap:26px; --sec-pad:26px 28px;
+  --nav-sticky-top:64px; --anchor-offset:70px;
+  --font-size:16px; --line-height:1.75;
+}
+
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font-sans);
+  font-size:var(--font-size);line-height:var(--line-height);-webkit-font-smoothing:antialiased}
+img{max-width:100%}
+
+/* ---------- 顶栏 ---------- */
+.topbar{position:sticky;top:0;z-index:50;background:var(--card);border-bottom:1px solid var(--line)}
+.topbar-in{max-width:var(--page-max);margin:0 auto;padding:10px 22px;display:flex;align-items:center;gap:14px}
+.brand{font-weight:700;letter-spacing:var(--tracking-title);font-family:var(--font-display)}
+.brand small{font-weight:500;color:var(--muted);margin-left:8px;font-size:12.5px}
+.progress{margin-left:auto;display:flex;align-items:center;gap:10px;font-size:12.5px;color:var(--muted)}
+.progress .bar{width:150px;height:6px;border-radius:var(--radius-pill);background:var(--line);overflow:hidden}
+.progress .bar>i{display:block;height:100%;width:0;background:var(--accent);transition:width .25s}
+
+/* ---------- 主体布局 ---------- */
+.layout{max-width:var(--page-max);margin:0 auto;padding:22px;display:grid;
+  grid-template-columns:var(--nav-w) minmax(0,1fr);gap:var(--gap)}
+main{min-width:0}
+/* 长 URL / 长标识符没有断行点，会把容器整个撑破（窄屏尤其明显）。
+   只作用于文本容器；表格故意不加，让它走 .tbl-wrap 的横向滚动。 */
+main p,main li,main dd,main dt,main h2,main h3,main h4,main h5,
+main .box,main .card,main .readout,main .puzzle,main .step{overflow-wrap:anywhere}
+
+/* ---------- 目录 ---------- */
+nav.toc{position:sticky;top:var(--nav-sticky-top);align-self:start;max-height:calc(100vh - 84px);overflow:auto;padding-right:4px}
+nav.toc h4{margin:0 0 8px;font-size:12px;letter-spacing:.12em;color:var(--muted);text-transform:uppercase;font-weight:600}
+nav.toc a{display:block;padding:7px 11px;border-radius:var(--radius-sm);color:var(--ink);opacity:.78;
+  text-decoration:none;font-size:14.5px;border-left:2.5px solid transparent}
+nav.toc a:hover{background:var(--sel-bg);opacity:1}
+nav.toc a.active{background:var(--accent-soft);color:var(--accent);border-left-color:var(--accent);font-weight:600;opacity:1}
+nav.toc a .n{display:inline-block;min-width:20px;color:var(--muted);font-size:12.5px;font-variant-numeric:tabular-nums}
+nav.toc a.active .n{color:var(--accent)}
+nav.toc .sub{padding-left:26px;font-size:13.5px;opacity:.7}
+
+/* ---------- 章节 ---------- */
+section{background:var(--card);border:var(--card-border);border-radius:var(--radius);
+  padding:var(--sec-pad);margin-bottom:22px;box-shadow:var(--shadow);scroll-margin-top:var(--anchor-offset)}
+section>h2{margin:0 0 6px;font-size:25px;letter-spacing:-.01em;font-family:var(--font-display)}
+section>.lede{color:var(--muted);margin:0 0 20px;font-size:14.5px}
+h3{font-size:18.5px;margin:26px 0 10px;padding-left:11px;border-left:3.5px solid var(--accent);font-family:var(--font-display)}
+h4{font-size:16px;margin:18px 0 8px;font-family:var(--font-display)}
+h5{font-size:15px;font-family:var(--font-display)}
+p{margin:10px 0}
+ul,ol{margin:10px 0;padding-left:22px}
+li{margin:5px 0}
+code{font-family:var(--font-mono);font-size:.89em;background:var(--code-bg);border:1px solid var(--code-bd);border-radius:5px;padding:1px 5px}
+.mono{font-family:var(--font-mono)}
+a{color:var(--accent)}
+hr{border:0;border-top:1px dashed var(--line);margin:24px 0}
+.srcref{font-size:11.5px;color:var(--muted);font-weight:500;font-family:var(--font-sans);margin-left:8px;vertical-align:middle;white-space:nowrap;opacity:.75}
+.en{color:var(--muted);font-size:.92em}
+
+/* ---------- 栅格与卡片 ---------- */
+.grid{display:grid;gap:14px}
+.g2{grid-template-columns:repeat(2,minmax(0,1fr))}
+.g3{grid-template-columns:repeat(3,minmax(0,1fr))}
+/* 窄屏单列：必须用 minmax(0,1fr)。写成 1fr 时轨道最小宽度是 auto，
+   单元格里只要有长代码行（<pre>）就撑破容器，整页横向溢出。 */
+@media(max-width:820px){.g2,.g3{grid-template-columns:minmax(0,1fr)}}
+.card{border:var(--card-border);border-radius:var(--radius-sm);padding:15px 17px;background:var(--paper-soft);box-shadow:var(--shadow-card)}
+.card h5{margin:0 0 7px}
+.card.pad0{padding:0;overflow:hidden}
+
+/* ---------- 提示框 ---------- */
+.box{border:1px solid var(--line);border-left:4px solid var(--accent);background:var(--accent-soft);
+  border-radius:var(--radius-sm);padding:12px 16px;margin:14px 0}
+.box.warn{border-left-color:var(--warn);background:var(--warn-bg)}
+.box.bad{border-left-color:var(--sign);background:var(--bad-bg)}
+.box.ok{border-left-color:var(--frac);background:var(--ok-bg)}
+.box .t{font-weight:650;font-size:14.5px;margin-bottom:2px}
+
+/* ---------- 公式 ---------- */
+.formula{font-family:var(--font-mono);background:var(--paper-soft);border:1px solid var(--line);
+  border-radius:var(--radius-sm);padding:14px 17px;margin:14px 0;font-size:16.5px;text-align:center;overflow-x:auto}
+.formula.big{font-size:20px}
+
+/* ---------- 表格 ---------- */
+table.tbl{width:100%;border-collapse:collapse;font-size:14.5px;margin:14px 0}
+table.tbl th,table.tbl td{border:1px solid var(--line);padding:8px 11px;text-align:left;vertical-align:top}
+table.tbl th{background:var(--tbl-head);font-weight:650;font-size:13.5px;white-space:nowrap}
+table.tbl td.mono,table.tbl th.mono{font-family:var(--font-mono);font-size:13.5px}
+table.tbl tr:hover td{background:var(--tbl-hover)}
+/* 当前行高亮：interactive 表格用它标出「正在看的那一行」。
+   注意 --tbl-hover 是悬停色，深色皮肤下故意比底色亮，所以 hl 用同一套变量。 */
+table.tbl tr.hl td{background:var(--sel-bg)}
+.tbl-wrap{overflow-x:auto}
+
+/* ---------- 位串控件 ---------- */
+.fw{display:flex;flex-wrap:wrap;gap:8px 18px;align-items:flex-start;margin:4px 0 2px;min-width:0}
+.fgrp{min-width:0}
+.fcap{font-size:12px;color:var(--muted);margin-bottom:4px;font-weight:600}
+.fcap b{font-family:var(--font-mono);font-size:12.5px}
+.bits{display:flex;flex-wrap:wrap;gap:2px;font-family:var(--font-mono);margin:4px 0}
+.bits .b{width:25px;height:33px;display:flex;align-items:center;justify-content:center;
+  border-radius:6px;font-size:15px;cursor:pointer;user-select:none;border:1px solid transparent;
+  transition:transform .06s,background .12s;font-weight:600}
+.bits .b:hover{transform:translateY(-2px)}
+.bits .b.s{background:var(--sign-bg);color:var(--sign-fg);border-color:var(--sign-bd)}
+.bits .b.e{background:var(--exp-bg);color:var(--exp-fg);border-color:var(--exp-bd)}
+.bits .b.f{background:var(--frac-bg);color:var(--frac-fg);border-color:var(--frac-bd)}
+.bits .b.sel{outline:2px solid var(--ink);outline-offset:1px}
+.bits.sm .b{width:19px;height:26px;font-size:12px;border-radius:4px}
+.fgrp .bits{flex-wrap:wrap;max-width:100%;gap:2px}
+.fgrp.ge .bits{max-width:300px}
+
+/* ---------- 读数表 ---------- */
+.readout{display:grid;grid-template-columns:auto 1fr;gap:4px 16px;font-size:14.5px;margin:12px 0}
+.readout dt{color:var(--muted);font-weight:600;font-family:var(--font-mono);font-size:13.5px;padding-top:2px}
+.readout dd{margin:0;font-family:var(--font-mono)}
+
+/* ---------- 小标签 ---------- */
+.chip{display:inline-block;font-size:12.5px;padding:2px 9px;border-radius:var(--radius-pill);
+  background:var(--accent-soft);color:var(--accent);font-weight:600}
+.chip.ok{background:var(--frac-bg);color:var(--frac-fg)}
+.chip.bad{background:var(--sign-bg);color:var(--sign-fg)}
+.chip.warn{background:var(--warn-bg);color:var(--warn)}
+.chip.gray{background:var(--gray-bg);color:var(--gray-fg)}
+.kbd{font-family:var(--font-mono);font-size:13px;background:var(--code-bg);border:1px solid var(--code-bd);
+  border-bottom-width:2px;border-radius:6px;padding:1px 7px}
+
+/* ---------- 控件 ---------- */
+.ctrls{display:flex;flex-wrap:wrap;gap:9px;align-items:center;margin:12px 0}
+label.fld{display:inline-flex;align-items:center;gap:7px;font-size:14px;color:var(--ink);max-width:100%;flex-wrap:wrap;min-width:0}
+label.fld select,label.fld input{min-width:0;max-width:100%}
+input[type=text],input[type=number],select{font-family:var(--font-mono);font-size:14px;padding:6px 10px;
+  border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--card);color:var(--ink)}
+input[type=text]:focus,input[type=number]:focus,select:focus{outline:2px solid var(--accent-soft);border-color:var(--accent)}
+button{font-family:var(--font-sans);font-size:14px;font-weight:600;padding:7px 15px;border-radius:var(--radius-sm);
+  border:1px solid var(--line);background:var(--card);color:var(--ink);cursor:pointer}
+button:hover{background:var(--sel-bg)}
+button.p{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+button.sm{padding:4px 10px;font-size:13px}
+button.pill{border-radius:var(--radius-pill)}
+/* 按钮组默认不换行：项一多就会把 .ctrls 撑破。允许它缩到容器宽度并横向滚动。 */
+.seg{display:inline-flex;max-width:100%;border:1px solid var(--line);
+  border-radius:var(--radius-sm);overflow-x:auto;overflow-y:hidden}
+.seg button{border:0;border-radius:0;border-right:1px solid var(--line);padding:6px 13px}
+.seg button:last-child{border-right:0}
+.seg button.on{background:var(--accent);color:var(--accent-ink)}
+
+/* ---------- 分步演示 ---------- */
+/* .steps 是 .step 的包裹层（skill 词汇表里列了但一直没定义）——
+   仅给一点上下留白，步骤块自己的边距由 .step 负责。 */
+.steps{margin:12px 0}
+.step{border:1px solid var(--line);border-radius:var(--radius-sm);padding:11px 15px;margin:9px 0;
+  background:var(--paper-soft);opacity:.42;transition:opacity .2s}
+.step.on{opacity:1;background:var(--card)}
+.step .h{font-size:13px;font-weight:700;color:var(--accent);letter-spacing:.02em;margin-bottom:3px}
+.step .m{font-family:var(--font-mono);font-size:14.5px;overflow-x:auto}
+.step .e{font-size:13.5px;color:var(--muted);margin-top:3px}
+
+/* ---------- 折叠与答案 ---------- */
+.reveal{border:1px solid var(--line);border-radius:var(--radius-sm);padding:11px 15px;margin:8px 0;background:var(--paper-soft)}
+.reveal summary{cursor:pointer;font-weight:600;font-size:14.5px}
+.reveal[open]{background:var(--card)}
+.ans{margin-top:8px;padding-top:8px;border-top:1px dashed var(--line);font-size:14.5px}
+
+/* ---------- 判断题 ---------- */
+.puzzle{border:1px solid var(--line);border-radius:var(--radius-sm);padding:12px 15px;margin:9px 0;
+  display:flex;gap:13px;align-items:flex-start;background:var(--paper-soft)}
+.puzzle .q{font-family:var(--font-mono);font-size:15px;flex:1;min-width:0;overflow-x:auto;white-space:nowrap}
+.puzzle .q small{font-family:var(--font-sans);color:var(--muted);display:block;white-space:normal}
+.puzzle .btns{display:flex;gap:6px;flex-shrink:0}
+.puzzle.correct{border-color:var(--ok-bd);background:var(--ok-bg)}
+.puzzle.wrong{border-color:var(--bad-bd);background:var(--bad-bg)}
+.puzzle .exp{margin-top:9px;padding-top:9px;border-top:1px dashed var(--line);font-size:14.5px;
+  display:none;white-space:normal;font-family:var(--font-sans)}
+.puzzle.done .exp{display:block}
+.puzzle .exp .verdict{font-weight:700}
+
+/* ---------- 分布图 ---------- */
+.tick{stroke:#94a3b8;stroke-width:1.4}
+.tick.dn{stroke:var(--exp)}
+.tick.nm{stroke:var(--frac)}
+.ticklabel{font-size:9.5px;fill:var(--muted);font-family:var(--font-mono)}
+.axisline{stroke:var(--line);stroke-width:1.2}
+.axislabel{font-size:11px;fill:var(--muted)}
+
+/* ---------- 页脚 / 回到顶部 ---------- */
+.footer{max-width:var(--page-max);margin:0 auto;padding:8px 22px 40px;color:var(--muted);font-size:13px}
+.totop{position:fixed;right:22px;bottom:22px;z-index:40;box-shadow:var(--shadow);display:none}
+
+/* ---------- 响应式 ---------- */
+@media(max-width:960px){
+  .layout{grid-template-columns:1fr;padding:16px}
+  nav.toc{position:static;max-height:none;display:flex;flex-wrap:wrap;gap:6px;
+    background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:10px}
+  nav.toc h4{width:100%;margin-bottom:2px}
+  nav.toc a{border-left:0;padding:5px 10px;font-size:13px}
+  nav.toc .sub{display:none}
+  section{padding:20px 17px}
+}
+@media print{
+  nav.toc,.topbar,.totop{display:none}
+  .layout{display:block}
+  section{break-inside:avoid;box-shadow:none}
+}
+
+/* ==========================================================================
+   风格 A · 学术讲义（Academic / 印刷体）
+   纸感底色 · 衬线标题 · 书眉式细线 · 三线表 · 目录位于右侧栏
+   ========================================================================== */
+
+:root{
+  --bg:#fbfaf6; --card:#fffefb; --ink:#1b1a17; --muted:#6d6a60; --line:#e2ded2;
+  --accent:#8a2f2c; --accent-ink:#fff; --accent-soft:#f7eeea;
+  --sign:#a3282a; --exp:#1f4e79; --frac:#2c6b45; --warn:#8a5a12;
+  --sign-bg:#f9eeee; --sign-fg:#8f2426; --sign-bd:#e8cfcd;
+  --exp-bg:#eef3f9;  --exp-fg:#1f4e79;  --exp-bd:#cddcec;
+  --frac-bg:#eef5f0; --frac-fg:#2c6b45; --frac-bd:#cfe2d6;
+  --ok-bg:#f2f7f3; --ok-bd:#b6cfbc; --bad-bg:#fbf1f1; --bad-bd:#e2bcbc;
+  --warn-bg:#fbf6ea; --gray-bg:#f0eee7; --gray-fg:#6d6a60;
+  --paper-soft:#fdfcf9; --code-bg:#f4f2ec; --code-bd:#e2ded2;
+  --tbl-head:#faf8f3; --tbl-hover:#fdfbf7;
+  --sel-bg:#f2efe7;
+
+  --font-sans:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",system-ui,sans-serif;
+  --font-mono:ui-monospace,"SF Mono",Menlo,Consolas,"Liberation Mono",monospace;
+  --font-display:"Songti SC","Source Han Serif SC","Noto Serif SC",Georgia,"Times New Roman",var(--font-sans);
+  --tracking-title:.01em;
+
+  --radius:3px; --radius-sm:2px; --radius-pill:3px;
+  --border-w:1px;
+  --shadow:none; --shadow-card:none;
+  --card-border:1px solid var(--line);
+
+  --page-max:1140px; --nav-w:196px; --gap:32px;
+  --sec-pad:30px 34px; --nav-sticky-top:28px; --anchor-offset:24px;
+  --font-size:16px; --line-height:1.8;
+}
+
+/* ---------- 书眉：细线 + 小字，不用色块 ---------- */
+.topbar{background:var(--bg);border-bottom:1px solid var(--line)}
+.topbar-in{padding:14px 22px 10px}
+.brand{font-family:var(--font-display);font-weight:600;font-size:17px;letter-spacing:.02em}
+.brand small{font-family:var(--font-sans);font-size:12px;letter-spacing:.04em;text-transform:uppercase}
+.progress{font-family:var(--font-display);font-style:italic}
+.progress .bar{height:3px;border-radius:0;background:var(--line)}
+.progress .bar>i{background:var(--accent)}
+
+/* ---------- 目录移到右侧，做成「纲要」 ---------- */
+.layout{grid-template-columns:minmax(0,1fr) var(--nav-w);padding:26px 22px}
+nav.toc{order:2}
+main{order:1}
+nav.toc h4{font-family:var(--font-display);letter-spacing:.18em;font-size:10.5px;
+  border-bottom:1px solid var(--line);padding-bottom:6px}
+nav.toc a{border-left:0;border-right:2.5px solid transparent;text-align:right;padding:5px 11px 5px 4px;
+  font-size:13.5px;font-family:var(--font-display)}
+nav.toc a.active{background:transparent;border-right-color:var(--accent);color:var(--accent)}
+nav.toc a:hover{background:transparent;color:var(--accent)}
+nav.toc a .n{font-family:var(--font-mono);font-size:11.5px;min-width:18px;margin-right:8px}
+
+/* ---------- 章节：双线标题 + 无边框白纸 ---------- */
+section{padding:var(--sec-pad);margin-bottom:30px;border:0;border-top:3px double var(--ink);
+  border-radius:0;background:transparent}
+section>h2{font-size:26px;font-weight:600;margin-bottom:4px}
+section>h2::before{content:"§";color:var(--accent);font-size:.72em;vertical-align:.12em;margin-right:.35em;font-family:var(--font-mono)}
+section>.lede{font-family:var(--font-display);font-style:italic;font-size:15px;color:var(--muted);
+  border-bottom:1px solid var(--line);padding-bottom:14px}
+h3{font-size:19px;font-weight:600;border-left:0;padding-left:0;margin-top:30px;
+  border-bottom:1px solid var(--line);padding-bottom:5px}
+h4,h5{font-weight:600}
+
+/* 正文首行不缩进，但引用块做缩排 */
+.card{border:0;border-left:2px solid var(--line);border-radius:0;background:transparent;padding:2px 0 2px 16px}
+
+/* ---------- 盒模型：批注式 ---------- */
+.box{border:0;border-left:3px solid var(--accent);background:transparent;border-radius:0;
+  padding:2px 0 2px 16px;margin:16px 0}
+.box.warn{border-left-color:var(--warn)}
+.box.bad{border-left-color:var(--sign)}
+.box.ok{border-left-color:var(--frac)}
+.box .t{font-family:var(--font-display);font-size:14px;letter-spacing:.02em}
+
+/* ---------- 公式：居中衬线体 ---------- */
+.formula{border:0;border-top:1px solid var(--line);border-bottom:1px solid var(--line);border-radius:0;
+  background:transparent;font-family:var(--font-display);font-size:18px;padding:16px 12px}
+.formula.big{font-size:22px}
+
+/* ---------- 三线表（booktabs） ---------- */
+table.tbl{border-collapse:collapse;font-size:14px}
+table.tbl th,table.tbl td{border:0;border-bottom:1px solid var(--line);padding:7px 12px}
+table.tbl th{background:transparent;border-top:1.5px solid var(--ink);border-bottom:1px solid var(--ink);
+  font-family:var(--font-display);font-weight:600;font-size:13px;letter-spacing:.02em}
+table.tbl tr:last-child td{border-bottom:1.5px solid var(--ink)}
+table.tbl tr:hover td{background:transparent}
+table.tbl td.mono,table.tbl th.mono{font-size:13px}
+
+/* ---------- 位串：空心方框，像活字 ---------- */
+.bits .b{width:24px;height:30px;border-radius:0;border:1px solid var(--line);background:var(--card);
+  font-family:var(--font-mono);font-weight:500}
+.bits .b.s{background:var(--card);color:var(--sign);border-color:var(--sign-bd);border-bottom:2px solid var(--sign)}
+.bits .b.e{background:var(--card);color:var(--exp);border-color:var(--exp-bd);border-bottom:2px solid var(--exp)}
+.bits .b.f{background:var(--card);color:var(--frac);border-color:var(--frac-bd);border-bottom:2px solid var(--frac)}
+.bits .b:hover{transform:none;background:var(--sel-bg)}
+.bits .b.sel{outline:2px solid var(--ink);outline-offset:0}
+
+/* ---------- 交互控件：细描边，方角 ---------- */
+input[type=text],input[type=number],select{border-radius:0;background:var(--card);border-color:var(--line);font-size:13.5px}
+button{border-radius:0;font-weight:500;background:transparent;border-color:var(--line)}
+button.p{background:var(--accent);border-color:var(--accent)}
+button.sm{font-size:12.5px;padding:4px 9px}
+.chip{border-radius:0;background:transparent;border:1px solid var(--line);color:var(--muted);font-weight:500}
+.chip.ok{border-color:var(--ok-bd);color:var(--frac-fg)}
+.chip.bad{border-color:var(--bad-bd);color:var(--sign-fg)}
+.chip.warn{border-color:#e3cfa4;color:var(--warn)}
+.chip.gray{background:transparent;border-color:var(--line);color:var(--muted)}
+.seg{border-radius:0}
+.seg button.on{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+
+/* ---------- 分步演示：编号批注 ---------- */
+.steps{counter-reset:ast}
+.step{border:0;border-left:2px solid var(--line);border-radius:0;background:transparent;
+  padding:8px 0 8px 16px;margin:10px 0;position:relative}
+.step.on{border-left-color:var(--accent);background:transparent}
+.step .h{font-family:var(--font-display);color:var(--muted);font-weight:600;letter-spacing:.04em;font-size:12.5px}
+.step .m{font-size:14px}
+
+/* ---------- 判断题：脚注感 ---------- */
+.puzzle{border:0;border-bottom:1px solid var(--line);border-radius:0;background:transparent;padding:12px 0}
+.puzzle.correct,.puzzle.wrong{background:transparent;border-bottom-color:var(--line)}
+.puzzle.correct{border-left:3px solid var(--frac)}
+.puzzle.wrong{border-left:3px solid var(--sign)}
+.puzzle.correct,.puzzle.wrong{padding-left:14px}
+.puzzle .exp{font-family:var(--font-sans);font-size:14px}
+.reveal{border:0;border-left:2px solid var(--line);border-radius:0;background:transparent;padding:6px 0 6px 16px}
+.reveal[open]{background:transparent}
+
+/* 回到顶部：素净 */
+.totop{border-radius:0;font-family:var(--font-display)}
+
+@media(max-width:960px){
+  .layout{grid-template-columns:1fr;padding:16px}
+  nav.toc{order:0;border-radius:0;border-left:0;border-right:0;background:transparent;padding:8px 0}
+  nav.toc a{text-align:left;border-right:0;padding:5px 8px}
+  section{padding:22px 4px}
+}
+
+
+/* ---------- 风格切换条（构建时注入，各主题通用） ---------- */
+.stylebar{max-width:var(--page-max);margin:0 auto;padding:14px 22px 0;display:flex;gap:8px;
+  flex-wrap:wrap;align-items:center;font-size:12.5px;color:var(--muted)}
+.stylebar>span{font-weight:600}
+.stylebar a{text-decoration:none;padding:4px 11px;border:1px solid var(--line);border-radius:var(--radius-pill);
+  color:var(--muted);background:var(--card);font-weight:600}
+.stylebar a:hover{border-color:var(--accent);color:var(--accent)}
+.stylebar a.cur{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.stylebar>span{flex:0 0 auto}
+@media(max-width:960px){.stylebar{padding:12px 16px 0}}
+/* 25 讲之后药丸很多：窄屏折行会吃掉大半屏，改成单行横滑 */
+@media(max-width:820px){.stylebar{flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;
+  scrollbar-width:thin}.stylebar a{flex:0 0 auto;font-size:12px;padding:4px 10px}}
+
+</style>
+</head>
+<body>
+
+<header class="topbar"><div class="topbar-in">
+  <div class="brand">Bomb Lab: Defusing a Binary Bomb<small>PKU-ICS 实验手册 · 学术讲义版</small></div>
+  <div class="progress"><span id="pgText">学习进度 0%</span><span class="bar"><i id="pgBar"></i></span></div>
+</div></header>
+
+<div class="stylebar">
+  <span>风格：</span>
+  <a href="../bomblab-zh.html">清爽蓝（原版）</a>
+  <a href="02-terminal.html">深色终端</a>
+  <a href="03-brutalist.html">新粗野</a>
+  <a href="04-glass.html">柔和玻璃</a>
+  <a href="index.html">◧ 全部预览</a>
+  <span style="opacity:.5">|</span>
+  <a href="../variants-ics01/index.html">↗ 第 1 讲 · 课程概述</a>
+  <a href="../variants-bits/index.html">↗ 第 2 讲 · 位、字节与整数</a>
+  <a href="../variants/index.html">↗ 第 3 讲 · 浮点数</a>
+  <a href="../variants-ics04/index.html">↗ 第 4 讲 · 机器级编程 I：基础</a>
+  <a href="../variants-ics05/index.html">↗ 第 5 讲 · 机器级编程 II：控制</a>
+  <a href="../variants-ics06/index.html">↗ 第 6 讲 · 机器级编程 III：过程</a>
+  <a href="../variants-ics07/index.html">↗ 第 7 讲 · 机器级编程 IV：数据</a>
+  <a href="../variants-ics08/index.html">↗ 第 8 讲 · 机器级编程 V：高级</a>
+  <a href="../variants-ics09/index.html">↗ 第 9 讲 · 处理器体系结构：ISA 与逻辑</a>
+  <a href="../variants-ics10/index.html">↗ 第 10 讲 · 处理器体系结构：顺序实现</a>
+  <a href="../variants-ics11/index.html">↗ 第 11 讲 · 处理器体系结构：流水线</a>
+  <a href="../variants-ics12/index.html">↗ 第 12 讲 · 存储层次结构</a>
+  <a href="../variants-ics13/index.html">↗ 第 13 讲 · 缓存存储器</a>
+  <a href="../variants-ics14/index.html">↗ 第 14 讲 · 代码优化</a>
+  <a href="../variants-ics15/index.html">↗ 第 15 讲 · 链接</a>
+  <a href="../variants-ics16/index.html">↗ 第 16 讲 · 异常控制流 I</a>
+  <a href="../variants-ics17/index.html">↗ 第 17 讲 · 异常控制流 II</a>
+  <a href="../variants-ics18/index.html">↗ 第 18 讲 · 系统级 I/O</a>
+  <a href="../variants-ics19/index.html">↗ 第 19 讲 · 虚拟内存 I</a>
+  <a href="../variants-ics20/index.html">↗ 第 20 讲 · 虚拟内存 II</a>
+  <a href="../variants-ics21/index.html">↗ 第 21 讲 · 动态内存分配</a>
+  <a href="../variants-ics22/index.html">↗ 第 22 讲 · 网络基础</a>
+  <a href="../variants-ics23/index.html">↗ 第 23 讲 · 网络编程</a>
+  <a href="../variants-ics24/index.html">↗ 第 24 讲 · 并发编程</a>
+  <a href="../variants-ics25/index.html">↗ 第 25 讲 · 同步</a>
+  <a href="../variants-lab/index.html">↗ Data Lab 实验</a>
+</div>
+
+<div class="layout">
+
+<nav class="toc">
+  <h4>目录</h4>
+  <a href="#s0"><span class="n">0</span>实验导览</a>
+  <a href="#s1"><span class="n">1</span>炸弹是什么</a>
+  <a href="#s2"><span class="n">2</span>领取你的炸弹</a>
+  <a href="#s3"><span class="n">3</span>拆除与计分</a>
+  <a href="#s4"><span class="n">4</span>提交与记分板</a>
+  <a href="#s5"><span class="n">5</span>请勿暴力破解</a>
+  <a href="#s6"><span class="n">6</span>侦察工具箱</a>
+  <a href="#s7"><span class="n">7</span>gdb 命令速查</a>
+  <a href="#s8"><span class="n">8</span>.gdbinit 自动化</a>
+  <a href="#s9"><span class="n">9</span>隐藏关卡</a>
+</nav>
+
+<main>
+<!-- ============================================================
+     Bomb Lab: Defusing a Binary Bomb · PKU-ICS 实验手册（7 页）
+     中文交互版正文。每个 <section> 对应目录里的一项。
+     ============================================================ -->
+
+  <!-- ================= 0 实验导览 ================= -->
+  <section id="s0">
+    <h2>0. 实验导览<span class="srcref">综合原第 1–3 页</span></h2>
+    <p class="lede">本页是 PKU-ICS《计算机系统导论》Bomb Lab 实验手册的中文交互版。原手册共 7 页，讲的都是「拆弹前你必须知道的事」：炸弹是什么、怎么领取、怎么计分、用什么工具拆，以及一份很实用的 <code>gdb</code> 速查表。真正的战场——你那颗独一无二的二进制炸弹——要你自己去反汇编里读。</p>
+    <div class="g2">
+      <div class="card">
+        <h3>这个实验考什么</h3>
+        <p>不给源码，只给一个可执行文件。你要用 <code>gdb</code>、<code>objdump</code>、<code>strings</code> 弄清 6 个阶段各自期待什么输入字符串——这正是第 3–5 讲机器级编程内容的实战检验。</p>
+        <p>另有一个<b>隐藏关卡</b>，不占分（见 §9）。</p>
+      </div>
+      <div class="card">
+        <h3>计分速览</h3>
+        <div class="tbl-wrap">
+          <table class="tbl">
+            <tr><th>项目</th><th>分值</th></tr>
+            <tr><td>阶段 1–4（每关）</td><td class="mono">15 分</td></tr>
+            <tr><td>阶段 5–6（每关，稍难）</td><td class="mono">20 分</td></tr>
+            <tr><td>满分</td><td class="mono">100 分</td></tr>
+            <tr class="hl"><td>每爆炸一次</td><td class="mono">−0.5 分（最多扣 20 分）</td></tr>
+          </table>
+        </div>
+      </div>
+    </div>
+    <div class="box warn"><div class="t">先记住三条红线</div>
+      ① 整个实验必须在你的 <b>xLab 容器</b>里完成（<code>xlab.pku.edu.cn</code>），传闻炸弹离开课程服务器就必炸；② <b>请勿暴力破解</b>——每猜错一次就爆炸一次、扣一次分，而且数学上根本试不完（§5 有个计算器让你死心）；③ <b>不要用调试器直接跳到某个阶段</b>，这么做可能让炸弹无声地爆炸。
+    </div>
+    <p>本页提供 5 个小工具：<b>计分器</b>（§3）、<b>暴力破解不可行性计算器</b>（§5）、<b><code>x</code> 命令后缀解析器</b>与<b>可搜索的 gdb 命令速查</b>（§7）、<b><code>.gdbinit</code> 生成器</b>（§8）。所有数值都在页面里现算。</p>
+  </section>
+
+  <!-- ================= 1 炸弹是什么 ================= -->
+  <section id="s1">
+    <h2>1. 炸弹是什么<span class="srcref">原第 1 页</span></h2>
+    <p>邪恶的 <b>Mr. Gin</b> 在我们的 64 位 Linux 机器上安放了一大批<b>二进制炸弹（binary bomb）</b>。所谓二进制炸弹，是一个由一连串<b>阶段（phase）</b>组成的程序：每个阶段都要求你在标准输入（stdin）上敲入一个特定的字符串。敲对了，这个阶段就被<b>拆除（defuse）</b>，炸弹进入下一阶段；敲错了，炸弹就<b>爆炸（explode）</b>——打印 <code>"BOOM!!!"</code> 然后终止。当每个阶段都被拆除，炸弹就被拆除了。</p>
+    <div class="box">
+      <div class="t">一个阶段的生死循环</div>
+      <p style="margin:4px 0">读入一行输入 → <code>phase_N</code> 校验 → 字符串正确：拆除本阶段，进入下一阶段；字符串错误：<code>explode_bomb</code> → 打印 <code>"BOOM!!!"</code> → 程序终止。</p>
+    </div>
+    <p>炸弹太多，我们来不及逐颗处理，所以给每位学生发一颗。你无可选择、必须接受的任务，就是在截止日期前拆掉你的炸弹。我们相信，你和柯南一样，也在夏威夷进修过炸弹处理。祝你好运，欢迎加入拆弹小队！</p>
+  </section>
+
+  <!-- ================= 2 领取你的炸弹 ================= -->
+  <section id="s2">
+    <h2>2. 第一步：领取你的炸弹<span class="srcref">原第 1–2 页</span></h2>
+    <p>从 Autolab 网站领取：<code>https://autolab.pku-ics.com</code>。登录后选择 <code>Bomblab -&gt; Download your bomb</code>，服务器会构建你的炸弹，并以 <code>tar</code> 文件 <code>bombk.tar</code> 的形式返回给浏览器，其中 <code>k</code> 是你这颗炸弹的编号。</p>
+    <div class="steps">
+      <div class="step on"><div class="h">保存</div><div class="m">把 <code>bombk.tar</code> 存到一个（受保护的）工作目录</div><div class="e">就是你打算做实验的地方。</div></div>
+      <div class="step"><div class="h">解包</div><div class="m"><code>tar -xvf bombk.tar</code></div><div class="e">登录一台 Linux 机器执行，会创建目录 <code>./bombk</code>。</div></div>
+      <div class="step"><div class="h">（如有需要）恢复执行位</div><div class="m"><code>chmod +x bomb</code></div><div class="e">只在 PC 上解过包才需要，见下方警告。</div></div>
+    </div>
+    <p>目录 <code>./bombk</code> 里有三样东西：</p>
+    <div class="tbl-wrap">
+      <table class="tbl">
+        <tr><th>文件</th><th>说明</th></tr>
+        <tr><td class="mono">README</td><td>标明这颗炸弹及其主人。</td></tr>
+        <tr><td class="mono">bomb</td><td>可执行的二进制炸弹。</td></tr>
+        <tr><td class="mono">bomb.c</td><td>包含炸弹 <code>main</code> 例程的源文件，附有 Mr. Gin 的友好问候。</td></tr>
+      </table>
+    </div>
+    <div class="box"><div class="t">只领一颗</div>你应当只下载一颗炸弹。万一因为某种原因领了多颗，选一颗来做，把其余的删掉。</div>
+    <div class="box warn"><div class="t">警告</div>如果在 PC 上解开 <code>bombk.tar</code>，可能会弄丢炸弹的可执行位。用 <code>chmod +x bomb</code> 可以恢复。</div>
+  </section>
+
+  <!-- ================= 3 拆除与计分 ================= -->
+  <section id="s3">
+    <h2>3. 第二步：拆除炸弹<span class="srcref">原第 2–3 页</span></h2>
+    <p class="lede">本实验的任务只有一个：拆掉你的炸弹。</p>
+    <div class="box warn"><div class="t">必须在 xLab 容器里做</div>
+      登录 <code>xlab.pku.edu.cn</code> 打开你的容器（浏览器终端、Web VS Code、VS Code Remote 或 SSH——见你的 node 页面，或问助教）。有传闻说 Mr. Gin 是真邪恶：炸弹只要换地方跑就<b>总是爆炸</b>——它只能在连得上课程服务器的地方被拆除，也就是你的 xLab 容器。据说里面还装了好几道别的防拆装置。
+    </div>
+    <p>拆弹工具随你挑（§6 有清单和提示）。最好的办法，是用你顺手的调试器在反汇编出来的二进制上单步执行。</p>
+    <h3>3.1 计分规则</h3>
+    <p>炸弹每爆炸一次，就会通知一次 Autolab 服务器，你的实验最终成绩扣 <b>0.5 分</b>（最多扣 <b>20 分</b>）。所以爆炸是有后果的——务必小心！前四个阶段每关 <b>15 分</b>；第 5、6 关稍难，各 <b>20 分</b>。所以你能拿到的最高分是 <b>100 分</b>。</p>
+    <p>虽然阶段一个比一个难，但你在逐关推进中积累的本领应当能抵消难度。不过最后一关对最好的学生也是个挑战——<b>别拖到最后一刻才开始</b>。</p>
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：计分器——勾掉已拆的阶段、填上爆炸次数，实时算分</span>
+        <label class="fld"><input type="checkbox" id="scP1" checked> phase_1（15 分）</label>
+        <label class="fld"><input type="checkbox" id="scP2" checked> phase_2（15 分）</label>
+        <label class="fld"><input type="checkbox" id="scP3" checked> phase_3（15 分）</label>
+        <label class="fld"><input type="checkbox" id="scP4" checked> phase_4（15 分）</label>
+        <label class="fld"><input type="checkbox" id="scP5" checked> phase_5（20 分）</label>
+        <label class="fld"><input type="checkbox" id="scP6" checked> phase_6（20 分）</label>
+        <label class="fld">已爆炸 <input type="number" id="scN" value="0" min="0" max="500" style="width:74px"> 次</label>
+        <button class="sm" data-sc="four">只拆前四关</button>
+        <button class="sm" data-sc="ten">爆炸 10 次</button>
+        <button class="sm" data-sc="cap">爆炸到扣分封顶</button>
+        <button class="sm" data-sc="full">满分演示</button>
+      </div>
+      <div id="scOut"></div>
+    </div>
+    <h3>3.2 答案文件与安全退出</h3>
+    <p>炸弹会忽略空输入行。如果带命令行参数运行，例如：</p>
+    <p class="mono"><code>linux&gt; ./bomb psol.txt</code></p>
+    <p>它会先从 <code>psol.txt</code> 逐行读取输入，直到 EOF（文件结束），然后转回标准输入。Dr. Evil 一时心软，加了这个功能，免得你反复重输已拆阶段的答案。</p>
+    <p>想避免误爆，你需要学会两件事：单步执行汇编代码、设置断点。任何时候都可以按 <span class="kbd">ctrl-c</span> 安全退出（同时按下 <span class="kbd">ctrl</span> 与 <span class="kbd">c</span>）。</p>
+    <p>你还需要学会查看寄存器与内存状态。做这个实验的一个副产品是：你的调试器水平会突飞猛进——这是一项会用一辈子的关键技能，回报巨大。</p>
+    <div class="box bad"><div class="t">警告：不要用调试器直接跳到某个阶段</div>这么做可能导致炸弹<b>无声地爆炸</b>——你连 <code>"BOOM!!!"</code> 都看不到，分却照扣。</div>
+  </section>
+
+  <!-- ================= 4 提交与记分板 ================= -->
+  <section id="s4">
+    <h2>4. 提交与记分板<span class="srcref">原第 3 页</span></h2>
+    <p><b>没有显式的提交动作。</b>炸弹会在你拆弹的过程中自动把进度上报给 Autolab。想知道自己进展如何，去看 Autolab 的班级记分板：从 Autolab 进入 <code>Bomblab -&gt; View scoreboard</code>。该页面持续更新，实时显示每颗炸弹的进度。</p>
+  </section>
+
+  <!-- ================= 5 请勿暴力破解 ================= -->
+  <section id="s5">
+    <h2>5. 提示：请勿暴力破解<span class="srcref">原第 3–4 页</span></h2>
+    <p class="lede">拆弹的路子很多，但有一条被课程组明确劝退：暴力穷举。</p>
+    <p>拆弹可以完全不动手运行程序，纯靠静态分析把它研究个底朝天，弄清它到底做什么——这招有用，但不总容易。也可以在调试器里跑，一步步盯着它做什么，再用这些信息把它拆掉——<b>这通常是最快的路</b>。</p>
+    <p>我们确实有一个请求：<b>请勿使用暴力法！</b>你完全可以写个程序把所有可能的钥匙挨个试一遍，但这条路走不通，原因有四：</p>
+    <div class="steps">
+      <div class="step on"><div class="h">扣分</div><div class="m">每猜错一次、炸弹爆炸一次，就扣 0.5 分（最多扣 20 分）</div><div class="e">穷举到一半，分已经扣穿了。</div></div>
+      <div class="step"><div class="h">封号</div><div class="m">每次猜错都会向 Autolab 服务器发一条消息</div><div class="e">很快就会把网络塞满，系统管理员可能会收回你的计算机使用权限。</div></div>
+      <div class="step"><div class="h">天文数字</div><div class="m">即使假设每串不到 120 个字符、只含字母，每阶段也有 26<sup>120</sup> 种猜测</div><div class="e">这还是个（并不成立的）假设——课程组没告诉你字符串多长、由什么字符组成。要跑非常非常久，截止日期前你绝算不完。</div></div>
+      <div class="step"><div class="h">字符集受限</div><div class="m">phase_5 的答案只能由数字与字母组成！</div><div class="e">含不支持字符的输入可能引发奇怪的结果，课程组概不负责。</div></div>
+    </div>
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：暴力破解不可行性计算器——亲手算算课程组说的 26<sup>120</sup> 有多离谱</span>
+        <label class="fld">字符集大小 <input type="number" id="bfK" value="26" min="2" max="1000" style="width:80px"></label>
+        <label class="fld">串长 <input type="number" id="bfL" value="120" min="1" max="4096" style="width:80px"></label>
+        <label class="fld">尝试速度 <input type="number" id="bfR" value="1000000000" min="1" style="width:130px"> 次/秒</label>
+        <button class="p" id="bfGo">计算</button>
+        <button class="sm" data-bf="handout">课件假设：26 字母 × 120 位</button>
+        <button class="sm" data-bf="alnum">数字 + 字母（36）</button>
+        <button class="sm" data-bf="digits6">纯数字 6 位</button>
+      </div>
+      <div id="bfOut"></div>
+    </div>
+    <div class="box warn"><div class="t">别忘了 phase_5 的字符集约束</div>第 4 条提示是难得的<b>官方情报</b>：phase_5 的答案只由数字与字母组成。在页内计算器里把字符集大小设成 36 再感受一下——就算知道字符集，穷举依然不可行。</div>
+  </section>
+
+  <!-- ================= 6 侦察工具箱 ================= -->
+  <section id="s6">
+    <h2>6. 侦察工具箱<span class="srcref">原第 4 页</span></h2>
+    <p class="lede">很多工具能帮你搞清程序怎么工作、出了错又是为什么。下面是分析炸弹时最趁手的几件。</p>
+    <div class="g2">
+      <div class="card">
+        <h3><code>gdb</code> —— GNU 调试器</h3>
+        <p>几乎所有平台都有的命令行调试器。可以逐行跟踪程序、查看内存与寄存器、对照汇编代码（炸弹的大部分源码我们是<b>不给</b>的）、设置断点、设置内存观察点、写脚本。</p>
+        <p>CS:APP 教材网站（<code>http://csapp.cs.cmu.edu/3e/students.html</code>）有一页可打印的 x86-64 <code>gdb</code> 命令速查，还链接了 Norm Matloff 教授的 GDB 教程。</p>
+        <p>几条使用建议：想让炸弹别每次输错就炸，先学会<b>设断点</b>；在线文档在 <code>gdb</code> 里输 <code>help</code>，或在 Unix 提示符下 <code>man gdb</code>、<code>info gdb</code>；也有人喜欢在 emacs 的 gdb-mode 里跑。今年不一样——§7 直接给你整理好了一份速查表。</p>
+      </div>
+      <div class="card">
+        <h3><code>objdump -t</code> —— 符号表</h3>
+        <p>打印炸弹的符号表（symbol table）：炸弹里所有函数与全局变量的名字、它调用的所有函数的名字，以及它们的地址。</p>
+        <p><b>看看函数名就能学到东西！</b>比如你会发现一个叫 <code>explode_bomb</code> 的函数——那里正是设断点、防止炸弹真爆的好地方。</p>
+      </div>
+      <div class="card">
+        <h3><code>objdump -d</code> —— 反汇编</h3>
+        <p>反汇编炸弹的全部代码（也可以只看单个函数）。读懂汇编代码，炸弹的工作原理就摆在眼前了。</p>
+        <p>不过 <code>objdump -d</code> 不会告诉你全部：对系统级函数的调用显示得很隐晦。例如对 <code>sscanf</code> 的调用可能显示成：</p>
+        <p class="mono"><code>8048c36:&nbsp;&nbsp;e8 99 fc ff ff&nbsp;&nbsp;&nbsp;call&nbsp;&nbsp;&nbsp;80488d4 &lt;_init+0x1a0&gt;</code></p>
+        <p>要确认这真的是 <code>sscanf</code>，你得在 <code>gdb</code> 里反汇编。</p>
+      </div>
+      <div class="card">
+        <h3><code>strings</code> —— 可打印字符串</h3>
+        <p>列出炸弹里所有可打印的字符串。隐藏关卡要是想留线索，多半也藏在这里面（§9）。</p>
+      </div>
+    </div>
+    <div class="box"><div class="t">找不到想用的工具？</div><code>apropos</code>、<code>man</code> 和 <code>info</code> 是你的朋友。特别地，<code>man ascii</code> 可能派上用场；<code>info gas</code> 会告诉你关于 GNU 汇编器的一切——比你想要的还多。卡住了，随时找助教。</div>
+  </section>
+
+  <!-- ================= 7 gdb 命令速查 ================= -->
+  <section id="s7">
+    <h2>7. gdb 命令速查<span class="srcref">原第 5–6 页</span></h2>
+    <p>开拆之前，建议先读 CS:APP 教材 3.10.2 节里针对具体 <code>gdb</code> 命令的详细介绍。</p>
+    <p>通常，启动 <code>gdb bomb</code> 之后，先用 <code>layout asm</code> 和 <code>layout regs</code> 打开两个视图，分析起来更顺手；要关闭 layout 视图，先按 <span class="kbd">Ctrl + x</span>，再按 <span class="kbd">a</span>。</p>
+    <p><code>p</code> 和 <code>x</code> 的分工务必分清：<b><code>p</code> 打印表达式的值；<code>x</code> 主要用来查看内存内容。</b>常见用法见表 2。</p>
+    <h3>7.1 x 命令的后缀怎么读</h3>
+    <p>这些命令斜杠后的后缀（如 <code>2x</code>、<code>2d</code>、<code>s</code>、<code>g</code>、<code>20c</code>）规定了查看内存的方式与数量。具体来说：</p>
+    <ul>
+      <li>第一个数字（如 <code>2</code>、<code>20</code>）指定要查看的<b>单位个数</b>；</li>
+      <li>字母 <code>c</code>/<code>d</code>/<code>x</code> 表示按<b>字符 / 十进制 / 十六进制</b>格式查看；</li>
+      <li>字母 <code>s</code> 表示按 <b>C 风格字符串</b>查看；</li>
+      <li>字母 <code>b</code>/<code>h</code>/<code>w</code>/<code>g</code> 表示以<b>字节 / 半字（2 字节）/ 字（4 字节）/ 巨字（8 字节）</b>为单位。</li>
+    </ul>
+    <div class="box warn"><div class="t">单位会「粘住」</div>用过 <code>x/b</code>、<code>x/h</code>、<code>x/w</code>、<code>x/g</code> 之后，单位会一直保持，直到你再次用这类命令去改变它。</div>
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：x 命令后缀解析器——把一条 x 命令拆开讲明白</span>
+        <label class="fld">命令 <input type="text" id="gxIn" value="x/2x $rsp" size="26" spellcheck="false" style="min-width:220px"></label>
+        <button class="p" id="gxGo">解析</button>
+        <button class="sm" data-gx="x/2c $rsp">x/2c</button>
+        <button class="sm" data-gx="x/2d $rsp">x/2d</button>
+        <button class="sm" data-gx="x/s $rsp">x/s</button>
+        <button class="sm" data-gx="x/20c $rsp">x/20c</button>
+        <button class="sm" data-gx="x/g $rsp">x/g</button>
+      </div>
+      <div id="gxOut"></div>
+    </div>
+    <h3>7.2 两张速查表（可搜索）</h3>
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：在 27 条 gdb 命令里搜索</span>
+        <label class="fld">搜索 <input type="text" id="gdQ" value="" size="20" placeholder="如：break、寄存器、断点" spellcheck="false" style="min-width:200px"></label>
+      </div>
+      <div id="gdOut"></div>
+    </div>
+  </section>
+
+  <!-- ================= 8 .gdbinit 自动化 ================= -->
+  <section id="s8">
+    <h2>8. 用 .gdbinit 自动化<span class="srcref">原第 6–7 页</span></h2>
+    <p class="lede">每次开 gdb 都重敲一遍断点？把配置写进 <code>.gdbinit</code>，一劳永逸。</p>
+    <p><code>.gdbinit</code> 文件是 <code>gdb</code> 的一个强大功能：它允许用户在启动时自动加载默认配置，省去反复手动敲命令的过程，能显著简化调试。</p>
+    <h3>8.1 配置步骤</h3>
+    <div class="steps">
+      <div class="step on"><div class="h">在当前目录创建 .gdbinit</div><div class="m"><code>touch .gdbinit</code></div><div class="e"></div></div>
+      <div class="step"><div class="h">创建配置目录</div><div class="m"><code>mkdir -p ~/.config/gdb</code></div><div class="e"></div></div>
+      <div class="step"><div class="h">允许 gdb 从根目录预加载文件</div><div class="m"><code>mkdir -p ~/.config/gdb</code><br><code>echo "set auto-load safe-path /" &gt;&gt; ~/.config/gdb/gdbinit</code></div><div class="e"></div></div>
+    </div>
+    <p>接着打开 <code>.gdbinit</code>，加入以下配置：</p>
+    <p class="mono"><code># Set default input file, avoiding manual input each time</code><br>
+    <code>set args psol.txt</code></p>
+    <p class="mono"><code># Set breakpoints at each phase function to monitor execution</code><br>
+    <code>b phase_1</code><br>
+    <code>b phase_2</code><br>
+    <code>b phase_3</code><br>
+    <code>b phase_4</code><br>
+    <code>b phase_5</code><br>
+    <code>b phase_6</code></p>
+    <p>借助 <code>.gdbinit</code>，断点与其它命令都能自动布好，调试体验更高效、更不易出错。</p>
+    <h3>8.2 给断点编程</h3>
+    <p><code>.gdbinit</code> 不只能简化初始化，还能做<b>断点脚本</b>：程序命中指定断点时自动执行一串动作，让调试工作流更顺畅。例如：</p>
+    <p class="mono"><code>b phase_1</code><br>
+    <code>command</code><br>
+    <code>p $rsp&nbsp;&nbsp;&nbsp;# Print the value of the stack pointer</code><br>
+    <code>end</code></p>
+    <p>这段脚本会在命中 <code>phase_1</code> 断点时自动打印栈指针的值。（也许你还能想到其它有用的脚本，awa。）</p>
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：.gdbinit 生成器——勾选要写入的配置，直接复制走</span>
+        <label class="fld"><input type="checkbox" id="giArgs" checked> set args psol.txt</label>
+        <label class="fld"><input type="checkbox" id="gi1" checked> phase_1</label>
+        <label class="fld"><input type="checkbox" id="gi2" checked> phase_2</label>
+        <label class="fld"><input type="checkbox" id="gi3" checked> phase_3</label>
+        <label class="fld"><input type="checkbox" id="gi4" checked> phase_4</label>
+        <label class="fld"><input type="checkbox" id="gi5" checked> phase_5</label>
+        <label class="fld"><input type="checkbox" id="gi6" checked> phase_6</label>
+        <div class="seg" id="giSeg">
+          <button class="on" data-m="plain">仅断点</button>
+          <button data-m="script">断点 + command 脚本</button>
+        </div>
+        <button class="sm" id="giCopy">复制</button>
+      </div>
+      <div id="giOut"></div>
+    </div>
+  </section>
+
+  <!-- ================= 9 隐藏关卡 ================= -->
+  <section id="s9">
+    <h2>9. 隐藏关卡<span class="srcref">原第 7 页</span></h2>
+    <p class="lede">Mr. Gin 手里总留着一张牌——这次也不例外。但他只留下了一句最隐晦的话。</p>
+    <p>你可能听说过，Mr. Gin 也是「哈利·波特」的粉丝，手里总留着一张牌，这次确实如此。但他只给你留了一句最为隐晦的话，课件逐字引用如下：</p>
+    <div class="box">
+      <div class="t">Mr. Gin 的话（中文译文）</div>
+      <p style="margin:4px 0">麻瓜永远感知不到魔法，那纯粹超出他们的认知。他们真以为阿拉霍洞开（alohomora）能打开世界上所有的门？想得美！他们更不会想到，我还用阿布拉卡达布拉之类的咒语把它加固了一遍。穆阿哈哈哈！就让他们在这些最无懈可击的咒语上费心吧！</p>
+    </div>
+    <details class="reveal"><summary>英文原文（课件逐字引用）</summary>
+      <p class="en" style="margin:8px 0 0">Never could a muggle senses the magic. It's purely beyond their ken. Do they really think alohomora could open all the doors in the world? No way! Neither would they have any idea that I further secured it with some abracadabra. Mua ha ha ha! Just bother with these most impregnable spells ever!</p>
+    </details>
+    <p>能解开这个谜题吗？不过我们必须说明：<b>这一关不占分</b>。管理员的日程排得太满，现在只能指望你把这一切弄个水落石出，保护我们脆弱的小 Linux 机器了。请务必帮帮我们！</p>
+    <div class="box"><div class="t">思路提示（本页与原手册一样，不给任何答案）</div>
+      分层往里走：第一层——一个「额外」的关卡，总得有<b>入口</b>，想想 §6 里哪个工具能列出全部函数名；第二层——如果入口需要特定输入，<code>strings</code> 看到的字符串里哪个不像报错信息；第三层——确认入口之后，就用 §7 的断点与视图，把它当成第 7 个 <code>phase</code> 来拆。
+    </div>
+  </section>
+</main>
+
+</div>
+
+<div class="footer">
+  本页由原课件 PDF 翻译整理而成 · 数值计算与可视化均为页面内实时计算 · 可对照原课件页码阅读。
+</div>
+<button class="totop" id="toTop">↑ 顶部</button>
+
+<script>
+"use strict";
+/* ============================================================
+   Bomb Lab: Defusing a Binary Bomb · PKU-ICS 实验手册 —— 全部逻辑
+   约定：所有数值在页面内实时计算；无效输入必须给出提示而不是抛错。
+   组件（输出容器）：
+     scOut  计分器（勾阶段 + 爆炸次数 → 得分，0.5 分粒度用半点整数算，避免浮点尾差）
+     bfOut  暴力破解不可行性计算器（k^L 用 BigInt，天文数字用科学计数）
+     gxOut  x 命令后缀解析器（按课件口径：[个数][格式][单位]）
+     gdOut  gdb 命令速查（表 1 + 表 2，可搜索）
+     giOut  .gdbinit 生成器（勾选 → 生成 → 复制）
+   ============================================================ */
+
+const $  = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const badBox = msg => `<div class="box bad"><div class="t">输入无效</div>${esc(msg)}</div>`;
+const fmtInt = v => String(v).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+const bindEnter = (sel, fn) => { const el = $(sel); if (el) el.addEventListener('keydown', e => { if (e.key === 'Enter') fn(); }); };
+
+/* ---------- 通用：大整数的科学计数 ---------- */
+/* BigInt → { m: 尾数(1≤m<10), e: 10 的幂, digits: 位数, str: 原串 } */
+function bigParts(b) {
+  const s = b.toString();
+  return { m: Number(s[0] + '.' + (s.slice(1, 10) || '0')), e: s.length - 1, digits: s.length, str: s };
+}
+function normME(m, e) { while (m >= 10) { m /= 10; e++; } while (m < 1 && m > 0) { m *= 10; e--; } return [m, e]; }
+function sciHTML(m, e) { return m.toFixed(4).replace(/\.?0+$/, '') + '×10<sup>' + e + '</sup>'; }
+/* 组合数展示：位数少给完整数字，位数多给科学计数 + 折叠的完整数字 */
+function combosHTML(b) {
+  const p = bigParts(b);
+  if (p.digits <= 60) return fmtInt(p.str);
+  return sciHTML(p.m, p.e) + '（共 ' + fmtInt(p.digits) + ' 位）' +
+    '<details class="reveal"><summary>看完整数字（' + fmtInt(p.digits) + ' 位）</summary>' +
+    '<p class="mono" style="overflow-wrap:anywhere;margin:8px 0 0">' + p.str + '</p></details>';
+}
+
+/* ============================================================
+   0/3 计分器：得分 = Σ已拆分值 − min(0.5 × 爆炸次数, 20)
+   15/15/15/15/20/20，满分 100；0.5 分粒度 → 全程用「半点」整数运算
+   ============================================================ */
+const SC_PHASES = [
+  { id: 'scP1', name: 'phase_1', pts: 15 },
+  { id: 'scP2', name: 'phase_2', pts: 15 },
+  { id: 'scP3', name: 'phase_3', pts: 15 },
+  { id: 'scP4', name: 'phase_4', pts: 15 },
+  { id: 'scP5', name: 'phase_5', pts: 20 },
+  { id: 'scP6', name: 'phase_6', pts: 20 },
+];
+const SC_CAP_EXPLOSIONS = 40;   /* 20 分 ÷ 0.5 分/次 = 40 次吃满扣分上限 */
+
+function halfToScore(h) { return h % 2 === 0 ? String(h / 2) : (h / 2).toFixed(1); }
+
+function renderSc() {
+  const raw = String($('#scN').value).trim();
+  if (!/^\d+$/.test(raw)) {
+    $('#scOut').innerHTML = badBox('已爆炸次数要填非负整数（当前填的是「' + raw + '」）。');
+    return;
+  }
+  const n = parseInt(raw, 10);
+  const done = SC_PHASES.filter(p => $('#' + p.id).checked);
+  const sum = done.reduce((s, p) => s + p.pts, 0);
+  const capped = n >= SC_CAP_EXPLOSIONS;
+  const penaltyHalves = Math.min(n, SC_CAP_EXPLOSIONS);      /* 半点数 = 0.5 分 × 次数 */
+  const scoreHalves = sum * 2 - penaltyHalves;
+  const rest = Math.max(0, SC_CAP_EXPLOSIONS - n);
+
+  const rows = SC_PHASES.map(p => {
+    const ok = done.includes(p);
+    return '<tr' + (ok ? ' class="hl"' : '') + '><td class="mono">' + p.name + '</td><td class="mono">' +
+      p.pts + ' 分</td><td><span class="chip ' + (ok ? 'ok' : 'gray') + '">' + (ok ? '✓ 已拆' : '未拆') + '</span></td></tr>';
+  }).join('');
+
+  $('#scOut').innerHTML =
+    '<div class="g2" style="align-items:start;margin-top:10px">' +
+      '<div>' +
+        '<div class="readout">' + halfToScore(scoreHalves) + ' <small>/ 100 分</small></div>' +
+        '<p style="margin:10px 0 6px">得分 = 已拆分值合计 <b>' + sum + '</b> − min(0.5 × ' + n + ', 20) = <b>' +
+          halfToScore(scoreHalves) + '</b>' +
+          (capped ? '（爆炸已超过 ' + SC_CAP_EXPLOSIONS + ' 次，扣分封顶 20 分）' : '') + '</p>' +
+        '<p style="margin:4px 0">' +
+          '<span class="chip gray">已拆 ' + done.length + ' / 6 关</span> ' +
+          '<span class="chip ' + (scoreHalves === 200 ? 'ok' : 'warn') + '">距满分 ' + halfToScore(200 - scoreHalves) + ' 分</span> ' +
+          (capped ? '<span class="chip bad">扣分已封顶 20 分</span>'
+                  : '<span class="chip gray">还可承受 ' + rest + ' 次爆炸，之后吃满扣分上限</span>') +
+        '</p>' +
+      '</div>' +
+      '<div class="tbl-wrap"><table class="tbl">' +
+        '<tr><th>阶段</th><th>分值</th><th>状态</th></tr>' + rows + '</table></div>' +
+    '</div>';
+}
+
+/* ============================================================
+   5 暴力破解不可行性计算器：k^L 组合数 → 耗时 → 对比宇宙年龄
+   宇宙年龄取参考值 1.38×10^10 年；1 年 = 365.25 天 = 31 557 600 秒
+   ============================================================ */
+const BF_YEAR_SEC = 31557600n;
+const BF_UNIVERSE_YEARS = 1.38e10;
+
+function renderBf() {
+  const k = parseInt(String($('#bfK').value), 10);
+  const L = parseInt(String($('#bfL').value), 10);
+  const r = Number(String($('#bfR').value));
+  if (!Number.isInteger(k) || k < 2 || k > 1000) { $('#bfOut').innerHTML = badBox('字符集大小要填 2…1000 的整数（当前：' + esc(String($('#bfK').value)) + '）。'); return; }
+  if (!Number.isInteger(L) || L < 1 || L > 4096) { $('#bfOut').innerHTML = badBox('串长要填 1…4096 的整数（当前：' + esc(String($('#bfL').value)) + '）。'); return; }
+  if (!Number.isFinite(r) || r <= 0) { $('#bfOut').innerHTML = badBox('尝试速度要填正数（当前：' + esc(String($('#bfR').value)) + '）。'); return; }
+
+  const combos = BigInt(k) ** BigInt(L);
+  const chips = [];
+  let timeHTML, ratioHTML;
+
+  if (combos <= 1000000000000000n) {          /* 小规模：直接用 Number 算，给可读的时间 */
+    const secs = Number(combos) / r;
+    if (secs < 1) {
+      timeHTML = '不足 1 秒';
+      chips.push('<span class="chip warn">这个规模毫秒级就能穷举完——前提是你<b>碰巧知道</b>字符集和串长</span>');
+    } else {
+      timeHTML = fmtInt(Math.round(secs)) + ' 秒';
+      const yrs = secs / 31557600;
+      if (yrs >= 0.01) timeHTML += '（约 ' + (yrs >= 100 ? sciHTML(...normME(yrs, 0)) : yrs.toFixed(2)) + ' 年）';
+    }
+    ratioHTML = null;
+  } else {                                    /* 天文数字：走科学计数 */
+    const [sm, se] = normME(bigParts(combos).m / r, bigParts(combos).e);
+    const [ym, ye] = normME(sm / 3.15576, se - 7);          /* ÷3.15576×10^7 秒（1 年 = 365.25 天） */
+    timeHTML = '约 ' + sciHTML(ym, ye) + ' 年（按每秒 ' + fmtInt(Math.round(r)) + ' 次不停歇地猜）';
+    const [rm, re] = normME(ym / 1.38, ye - 10);            /* ÷ 宇宙年龄 1.38×10^10 年 */
+    ratioHTML = '是宇宙年龄（约 1.38×10<sup>10</sup> 年，参考值）的 <b>' + sciHTML(rm, re) + '</b> 倍';
+    chips.push('<span class="chip bad">截止日期前绝算不完 —— 课件的判断成立</span>');
+  }
+
+  $('#bfOut').innerHTML =
+    '<div class="tbl-wrap" style="margin-top:10px"><table class="tbl">' +
+      '<tr><th>暴力破解 ' + k + '<sup>' + L + '</sup> 种组合</th><th>结果</th></tr>' +
+      '<tr><td>要试的钥匙总数（字符集 ' + k + ' × 串长 ' + L + '）</td><td class="mono">' + combosHTML(combos) + '</td></tr>' +
+      '<tr><td>全部试完需要</td><td>' + timeHTML + '</td></tr>' +
+      (ratioHTML ? '<tr><td>和宇宙年龄比</td><td>' + ratioHTML + '</td></tr>' : '') +
+    '</table></div>' +
+    '<p style="margin:10px 0 4px">' + chips.join(' ') + '</p>' +
+    '<p style="margin:4px 0">所以课程组的请求不是客套：读汇编才是唯一的路。</p>';
+}
+
+/* ============================================================
+   7a x 命令后缀解析器（课件口径：x/[个数][格式][单位] 地址）
+   ============================================================ */
+const GX_F = { c: '字符', d: '十进制', x: '十六进制', s: 'C 风格字符串' };
+const GX_U = { b: ['字节', 1], h: ['半字（2 字节）', 2], w: ['字（4 字节）', 4], g: ['巨字（8 字节）', 8] };
+
+const GX_GRAMMAR = '本页解析课件口径的 x 命令：x/[个数][格式][单位] 地址，格式 c/d/x（字符/十进制/十六进制）' +
+  '或 s（C 字符串），单位 b/h/w/g（字节/半字/字/巨字）。示例：x/2x $rsp、x/s $rsp、x/g $rsp。';
+
+function parseXCmd(raw) {
+  const s = String(raw).trim();
+  if (!/^x($|[\/\s])/.test(s)) return { err: '这不是 x 命令。' + GX_GRAMMAR };
+  const rest = s.slice(1);
+  const sp = rest.search(/\s/);
+  const suf = (sp === -1 ? rest : rest.slice(0, sp)).replace(/^\//, '');
+  const addr = sp === -1 ? '' : rest.slice(sp).trim();
+  if (!addr) return { err: '还差一个地址，比如 $rsp 或 0x419b76。' + GX_GRAMMAR };
+  const sm = /^(\d*)([cdxs]?)([bhwg]?)$/.exec(suf);
+  if (!sm) {
+    return { err: '后缀「' + suf + '」没看懂。按课件口径应为 [个数][格式][单位]：个数是数字（如 2、20）；' +
+      '格式 c/d/x 或 s；单位 b/h/w/g。示例：x/2x $rsp、x/20c $rsp、x/s $rsp、x/g $rsp。' };
+  }
+  return {
+    n: sm[1] ? parseInt(sm[1], 10) : 1,
+    ngiven: !!sm[1],
+    f: sm[2] || null,
+    u: sm[3] || null,
+    addr,
+  };
+}
+
+function renderGx() {
+  const p = parseXCmd($('#gxIn').value);
+  if (p.err) { $('#gxOut').innerHTML = badBox(p.err); return; }
+
+  const fHTML = p.f ? '按<b>' + GX_F[p.f] + '</b>格式' : '格式未在命令里给出';
+  const uHTML = p.u ? '以 ' + GX_U[p.u][1] + ' 字节（' + GX_U[p.u][0] + '）为单位' : '单位未在命令里给出';
+  let total;
+  if (p.f === 's') total = '读到 NUL 为止（长度不定）';
+  else if (p.u) total = fmtInt(p.n * GX_U[p.u][1]) + ' 字节';
+  else total = '取决于当前单位设置（单位会「粘住」，见上方注意框）';
+
+  $('#gxOut').innerHTML =
+    '<div class="g2" style="align-items:start;margin-top:10px">' +
+      '<div>' +
+        '<p style="margin:0 0 6px"><b>一句话解释：</b>从 <code>' + esc(p.addr) + '</code> 开始，' +
+        fHTML + '、' + uHTML + '，查看 <b>' + p.n + '</b> 个单位。</p>' +
+        '<p style="margin:4px 0"><span class="chip gray">合计读取：' + total + '</span></p>' +
+        '<p style="margin:4px 0;font-size:13.5px;color:var(--muted)">对照表 2：不带个数的 <code>x/g $rsp</code> 就是「查看 1 个巨字」——个数省略时按 1 计。</p>' +
+      '</div>' +
+      '<div class="tbl-wrap"><table class="tbl">' +
+        '<tr><th>后缀成分</th><th>值</th></tr>' +
+        '<tr><td>单位个数 n</td><td class="mono">' + p.n + (p.ngiven ? '' : '（未写，按 1 计）') + '</td></tr>' +
+        '<tr><td>格式 f</td><td>' + (p.f ? '<code>' + p.f + '</code> · ' + GX_F[p.f] : '未指定') + '</td></tr>' +
+        '<tr><td>单位 u</td><td>' + (p.u ? '<code>' + p.u + '</code> · ' + GX_U[p.u][0] : '未指定') + '</td></tr>' +
+        '<tr><td>合计读取</td><td>' + total + '</td></tr>' +
+        '<tr><td>地址</td><td class="mono">' + esc(p.addr) + '</td></tr>' +
+      '</table></div>' +
+    '</div>';
+}
+
+/* ============================================================
+   7b gdb 命令速查（表 1 · 原第 5 页；表 2 · 原第 6 页）
+   ============================================================ */
+const GDB1 = [
+  ['r', 'run', '启动程序，运行到下一个断点或程序结束。'],
+  ['q', 'quit', '退出 GDB 调试器。'],
+  ['ni', 'next instruction', '执行下一条指令，但不步入函数。'],
+  ['si', 'step instruction', '执行当前指令；若是函数调用，则步入该函数。'],
+  ['b', 'break', '在指定位置设置断点。'],
+  ['c', 'continue', '从当前位置继续运行，直到下一个断点或程序结束。'],
+  ['p', 'print', '打印变量的值。'],
+  ['x', 'examine', '查看指定位置的内存。'],
+  ['j', 'jump', '跳转到程序中的指定位置。'],
+  ['disas', 'disassemble', '反汇编当前函数或指定的代码区域。'],
+  ['layout asm', '—', '显示汇编代码视图。'],
+  ['layout regs', '—', '显示当前寄存器状态与取值。'],
+];
+const GDB2 = [
+  ['p $rax', '打印 %rax 寄存器的值。'],
+  ['p/x $rsp', '以十六进制打印 %rsp 寄存器的值。'],
+  ['p/d $rsp', '以十进制打印 %rsp 寄存器的值。'],
+  ['x/2x $rsp', '以十六进制格式查看 $rsp 处 2 个单位的内存。'],
+  ['x/2c $rsp', '以字符格式查看 $rsp 处 2 个单位的内存。'],
+  ['x/s $rsp', '把 $rsp 处的内存当作 C 风格字符串查看。'],
+  ['x/b $rsp', '查看 $rsp 处 1 个字节的内存。'],
+  ['x/h $rsp', '查看 $rsp 处 1 个半字（2 字节）的内存。'],
+  ['x/w $rsp', '查看 $rsp 处 1 个字（4 字节）的内存。'],
+  ['x/g $rsp', '查看 $rsp 处 1 个巨字（8 字节）的内存。'],
+  ['j 0x00004869', '跳转到地址 0x00004869。'],
+  ['j *(main + 40)', '跳转到 main 函数地址加 40 字节偏移处。'],
+  ['info registers', '打印全部寄存器的值。'],
+  ['info breakpoints', '打印全部断点的信息。'],
+  ['delete breakpoints 1', '删除 1 号断点，可缩写为 d 1。'],
+];
+
+function renderGd() {
+  const q = String($('#gdQ').value).trim().toLowerCase();
+  const hit = t => !q || t.toLowerCase().includes(q);
+  const r1 = GDB1.filter(r => hit(r[0]) || hit(r[1]) || hit(r[2]));
+  const r2 = GDB2.filter(r => hit(r[0]) || hit(r[1]));
+  const none = (q && !r1.length && !r2.length)
+    ? '<div class="box warn"><div class="t">没有匹配「' + esc(q) + '」的命令</div>试试英文命令名（break、print）、中文说明（断点、寄存器）或 x 命令片段（x/2x）。</div>'
+    : '';
+  const t1 = r1.length ? '<div class="tbl-wrap"><table class="tbl">' +
+      '<tr><th>命令</th><th>全称</th><th>说明</th></tr>' +
+      r1.map(r => '<tr><td class="mono">' + esc(r[0]) + '</td><td class="mono">' + esc(r[1]) + '</td><td>' + r[2] + '</td></tr>').join('') +
+    '</table></div>' : '';
+  const t2 = r2.length ? '<div class="tbl-wrap" style="margin-top:10px"><table class="tbl">' +
+      '<tr><th>命令</th><th>说明</th></tr>' +
+      r2.map(r => '<tr><td class="mono">' + esc(r[0]) + '</td><td>' + r[1] + '</td></tr>').join('') +
+    '</table></div>' : '';
+  $('#gdOut').innerHTML =
+    '<p style="margin:10px 0 6px"><span class="chip gray">表 1 · 常用命令：' + r1.length + ' / ' + GDB1.length + ' 条</span> ' +
+    '<span class="chip gray">表 2 · 带寄存器/地址的例子：' + r2.length + ' / ' + GDB2.length + ' 条</span></p>' +
+    (r1.length ? '<p style="font-weight:650;margin:8px 0 4px">表 1：常用 gdb 命令（原第 5 页）</p>' + t1 : '') +
+    (r2.length ? '<p style="font-weight:650;margin:12px 0 4px">表 2：常见用法（原第 6 页）</p>' + t2 : '') +
+    none;
+}
+
+/* ============================================================
+   8 .gdbinit 生成器
+   ============================================================ */
+let giMode = 'plain';
+
+function giText() {
+  const lines = [];
+  if ($('#giArgs').checked) {
+    lines.push('# Set default input file, avoiding manual input each time', 'set args psol.txt', '');
+  }
+  const ph = [1, 2, 3, 4, 5, 6].filter(i => $('#gi' + i).checked);
+  if (ph.length) {
+    lines.push('# Set breakpoints at each phase function to monitor execution');
+    ph.forEach(i => {
+      lines.push('b phase_' + i);
+      if (giMode === 'script') lines.push('command', 'p $rsp    # Print the value of the stack pointer', 'end');
+    });
+  }
+  if (!lines.length) lines.push('# 什么都没勾 —— 这样生成的 .gdbinit 是空的。');
+  return lines.join('\n');
+}
+
+function renderGi() {
+  const txt = giText();
+  const rows = txt.split('\n').length;
+  $('#giOut').innerHTML =
+    '<textarea id="giFile" readonly rows="' + Math.min(26, Math.max(6, rows + 1)) +
+    '" style="width:100%;margin-top:10px">' + esc(txt) + '</textarea>';
+}
+
+/* ============================================================
+   启动
+   ============================================================ */
+function initAll() {
+  const safe = (name, out, fn) => {
+    try { fn(); } catch (e) {
+      console.error('[bomblab] ' + name + ':', e);
+      const el = $(out);
+      if (el) el.innerHTML = '<div class="box bad"><div class="t">' + esc(name) + '初始化失败</div>' + esc(String(e && e.message || e)) + '</div>';
+    }
+  };
+
+  /* 计分器 */
+  safe('计分器', '#scOut', () => {
+    renderSc();
+    SC_PHASES.forEach(p => $('#' + p.id).addEventListener('change', renderSc));
+    $('#scN').addEventListener('input', renderSc);
+    $$('button[data-sc]').forEach(b => b.addEventListener('click', () => {
+      const m = b.dataset.sc;
+      SC_PHASES.forEach(p => { $('#' + p.id).checked = (m !== 'four' || p.pts === 15); });
+      $('#scN').value = m === 'ten' ? '10' : (m === 'cap' ? '60' : '0');
+      renderSc();
+    }));
+  });
+
+  /* 暴力破解计算器 */
+  safe('暴力破解计算器', '#bfOut', () => {
+    renderBf();
+    $('#bfGo').addEventListener('click', renderBf);
+    bindEnter('#bfK', renderBf); bindEnter('#bfL', renderBf); bindEnter('#bfR', renderBf);
+    $$('button[data-bf]').forEach(b => b.addEventListener('click', () => {
+      const m = b.dataset.bf;
+      if (m === 'handout') { $('#bfK').value = '26'; $('#bfL').value = '120'; }
+      if (m === 'alnum')   { $('#bfK').value = '36'; }
+      if (m === 'digits6') { $('#bfK').value = '10'; $('#bfL').value = '6'; }
+      renderBf();
+    }));
+  });
+
+  /* x 命令解析器 */
+  safe('x 命令解析器', '#gxOut', () => {
+    renderGx();
+    $('#gxGo').addEventListener('click', renderGx);
+    bindEnter('#gxIn', renderGx);
+    $$('button[data-gx]').forEach(b => b.addEventListener('click', () => { $('#gxIn').value = b.dataset.gx; renderGx(); }));
+  });
+
+  /* gdb 速查 */
+  safe('gdb 速查', '#gdOut', () => {
+    renderGd();
+    $('#gdQ').addEventListener('input', renderGd);
+    $('#gdQ').addEventListener('change', renderGd);
+  });
+
+  /* .gdbinit 生成器 */
+  safe('.gdbinit 生成器', '#giOut', () => {
+    renderGi();
+    ['giArgs', 'gi1', 'gi2', 'gi3', 'gi4', 'gi5', 'gi6'].forEach(id => $('#' + id).addEventListener('change', renderGi));
+    $$('#giSeg button').forEach(b => b.addEventListener('click', () => {
+      giMode = b.dataset.m;
+      $$('#giSeg button').forEach(x => x.classList.toggle('on', x === b));
+      renderGi();
+    }));
+    $('#giCopy').addEventListener('click', async () => {
+      const btn = $('#giCopy'), t = giText();
+      let ok = false;
+      try { await navigator.clipboard.writeText(t); ok = true; }
+      catch (e) {
+        const ta = $('#giFile');
+        if (ta) { ta.focus(); ta.select(); try { ok = document.execCommand('copy'); } catch (e2) {} }
+      }
+      btn.textContent = ok ? '已复制 ✓' : '复制失败，请手动全选';
+      setTimeout(() => { btn.textContent = '复制'; }, 1600);
+    });
+  });
+
+  /* ---------- 公共：进度条与回到顶部 ---------- */
+  const onScroll = () => {
+    const h = document.documentElement;
+    const max = h.scrollHeight - h.clientHeight;
+    const p = max > 0 ? Math.min(100, Math.round(h.scrollTop / max * 100)) : 0;
+    if ($('#pgBar')) $('#pgBar').style.width = p + '%';
+    if ($('#pgText')) $('#pgText').textContent = '学习进度 ' + p + '%';
+    if ($('#toTop')) $('#toTop').style.display = h.scrollTop > 600 ? 'block' : 'none';
+  };
+  window.addEventListener('scroll', onScroll, { passive: true });
+  onScroll();
+  if ($('#toTop')) $('#toTop').addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
+}
+
+document.addEventListener('DOMContentLoaded', initAll);
+</script>
+</body>
+</html>

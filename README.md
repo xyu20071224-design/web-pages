@@ -6,7 +6,7 @@
 
 | 路径 | 内容 |
 | --- | --- |
-| `ics/` | 《计算机系统基础》交互式课件：Data Lab 实验台、位与整数、浮点数 |
+| `ics/` | 《计算机系统基础》交互式课件：25 讲正文，加 Data Lab、Bomb Lab、Attack Lab 三个实验台 |
 | `ics/variants-lab/` | Data Lab 页面的四种备选视觉风格 |
 | `laiyipan/` | Phaser 小游戏「来一盘吗？」，含音效与地图素材 |
 | `qinshihuang/` | 「始皇北巡」单页作品 |

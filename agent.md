@@ -21,7 +21,8 @@
 | --- | --- | --- |
 | `index.html` | 落地页，5 张卡片入口 | 纯手写 HTML |
 | `ics/index.html` | ICS 二级入口页（课件 / 实验 / 视觉风格三个网格） | 新增讲次要改这里 |
-| `ics/*.html` | 《计算机系统导论》5 讲主页面 + Data Lab 实验台 | 见 §4 |
+| `ics/*.html` | 《计算机系统导论》25 讲主页面 + Data Lab / Bomb Lab / Attack Lab 实验台 | 见 §4 |
+| `ics/attacklab-zh.html` | Attack Lab 解题指引（单页，无风格变体） | 第三个实验台；内容是具体实例的栈布局、gadget 与 payload 生成器 |
 | `ics/variants*/` | 每讲的 4 种视觉风格副本 + 预览页 | 见 §4，整页副本 |
 | `gitlearn/` | Git 学习模拟器（单文件，9 章） | 见 §5 |
 | `shelllearn/` | 命令行学习模拟器（单文件，18 章） | 见 §5 |

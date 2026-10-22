@@ -3450,8 +3450,10 @@ svg.graph .node:hover circle { stroke: #fff; stroke-width: 2; }
   $('#btnResetAll').addEventListener('click', () => {
     if (!confirm('这会清空沙盒 + 清空所有章节进度，确定吗？')) return;
     lessonPanel.progress.clear();
-    startLesson(LESSONS[0]);
-    TK.toast('已全部重置');
+    // 必须走 lessonPanel.start：它会同步 current、重渲染章节列表与任务清单、再判分。
+    // 直接调 startLesson 只改引擎和终端，左侧仍停在旧章节，判分也会错位。
+    lessonPanel.start(LESSONS[0], false);
+    TK.toast('已全部重置，从第 1 章开始', true);
   });
 
   document.addEventListener('keydown', (e) => {

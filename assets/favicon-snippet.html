@@ -1,0 +1,27 @@
+<!--
+  站点图标引用片段。注意相对路径因页面所在目录深度而异：
+
+  · 根目录页面（index.html）           → 用 assets/ 开头的版本
+  · 一级子目录页面（ics/index.html）    → 用 ../assets/ 开头的版本
+  · 二级子目录页面（ics/variants-x/）→ 用 ../../assets/ 开头的版本
+-->
+<!-- ===== 根目录页面用 ===== -->
+<link rel="icon" href="assets/icon.svg" type="image/svg+xml">
+<link rel="icon" href="assets/icon-32.png" sizes="32x32" type="image/png">
+<link rel="icon" href="assets/icon-16.png" sizes="16x16" type="image/png">
+<link rel="apple-touch-icon" href="assets/icon-180.png">
+<link rel="manifest" href="assets/manifest.webmanifest">
+
+<!-- ===== 一级子目录页面用（ics/、gitlearn/、shelllearn/ 等）===== -->
+<link rel="icon" href="../assets/icon.svg" type="image/svg+xml">
+<link rel="icon" href="../assets/icon-32.png" sizes="32x32" type="image/png">
+<link rel="icon" href="../assets/icon-16.png" sizes="16x16" type="image/png">
+<link rel="apple-touch-icon" href="../assets/icon-180.png">
+<link rel="manifest" href="../assets/manifest.webmanifest">
+
+<!-- ===== 二级子目录页面用（ics/variants-ics01/ 等）===== -->
+<link rel="icon" href="../../assets/icon.svg" type="image/svg+xml">
+<link rel="icon" href="../../assets/icon-32.png" sizes="32x32" type="image/png">
+<link rel="icon" href="../../assets/icon-16.png" sizes="16x16" type="image/png">
+<link rel="apple-touch-icon" href="../../assets/icon-180.png">
+<link rel="manifest" href="../../assets/manifest.webmanifest">

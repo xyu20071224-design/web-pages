@@ -1,16 +1,12 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-label="网页作品集">
-  <title>网页作品集</title>
-  <defs>
-    <linearGradient id="mg" gradientUnits="userSpaceOnUse" x1="8" y1="0" x2="56" y2="0">
-      <stop offset="0" stop-color="#087CFA"/>
-      <stop offset=".62" stop-color="#10A99A"/>
-      <stop offset="1" stop-color="#20D689"/>
-    </linearGradient>
-  </defs>
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-labelledby="iconTitle">
+  <title id="iconTitle">网页作品集 Web Portfolio</title>
+  <!-- 纯黑画布；零投影；无外链、无字体，全部为几何图元 -->
   <rect width="64" height="64" fill="#000000"/>
-  <g transform="translate(32,0) skewX(-11) translate(-32,0)">
-    <rect x="8"    y="10" width="13" height="44" rx="1" fill="url(#mg)"/>
-    <rect x="25.5" y="21" width="13" height="33" rx="1" fill="url(#mg)"/>
-    <rect x="43"   y="32" width="13" height="22" rx="1" fill="url(#mg)"/>
+  <!-- 三根 -11° 左斜切竖条（站点 .mk 标记同源）：蓝 / 青 / 绿 -->
+  <g transform="translate(0,32) skewX(-11) translate(0,-32)">
+    <rect x="9.50"  y="11" width="10.5" height="42" fill="#087CFA"/>
+    <rect x="26.00" y="11" width="10.5" height="42" fill="#07C3F2"/>
+    <rect x="42.50" y="11" width="10.5" height="42" fill="#20D689"/>
   </g>
 </svg>

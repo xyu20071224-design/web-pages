@@ -1,27 +1,40 @@
 <!--
-  站点图标引用片段。注意相对路径因页面所在目录深度而异：
+  ============================================================================
+  站点图标引用片段（可直接粘贴进 <head>）
+  ----------------------------------------------------------------------------
+  图标资源全部位于仓库的 assets/ 目录。相对路径取决于页面所在目录的深度，
+  所以下面给出两套版本，按页面位置二选一使用。
 
-  · 根目录页面（index.html）           → 用 assets/ 开头的版本
-  · 一级子目录页面（ics/index.html）    → 用 ../assets/ 开头的版本
-  · 二级子目录页面（ics/variants-x/）→ 用 ../../assets/ 开头的版本
+    · 根目录页面      index.html                              → 用【版本 A】assets/...
+    · 一级子目录页面  ics/*.html、gitlearn/*.html、
+                     shelllearn/*.html、qinshihuang/*.html   → 用【版本 B】../assets/...
+
+  ⚠ 不要同时粘贴两套：会出现多条互相覆盖的 <link rel="icon">，浏览器只认最后一条。
+  ⚠ 粘贴前先删掉页面里原来的 favicon 行（旧的 "蓝底 #2f6feb + 白色 L" inline
+    data-URI；laiyipan/index.html 另有一个 ./favicon.svg）。
+
+  图标说明：纯黑 #000000 画布 + 三根 -11° 左斜切竖条（蓝 #087CFA / 青 #07C3F2 /
+  绿 #20D689），与站点顶栏 .mk 标记同源；零投影、无外链依赖、无字体。
+  ============================================================================
 -->
-<!-- ===== 根目录页面用 ===== -->
+
+<!-- ==================== 版本 A · 站点根目录页面 ==================== -->
+<!-- 放在 /index.html 的 <head> 内 -->
 <link rel="icon" href="assets/icon.svg" type="image/svg+xml">
 <link rel="icon" href="assets/icon-32.png" sizes="32x32" type="image/png">
 <link rel="icon" href="assets/icon-16.png" sizes="16x16" type="image/png">
+<link rel="alternate icon" href="assets/favicon.ico" sizes="any">
 <link rel="apple-touch-icon" href="assets/icon-180.png">
 <link rel="manifest" href="assets/manifest.webmanifest">
+<meta name="theme-color" content="#000000">
 
-<!-- ===== 一级子目录页面用（ics/、gitlearn/、shelllearn/ 等）===== -->
+
+<!-- ==================== 版本 B · ics/ 等一级子目录页面 ==================== -->
+<!-- 放在 /ics/index.html、/gitlearn/*.html 等页面的 <head> 内 -->
 <link rel="icon" href="../assets/icon.svg" type="image/svg+xml">
 <link rel="icon" href="../assets/icon-32.png" sizes="32x32" type="image/png">
 <link rel="icon" href="../assets/icon-16.png" sizes="16x16" type="image/png">
+<link rel="alternate icon" href="../assets/favicon.ico" sizes="any">
 <link rel="apple-touch-icon" href="../assets/icon-180.png">
 <link rel="manifest" href="../assets/manifest.webmanifest">
-
-<!-- ===== 二级子目录页面用（ics/variants-ics01/ 等）===== -->
-<link rel="icon" href="../../assets/icon.svg" type="image/svg+xml">
-<link rel="icon" href="../../assets/icon-32.png" sizes="32x32" type="image/png">
-<link rel="icon" href="../../assets/icon-16.png" sizes="16x16" type="image/png">
-<link rel="apple-touch-icon" href="../../assets/icon-180.png">
-<link rel="manifest" href="../../assets/manifest.webmanifest">
+<meta name="theme-color" content="#000000">

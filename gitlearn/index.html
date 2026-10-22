@@ -343,6 +343,7 @@ svg.graph .node:hover circle { stroke: #fff; stroke-width: 2; }
   <button class="btn" id="btnCheat">命令速查表</button>
   <button class="btn" id="btnWipe" title="清空仓库内容，但保留章节进度和操作记录">清空沙盒</button>
   <button class="btn ghost" id="btnResetAll" title="清空沙盒 + 清空所有进度">重新开始</button>
+  <a class="btn ghost" href="./mellum.html" title="同一套模拟器，JetBrains Mellum 2 深色课件风格">Mellum 版 →</a>
 </header>
 
 <main class="layout">
@@ -1074,6 +1075,7 @@ svg.graph .node:hover circle { stroke: #fff; stroke-width: 2; }
       this.mergeState = null;
       this.reflog = [];
       this.seq = 0;
+      this.prevBranch = null;   // 上一个所在分支，供 git switch - / git checkout - 使用
     }
     get oid() {
       if (!this.head) return null;
@@ -1278,7 +1280,15 @@ svg.graph .node:hover circle { stroke: #fff; stroke-width: 2; }
     splitOpts(args) {
       const opts = [], pos = [];
       args.forEach(function (a) {
-        if (a.startsWith('-') && a !== '-') opts.push(a); else pos.push(a);
+        if (a.startsWith('-') && a !== '-') {
+          // 合并短选项：-am 等价于 -a -m；-Aq 等价于 -A -q。
+          // 只有纯字母、且长度 >2 的才拆，-n5 / --staged 这类保持原样。
+          // 含 m 的组合（-am / -mfix）不拆：m 会吃掉后面的内容当提交说明，
+          // 这里的拆分只服务 -a / -A / -u 这类纯布尔开关。
+          if (/^-[A-Za-z]{2,}$/.test(a) && a.indexOf('m') === -1) {
+            a.slice(1).split('').forEach(function (ch) { opts.push('-' + ch); });
+          } else opts.push(a);
+        } else pos.push(a);
       });
       return { opts: opts, pos: pos, has: function (o) { return opts.indexOf(o) !== -1; } };
     }
@@ -1609,14 +1619,18 @@ svg.graph .node:hover circle { stroke: #fff; stroke-width: 2; }
       if (gate) return gate;
       const o = this.splitOpts(args);
       const paths = o.pos;
-      if (!paths.length) return this.fail([L('Nothing specified, nothing added.', 'err'), L('用法：git add <文件> 或 git add .', 'hint')]);
       const all = o.has('-A') || o.has('--all') || paths.indexOf('.') !== -1;
       const updateOnly = o.has('-u') || o.has('--update');
+      if (!paths.length && !all && !updateOnly) {
+        return this.fail([L('Nothing specified, nothing added.', 'err'),
+          L('用法：git add <文件> 或 git add . 或 git add -A / -u', 'hint')]);
+      }
       const r = this.repo;
       const added = [], updated = [], removed = [], missing = [];
 
-      if (all) {
+      if (all || (updateOnly && !paths.length)) {
         keys(r.workdir).forEach(function (p) {
+          if (updateOnly && !r.index.has(p)) return;   // -u 只管已跟踪文件
           const old = r.index.get(p);
           if (old === undefined) added.push(p); else if (old !== r.workdir.get(p)) updated.push(p);
           r.index.set(p, r.workdir.get(p));
@@ -1685,9 +1699,15 @@ svg.graph .node:hover circle { stroke: #fff; stroke-width: 2; }
       const r = this.repo;
       let message = null;
       for (let i = 0; i < args.length; i++) {
-        if (args[i] === '-m' || args[i] === '--message') { message = args[i + 1]; break; }
-        if (args[i].startsWith('-m') && args[i].length > 2) { message = args[i].slice(2); break; }
-        if (args[i].startsWith('--message=')) { message = args[i].slice(10); break; }
+        const a = args[i];
+        if (a === '--message') { message = args[i + 1]; break; }
+        if (a.startsWith('--message=')) { message = a.slice(10); break; }
+        // -m / -m"说明" / -am / -mfix 都要能认出来
+        if (/^-[A-Za-z]+$/.test(a) && a.includes('m')) {
+          const after = a.slice(a.indexOf('m') + 1);
+          message = after !== '' ? after : args[i + 1];
+          break;
+        }
       }
 
       if (r.mergeState) {
@@ -1703,7 +1723,12 @@ svg.graph .node:hover circle { stroke: #fff; stroke-width: 2; }
         }
       }
 
-      if (o.has('-a') || o.has('--all')) {
+      // -a / -am / -ma 里的 a 都算"暂存已跟踪文件"
+      const bundleAll = args.some(function (a) {
+        return /^-[A-Za-z]+$/.test(a) && a.indexOf('m') !== -1 &&
+          a.slice(1, a.indexOf('m')).indexOf('a') !== -1;
+      });
+      if (o.has('-a') || o.has('--all') || bundleAll) {
         const head = r.headFiles();
         keys(head).forEach(function (p) {
           if (r.workdir.has(p)) r.index.set(p, r.workdir.get(p));
@@ -1713,7 +1738,8 @@ svg.graph .node:hover circle { stroke: #fff; stroke-width: 2; }
 
       const stagedChanges = this.stagedDiffCount();
       const isMerge = !!r.mergeState;
-      if (!stagedChanges && !isMerge) {
+      const amendOnly = o.has('--amend');
+      if (!stagedChanges && !isMerge && !amendOnly) {
         return this.fail([
           L('On branch ' + (r.branchName() || 'HEAD detached'), 'plain'),
           L('nothing to commit, working tree clean', 'plain'),
@@ -1946,7 +1972,11 @@ svg.graph .node:hover circle { stroke: #fff; stroke-width: 2; }
             }, this);
           }
         }
-        r.tags.forEach(function (oid, name) { lines.push(L('  ' + name + '  ' + oid.slice(0, 7) + '  (tag)', 'muted')); });
+        // 标签不是分支：只在看本地列表时附带展示，并明确标注 (tag)，
+        // git branch -r（只看远程）时不应该出现。
+        if (showLocal) {
+          r.tags.forEach(function (oid, name) { lines.push(L('  ' + name + '  ' + oid.slice(0, 7) + '  (tag)', 'muted')); });
+        }
         const hints = [];
         if (showLocal) hints.push('* 号标记的就是"你当前所在的分支"。');
         if (showRemote) hints.push('remotes/origin/xxx 是"你本地记录的远程分支位置"，它只在 fetch / push / pull 时更新。');
@@ -1992,6 +2022,15 @@ svg.graph .node:hover circle { stroke: #fff; stroke-width: 2; }
       const force = o.has('-f') || o.has('--force');
 
       if (!target) return this.fail([L('fatal: 请指定要切换到的分支名，例如 git checkout main', 'err')]);
+
+      // git switch - / git checkout - ：回到上一个分支
+      if (target === '-' && !create) {
+        if (!r.prevBranch) {
+          return this.fail([L('fatal: 没有"上一个分支"可以回去（你还没切换过分支）。', 'err'),
+            L('可以先 git checkout -b feature 建一个新分支试试。', 'hint')]);
+        }
+        target = r.prevBranch;
+      }
 
       // 切换分支
       let oid;
@@ -2051,8 +2090,11 @@ svg.graph .node:hover circle { stroke: #fff; stroke-width: 2; }
       r.workdir = cloneMap(c.files);
       keep.forEach(function (v, p) { r.workdir.set(p, v); });
       r.index = cloneMap(c.files);
+      const fromBranch = r.branchName();
       if (r.refs.has('refs/heads/' + target)) r.head = { type: 'branch', name: target };
       else r.head = { type: 'detached', oid: oid };
+      // 记住「上一个分支」，供 git switch - / git checkout - 回到原处
+      if (fromBranch && fromBranch !== target) r.prevBranch = fromBranch;
 
       const hints = [];
       let lines = [];
@@ -2279,6 +2321,24 @@ svg.graph .node:hover circle { stroke: #fff; stroke-width: 2; }
       const o = this.splitOpts(args);
       const r = this.repo;
       const mode = o.has('--soft') ? 'soft' : (o.has('--hard') ? 'hard' : (o.has('--mixed') ? 'mixed' : 'mixed'));
+
+      // git reset <文件…>：只把这几个文件从暂存区撤出，不动 HEAD。
+      // 判定方式与真 git 一致：有 -- 分隔符，或第一个位置参数是已存在的路径却解析不出提交。
+      const dd = args.indexOf('--');
+      let pathArgs = null;
+      if (dd !== -1) {
+        pathArgs = args.slice(dd + 1);
+      } else if (o.pos.length) {
+        const looksLikeCommit = !!this.resolveCommitish(o.pos[0]);
+        const looksLikePath = r.workdir.has(o.pos[0]) || r.index.has(o.pos[0]) ||
+          r.headFiles().has(o.pos[0]);
+        if (!looksLikeCommit && looksLikePath) pathArgs = o.pos;
+      }
+      if (pathArgs) {
+        if (!pathArgs.length) return this.fail([L('用法：git reset <文件>（把文件从暂存区撤出）', 'err')]);
+        return this.restoreFiles(pathArgs, { staged: true, worktree: false });
+      }
+
       const target = o.pos[0] || 'HEAD';
       const oid = this.resolveCommitish(target);
       if (!oid) return this.fail([L("fatal: 找不到目标 '" + target + "'", 'err')]);
@@ -2336,7 +2396,7 @@ svg.graph .node:hover circle { stroke: #fff; stroke-width: 2; }
       else r.head = { type: 'detached', oid: n.id };
       r.index = cloneMap(result);
       r.workdir = cloneMap(result);
-      return this.ok([L('[master ' + this.short(n.id) + '] Revert "' + c.message + '"', 'plain')],
+      return this.ok([L('[' + (r.branchName() || 'detached HEAD') + ' ' + this.short(n.id) + '] Revert "' + c.message + '"', 'plain')],
         ['revert 不删除历史，而是新增一个"反向提交"来抵消旧提交。已经推送给别人的提交，用 revert 比 reset 安全。']);
     }
 
@@ -2386,6 +2446,21 @@ svg.graph .node:hover circle { stroke: #fff; stroke-width: 2; }
       if (gate) return gate;
       const o = this.splitOpts(args);
       const r = this.repo;
+      if (o.has('-d') || o.has('--delete')) {
+        if (!o.pos.length) return this.fail([L('用法：git tag -d <标签名>', 'err')]);
+        const gone = [];
+        const missing = [];
+        o.pos.forEach(function (name) {
+          if (r.tags.has(name)) { r.tags.delete(name); gone.push(name); }
+          else missing.push(name);
+        });
+        if (!gone.length) {
+          return this.fail([L("error: 标签 '" + missing[0] + "' 不存在。", 'err'),
+            L('用 git tag 看看现在有哪些标签。', 'hint')]);
+        }
+        return this.ok(gone.map(function (name) { return L('Deleted tag ' + "'" + name + "'", 'plain'); }),
+          missing.length ? ['这些标签本来就不存在：' + missing.join('、')] : []);
+      }
       if (!o.pos.length) {
         if (!r.tags.size) return this.ok([], ['还没有标签。用 git tag v1.0 给当前提交打一个。']);
         const lines = [];
@@ -2550,7 +2625,7 @@ svg.graph .node:hover circle { stroke: #fff; stroke-width: 2; }
       if (r.initialized && (r.objects.size || dirty)) {
         return this.fail([
           L('fatal: 目标目录不是空的，不能 clone 进来。', 'err'),
-          L('提示：clone 需要一个空目录。点右上角「重置沙盒」清空后重试。', 'hint'),
+          L('提示：clone 需要一个空目录。点顶部「清空沙盒」清空后重试。', 'hint'),
         ]);
       }
       const srv = getServer(url);

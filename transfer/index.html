@@ -236,15 +236,112 @@ footer p{margin:0;font-family:var(--mono);font-size:12px;color:var(--ink-dim);li
   };
 
   // 信令服务器：只负责交换一次 ~200 字节的牵线信息，不碰文件。
-  // 页面是 https 时必须用 wss（浏览器拦 Mixed Content）；http 页面只能用 ws。
-  // 自建服务同时开了两个端口：25443 带 TLS（自签证书）、25444 明文。
-  function pickSignal() {
-    if (location.protocol === "https:") {
-      return { host: "62.234.28.97", port: 25443, secure: true, path: "/" };
+  //
+  // 为什么不写死域名：https 场景必须走 Cloudflare 隧道（本机 443 被封、80 被备案拦截，
+  // 且拿不到受信任证书）。Cloudflare 免费隧道每次重启都会换域名，写死必然失效。
+  // 所以这里改成向配置接口现取，并缓存到 localStorage 兜底。
+  //
+  // 信令端点从哪来？三种来源，按优先级：
+  //
+  // 1. URL 参数 ?signal=host[:port]  —— 手工覆盖，调试或应急用
+  // 2. 同源 /config.json             —— 由 Cloudflare 隧道对外提供（推荐入口）
+  // 3. 站点自带的 config.json        —— GitHub Pages 上的静态快照
+  //
+  // 必须如此兜底：Cloudflare 免费隧道重启就换域名，页面若写死必然失效；
+  // 而 https 页面又不能取 http 配置（Mixed Content），所以只能靠 https 源。
+  var LAST_GOOD_KEY = "wptransfer-signal-v1";
+
+  function configUrls() {
+    var list = [];
+    var m = location.search.match(/[?&]signal=([^&]+)/);
+    if (m) {
+      var raw = decodeURIComponent(m[1]);
+      var hm = raw.match(/^([^:\/]+)(?::(\d+))?$/);
+      if (hm) {
+        list.push({ inline: {
+          host: hm[1], port: parseInt(hm[2] || "443", 10), secure: true, path: "/"
+        }});
+      }
     }
-    return { host: "62.234.28.97", port: 25444, secure: false, path: "/" };
+    if (location.protocol === "https:") {
+      // GitHub Pages 上是静态快照 config.json；隧道上 /config.json 是实时配置。
+      // 先同源找，两个都试，谁先给出可用端点就用谁。
+      var base = location.pathname.replace(/[^/]*$/, "");
+      list.push({ url: base + "config.json" });        // 同目录静态快照（GitHub Pages）
+      list.push({ url: base + "signal.json" });        // 隧道上的静态快照
+      list.push({ url: "/config.json" });              // 隧道根上的实时配置
+    } else {
+      list.push({ url: "http://62.234.28.97:25445/config.json" });
+    }
+    return list;
   }
-  var SIGNAL = pickSignal();
+
+  // 兜底：配置接口也取不到时，用本机已知端口（仅 http 页面可用）
+  var FALLBACK = { host: "62.234.28.97", port: 25444, secure: false, path: "/" };
+
+  var SIGNAL = FALLBACK;      // 先给个安全默认值
+  var signalingReady = null;  // 由 initSignaling() 填充
+
+  function normalizeSignal(cfg) {
+    if (!cfg || !cfg.host) return null;
+    return {
+      host: cfg.host,
+      port: cfg.port || 443,
+      secure: cfg.secure !== false,
+      path: cfg.path || "/"
+    };
+  }
+
+  function readCached() {
+    try {
+      var raw = localStorage.getItem(LAST_GOOD_KEY);
+      if (!raw) return null;
+      return normalizeSignal(JSON.parse(raw));
+    } catch (e) { return null; }
+  }
+
+  function writeCached(cfg) {
+    try { localStorage.setItem(LAST_GOOD_KEY, JSON.stringify(cfg)); } catch (e) {}
+  }
+
+  // 从某个来源取一个候选配置
+  function probeSource(src) {
+    if (src.inline) {
+      return Promise.resolve(normalizeSignal(src.inline));
+    }
+    return fetch(src.url, { cache: "no-store", mode: "cors" })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (j) {
+        if (!j) return null;
+        if (location.protocol === "https:") {
+          if (j.secure === false) return null;   // https 下不能用 ws
+          return normalizeSignal(j);
+        }
+        return normalizeSignal(j) || normalizeSignal(j.plain);
+      })
+      .catch(function () { return null; });
+  }
+
+  // 逐个来源试；拿到第一个就跑
+  signalingReady = (function () {
+    var sources = configUrls();
+    return (function tryNext(i) {
+      if (i >= sources.length) {
+        var cached = readCached();
+        if (cached && !(location.protocol === "https:" && cached.secure === false)) {
+          SIGNAL = cached;
+          return Promise.resolve(cached);
+        }
+        if (location.protocol === "https:") return Promise.resolve(null);
+        SIGNAL = FALLBACK;
+        return Promise.resolve(FALLBACK);
+      }
+      return probeSource(sources[i]).then(function (cfg) {
+        if (cfg) { writeCached(cfg); SIGNAL = cfg; return cfg; }
+        return tryNext(i + 1);
+      });
+    })(0);
+  })();
 
   function $(id){ return document.getElementById(id); }
   function setStatus(el, text, kind){
@@ -378,7 +475,18 @@ footer p{margin:0;font-family:var(--mono);font-size:12px;color:var(--ink-dim);li
     createBtn.disabled = true;
     setStatus(sendStatus, "正在向信令服务器申请房间…", "busy");
     myCode = randomCode();
-    peer = new Peer(PREFIX + myCode, Object.assign({ debug: 0, config: ICE }, SIGNAL));
+    signalingReady.then(function (cfg) {
+      if (!cfg) {
+        setStatus(sendStatus, "拿不到可用的信令服务器配置。请确认你能访问 " + CONFIG_URL, "err");
+        createBtn.disabled = false;
+        return;
+      }
+      startSender(cfg);
+    });
+  });
+
+  function startSender(cfg) {
+    peer = new Peer(PREFIX + myCode, Object.assign({ debug: 0, config: ICE }, cfg));
 
     peer.on("open", function(){
       sendCodeEl.textContent = myCode;
@@ -398,7 +506,7 @@ footer p{margin:0;font-family:var(--mono);font-size:12px;color:var(--ink-dim);li
       signalError(sendStatus, t);
       createBtn.disabled = false;
     });
-  });
+  }
 
   var acked = {};
   var ackWait = null;
@@ -589,7 +697,18 @@ footer p{margin:0;font-family:var(--mono);font-size:12px;color:var(--ink-dim);li
     }
     joinBtn.disabled = true;
     setStatus(recvStatus, "正在连接房间 " + code + " …", "busy");
-    peer = new Peer(Object.assign({ debug: 0, config: ICE }, SIGNAL));
+    signalingReady.then(function (cfg) {
+      if (!cfg) {
+        setStatus(recvStatus, "拿不到可用的信令服务器配置。请确认你能访问 " + CONFIG_URL, "err");
+        joinBtn.disabled = false;
+        return;
+      }
+      startReceiver(cfg, code);
+    });
+  });
+
+  function startReceiver(cfg, code) {
+    peer = new Peer(Object.assign({ debug: 0, config: ICE }, cfg));
 
     peer.on("open", function(){
       conn = peer.connect(PREFIX + code, { reliable: true });
@@ -604,7 +723,7 @@ footer p{margin:0;font-family:var(--mono);font-size:12px;color:var(--ink-dim);li
       }
       joinBtn.disabled = false;
     });
-  });
+  }
 
   function wireReceiver(c){
     c.on("open", function(){

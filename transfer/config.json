@@ -1,0 +1,8 @@
+{
+  "_comment": "Cloudflare quick tunnel 重启会换域名。此文件由服务器上的 sync-config 自动更新，也可手工改。",
+  "host": "jet-kde-beer-petersburg.trycloudflare.com",
+  "port": 443,
+  "secure": true,
+  "path": "/",
+  "generated_at": "2026-10-24T00:36:00+08:00"
+}

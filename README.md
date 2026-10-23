@@ -13,6 +13,7 @@
 | `gitlearn/` | Git 学习模拟器：纯前端 git 模拟器 + 9 章零基础闯关课程（单文件） |
 | `gitlearn/mellum.html` | 同一套模拟器的 Mellum 2 深色课件风格版：长页 + 三栏练习场，字体全部内嵌 |
 | `shelllearn/` | 命令行学习模拟器：纯前端 bash/fish 模拟器 + 18 章零基础课程（单文件） |
+| `transfer/` | 临时文件传送：两台设备点对点直传（WebRTC），文件不经服务器 |
 | `index.html` | 落地页，汇总以上入口 |
 
 ## 本地预览

@@ -144,7 +144,7 @@ footer p{margin:0;font-family:var(--mono);font-size:12px;color:var(--ink-dim);li
 
   <div class="notice">
     <div><b>为什么不是「上传」？</b> 本站托管在 GitHub Pages，只能提供静态文件（服务器对 POST 直接返回 405），没有任何可以写入的地方。
-    所以这里的做法是：服务器只帮忙交换一次「牵线信息」，真正的文件在两台设备之间点对点直传。</div>
+    所以这里的做法是：自建服务器只帮忙交换一次「牵线信息」，真正的文件在两台设备之间点对点直传；实在连不通时由自建 TURN 中继兜底。</div>
   </div>
 
   <div class="cols">
@@ -195,8 +195,8 @@ footer p{margin:0;font-family:var(--mono);font-size:12px;color:var(--ink-dim);li
   </ol>
 
   <footer>
-    <p>文件走 WebRTC DataChannel 直连，本站不存储、不中转、不记录文件名。<br>
-    两端都不在同一网络且 NAT 严格时可能连不上，此时换用微信/网盘更快。</p>
+    <p>文件走 WebRTC DataChannel 直连；NAT 打不通时自动回到自建 TURN 中继（62.234.28.97:25347）。<br>
+    文件名与内容都不落盘，房间关掉即失效。中继带宽有限，超大文件建议走同一 WiFi。</p>
   </footer>
 </div>
 
@@ -215,15 +215,36 @@ footer p{margin:0;font-family:var(--mono);font-size:12px;color:var(--ink-dim);li
 
   var PREFIX = "wptr1-";
 
+  // 自建 TURN 中继：双方 NAT 都严格时靠它兜底（实测可分配 relay 候选）。
+  // 这是本页能跨网传文件的关键 —— 公共免费 TURN 基本都已失效。
+  var TURN = {
+    urls: [
+      "turn:62.234.28.97:25347?transport=udp",
+      "turn:62.234.28.97:25347?transport=tcp"
+    ],
+    username: "wp47b9d28d",
+    credential: "cyi7ozAPIkacFrzK7MK73nVcYxC6"
+  };
+
   var ICE = {
     iceServers: [
       { urls: "stun:stun.l.google.com:19302" },
       { urls: "stun:stun.cloudflare.com:3478" },
-      { urls: "stun:stun.miwifi.com:3478" }
-    ]
+      TURN
+    ],
+    iceTransportPolicy: "all"
   };
 
-  var SIGNAL = { host: "0.peerjs.com", port: 443, secure: true, path: "/" };
+  // 信令服务器：只负责交换一次 ~200 字节的牵线信息，不碰文件。
+  // 页面是 https 时必须用 wss（浏览器拦 Mixed Content）；http 页面只能用 ws。
+  // 自建服务同时开了两个端口：25443 带 TLS（自签证书）、25444 明文。
+  function pickSignal() {
+    if (location.protocol === "https:") {
+      return { host: "62.234.28.97", port: 25443, secure: true, path: "/" };
+    }
+    return { host: "62.234.28.97", port: 25444, secure: false, path: "/" };
+  }
+  var SIGNAL = pickSignal();
 
   function $(id){ return document.getElementById(id); }
   function setStatus(el, text, kind){
